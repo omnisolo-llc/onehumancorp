@@ -2,63 +2,27 @@
 
 import React, { useState } from 'react';
 
-// OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
-// We simulate these with tailwind classes for now, ensuring 375px responsiveness.
-
 export default function OnboardingWizard() {
   const [step, setStep] = useState(1);
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState("");
-  const [preferredStyle, setPreferredStyle] = useState("");
+  const [businessType, setBusinessType] = useState("");
+
+  // Specific fields
+  const [paymentPref, setPaymentPref] = useState("");
+  const [services, setServices] = useState("");
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [intakeData, setIntakeData] = useState<any>(null);
   const [startResult, setStartResult] = useState<any>(null);
 
   const handleNext = () => {
-    if (step === 1 && !businessName.trim()) {
-      setError("Please enter your business name.");
-      return;
-    }
-    if (step === 2 && !businessCategory.trim()) {
-      setError("Please describe what you sell.");
+    if (step === 1 && (!businessName.trim() || !businessCategory.trim())) {
+      setError("Please fill out both fields.");
       return;
     }
     setError("");
     setStep(step + 1);
-  };
-
-  const handleIntakeSubmit = async () => {
-    if (!preferredStyle.trim()) {
-      setError("Please describe your preferred style.");
-      return;
-    }
-
-    setError("");
-    setIsLoading(true);
-
-    const combinedDescription = `Business Name: ${businessName}\nCategory/Products: ${businessCategory}\nStyle: ${preferredStyle}`;
-
-    try {
-      const response = await fetch('/api/onboarding/intake', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: combinedDescription }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to process intake');
-      }
-
-      const data = await response.json();
-      setIntakeData(data);
-      setStep(4);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during intake.');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleStartOnboarding = async () => {
@@ -67,17 +31,17 @@ export default function OnboardingWizard() {
 
     try {
       const startRequest = {
-        business_type: intakeData.business_type || "Retail",
-        company_name: intakeData.business_name || businessName,
-        company_description: preferredStyle,
-        selling_categories: intakeData.categories || [],
-        payment_pref: "stripe",
+        business_type: businessType || "Retail",
+        company_name: businessName,
+        company_description: businessCategory + (services ? ` Services: ${services}` : ""),
+        selling_categories: [businessType.toLowerCase()],
+        payment_pref: paymentPref || "stripe",
         admin_email: "admin@example.com",
         admin_name: "Admin",
         admin_password: "password123",
         website_template: "modern",
-        first_product_name: intakeData.initial_products?.[0]?.name || "Sample Product",
-        first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+        first_product_name: "Sample Product",
+        first_product_price: "10.00",
         price_type: "fixed",
         domain_choice: "auto"
       };
@@ -94,7 +58,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(5);
+      setStep(10); // Success Step
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -114,9 +78,6 @@ export default function OnboardingWizard() {
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
-           </div>
         </div>
 
         {/* Content Area */}
@@ -130,7 +91,6 @@ export default function OnboardingWizard() {
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
               <input
                 type="text"
                 value={businessName}
@@ -138,6 +98,14 @@ export default function OnboardingWizard() {
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+              />
+              <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2 mt-4">Briefly describe your business:</h2>
+              <input
+                type="text"
+                value={businessCategory}
+                onChange={(e) => setBusinessCategory(e.target.value)}
+                placeholder="e.g. I bake custom vegan cakes."
+                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-6 bg-white/80"
               />
               <button
                 onClick={handleNext}
@@ -151,117 +119,109 @@ export default function OnboardingWizard() {
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you sell?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
-              <textarea
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                placeholder="e.g. I bake custom wedding cakes and cupcakes."
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 min-h-[120px] bg-white/80 resize-none"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
-                >
-                  Next
-                </button>
+              <div className="flex flex-col gap-3">
+                <button onClick={() => { setBusinessType('Food'); handleNext(); }} className="w-full p-4 rounded-xl border border-gray-200 text-left font-medium hover:border-[#0066FF]">Food / Custom Cakes</button>
+                <button onClick={() => { setBusinessType('Services'); handleNext(); }} className="w-full p-4 rounded-xl border border-gray-200 text-left font-medium hover:border-[#0066FF]">Services / Bookings</button>
+                <button onClick={() => { setBusinessType('Physical'); handleNext(); }} className="w-full p-4 rounded-xl border border-gray-200 text-left font-medium hover:border-[#0066FF]">Physical Products</button>
+                <button onClick={() => { setBusinessType('Subscriptions'); handleNext(); }} className="w-full p-4 rounded-xl border border-gray-200 text-left font-medium hover:border-[#0066FF]">Services & Subscriptions</button>
+                <button onClick={() => { setBusinessType('Food Cart'); handleNext(); }} className="w-full p-4 rounded-xl border border-gray-200 text-left font-medium hover:border-[#0066FF]">Food & Beverage (Cart)</button>
               </div>
             </div>
           )}
 
-          {step === 3 && (
+          {/* Maya (Food) Path */}
+          {step === 3 && businessType === 'Food' && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Describe your preferred style.</h2>
-              <p className="text-gray-500 text-sm mb-6">Minimal, colorful, elegant, etc.</p>
-              <input
-                type="text"
-                value={preferredStyle}
-                onChange={(e) => setPreferredStyle(e.target.value)}
-                placeholder="e.g. Clean and modern with pastel colors"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-                  disabled={isLoading}
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleIntakeSubmit}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Generate Draft"
-                  )}
-                </button>
-              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">How do you want to get paid?</h2>
+              <input type="text" value={paymentPref} onChange={(e) => setPaymentPref(e.target.value)} placeholder="Deposits via Stripe" className="w-full p-4 rounded-xl border border-gray-200 mb-4" />
+              <button onClick={() => setStep(4)} className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md">Next</button>
             </div>
           )}
-
-          {step === 4 && intakeData && (
+          {step === 4 && businessType === 'Food' && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto">
-                <span className="text-3xl text-[#0066FF]">✨</span>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
-              <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
-
-              <div className="bg-white/80 p-5 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Business Name</span>
-                  <div className="font-medium text-gray-900">{intakeData.business_name}</div>
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</span>
-                  <div className="font-medium text-gray-900">{intakeData.business_type}</div>
-                </div>
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Products</span>
-                  <ul className="list-disc pl-4 text-sm text-gray-700 mt-1">
-                    {intakeData.initial_products?.map((p: any, i: number) => (
-                      <li key={i}>{p.name} - ${p.price}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-                  disabled={isLoading}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="flex-1 bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Publish Now"
-                  )}
-                </button>
-              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Instagram?</h2>
+              <button onClick={() => setStep(5)} className="w-full bg-pink-500 text-white p-4 rounded-xl font-bold shadow-md mb-3">Connect IG</button>
+              <button onClick={() => setStep(5)} className="w-full bg-gray-100 text-gray-600 p-4 rounded-xl font-bold shadow-md">Skip</button>
+            </div>
+          )}
+          {step === 5 && businessType === 'Food' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Set Prices & Deposit Rules</h2>
+              <input type="text" placeholder="Prices" className="w-full p-4 rounded-xl border border-gray-200 mb-4" />
+              <button onClick={handleStartOnboarding} disabled={isLoading} className="w-full bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md disabled:opacity-70 flex justify-center items-center">
+                {isLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : "Publish Store"}
+              </button>
             </div>
           )}
 
-          {step === 5 && startResult && (
+          {/* Carlos (Services) Path */}
+          {step === 3 && businessType === 'Services' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What services do you offer?</h2>
+              <input type="text" placeholder="Plumbing, Painting" value={services} onChange={(e) => setServices(e.target.value)} className="w-full p-4 rounded-xl border border-gray-200 mb-4" />
+              <button onClick={() => setStep(4)} className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md">Next</button>
+            </div>
+          )}
+          {step === 4 && businessType === 'Services' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Set Working Hours & Deposits</h2>
+              <input type="text" placeholder="Mon-Fri, 20% Deposit" className="w-full p-4 rounded-xl border border-gray-200 mb-4" />
+              <button onClick={handleStartOnboarding} disabled={isLoading} className="w-full bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md disabled:opacity-70 flex justify-center items-center">
+                {isLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : "Publish Store"}
+              </button>
+            </div>
+          )}
+
+          {/* Priya (Physical) Path */}
+          {step === 3 && businessType === 'Physical' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Upload Inventory</h2>
+              <button onClick={() => setStep(4)} className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md">Upload CSV</button>
+            </div>
+          )}
+          {step === 4 && businessType === 'Physical' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Inventory Uploaded</h2>
+              <button onClick={handleStartOnboarding} disabled={isLoading} className="w-full bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md disabled:opacity-70 flex justify-center items-center">
+                {isLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : "Publish Store"}
+              </button>
+            </div>
+          )}
+
+          {/* Leo (Subscriptions) Path */}
+          {step === 3 && businessType === 'Subscriptions' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Connect Calendar?</h2>
+              <button onClick={() => setStep(4)} className="w-full bg-blue-500 text-white p-4 rounded-xl font-bold shadow-md mb-3">Connect Google Calendar</button>
+            </div>
+          )}
+          {step === 4 && businessType === 'Subscriptions' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Calendar Synced</h2>
+              <button onClick={handleStartOnboarding} disabled={isLoading} className="w-full bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md disabled:opacity-70 flex justify-center items-center">
+                {isLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : "Publish Store"}
+              </button>
+            </div>
+          )}
+
+          {/* Fatima (Food Cart) Path */}
+          {step === 3 && businessType === 'Food Cart' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Take photos of menu</h2>
+              <button onClick={() => setStep(4)} className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md mb-3">Upload Photos</button>
+            </div>
+          )}
+          {step === 4 && businessType === 'Food Cart' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Menu Ready</h2>
+              <button onClick={handleStartOnboarding} disabled={isLoading} className="w-full bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md disabled:opacity-70 flex justify-center items-center">
+                {isLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> : "Publish Store"}
+              </button>
+            </div>
+          )}
+
+          {/* Success */}
+          {step === 10 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,23 +229,8 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h2>
-              <p className="text-gray-500 text-sm mb-8 px-4">
-                {startResult.message || "Your business has been successfully launched."}
-              </p>
-
               <div className="w-full space-y-3 mt-auto">
-                <a
-                  href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
-                >
-                  Go to Dashboard
-                </a>
-                <a
-                  href="/builder"
-                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-xl font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
-                >
-                  Preview Storefront
-                </a>
+                <a href="/dashboard" className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black transition-all">Go to Dashboard</a>
               </div>
             </div>
           )}
