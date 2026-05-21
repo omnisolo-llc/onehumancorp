@@ -32,4 +32,27 @@ impl ManychatProvider {
             }
         }
     }
+
+    pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
+        self._client.send_message(platform, to, body).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_manychat_provider_new() {
+        let provider = ManychatProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "manychat");
+        assert_eq!(provider.metadata.category, "social_media");
+    }
+
+    #[test]
+    fn test_manychat_provider_into() {
+        let provider = ManychatProvider::new("test_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "manychat");
+    }
 }
