@@ -42,4 +42,14 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(4)).toBeVisible();
   });
+
+  test('displays stripe terminal integration card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Stripe Terminal' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).filter({ hasText: 'Connect' })).toBeVisible();
+  });
+
+  test('displays google calendar integration card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Google Calendar' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).filter({ hasText: 'Connect' })).toBeVisible();
+  });
 });
