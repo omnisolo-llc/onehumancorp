@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
+  const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -86,6 +87,15 @@ export default function Dashboard() {
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
+
+            const invitesRes = await fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (invitesRes.ok) {
+                const invitesData = await invitesRes.json();
+                setTeamInvitesSent(invitesData.total_invites);
+            }
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
         }
@@ -115,7 +125,7 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
          <div className="flex items-center gap-3">
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
@@ -153,7 +163,7 @@ export default function Dashboard() {
                         }
 
                         return (
-                            <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                            <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
@@ -272,18 +282,23 @@ export default function Dashboard() {
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                    <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
+                    <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
+                </div>
+
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
                 </div>
 
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
                 </div>
 
-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
                 </div>

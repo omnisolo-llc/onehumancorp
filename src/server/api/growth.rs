@@ -70,6 +70,7 @@ where
         .route("/storefront/track", post(handle_track_visitor))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -85,6 +86,11 @@ pub struct ReferralIdRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TeamInvitesMetricsResponse {
+    pub total_invites: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -166,6 +172,19 @@ async fn handle_get_team_invites(
 
     match tracker.get_team_invites(&query.team_id).await {
         Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_team_invites_metrics(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
+) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.get_team_invites_count(&query.team_id).await {
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -298,6 +317,15 @@ mod tests {
         };
         let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
         assert!(accept_res.is_ok());
+
+        // Call metrics handler directly
+        let metrics_query = GetTeamInvitesQuery {
+            team_id: "team-test-direct".to_string(),
+        };
+        let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
+        assert!(metrics_res.is_ok());
+        let metrics_res_json = metrics_res.unwrap().0;
+        assert_eq!(metrics_res_json.total_invites, 1);
     }
 
     #[tokio::test]
