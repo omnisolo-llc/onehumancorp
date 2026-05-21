@@ -1117,6 +1117,9 @@ mod tests {
         assert_eq!(child_agent.name, "Parent (Fork)");
         assert_eq!(child_agent.role, "Manager");
 
+        // Wait a tiny bit for the tokio spawn to run
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
         let inbox = hub.inbox.read().unwrap();
         let child_inbox = inbox.get(&child_id).unwrap();
 
@@ -1125,12 +1128,6 @@ mod tests {
         assert_eq!(child_inbox[0].content, "hello world");
         assert!(child_inbox[1].content.contains("<task-notification>"));
         assert!(child_inbox[1].content.contains("do some work"));
-        assert!(child_inbox[1].content.contains("Context: ["));
-        assert!(child_inbox[1].content.contains("hello world"));
-        assert!(child_inbox[1].content.contains("Context: ["));
-        assert!(child_inbox[1].content.contains("hello world"));
-        assert!(child_inbox[1].content.contains("Context: ["));
-        assert!(child_inbox[1].content.contains("hello world"));
         assert!(child_inbox[1].content.contains("Context: ["));
         assert!(child_inbox[1].content.contains("hello world"));
     }
