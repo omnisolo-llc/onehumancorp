@@ -1776,7 +1776,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/website-builder", axum::routing::get(ui_handler))
         .route("/login", axum::routing::get(ui_handler))
         .route("/agents", axum::routing::get(ui_handler))
-        .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
@@ -1879,7 +1878,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
-        .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
@@ -2196,8 +2194,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
                         button {
-            min-height: 44px;
-            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
@@ -2312,8 +2308,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 border-radius: 12px;
                             }
                             #setup-screen button {
-            min-height: 44px;
-            min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
                             }
@@ -2528,7 +2522,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('team-screen')">Your Team</a>
+                        <a onclick="showScreen('agents-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
@@ -2558,24 +2552,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
 
-                        <!-- Milestone Viral Share Loop Banner -->
-                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
-                            <div class="flex items-center gap-4">
-                                <span class="text-3xl" style="font-size: 32px;">🎉</span>
-                                <div>
-                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked: Your First Customers!</h3>
-                                    <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
-                                </div>
-                            </div>
-                            <button
-                                onclick="const tenant = localStorage.getItem('tenant_id') || 'DEFAULT'; window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just reached ' + document.getElementById('milestone-customers-count').textContent + ' customers on my store! Start your own business today with One Human Corp: ohc://join?ref=' + tenant)}`, '_blank'); dismissMilestoneShareBanner();"
-                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-orange-500 shadow-sm transition-colors hover:bg-orange-50"
-                                style="background: white; color: #f97316; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
-                            >
-                                Share & Claim Reward
-                            </button>
-                        </div>
-
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
@@ -2589,7 +2565,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('team-screen')">Your Team</button>
+                            <button onclick="showScreen('agents-screen')">My AI Assistants</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
@@ -2620,7 +2596,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
+                            <button onclick="showScreen('agents-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2795,9 +2771,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -2857,9 +2833,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Agents Page (Your Team) -->
-                    <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
+                    <!-- Agents Page (My Staff) -->
+                    <div id="agents-screen" class="screen">
+                        <h1 class="outfit">My Staff</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -2929,71 +2905,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Buffer Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Manychat</h3>
+                                    <h3 style="margin: 0;">Buffer</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Manychat...')">Connect</button>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Buffer...')">Connect</button>
                             </div>
 
                             <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Calendly</h3>
+                                    <h3 style="margin: 0;">Acuity Scheduling</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Acuity...')">Connect</button>
                             </div>
 
                             <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Mailchimp</h3>
+                                    <h3 style="margin: 0;">ActiveCampaign</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up ActiveCampaign...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Shippo</h3>
+                                    <h3 style="margin: 0;">ShipStation</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Labels & Tracking. Save time on fulfilling orders.</p>
-                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to Shippo...')">Connect</button>
+                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to ShipStation...')">Connect</button>
                             </div>
 
                             <!-- MessageBird Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Twilio</h3>
+                                    <h3 style="margin: 0;">MessageBird</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Text Alerts. Send critical updates directly to phones.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to MessageBird...')">Connect</button>
                             </div>
 
                             <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Mercado Pago</h3>
+                                    <h3 style="margin: 0;">Alipay</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Alipay...')">Connect</button>
                             </div>
 
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Zoom</h3>
+                                    <h3 style="margin: 0;">Microsoft Teams</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting Video Provider...')">Connect</button>
                             </div>
                         </div>
 
@@ -3246,7 +3222,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
@@ -3450,14 +3426,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
 
                                 try {
-                                    await fetch('/api/onboarding/state', {
+                                    await fetch('/api/wizard/state', {
                                         method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
-                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
-                                        },
-                                        body: JSON.stringify(state)
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ state: JSON.stringify(state) })
                                     });
                                 } catch (e) {
                                     console.error('Failed to save state to server', e);
@@ -3474,16 +3446,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
 
                             try {
-                                const res = await fetch('/api/onboarding/state', {
-                                    headers: {
-                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
-                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
-                                    }
-                                });
+                                const res = await fetch('/api/wizard/state');
                                 if (res.ok) {
                                     const data = await res.json();
-                                    if (data) {
-                                        const state = data;
+                                    if (data && data.state) {
+                                        const state = JSON.parse(data.state);
                                         inputs.forEach((input, index) => {
                                             if (input.type === 'checkbox') {
                                                 if (state['checkbox_' + index] !== undefined) {
@@ -3783,23 +3750,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('milestone-card').style.display = 'none';
                         }
 
-                        function dismissMilestoneShareBanner() {
-                            const banner = document.getElementById('milestone-share-banner');
-                            if (banner) {
-                                banner.style.display = 'none';
-                                banner.classList.add('hidden');
-                            }
-                            localStorage.setItem('milestone_banner_dismissed', 'true');
-
-                            fetch('/api/v1/growth/referrals/click', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ id: localStorage.getItem('tenant_id') || 'DEFAULT' })
-                            }).catch(console.error);
-
-                            alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
-                        }
-
                         async function draftInboxReply(btn) {
                             const input = document.getElementById('reply-input');
                             btn.disabled = true;
@@ -3841,7 +3791,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
                             'my-plan-screen': '/my-plan',
-                            'team-screen': '/team',
+                            'agents-screen': '/agents',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
@@ -4264,29 +4214,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
                                 })
                                 .catch(err => console.error('Error fetching sales:', err));
-
-                                fetch('/api/v1/dashboard/metrics', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    const banner = document.getElementById('milestone-share-banner');
-                                    const countEl = document.getElementById('milestone-customers-count');
-                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
-                                    if (banner && countEl && !dismissed) {
-                                        if (data.active_customers > 0) {
-                                            banner.style.display = 'flex';
-                                            banner.classList.remove('hidden');
-                                            countEl.textContent = data.active_customers;
-                                        } else {
-                                            banner.style.display = 'none';
-                                            banner.classList.add('hidden');
-                                        }
-                                    }
-                                })
-                                .catch(err => console.error('Error fetching metrics:', err));
                             }
 
                             if (id === 'my-plan-screen') {
@@ -4318,7 +4245,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'agents-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {

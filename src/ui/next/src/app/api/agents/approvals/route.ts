@@ -17,30 +17,6 @@ export async function GET() {
       action_risk: "Low",
       description: "Draft Instagram Post: New vegan cakes available!",
       status: "Pending"
-    },
-    {
-      id: "3",
-      department: "Legal",
-      action_risk: "High",
-      description: "ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?",
-      status: "Pending",
-      feature_type: "legal_compliance"
-    },
-    {
-      id: "4",
-      department: "Marketing",
-      action_risk: "Medium",
-      description: "Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?",
-      status: "Pending",
-      feature_type: "global_localization"
-    },
-    {
-      id: "5",
-      department: "Marketing",
-      action_risk: "Low",
-      description: "AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?",
-      status: "Pending",
-      feature_type: "ai_geo"
     }
   ];
 

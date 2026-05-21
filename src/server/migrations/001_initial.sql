@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS tenants (
     name TEXT NOT NULL,
     industry TEXT DEFAULT '',
     tier TEXT DEFAULT 'free',
+    ai_budget INT DEFAULT 1000,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     version BIGINT DEFAULT 1

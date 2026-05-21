@@ -25,10 +25,6 @@ pub struct IntegrationsRegistry {
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
-    ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
-    listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
-    easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
-    jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -60,10 +56,6 @@ impl IntegrationsRegistry {
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -226,22 +218,6 @@ impl IntegrationsRegistry {
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "ayrshare" {
-            let mut clients = self.ayrshare_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::ayrshare::provider::AyrshareProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "listmonk" {
-            let mut clients = self.listmonk_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "easypost" {
-            let mut clients = self.easypost_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "jitsi" {
-            let mut clients = self.jitsi_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)

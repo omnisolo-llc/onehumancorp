@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { SmartBlock } from "./components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
@@ -23,12 +23,6 @@ export default function BuilderPage() {
   // Growth Loop: Soft Paywall State
   const [isPremium, setIsPremium] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
-  const [tenantId, setTenantId] = useState("storefront");
-
-  useEffect(() => {
-    const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
-    setTenantId(savedTenantId);
-  }, []);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -425,7 +419,7 @@ export default function BuilderPage() {
           {blocks.map((b, i) => (
             <SmartBlock key={i} {...b} />
           ))}
-          {!isPremium && <SmartBlock type="PoweredBy" props={{ tenantId }} />}
+          {!isPremium && <SmartBlock type="PoweredBy" props={{}} />}
         </div>
 
         {/* Bottom Action Bar */}

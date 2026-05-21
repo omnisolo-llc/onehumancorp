@@ -33,9 +33,3 @@ impl CalComProvider {
         }
     }
 }
-
-impl CalComProvider {
-    pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
-        self._client.get_booking_link(event_type).await
-    }
-}

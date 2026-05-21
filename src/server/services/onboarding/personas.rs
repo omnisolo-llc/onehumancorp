@@ -6,7 +6,6 @@ pub struct PersonaJourney {
     pub name: String,
     pub business_type: String,
     pub initial_state: String,
-    pub friction_points: Vec<String>,
     pub steps: Vec<JourneyStep>,
 }
 
@@ -25,7 +24,6 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Maya".to_string(),
         business_type: "Home Baker".to_string(),
         initial_state: "Custom Orders".to_string(),
-        friction_points: vec!["Connecting Stripe: Requires business details Maya might not have handy (EIN/SSN). The flow must allow deferred connection or use a \"receive money later\" model.".to_string(), "Connecting Instagram: OAuth flows on mobile web can sometimes drop context or fail to redirect back to the app smoothly.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
@@ -81,7 +79,6 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Carlos".to_string(),
         business_type: "Handyman".to_string(),
         initial_state: "Services & Bookings".to_string(),
-        friction_points: vec!["Calendar Sync: Syncing with personal Google/Outlook calendars can be confusing. If OHC double-books him with a personal event, trust is lost.".to_string(), "Pricing Estimation: Handyman jobs are often variable. Carlos might abandon onboarding if forced to set fixed prices. The system must support \"Starting at\" or \"Request Quote\" options.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
@@ -137,7 +134,6 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Priya".to_string(),
         business_type: "Boutique Owner".to_string(),
         initial_state: "Omnichannel POS".to_string(),
-        friction_points: vec!["Inventory Ingestion: If barcode scanning or CSV upload fails or requires strict formatting, Priya will give up. The AI must handle messy data gracefully.".to_string(), "Hardware Provisioning: Ordering and pairing physical POS hardware (Terminal) is traditionally a high-friction process requiring network configuration.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
@@ -193,7 +189,6 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Leo".to_string(),
         business_type: "Music Tutor".to_string(),
         initial_state: "Subscriptions".to_string(),
-        friction_points: vec!["Zoom/Meet Integration: Requiring complex OAuth for Zoom generation might block onboarding. OHC should offer built-in video links or a seamless Google Meet integration.".to_string(), "Subscription Setup: Explaining how recurring billing works (failed payments, cancellations) without confusing jargon is critical.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {
@@ -249,7 +244,6 @@ pub fn get_persona_journeys() -> Vec<PersonaJourney> {
         name: "Fatima".to_string(),
         business_type: "Food Cart".to_string(),
         initial_state: "Pre-Orders".to_string(),
-        friction_points: vec!["App Performance & Connectivity: Her low-end Android on a 3G network might struggle with heavy app payloads. The app must work offline/optimistically and be ultra-lightweight.".to_string(), "Notification Reliability: If the app gets killed in the background by Android battery management and she misses a pre-order notification, the service is useless to her.".to_string(), "Language Barrier: The UI must rely heavily on universally understood icons rather than text.".to_string()],
         steps: {
             let mut steps = vec![
                 JourneyStep {

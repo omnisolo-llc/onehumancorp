@@ -15,8 +15,6 @@ static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 
 
 pub fn get_deployment_mode() -> &'static str {
@@ -433,40 +431,5 @@ pub fn record_bubblewrap_violation(agent_id: &str, task_id: &str, reason: &str) 
         opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
         opentelemetry::KeyValue::new("task_id", task_id.to_string()),
         opentelemetry::KeyValue::new("reason", reason.to_string()),
-    ]);
-}
-
-pub fn get_harness_init_latency() -> &'static Histogram<f64> {
-    HARNESS_INIT_LATENCY.get_or_init(|| {
-        let meter = global::meter("ohc.harness");
-        meter.f64_histogram("harness_init_latency_seconds")
-            .with_description("Latency for Harness initialization")
-            .build()
-    })
-}
-
-pub fn get_harness_db_io_latency() -> &'static Histogram<f64> {
-    HARNESS_DB_IO_LATENCY.get_or_init(|| {
-        let meter = global::meter("ohc.harness");
-        meter.f64_histogram("harness_db_io_latency_seconds")
-            .with_description("Database I/O latency for Harness operations")
-            .build()
-    })
-}
-
-pub fn record_harness_init_latency(latency_seconds: f64) {
-    let histogram = get_harness_init_latency();
-    let deployment_mode = get_deployment_mode();
-    histogram.record(latency_seconds, &[
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-    ]);
-}
-
-pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
-    let histogram = get_harness_db_io_latency();
-    let deployment_mode = get_deployment_mode();
-    histogram.record(latency_seconds, &[
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-        opentelemetry::KeyValue::new("operation", operation.to_string()),
     ]);
 }

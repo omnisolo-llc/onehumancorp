@@ -2,7 +2,6 @@ filegroup(
     name = "srcs",
     srcs = [
         "approvals.rs",
-        "webhook.rs",
         "hire.rs",
         "mission/mod.rs",
         "mission/handoff.rs",

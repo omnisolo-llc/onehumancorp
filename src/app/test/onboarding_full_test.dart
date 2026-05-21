@@ -11,19 +11,21 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify we are on the input screen
-    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
+    expect(find.text('Your Details'), findsOneWidget);
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for the bio field
-    expect(find.text('Required'), findsOneWidget);
+    // Expect the validator message 'Required' for both fields
+    expect(find.text('Required'), findsNWidgets(2));
 
-    // Fill out the bio form
-    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    // Fill out the form
+    await tester.enterText(find.byType(TextFormField), "Maya's Custom Cakes");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    // Test that the form can be submitted when both fields are filled out properly.
+    // Note: Since we need to interact with a DropdownButtonFormField and simulate an HTTP request
+    // this test primarily asserts the UI validation and state transitions up to form submission.
   });
 }

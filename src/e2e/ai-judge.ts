@@ -13,10 +13,7 @@ type JudgeResult = {
 
 export async function judgeGeneratedOutput(testInfo: TestInfo, input: JudgeInput): Promise<JudgeResult> {
   const apiKey = process.env.MINIMAX_API_KEY;
-  if (!apiKey) {
-    console.log('MINIMAX_API_KEY missing, skipping real generation and returning mock 10 score.');
-    return { score: 10, reason: 'Mock score because MINIMAX_API_KEY was missing.' };
-  }
+  expect(apiKey, 'MINIMAX_API_KEY is required for real generated-output judging').toBeTruthy();
 
   const response = await fetch('https://api.minimax.chat/v1/chat/completions', {
     method: 'POST',

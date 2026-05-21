@@ -11,8 +11,6 @@ pub trait LlmClientForParser: Send + Sync {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
-
-
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."

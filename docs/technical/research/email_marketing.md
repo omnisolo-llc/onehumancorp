@@ -1,24 +1,26 @@
-# [Email Marketing] Automated Campaign Campaigns
+# [Email Marketing] Integrate Resend for Customer Campaigns
 
 ## Problem Statement
-Boutique owners like Priya want to notify their existing customers when new stock arrives or a sale starts. Using a separate tool like Mailchimp is complicated, expensive, and requires manually exporting/importing customer lists. They need a built-in way to send beautiful emails to their OHC customer list.
+Boutique owners like Priya need to notify customers when new stock arrives. Managing a separate tool like Mailchimp is complex and requires importing/exporting CSVs of customer emails. They need an automated, beautiful way to send emails directly from their customer list in OHC.
 
 ## Research Report
-- **Target Tools**: Amazon SES or SendGrid (under the hood for OHC).
-- **Competitive Analysis**: Shopify Email provides basic functionality. Dedicated tools (Mailchimp, Klaviyo) are too complex for our personas.
-- **Ease of Use**: OHC abstracts the complexity. The "Promoter" AI helps draft the email based on a prompt ("Tell my customers about the summer sale").
-- **Pricing**: SES is extremely cost-effective ($0.10 per 1000 emails). We can offer a generous free tier for OHC users.
-- **Reputation**: High deliverability when properly configured.
-- **Advantages and Risks**: High ROI and keeps users inside the platform. Main risk is users sending spam and ruining the OHC shared domain reputation.
-- **Cloud vs Standalone**: Cloud implementation is straightforward (shared SES). Standalone would require users to provide their own SMTP credentials, which is too technical.
+**Evaluated Tool:** Resend
+**Alternatives Considered:** SendGrid, Mailgun
+**Pros:** Developer-friendly, extremely fast, excellent deliverability out-of-the-box. Built with modern React Email components in mind, making it easy to generate beautiful, mobile-responsive templates programmatically.
+**Cons:** Newer player, fewer legacy features compared to SendGrid.
+**Ease of Use for Non-technical Users:** The user simply clicks "Send Campaign" or "Generate Email". The AI and Resend handle the formatting, delivery, and open-rate tracking automatically.
+**Pricing:** Generous free tier, then volume-based. Very affordable for SMBs.
+**Deployment:** Cloud-native. Perfect for multi-tenant.
 
 ## Design Doc
-- **Integration Flow**: In the "Marketing & Advertising" department, users can select "Send an Email Announcement."
-- **Actions**: The system uses the existing customer list. The AI can draft the subject and body. The system handles unsubscribe links and bounce tracking automatically.
-- **User Experience**: A simple interface to draft a message (or have AI draft it), pick an audience (e.g., "All past customers"), and click send. No managing of API keys or domain verification for the user; OHC handles sending from a verified shared domain or the user's connected domain.
+**Integration with OHC:**
+- **Trigger:** "The Promoter" agent schedules an email campaign, or the user clicks "Send Newsletter".
+- **Action:** OHC generates the email HTML (using React Email or similar) and sends it via the Resend API to the filtered customer list.
+- **AI Agent Interaction:** "The Promoter" drafts subject lines and email body text based on new inventory or seasonal events.
+- **User View:** A "Marketing Campaigns" tab showing draft emails, sent emails, open rates, and click rates.
 
 ## Implementation Prompt
-Build a native email marketing feature that allows users to send broadcast emails to their customer list directly from the OHC app. The feature should integrate with the existing customer database, allow for AI-assisted drafting of email content, and automatically handle unsubscribe requests and deliverability tracking. Ensure the user interface is completely free of technical email jargon.
+Integrate the Resend API to enable bulk and transactional email sending. Create a UI flow for users to select a customer segment and generate an email campaign. Ensure "The Promoter" AI can draft templates and that open/click events are tracked via Resend webhooks.
 
 ## Priority
 P1

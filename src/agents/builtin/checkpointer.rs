@@ -55,7 +55,6 @@ impl PgCheckpointer {
 }
 
 pub struct GitCheckpointer {
-    // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
 }
 
@@ -65,33 +64,20 @@ impl GitCheckpointer {
     }
 
     pub fn new(repo_path: PathBuf) -> Self {
-        // Run git init, check error
-        let init_out = Command::new("git")
+        let _ = Command::new("git")
             .arg("init")
             .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git init");
-        if !init_out.status.success() {
-            tracing::warn!("git init failed: {}", String::from_utf8_lossy(&init_out.stderr));
-        }
+            .output();
 
-        let name_out = Command::new("git")
+        let _ = Command::new("git")
             .args(&["config", "user.name", "Agent"])
             .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git config user.name");
-        if !name_out.status.success() {
-            tracing::warn!("git config user.name failed: {}", String::from_utf8_lossy(&name_out.stderr));
-        }
+            .output();
 
-        let email_out = Command::new("git")
+        let _ = Command::new("git")
             .args(&["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
-            .output()
-            .expect("Failed to execute git config user.email");
-        if !email_out.status.success() {
-            tracing::warn!("git config user.email failed: {}", String::from_utf8_lossy(&email_out.stderr));
-        }
+            .output();
 
         GitCheckpointer { repo_path }
     }
@@ -136,16 +122,11 @@ impl CheckpointSaver for GitCheckpointer {
         tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
 
         // 1. Stage ALL modified files in the workspace to allow true time-travel debugging
-        let add_out = Command::new("git")
+        let _ = Command::new("git")
             .arg("add")
             .arg("-A")
             .current_dir(&self.repo_path)
-            .output()
-            .map_err(|e| format!("Failed to execute git add: {}", e))?;
-
-        if !add_out.status.success() {
-            return Err(format!("git add failed: {}", String::from_utf8_lossy(&add_out.stderr)));
-        }
+            .output();
 
         // 2. Commit the changes
         let commit_msg = format!("Checkpoint: {}", checkpoint.checkpoint_id);
@@ -156,7 +137,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg(&commit_msg)
             .current_dir(&self.repo_path)
             .output()
-            .map_err(|e| format!("Failed to execute git commit: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
         if !output.status.success() {
             return Err(format!("Failed to commit: {}", String::from_utf8_lossy(&output.stderr)));
@@ -168,7 +149,7 @@ impl CheckpointSaver for GitCheckpointer {
             .arg(&checkpoint.checkpoint_id)
             .current_dir(&self.repo_path)
             .output()
-            .map_err(|e| format!("Failed to execute git tag: {}", e))?;
+            .map_err(|e| e.to_string())?;
 
         if !tag_output.status.success() {
             return Err(format!("Failed to tag: {}", String::from_utf8_lossy(&tag_output.stderr)));

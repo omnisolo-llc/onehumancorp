@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -36,37 +36,8 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
+          repository-cache: true
+          external-cache: true
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
@@ -86,7 +57,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

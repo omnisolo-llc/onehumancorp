@@ -29,7 +29,6 @@ pub async fn health_handler(
         "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),
         "hybrid_mode_ready": health.get("hybrid_mode_ready").unwrap_or(&serde_json::json!(false)),
         "stuck_missions": stuck_missions,
-        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false)),
-        "checklist": health.get("checklist").unwrap_or(&serde_json::json!(Vec::<String>::new()))
+        "mesh_active": health.get("mesh_active").unwrap_or(&serde_json::json!(false))
     }))
 }

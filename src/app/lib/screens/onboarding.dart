@@ -12,7 +12,8 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String bio = '';
+  String businessName = '';
+  String? businessType;
   OnboardingState _state = OnboardingState.welcome;
 
   Future<void> submit() async {
@@ -25,9 +26,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Uri.parse('http://localhost:8080/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'bio': bio,
-            'company_name': 'AI Generated Store',
-            'business_type': 'Auto',
+            'company_name': businessName,
+            'business_type': businessType,
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
@@ -67,23 +67,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7), // Light background
       body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 500),
-          child: Container(
-            height: MediaQuery.of(context).size.height, // Takes up screen height gracefully
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  ),
-                  child: _buildContent(),
+        child: Container(
+          width: 375, // Mobile viewport constraint
+          height: 812, // Standard mobile height
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
                 ),
+                child: _buildContent(),
               ),
             ),
           ),
@@ -177,7 +174,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome to OHC Smart Builder',
+              'Your Details',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -189,7 +186,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Tell us about your business, and AI will build it.',
+              'Just a few details to get started.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -199,11 +196,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
-              maxLines: 4,
               decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                labelText: 'Business Name',
+                hintText: 'e.g., Maya\'s Custom Cakes',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -214,7 +209,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
+              onSaved: (value) => businessName = value!,
+            ),
+            SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              decoration: InputDecoration(
+                labelText: 'Business Type',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              items: ['Physical', 'Digital', 'Service', 'Food']
+                  .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(type),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                setState(() {
+                  businessType = value;
+                });
+              },
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => businessType = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
@@ -293,7 +314,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Welcome, your store is ready',
+                'Welcome, $businessName',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
@@ -481,80 +502,78 @@ class StoreLiveScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7),
       body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 500),
-          child: Container(
-            height: MediaQuery.of(context).size.height,
-            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Color(0xFF34C759).withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+        child: Container(
+          width: 375,
+          height: 812,
+          padding: EdgeInsets.all(24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF34C759).withOpacity(0.1),
+                        shape: BoxShape.circle,
                       ),
-                      SizedBox(height: 32),
-                      Text(
-                        'You\'re Live!',
-                        style: TextStyle(
-                          fontFamily: 'Outfit',
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1D1D1F),
-                        ),
-                        textAlign: TextAlign.center,
+                      child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+                    ),
+                    SizedBox(height: 32),
+                    Text(
+                      'You\'re Live!',
+                      style: TextStyle(
+                        fontFamily: 'Outfit',
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1D1D1F),
                       ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Your automated storefront is successfully published.',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                        textAlign: TextAlign.center,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Your automated storefront is successfully published.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        color: Colors.grey[600],
                       ),
-                      SizedBox(height: 48),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[100],
-                            foregroundColor: Color(0xFF1D1D1F),
-                            padding: EdgeInsets.symmetric(vertical: 18),
-                            minimumSize: Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 0,
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 48),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: ElevatedButton(
+                        onPressed: () {},
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.grey[100],
+                          foregroundColor: Color(0xFF1D1D1F),
+                          padding: EdgeInsets.symmetric(vertical: 18),
+                          minimumSize: Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(
-                            'Go to Dashboard',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Go to Dashboard',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
