@@ -17,9 +17,12 @@ export default function Dashboard() {
         const data = await res.json();
         if (data && data.pending_approvals) {
           setApprovals(data.pending_approvals);
+        } else {
+          setApprovals([]);
         }
       } catch (e) {
         console.error("Failed to fetch approvals", e);
+        setApprovals([]);
       }
     }
     fetchApprovals();
@@ -151,7 +154,7 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                                            {approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'Operations' ? '⚙️' : '🤖'}
+                                            {approval.department === 'customer_success' ? '🤝' : approval.department === 'operations' ? '⚙️' : '🤖'}
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900">

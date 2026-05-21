@@ -21,7 +21,7 @@ test('draft-to-approval flow for AI Agent Departments', async ({ page, request }
   const pendingApproval = getPendingJson.pending_approvals?.find((a: any) => a.id === 'e2e-approval-1');
   expect(pendingApproval).toBeDefined();
   expect(pendingApproval.status).toBe('Pending');
-  expect(pendingApproval.department).toBe('CustomerSuccess');
+  expect(pendingApproval.department).toBe('customer_success');
 
   // 2. Approve the request via the approval endpoint
   const approveRes = await request.post('/api/agents/approvals/e2e-approval-1', {
