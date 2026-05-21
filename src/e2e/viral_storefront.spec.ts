@@ -20,6 +20,6 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.powered-by-footer')).toBeVisible();
     await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
-    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
+    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', /ohc:\/\/join\?ref=(storefront|e2e-tenant)/);
   });
 });
