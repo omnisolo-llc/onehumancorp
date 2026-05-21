@@ -15,7 +15,7 @@ const USERS = [
 async function waitForApp(baseURL: string) {
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {
-      const response = await fetch(new URL('/readyz', baseURL));
+      const response = await fetch(new URL('/dashboard', baseURL));
       if (response.ok) return;
     } catch {
       // App is still booting.

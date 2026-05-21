@@ -13,8 +13,8 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
-    await expect(page.getByText('Unified Customer Inbox. Manage all your messages and posts from one place.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Respond.io' })).toBeVisible();
+    await expect(page.getByText('Unified inbox combining all major social channels.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
@@ -32,7 +32,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Mailchimp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'MailerLite' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(2)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(6)).toBeVisible();
