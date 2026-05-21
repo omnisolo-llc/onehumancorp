@@ -456,7 +456,7 @@ impl DepartmentOrchestrator {
 
 
     pub async fn query_long_term_memory(&self, tenant_id: &str, query_embedding: &[f32], limit: i64) -> Result<Vec<String>, String> {
-        let records = self.memory_repo.semantic_search(tenant_id, query_embedding, limit).await?;
+        let records = self.memory_repo.cross_department_search(tenant_id, query_embedding, limit).await?;
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
