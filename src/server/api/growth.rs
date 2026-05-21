@@ -181,7 +181,10 @@ async fn handle_referral_click(
         .execute(&state.pool)
         .await
     {
-        Ok(_) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
             state.hub.referral_tracker().record_click(&req.id);
             Ok(Json(()))
         }
@@ -198,7 +201,10 @@ async fn handle_referral_convert(
         .execute(&state.pool)
         .await
     {
-        Ok(_) => {
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                return Err(StatusCode::NOT_FOUND);
+            }
             state.hub.referral_tracker().record_conversion(&req.id);
             Ok(Json(()))
         }
@@ -215,6 +221,7 @@ async fn handle_team_invite_accept(
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => Ok(Json(())),
+        Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -314,6 +321,12 @@ mod tests {
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
+        // Insert dummy referral
+        let ref_id = "ref-code-123";
+        sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, 'org1', 'user1', 'code1', 0, 0, 0) ON CONFLICT DO NOTHING")
+            .bind(ref_id)
+            .execute(&pool).await.unwrap();
+
         let click_req = ReferralIdRequest {
             id: "ref-code-123".to_string(),
         };
@@ -325,6 +338,21 @@ mod tests {
         };
         let res = handle_referral_convert(Extension(state.clone()), Json(convert_req)).await;
         assert!(res.is_ok());
+
+        // Test missing referral
+        let click_req_not_found = ReferralIdRequest {
+            id: "ref-code-123-not-found".to_string(),
+        };
+        let res_not_found = handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
+        assert!(res_not_found.is_err());
+        assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
+
+        let convert_req_not_found = ReferralIdRequest {
+            id: "ref-code-123-not-found".to_string(),
+        };
+        let res2_not_found = handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
+        assert!(res2_not_found.is_err());
+        assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
     }
 
     #[tokio::test]
@@ -394,5 +422,11 @@ mod tests {
             .bind(invite_id)
             .fetch_one(&pool).await.unwrap();
         assert_eq!(status, "ACCEPTED");
+
+        // Test missing invite
+        let missing_req = InviteIdRequest { id: "missing-invite-404".to_string() };
+        let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
+        assert!(res_missing.is_err());
+        assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
     }
 }
