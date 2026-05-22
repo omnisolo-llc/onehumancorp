@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
   testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen()));
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/start') {
+        return http.Response('{"status": "ok"}', 200);
+      } else if (request.url.path == '/api/onboarding/launch') {
+        return http.Response('{"status": "ok"}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
 
     // Tap 'Start a Business' on the welcome screen
     await tester.tap(find.text('Start a Business'));
@@ -24,6 +35,29 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Test that the form can be submitted. We just assert UI state here up to form submission.
+    // Tap to build my storefront
+    await tester.tap(find.text('Build My Storefront'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Dashboard state
+    expect(find.text('Storefront Generated!'), findsOneWidget);
+
+    // Go to draft preview
+    await tester.tap(find.text('Preview Site'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Draft state
+    expect(find.text('Preview Mode'), findsOneWidget);
+    expect(find.text('1-Tap Launch'), findsOneWidget);
+
+    // Verify touch target for edit
+    expect(find.byIcon(Icons.edit), findsOneWidget);
+
+    // Launch store
+    await tester.tap(find.text('1-Tap Launch'));
+    await tester.pumpAndSettle();
+
+    // Expect to be on Live state
+    expect(find.text("You're Live!"), findsOneWidget);
   });
 }
