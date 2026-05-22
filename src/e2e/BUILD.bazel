@@ -7,9 +7,9 @@ sh_binary(
     name = "run_playwright_e2e",
     srcs = ["//bazel/rules/playwright:run_playwright.sh"],
     data = [
-        "//scripts:run-playwright.mjs",
         "//deploy:docker-compose.e2e.yml",
-        "//src/server:server",
+        "//scripts:run-playwright.mjs",
+        "//src/server",
     ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
@@ -19,6 +19,8 @@ sh_binary(
 )
 
 # Per-spec Playwright test targets.
+# These intentionally do not depend on //src/server:server; the manual
+# run_playwright_e2e target owns building and starting the local server.
 # Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(glob(["*.spec.ts"]))
