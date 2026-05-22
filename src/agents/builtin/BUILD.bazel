@@ -53,6 +53,7 @@ rust_library(
         "langgraph.rs",
         "autogen.rs",
         "lib.rs",
+        "local_provider.rs",
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
@@ -193,9 +194,11 @@ rust_binary(
         "guardrails",
         "harness",
         "memory_store",
+        "consolidation_worker",
         "output_parser",
         "pubsub",
         "registry",
+        "local_provider",
     ]
 ]
 
