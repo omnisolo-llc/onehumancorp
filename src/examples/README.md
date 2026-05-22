@@ -1,4 +1,4 @@
-<div align="center" style="font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 16px; margin-bottom: 24px;">
+<div align="center" style="font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 16px; margin-bottom: 24px;">
   <h1 style="margin-bottom: 12px; font-weight: 700;">One Human Corp Examples</h1>
   <p style="font-size: 1.1em; color: #888; font-weight: 400;"><strong>Pre-configured, high-quality agent examples for the One Human Corp platform.</strong></p>
 </div>
@@ -25,11 +25,11 @@ Run the compiled Go agent directly using our intuitive Bazel aliases:
 The `examples` directory serves as a template and testing ground for new agent behaviors.
 
 <div style="display: flex; gap: 16px; margin: 16px 0;">
-  <div style="flex: 1; background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+  <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.65);">
     <strong>Build all examples:</strong>
     <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazelisk build //examples/...</code></pre>
   </div>
-  <div style="flex: 1; background: rgba(255, 255, 255, 0.03); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+  <div style="flex: 1; background: rgba(255, 255, 255, 0.65); padding: 16px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.65);">
     <strong>Test all examples:</strong>
     <pre style="margin-top: 8px; margin-bottom: 0;"><code>bazelisk test //examples/...</code></pre>
   </div>

@@ -20,13 +20,13 @@ metadata:
 data:
   custom.css: |
     .grafana-app {
-        backdrop-filter: blur(20px) saturate(200%) !important;
-        background: rgba(255, 255, 255, 0.03) !important;
+        backdrop-filter: blur(30px) saturate(210%) !important;
+        background: rgba(22, 22, 26, 0.7) !important;
         font-family: 'Outfit', 'Inter', sans-serif !important;
     }
     .panel-container {
-        backdrop-filter: blur(20px) saturate(200%);
-        background: rgba(255, 255, 255, 0.03) !important;
+        backdrop-filter: blur(30px) saturate(210%);
+        background: rgba(22, 22, 26, 0.7) !important;
         font-family: 'Outfit', 'Inter', sans-serif !important;
         border-radius: 12px !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;

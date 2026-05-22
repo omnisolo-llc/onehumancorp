@@ -88,7 +88,7 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING' OR status = 'STUCK') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)

@@ -2146,7 +2146,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                             box-shadow: var(--shadow-md);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
@@ -2210,7 +2210,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         .ohc-growth-card {
                             backdrop-filter: blur(30px) saturate(210%);
-                            background: rgba(255, 255, 255, 0.05);
+                            background: rgba(255, 255, 255, 0.65);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             font-family: 'Outfit', 'Inter', sans-serif;
                             color: #ffffff;
@@ -2224,7 +2224,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
-                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                             box-shadow: var(--shadow-sm);
                         }
                         body.dark-theme .card {
@@ -2316,7 +2316,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: rgba(255, 255, 255, 0.65);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                             border-radius: 16px;
                             box-shadow: 0 16px 42px rgba(16, 24, 40, 0.09);
                         }
@@ -2541,7 +2541,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             background: rgba(255, 255, 255, 0.65);
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             max-width: 600px;
             margin: 40px auto;
@@ -3368,7 +3368,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
@@ -3455,7 +3455,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 24px; margin: 16px;">
                             <h1>Welcome Checklist</h1>
                             <h1>You're set up! Here's what to do next:</h1>
                             <p>✅ Business live</p>

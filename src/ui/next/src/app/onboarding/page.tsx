@@ -121,7 +121,7 @@ export default function OnboardingWizard() {
             color: #A1A1A6;
           }
           .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(22, 22, 26, 0.7);
             color: #F5F5F7;
             border-color: rgba(255, 255, 255, 0.2);
           }
