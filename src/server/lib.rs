@@ -4252,9 +4252,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
+                                const nameInput = document.querySelectorAll('#step-7 input[type="text"]')[0];
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
-                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                const passwordInput = document.querySelector('#step-7 input[type="password"]');
+
+                                if (!nameInput || nameInput.value.trim().length === 0) {
+                                    alert('Please enter your name');
+                                    return false;
+                                }
+
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailInput || emailInput.value.trim().length === 0 || !emailRegex.test(emailInput.value.trim())) {
                                     alert('Please enter a valid email address');
+                                    return false;
+                                }
+
+                                if (!passwordInput || passwordInput.value.trim().length < 8) {
+                                    alert('Password must be at least 8 characters long');
                                     return false;
                                 }
                             }
@@ -4614,6 +4628,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            // State restoration for setup wizard
+                            if (screenId === 'setup-screen' || path === '/website-builder') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: { 'X-Tenant-ID': tenantId }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                            if (stateData.step > 1 && stateData.step <= 10) {
+                                                currentStep = parseInt(stateData.step);
+                                                // Initialize wizard at the saved step
+                                                document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                                    if (d.id.startsWith('step-')) {
+                                                        d.classList.add('hidden');
+                                                        d.style.display = 'none';
+                                                    }
+                                                });
+                                                const target = document.getElementById('step-' + currentStep);
+                                                if (target) {
+                                                    target.style.display = 'block';
+                                                    target.classList.remove('hidden');
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to restore wizard state:', e);
+                                }
+                            }
+
                             showScreen(screenId);
 
 
