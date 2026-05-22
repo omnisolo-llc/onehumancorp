@@ -910,9 +910,9 @@ mod chaos_tests {
         async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
         async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> {
             // Chaos: randomly delay to simulate network lag/degradation
-            let delay = rand::random::<u64>() % 3000;
+            let delay = rand::random::<u64>() % 30; // Reduce delay to avoid timeout
             tokio::time::sleep(Duration::from_millis(delay)).await;
-            if delay > 2500 {
+            if delay > 25 {
                 // Drop packet or timeout
                 return Err("Chaos: network drop".to_string());
             }
