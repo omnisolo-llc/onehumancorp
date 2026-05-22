@@ -309,3 +309,31 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+
+
+
+rust_test(
+    name = "config_sync_unit_test",
+    size = "large",
+    crate = ":server_lib",
+    args = ["--test", "tools::config_sync"],
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:tokio",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tempfile",
+        "@crates//:temp-env",
+    ],
+)
