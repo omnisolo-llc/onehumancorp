@@ -6,18 +6,16 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "social", name: "Social Media Auto-Poster", category: "marketing", status: "connected", icon: "📱", description: "Automatically post product updates to Facebook, Instagram, and Twitter." },
-    { id: "shipping", name: "ShipStation Sync", category: "operations", status: "disconnected", icon: "📦", description: "Sync orders with ShipStation for automated label printing." },
-    { id: "mailchimp", name: "Mailchimp Automations", category: "marketing", status: "disconnected", icon: "📧", description: "Trigger email campaigns based on customer purchase behavior." },
+    { id: "social", name: "Manychat", category: "marketing", status: "connected", icon: "💬", description: "Unified Customer Inbox. Manage all your messages and posts from one place." },
+    { id: "shipping", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Labels & Tracking. Save time on fulfilling orders." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📧", description: "Automated Newsletters. Keep your customers engaged easily." },
     { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
     { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
     { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
-    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated scheduling and calendar sync for service businesses." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated shipping rates and label printing for orders." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automatically generate Zoom meeting links for booked online services." }
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking. Let customers schedule appointments 24/7." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept Payments. Simple checkout for global customers." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Automated Text Alerts. Send critical updates directly to phones." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Instant Video Rooms. Host online meetings effortlessly." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -32,7 +30,7 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Tools</h1>
             <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
