@@ -41,14 +41,14 @@ On Linux, the harness exclusively executes agent commands within `bwrap` (Bubble
 ### Proposed Architecture: The Unified Hybrid Harness (UHH)
 We will introduce the **Unified Hybrid Harness** in `src/server/harness/`. It acts as the execution layer between the KAIROS Orchestrator and the host OS.
 
-1.  **AST Policy Engine (`src/server/harness/parser.go`)**:
-    *   A pre-flight validation phase. All bash commands will be parsed into an AST using an AST library (e.g., `mvdan.cc/sh/v3/syntax`).
+1.  **AST Policy Engine (`src/server/harness/parser.rs`)**:
+    *   A pre-flight validation phase. All bash commands will be parsed into an AST using an AST library (e.g., `tree-sitter-bash/syntax`).
     *   Validators will explicitly check for blocked subshell executions, redirects, and unauthorized alias usage.
-2.  **OS Sandbox Runner (`src/server/harness/bwrap.go`)**:
+2.  **OS Sandbox Runner (`src/server/harness/bwrap.rs`)**:
     *   A Go adapter that wraps standard commands in `bwrap`.
     *   Enforces `--ro-bind / /` and restricts write access via `--bind` strictly to the agent's task workspace.
     *   Unshares network and PID namespaces by default.
-3.  **Network Proxy Daemon (`src/server/harness/proxy.go`)**:
+3.  **Network Proxy Daemon (`src/server/harness/proxy.rs`)**:
     *   Spawns a local HTTP/SOCKS proxy.
     *   Dynamically sets `HTTP_PROXY` inside the `bwrap` environment, proxying all egress traffic against a `TaskEgressPolicy` struct.
 4.  **Telemetry Hook**:
@@ -80,14 +80,14 @@ graph TD
 **Role:** Implementer Agent
 **Task:** Build the core execution engine of the Unified Hybrid Harness.
 
-1.  **Create the AST Parser:** In `src/server/harness/parser.go`, implement a `ValidateCommand(cmd string) error` function using `mvdan.cc/sh/v3/syntax` to parse the command. If the AST contains redirection nodes (`>`) or subshell execution (`$()`), return an error.
-2.  **Create the Bwrap Runner:** In `src/server/harness/bwrap.go`, implement `RunInSandbox(ctx context.Context, cmd string, workspace string, allowNet bool) error`.
+1.  **Create the AST Parser:** In `src/server/harness/parser.rs`, implement a `ValidateCommand(cmd string) error` function using `tree-sitter-bash/syntax` to parse the command. If the AST contains redirection nodes (`>`) or subshell execution (`$()`), return an error.
+2.  **Create the Bwrap Runner:** In `src/server/harness/bwrap.rs`, implement `RunInSandbox(ctx async context, cmd string, workspace string, allowNet bool) error`.
     *   Construct a command slice starting with `bwrap`.
     *   Add flags: `--unshare-all`, `--ro-bind / /`, `--bind <workspace> <workspace>`.
     *   If `allowNet` is true, add `--share-net`.
     *   Execute the target `cmd` inside this wrapper.
 3.  **Metrics Integration:** Add an OpenTelemetry counter `ohc_harness_security_violation_total`. Increment it inside `ValidateCommand` if validation fails. Ensure `telemetry.RedactInterfacePII` is applied to any logged payload.
-4.  **Testing:** Provide 100% test coverage in `parser_test.go` and `bwrap_test.go`. Include tests that verify malicious bash strings (e.g., `echo test > /etc/passwd`) are rejected by the AST parser.
+4.  **Testing:** Provide 100% test coverage in `parser_test.rs` and `bwrap_test.rs`. Include tests that verify malicious bash strings (e.g., `echo test > /etc/passwd`) are rejected by the AST parser.
 
 ## Priority
 P0

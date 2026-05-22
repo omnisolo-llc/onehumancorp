@@ -4,8 +4,8 @@
 The OHC telemetry system currently exposes the `ohc_agent_api_errors_total` metric to track the total API errors made by or for agents. However, there is no corresponding high-fidelity Grafana dashboard to visualize this critical observability data. This lack of visualization violates the Full-Spectrum Observability core value that requires every feature exposing metrics to have a corresponding internal user-facing dashboard.
 
 ## Research Report
-- Code review reveals that the `ohc_agent_api_errors_total` metric is exported by `src/server/telemetry/telemetry.go`.
-- The `RecordAgentApiError(ctx context.Context, agentID, role, api string)` function tags this metric with `agent_id`, `role`, and `api`.
+- Code review reveals that the `ohc_agent_api_errors_total` metric is exported by `src/server/telemetry/telemetry/mod.rs`.
+- The `RecordAgentApiError(ctx async context, agentID, role, api string)` function tags this metric with `agent_id`, `role`, and `api`.
 - We need to group these errors by these tags to understand which agents and APIs are failing.
 - The `monitoring/dashboards` folder currently contains other dashboards like `kairos_dashboard.json`, but none for agent API errors.
 - A premium UI representation is required to meet the Visual Excellence Mandate.

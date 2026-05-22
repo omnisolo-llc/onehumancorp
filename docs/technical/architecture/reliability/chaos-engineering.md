@@ -7,7 +7,7 @@ The OHC Hybrid Agentic OS guarantees stability through relentless failure simula
 
 ## Chaos Injection Framework
 
-The Chaos Injector (`lib/resilience/chaos/chaos.go`) is responsible for surfacing latent vulnerabilities within the Agent Harness by orchestrating controlled failure modes. Failure injection is orchestrated via a dedicated sub-swarm. This swarm safely injects faults across nodes, tests our graceful degradation in Standalone Mode, and verifies the "Zero Secrets" SPIFFE/SPIRE identity architecture under stress.
+The Chaos Injector (`lib/resilience/chaos/chaos.rs`) is responsible for surfacing latent vulnerabilities within the Agent Harness by orchestrating controlled failure modes. Failure injection is orchestrated via a dedicated sub-swarm. This swarm safely injects faults across nodes, tests our graceful degradation in Standalone Mode, and verifies the "Zero Secrets" SPIFFE/SPIRE identity architecture under stress.
 
 ### Specific Failure Modes
 

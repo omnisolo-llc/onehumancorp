@@ -63,8 +63,8 @@ Based on this research, we need to introduce the following missions for the OHC 
     *   Feed the serialized context directly into the child agent's initialization state.
     *   Implement a `<task-notification>` XML/JSON response pattern for the child to report progress back to the parent asynchronously.
 *   **Implementation Prompt**:
-    1. Open `src/server/api/agent_pool.go`.
-    2. Add a `ForkAgent(ctx context.Context, parentID string, directive string) (string, error)` function.
+    1. Open `src/server/api/agent_pool.rs`.
+    2. Add a `ForkAgent(ctx async context, parentID string, directive string) (string, error)` function.
     3. Inside `ForkAgent`, retrieve the parent's state from the database.
     4. Clone the state and initialize a new child agent record.
     5. Return the child's `agentID`.
@@ -79,7 +79,7 @@ Based on this research, we need to introduce the following missions for the OHC 
     *   On project initialization, automatically create `.ohc/memory/auto/` and `.ohc/memory/team/`.
     *   Inject a system prompt directive: "The directories `.ohc/memory/...` already exist. Write state to them directly."
 *   **Implementation Prompt**:
-    1. Modify `src/app/standalone_linux_launcher.sh` or the local startup logic to ensure `.ohc/memory/` directories are created.
+    1. Modify the Tauri/local backend startup logic to ensure `.ohc/memory/` directories are created.
     2. Update the agent's base system prompt generator to include the memory directory instructions.
     3. Add tests verifying that the directories are created successfully on startup and that the system prompt contains the correct paths.
 *   **Priority**: P2
