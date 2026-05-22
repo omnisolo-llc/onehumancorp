@@ -1,7 +1,33 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('useOnboardingStore', () => {
+  beforeEach(() => {
+    // Clear localStorage mock
+    const localStorageMock = (() => {
+      let store: Record<string, string> = {};
+      return {
+        getItem: (key: string) => store[key] || null,
+        setItem: (key: string, value: string) => {
+          store[key] = value.toString();
+        },
+        removeItem: (key: string) => {
+          delete store[key];
+        },
+        clear: () => {
+          store = {};
+        },
+      };
+    })();
+
+    if (typeof window !== 'undefined') {
+      Object.defineProperty(window, 'localStorage', {
+        value: localStorageMock,
+      });
+      window.localStorage.clear();
+    }
+  });
+
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
