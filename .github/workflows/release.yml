@@ -107,8 +107,8 @@ jobs:
                 - Cargo.toml
           cache-save: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -228,8 +228,8 @@ jobs:
                 - Cargo.toml
           cache-save: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -404,8 +404,8 @@ jobs:
                 - Cargo.toml
           cache-save: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -502,8 +502,8 @@ jobs:
                 - Cargo.toml
           cache-save: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
@@ -649,8 +649,8 @@ jobs:
                 - Cargo.toml
           cache-save: true
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            # build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps

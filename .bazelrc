@@ -103,23 +103,23 @@ build --action_env=APPLE_TEAM_ID
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
 # Note: uses --spawn_strategy=remote (all eligible actions remote-first) unlike
 # buildbuddy-official which relies on the global sandboxed,local fallback chain.
-common:buildbuddy --bes_timeout=600s
-common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
-common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --bes_timeout=600s
+# common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
+# common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_local_fallback
-common:buildbuddy --remote_upload_local_results
-common:buildbuddy --remote_cache_compression
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_local_fallback
+# common:buildbuddy --remote_upload_local_results
+# common:buildbuddy --remote_cache_compression
 # Fall back to direct download when BuildBuddy CAS doesn't have the blob.
-common:buildbuddy --experimental_remote_downloader_local_fallback
-common:buildbuddy --jobs=50
+# common:buildbuddy --experimental_remote_downloader_local_fallback
+# common:buildbuddy --jobs=50
 # Read only Bazel cache
-common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
-common:buildbuddy --remote_timeout=10m
-build:buildbuddy --verbose_failures
-build:buildbuddy --bes_upload_mode=fully_async
+# common:buildbuddy --remote_header=x-buildbuddy-api-key=GZRlHAyqIIcVJw9dJ9n9
+# common:buildbuddy --remote_timeout=10m
+# build:buildbuddy --verbose_failures
+# build:buildbuddy --bes_upload_mode=fully_async
 
 # ── Local: disable remote cache/execution ─────────────────────────────────────
 build:local --remote_cache=
