@@ -316,6 +316,20 @@ export default function Dashboard() {
              </section>
          )}
 
+         {/* Top Action Banner (Stripe Setup) */}
+         <section className="mb-6">
+             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+                 <div className="flex items-center gap-4">
+                     <div>
+                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
+                     </div>
+                 </div>
+                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
+                     Complete Stripe Setup
+                 </button>
+             </div>
+         </section>
+
          {approvals.length === 0 && (
 <>
 {/* Business Snapshot */}
