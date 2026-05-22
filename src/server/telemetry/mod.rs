@@ -253,7 +253,7 @@ pub async fn buffer_metric(
         .bind(metric_type)
         .bind(value)
         .bind(&labels_json)
-        .bind(Utc::now().to_rfc3339()) // sqlite does not support TIMESTAMPTZ directly
+        .bind(Utc::now())
         .execute(sqlite_pool)
         .await?;
     } else {
