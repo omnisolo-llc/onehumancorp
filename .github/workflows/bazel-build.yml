@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -33,53 +33,22 @@ jobs:
       matrix:
         include:
           - name: linux-x86_64
-            runner: ubuntu-24.04
+            runner: ubuntu-latest
             bazel_config: linux_x86_64
-            install_linux_deps: true
           - name: windows-x86_64
-            runner: ubuntu-24.04
+            runner: ubuntu-latest
             bazel_config: windows_x86_64
-            install_linux_deps: true
-          - name: windows-arm64
-            runner: windows-11-arm
-            bazel_config: windows_arm64
-            install_linux_deps: false
+         # - name: windows-arm64
+          #  runner: windows-11-arm
+         #   bazel_config: windows_arm64
           #- name: macos-aarch64
           #  runner: macos-latest
           #  bazel_config: macos_aarch64
-          #  install_linux_deps: false
           #- name: macos-x86_64
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
-          #  install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install base dependencies
-        if: matrix.install_linux_deps
-        run: |
-          echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libatk1.0-dev libgtk-3-dev \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git rpm
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -90,8 +59,37 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
-          repository-cache: true
-          external-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
           cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
