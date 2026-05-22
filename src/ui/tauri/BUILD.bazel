@@ -33,7 +33,6 @@ genrule(
         "tauri-build-context.rs",
         "tauri_config.json",
     ],
-    tags = ["manual"],
     target_compatible_with = select({
         ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -140,7 +139,6 @@ rust_library(
     rustc_flags = [
         "--cfg=ohc_bazel_tauri_context",
     ],
-    tags = ["manual"],
     target_compatible_with = select({
         ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -155,7 +153,6 @@ rust_binary(
     deps = [
         ":app_lib",
     ],
-    tags = ["manual"],
     target_compatible_with = select({
         ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -182,7 +179,6 @@ tauri_mobile_package(
     out = "ohc-android-aarch64.apk",
     package_type = "apk",
     srcs = TAURI_MOBILE_SRCS,
-    tags = ["manual"],
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -197,7 +193,6 @@ tauri_mobile_package(
     out = "ohc-android-aarch64.aab",
     package_type = "aab",
     srcs = TAURI_MOBILE_SRCS,
-    tags = ["manual"],
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -211,7 +206,6 @@ tauri_mobile_package(
     out = "ohc-ios-aarch64.ipa",
     package_type = "ipa",
     srcs = TAURI_MOBILE_SRCS,
-    tags = ["manual"],
     target_compatible_with = select({
         "//:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

@@ -66,7 +66,7 @@ mod tests {
         let mut has_cs_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
             if pending.iter().any(|req| req.description.contains("Create order and booking")) {
                 has_ops_auto = true;
             }
@@ -218,7 +218,7 @@ mod tests {
         let mut has_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
             if pending.iter().any(|req| req.description.contains("Drafted reply for message")) {
                 has_draft = true;
                 break;
