@@ -280,7 +280,7 @@ export function HelpWidget() {
       </button>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-6 w-[350px] h-[500px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100">
+        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
           <div className="flex border-b border-gray-200">
             {[
               { id: "center", label: "Help" },
