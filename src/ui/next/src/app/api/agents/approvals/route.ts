@@ -5,6 +5,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const approvals = [
     {
+      id: "0",
+      department: "CustomerSuccess",
+      action_risk: "Low",
+      description: "3 customers haven't reviewed their orders. Request reviews?",
+      status: "Pending"
+    },
+    {
       id: "1",
       department: "CustomerSuccess",
       action_risk: "High",

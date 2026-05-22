@@ -6,6 +6,14 @@ test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
     const json = {
       pending_approvals: [
         {
+          id: '0',
+          tenant_id: 'mock-tenant',
+          department: 'CustomerSuccess',
+          description: "3 customers haven't reviewed their orders. Request reviews?",
+          status: 'Pending',
+          action_risk: 'Low'
+        },
+        {
           id: 'e2e-approval-mock-1',
           tenant_id: 'mock-tenant',
           department: 'CustomerSuccess',
@@ -50,11 +58,12 @@ test('AI Team Dashboard and Approval Inbox', async ({ page, request }) => {
 
   // Verify approval inbox view for The Ambassador
   await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).toBeVisible();
+  await expect(page.locator("text=3 customers haven't reviewed their orders. Request reviews?")).toBeVisible();
 
   // 3. User approves the action (Swipe right / Approve button)
   const approveBtn = page.locator('button', { hasText: 'Approve' }).first();
   await approveBtn.click();
 
   // Wait for the action to be processed (mocking the UI removal)
-  await expect(page.locator('text=Draft email for review: Maya ordered a vegan cake')).not.toBeVisible();
+  await expect(page.locator("text=3 customers haven't reviewed their orders. Request reviews?")).not.toBeVisible();
 });

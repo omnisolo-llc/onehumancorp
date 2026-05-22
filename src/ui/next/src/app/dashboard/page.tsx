@@ -188,30 +188,30 @@ export default function Dashboard() {
 
                         return (
                             <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#f8fafc', color: '#4f46e5' }}>
                                             {approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'Operations' ? '⚙️' : '🤖'}
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-lg font-outfit text-gray-900">
+                                            <h3 className="font-semibold text-lg font-outfit text-gray-900 mb-1">
                                                 {approval.department} Department
                                             </h3>
-                                            <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
+                                            <p className="text-gray-500 text-sm leading-relaxed">{plainMessage}</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex items-center gap-3 self-end md:self-auto">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-5 py-2 font-medium transition-colors"
+                                            style={{ color: '#ef4444', backgroundColor: '#fef2f2', borderRadius: '8px' }}
                                         >
                                             Reject
                                         </button>
                                         <button
                                             onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-6 py-2 font-medium transition-colors shadow-sm"
+                                            style={{ color: '#ffffff', backgroundColor: '#2563eb', borderRadius: '8px' }}
                                         >
                                             Approve
                                         </button>

@@ -354,6 +354,20 @@ impl OperationsWorker {
                         .execute(&db.pool)
                         .await;
                     }
+
+                    if order_count > 0 && order_count % 3 == 0 {
+                        let request_id = Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES ($1, $2, 'CustomerSuccess', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING', 'P3', 'LOW', 'PENDING', NULL)
+                            "#
+                        )
+                        .bind(&request_id)
+                        .bind(&tenant_id)
+                        .execute(&db.pool)
+                        .await;
+                    }
                 },
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     sqlx::query(
@@ -400,6 +414,20 @@ impl OperationsWorker {
                         .bind(&tenant_id)
                         .bind(milestone_title)
                         .bind(milestone_msg)
+                        .execute(sqlite_pool)
+                        .await;
+                    }
+
+                    if order_count > 0 && order_count % 3 == 0 {
+                        let request_id = Uuid::new_v4().to_string();
+                        let _ = sqlx::query(
+                            r#"
+                            INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
+                            VALUES (?, ?, 'CustomerSuccess', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING', 'P3', 'LOW', 'PENDING', NULL)
+                            "#
+                        )
+                        .bind(&request_id)
+                        .bind(&tenant_id)
                         .execute(sqlite_pool)
                         .await;
                     }
