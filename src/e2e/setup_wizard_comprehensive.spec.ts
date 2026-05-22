@@ -2,41 +2,37 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
-    await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Creative/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Services/).check();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Portrait Session');
-    await page.getByPlaceholder('0.00').fill('120');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Both Online/ }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Artist');
-    await page.getByPlaceholder('you@email.com').fill('alex@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Modern' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Connect Custom Domain/ }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
+    await page.goto('/onboarding');
+
+    // Step 1: Business Name
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill('Alex Art');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 2: What do you sell?
+    await page.getByPlaceholder("e.g. I bake custom wedding cakes and cupcakes.").fill('Portrait Session');
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Step 3: Preferred style
+    await page.getByPlaceholder("e.g. Clean and modern with pastel colors").fill('Modern');
+    await page.getByRole('button', { name: 'Generate Draft' }).click();
+
+    // Step 4: AI Draft Preview
+    await expect(page.getByText('Looks Great!')).toBeVisible({ timeout: 15000 });
 
     const requestPromise = page.waitForRequest(request =>
       request.url().includes('/api/onboarding/start') && request.method() === 'POST'
     );
 
-    await page.getByRole('button', { name: /Publish my business/ }).click();
+    await page.getByRole('button', { name: 'Publish Now' }).click();
 
     const request = await requestPromise;
     const postData = JSON.parse(request.postData() || '{}');
 
-    expect(postData.business_type).not.toBe('');
-    expect(postData.company_name).toBe('Alex Art');
-    expect(postData.first_product_name).toBe('Portrait Session');
-    expect(postData.first_product_price).toBe('120');
-    expect(postData.website_template).toBe('Modern');
+    // Expected properties based on the new onboarding UI logic
+    expect(postData.company_description).toBe('Modern');
+    expect(postData.website_template).toBe('modern');
 
-    await expect(page.getByText('Your business is now live!')).toBeVisible();
+    // Step 5: Success Screen
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
   });
 });

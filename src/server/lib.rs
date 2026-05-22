@@ -3482,7 +3482,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (res.ok) {
                                     const data = await res.json();
-                                    if (data) {
+                                    if (data && typeof data === 'object' && !Array.isArray(data)) {
                                         const state = data;
                                         inputs.forEach((input, index) => {
                                             if (input.type === 'checkbox') {
