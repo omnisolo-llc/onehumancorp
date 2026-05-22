@@ -11,6 +11,8 @@ void main() {
         return http.Response('{"status": "ok"}', 200);
       } else if (request.url.path == '/api/onboarding/launch') {
         return http.Response('{"status": "ok"}', 200);
+      } else if (request.url.path == '/api/onboarding/draft') {
+        return http.Response('{"bio": "saved bio test"}', 200);
       }
       return http.Response('Not Found', 404);
     });
@@ -23,6 +25,11 @@ void main() {
 
     // Verify we are on the input screen
     expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
+
+    // We no longer trigger 'Required' because the mock returns 'saved bio test'
+    // so the field is not empty! Let's clear the field first.
+    await tester.enterText(find.byKey(Key('bio-input')), '');
+    await tester.pumpAndSettle();
 
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
