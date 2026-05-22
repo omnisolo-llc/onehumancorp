@@ -89,9 +89,9 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, tenant_id, title, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE tenant_id = $1 LIMIT 10"
                 } else {
-                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, tenant_id, title, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE tenant_id = $1 LIMIT 10"
                 };
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -109,9 +109,9 @@ impl DashboardService for MyDashboardService {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
-                                        .try_get("organization_id")
+                                        .try_get("tenant_id")
                                         .unwrap_or_default(),
-                                    name: r.try_get("name").unwrap_or_default(),
+                                    name: r.try_get("title").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
@@ -135,9 +135,9 @@ impl DashboardService for MyDashboardService {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
                                     organization_id: r
-                                        .try_get("organization_id")
+                                        .try_get("tenant_id")
                                         .unwrap_or_default(),
-                                    name: r.try_get("name").unwrap_or_default(),
+                                    name: r.try_get("title").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
                                     currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
@@ -231,9 +231,9 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+                    "SELECT id, name, tier FROM tenants WHERE id = $1 LIMIT 1"
                 } else {
-                    "SELECT tenant_id, business_name, tier FROM tenants WHERE tenant_id = $1 LIMIT 1"
+                    "SELECT id, name, tier FROM tenants WHERE id = $1 LIMIT 1"
                 };
                 use sqlx::Row;
                 let mut org = None;
@@ -250,8 +250,8 @@ impl DashboardService for MyDashboardService {
                             sqlx::query(q).bind(&org_id).fetch_optional(&mut *tx).await
                         {
                             org = Some(::server_ohc::organization::Organization {
-                                id: row.try_get("tenant_id").unwrap_or_default(),
-                                name: row.try_get("business_name").unwrap_or_default(),
+                                id: row.try_get("id").unwrap_or_default(),
+                                name: row.try_get("name").unwrap_or_default(),
                                 domain: "".to_string(),
                                 ceo_id: "".to_string(),
                                 created_at_unix: 0,
@@ -266,8 +266,8 @@ impl DashboardService for MyDashboardService {
                             sqlx::query(q).bind(&org_id).fetch_optional(pool).await
                         {
                             org = Some(::server_ohc::organization::Organization {
-                                id: row.try_get("tenant_id").unwrap_or_default(),
-                                name: row.try_get("business_name").unwrap_or_default(),
+                                id: row.try_get("id").unwrap_or_default(),
+                                name: row.try_get("name").unwrap_or_default(),
                                 domain: "".to_string(),
                                 ceo_id: "".to_string(),
                                 created_at_unix: 0,
@@ -523,7 +523,7 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 LIMIT 1")
             .bind(&org_id)
             .fetch_optional(&self.db.pool)
             .await
@@ -599,7 +599,7 @@ impl DashboardService for MyDashboardService {
 
         let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
+                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3"
             )
             .bind(state.current_step)
             .bind(state_json_val)
@@ -640,14 +640,14 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_secs(1))
             .connect(database_url).await.unwrap();
 
-        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, tenant_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT, name TEXT, tier TEXT)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
-        sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO products (id, tenant_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 50.0, 'completed')").execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO tenants (id, name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });

@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 rust_library(
     name = "server_auth",
     srcs = [
+        "postgres_store.rs",
         "grpc.rs",
         "mod.rs",
         "orchestration.rs",

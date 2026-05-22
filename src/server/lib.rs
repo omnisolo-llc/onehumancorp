@@ -923,15 +923,14 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
@@ -963,10 +962,10 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1010,10 +1009,10 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
+        .bind(&user_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -1657,6 +1656,7 @@ impl HubService for MyHubService {
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
+    let store = std::sync::Arc::new(::server_auth::Store::new());
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
 
@@ -1918,6 +1918,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let db_for_login = db.clone();
 async fn get_inbox_messages_handler(
+    db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
 ) -> axum::response::Response {
@@ -1945,8 +1946,7 @@ async fn get_inbox_messages_handler(
         _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
     };
 
-    let pool = crate::db::get_pool();
-    let mut tx = match pool.begin().await {
+    let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
     };
@@ -1985,11 +1985,12 @@ async fn get_inbox_messages_handler(
 }
 
     let db_for_sales = db.clone();
-    let store_axum = std::sync::Arc::new(::server_auth::Store::new());
+    let store_axum = store.clone();
     let app = axum::Router::new()
         .route("/api/v1/inbox", axum::routing::get({
+            let db = db.clone();
             let store = store_axum.clone();
-            move |headers: axum::http::HeaderMap| async move { get_inbox_messages_handler(store, headers).await }
+            move |headers: axum::http::HeaderMap| async move { get_inbox_messages_handler(db, store, headers).await }
         }))
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
@@ -2140,7 +2141,6 @@ async fn get_inbox_messages_handler(
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
@@ -2228,11 +2228,11 @@ async fn get_inbox_messages_handler(
     let billing_service = crate::services::billing::service::MyBillingService::new(hub.get_cost_auditor());
 
     Server::builder()
-        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor.clone()))
-        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::with_interceptor(::server_auth::AuthServiceServerImpl::new(store), spiffe_interceptor.clone()))
-        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor.clone()))
-        .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor.clone()))
-        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor.clone()))
+        .add_service(HubServiceServer::with_interceptor(hub_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::auth_service_server::AuthServiceServer::with_interceptor(::server_auth::AuthServiceServerImpl::new(store), spiffe_interceptor))
+        .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
+        .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
+        .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
         .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
         .serve(addr)
         .await?;
@@ -3131,14 +3131,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Agents Page (Agents) -->
                     <div id="team-screen" class="screen">
                         <h1 class="outfit">Agents</h1>
-                        <h2>My Staff</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
-                        <button class="primary" onclick="alert('Hire Agent')">Hire Agent</button>
 
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
-                                <h3 class="outfit">The Ambassador</h3>
-                                <p>Customer Success</p>
+                                <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
                                 <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -3151,8 +3148,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">The Manager</h3>
-                                <p>Operations</p>
+                                <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
                                 <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -3165,8 +3161,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">The Salesperson</h3>
-                                <p>Sales</p>
+                                <h3 class="outfit">Sales Agent</h3>
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
                                 <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
@@ -4751,7 +4746,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/agents': 'team-screen', '/business-setup': 'setup-screen' };
+                            const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             // State restoration for setup wizard

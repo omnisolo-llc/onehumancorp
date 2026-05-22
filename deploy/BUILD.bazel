@@ -4,7 +4,6 @@ load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 exports_files([
     "deploy_dev.sh",
-    "docker/postgres/init-multiple-databases.sh",
     "docker-compose.yml",
     "docker-compose.e2e.yml",
     "setup_k8s.sh",

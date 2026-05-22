@@ -826,3 +826,5 @@ mod sentinel_auth_hardening_tests {
         });
     }
 }
+
+pub mod postgres_store;
