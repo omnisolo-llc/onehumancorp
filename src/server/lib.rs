@@ -3245,108 +3245,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
-                            <h1>What do you sell?</h1>
-                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
-                            </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
-                            <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
-                            <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
-                                <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
-                                <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
-                            </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-10" style="display: none;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
-                        </div>
-                        <div id="step-100" style="display: none;">
-                            <h1>🎉 Success! Your business is live! 🎉</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
+
+                        <div id="step-ai" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                            <h1>Welcome to OHC Smart Builder</h1>
+                            <p>Tell us about your business, and AI will build it.</p>
+                            <input id="bio-input" type="text" placeholder="e.g. I bake custom vegan cakes in Seattle. Maya's Cakes." style="border-radius: 8px;" />
+                            <button onclick="generateAI()" style="border-radius: 8px;">Build My Storefront</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
-                            <h1>Welcome Checklist</h1>
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
-                        </div>
-
-                        <div id="step-ai" class="hidden" class="hidden" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
-                        </div>
                         <div id="step-generating" class="hidden" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
@@ -3357,7 +3263,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
                         <div id="step-launch-ai" class="hidden" class="hidden" style="display: none;">
-                            <h1>Your live storefront!</h1>
+                            <h1>You're Live!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
                     </div>
@@ -3365,6 +3271,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Storefront Builder Screen -->
                     <div id="storefront-builder-screen" class="screen glass" style="display: none;">
+                        <div style="background: #000; color: #fff; padding: 4px 8px; font-size: 12px; display: flex; justify-content: space-between;">
+                            <span>Preview Mode</span>
+                            <span style="background: rgba(255,255,255,0.2); padding: 2px 4px; border-radius: 4px;">375px</span>
+                        </div>
                         <div class="builder-container">
                             <div class="builder-header">
                                 <h1>Edit Website</h1>
@@ -3376,6 +3286,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+                            <button onclick="publishStorefront()" style="width: 100%; border-radius: 8px; margin-top: 16px;">1-Tap Launch</button>
                         </div>
 
                         <!-- Block Editor Bottom Sheet -->
@@ -3683,7 +3594,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             };
 
-                            try {
+                                                        try {
                                 const response = await fetch('/api/v1/builder/publish_draft', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
@@ -3692,9 +3603,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (response.ok) {
                                     closeDomainSetup();
                                     fireConfetti();
-                                    setTimeout(() => {
-                                        showScreen('dashboard-screen');
-                                    }, 2000);
+
+                                    // Transition to "You're Live!" state
+                                    document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+                                    const setupScreen = document.getElementById('setup-screen');
+                                    setupScreen.style.display = 'block';
+                                    document.querySelectorAll('#setup-screen > div').forEach(d => d.style.display = 'none');
+                                    document.getElementById('step-launch-ai').style.display = 'block';
                                 } else {
                                     console.error('Failed to publish');
                                 }
@@ -4162,12 +4077,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let currentSiteDraft = null;
+                                                let currentSiteDraft = null;
 
                         async function generateAI() {
-                            const descInput = document.querySelector('#step-ai input');
+                            const descInput = document.querySelector('#bio-input');
                             const description = descInput ? descInput.value : '';
-                            nextStep('generating');
+
+                            // Manually hide step-ai and show step-generating
+                            document.getElementById('step-ai').style.display = 'none';
+                            document.getElementById('step-generating').style.display = 'block';
+
                             try {
                                 const response = await fetch('/api/v1/builder/generate', {
                                     method: 'POST',
@@ -4178,26 +4097,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const data = await response.json();
                                     currentSiteDraft = data;
 
-                                    // Update storefrontDraftState
                                     if (data.pages && data.pages.length > 0) {
                                         storefrontDraftState = data.pages[0].blocks.map((b, i) => ({
                                             id: 'ai-gen-' + i,
-                                            type: b.block_type,
+                                            type: b.block_type === 'HeroBlock' ? 'Hero' :
+                                                  b.block_type === 'ProductGridBlock' ? 'Catalog' :
+                                                  b.block_type === 'ServiceBookingBlock' ? 'Booking' :
+                                                  b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
                                             content: b.content
                                         }));
                                     }
 
-                                    // Show builder screen directly
                                     setTimeout(() => {
                                         showScreen('storefront-builder-screen');
                                         renderStorefrontPreview();
-                                    }, 2000); // Wait for the "generating" animation
+                                    }, 1000);
                                 } else {
-                                    setTimeout(() => nextStep('launch-ai'), 2000);
+                                    alert('Generation failed');
+                                    document.getElementById('step-ai').style.display = 'block';
+                                    document.getElementById('step-generating').style.display = 'none';
                                 }
                             } catch(e) {
                                 console.error(e);
-                                setTimeout(() => nextStep('launch-ai'), 2000);
+                                alert('Generation failed');
+                                document.getElementById('step-ai').style.display = 'block';
+                                document.getElementById('step-generating').style.display = 'none';
                             }
                         }
 
