@@ -7,7 +7,7 @@ use opentelemetry::global;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::UpDownCounter;
+use opentelemetry::metrics::{UpDownCounter, Counter};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -17,6 +17,8 @@ static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -39,6 +41,24 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
         let meter = global::meter("ohc.sub_agent");
         meter.i64_up_down_counter("ohc.sub_agent.queue_length")
             .with_description("The current number of jobs in the sub-agent task queue")
+            .build()
+    })
+}
+
+pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
+    SYNC_DAEMON_BATCH_SIZE_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter.f64_histogram("ohc_sync_daemon_batch_size")
+            .with_description("Batch size for sync daemon")
+            .build()
+    })
+}
+
+pub fn get_agent_execution_traces_total() -> &'static Counter<u64> {
+    AGENT_EXECUTION_TRACES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.u64_counter("ohc_agent_execution_traces_total")
+            .with_description("Total number of agent execution traces")
             .build()
     })
 }
@@ -165,7 +185,18 @@ pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Re
 }
 
 pub async fn record_sync_daemon_batch_size(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let histogram = get_sync_daemon_batch_size_histogram();
+    histogram.record(count as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+
     buffer_metric(pool, "sync_daemon_batch_size", "gauge", count, serde_json::json!({ "mode": mode })).await
+}
+
+pub fn record_agent_execution_trace(agent_id: &str, trace_type: &str) {
+    let counter = get_agent_execution_traces_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("trace_type", trace_type.to_string()),
+    ]);
 }
 
 pub async fn record_sync_latency(pool: &PgPool, latency_ms: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
