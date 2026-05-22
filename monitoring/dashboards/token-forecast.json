@@ -10,6 +10,37 @@
   "liveNow": false,
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 100,
+      "options": {
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"font-size: 24px; font-weight: bold; text-align: center; color: white; padding: 10px;\">\n  OHC Token Forecast\n</div>",
+        "mode": "html"
+      },
+      "title": "Aesthetic Mandate Injector",
+      "transparent": true,
+      "type": "text"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "Prometheus"
@@ -18,7 +49,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "id": 1,
       "targets": [
@@ -50,7 +81,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "OHC Hybrid Telemetry Review",
+  "title": "OHC Token Forecast Dashboard",
   "uid": "token-forecast",
   "version": 1
 }

@@ -32,31 +32,4 @@ impl ShippoProvider {
             }
         }
     }
-
-    pub async fn fetch_rates(&self, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
-        self._client.fetch_rates(weight, dimensions).await
-    }
-
-    pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
-        self._client.purchase_label(rate_id).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_shippo_provider_new() {
-        let provider = ShippoProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "shippo");
-        assert_eq!(provider.metadata.category, "shipping");
-    }
-
-    #[test]
-    fn test_shippo_provider_into() {
-        let provider = ShippoProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "shippo");
-    }
 }

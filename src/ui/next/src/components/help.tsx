@@ -212,22 +212,6 @@ export function HelpWidget() {
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const helpArticles = [
-    { title: "Getting Started", desc: "Learn the basics of setting up your store." },
-    { title: "My Store", desc: "Manage your products and layout." },
-    { title: "Payments", desc: "Connect your bank and get paid." },
-    { title: "AI Agents", desc: "Hire and manage your AI workforce." },
-    { title: "Marketing", desc: "Grow your audience and sales." },
-    { title: "Account & Billing", desc: "Manage your subscription." },
-    { title: "API Documentation (Advanced)", desc: "Interactive API reference for integrations.", link: "/api-docs" }
-  ];
-
-  const filteredArticles = helpArticles.filter(a =>
-    a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.desc.toLowerCase().includes(searchQuery.toLowerCase())
-  );
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
 
   useEffect(() => {
@@ -290,18 +274,36 @@ export function HelpWidget() {
             {tab === "center" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
-                <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" placeholder="Search for help..." className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <div className="space-y-2 mb-4">
-                  {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                      {a.link ? (
-                        <a href={a.link}><h4 className="font-bold text-gray-800 text-sm hover:underline">{a.title}</h4></a>
-                      ) : (
-                        <h4 className="font-bold text-gray-800 text-sm">{a.title}</h4>
-                      )}
-                      <p className="text-xs text-gray-500 mt-1">{a.desc}</p>
-                    </div>
-                  ))}
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Getting Started</h4>
+                    <p className="text-xs text-gray-500 mt-1">Learn the basics of setting up your store.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">My Store</h4>
+                    <p className="text-xs text-gray-500 mt-1">Manage your products and layout.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Payments</h4>
+                    <p className="text-xs text-gray-500 mt-1">Connect your bank and get paid.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">AI Agents</h4>
+                    <p className="text-xs text-gray-500 mt-1">Hire and manage your AI workforce.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Marketing</h4>
+                    <p className="text-xs text-gray-500 mt-1">Grow your audience and sales.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <h4 className="font-bold text-gray-800 text-sm">Account & Billing</h4>
+                    <p className="text-xs text-gray-500 mt-1">Manage your subscription.</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                    <a href="/api-docs"><h4 className="font-bold text-gray-800 text-sm hover:underline">API Documentation (Advanced)</h4></a>
+                    <p className="text-xs text-gray-500 mt-1">Interactive API reference for integrations.</p>
+                  </div>
                 </div>
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
