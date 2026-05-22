@@ -3423,8 +3423,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3442,8 +3442,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3456,9 +3456,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3501,7 +3501,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
