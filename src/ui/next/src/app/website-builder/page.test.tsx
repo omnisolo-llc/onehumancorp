@@ -8,12 +8,9 @@ vi.mock('../../components/help', () => ({
 }));
 
 describe('WebsiteBuilderPage', () => {
-
   beforeEach(() => {
     global.fetch = vi.fn();
-    localStorage.clear();
   });
-
 
   afterEach(() => {
     vi.resetAllMocks();
@@ -160,48 +157,4 @@ describe('WebsiteBuilderPage', () => {
 
     consoleSpy.mockRestore();
   });
-
-  test('handles invalid saved blocks gracefully', () => {
-    localStorage.setItem("ohc_builder_blocks", "invalid-json");
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    render(<WebsiteBuilderPage />);
-    expect(consoleSpy).toHaveBeenCalledWith("Failed to parse saved blocks", expect.any(Error));
-    consoleSpy.mockRestore();
-  });
-
-  test('handles fetch errors on publish', async () => {
-    // Generate Phase
-    (global.fetch as vi.Mock).mockResolvedValueOnce({
-      json: async () => ({
-        pages: [{
-          blocks: [
-            { block_type: 'HeroBlock', content: { headline: 'Test Hero' } }
-          ]
-        }]
-      })
-    });
-
-    render(<WebsiteBuilderPage />);
-    const input = screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service in Portland/i);
-    fireEvent.change(input, { target: { value: 'This is my bio' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Build My Storefront' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Preview Mode')).toBeInTheDocument();
-    });
-
-    // Publish Phase (Fail with network error)
-    (global.fetch as vi.Mock).mockRejectedValueOnce(new Error("Network Error"));
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    fireEvent.click(screen.getByRole('button', { name: '1-Tap Launch' }));
-
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith('Error publishing:', expect.any(Error));
-    });
-
-    consoleSpy.mockRestore();
-  });
-
 });

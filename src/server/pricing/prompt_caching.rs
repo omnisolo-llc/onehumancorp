@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
-use dashmap::DashMap;
 
 #[derive(Clone, Debug)]
 pub struct CachedResponse {
@@ -10,28 +10,27 @@ pub struct CachedResponse {
 }
 
 pub struct PromptCache {
-    cache: Arc<DashMap<String, CachedResponse>>,
+    cache: Arc<Mutex<HashMap<String, CachedResponse>>>,
     ttl: Duration,
 }
 
 impl PromptCache {
     pub fn new(ttl: Duration) -> Self {
         PromptCache {
-            cache: Arc::new(DashMap::new()),
+            cache: Arc::new(Mutex::new(HashMap::new())),
             ttl,
         }
     }
 
     pub fn get(&self, prompt: &str) -> Option<CachedResponse> {
-        let entry = self.cache.get(prompt);
-        if let Some(entry_ref) = entry {
-            if entry_ref.created_at.elapsed() <= self.ttl {
-                return Some(entry_ref.clone());
+        let mut cache = self.cache.lock().unwrap();
+        if let Some(entry) = cache.get(prompt) {
+            if entry.created_at.elapsed() <= self.ttl {
+                return Some(entry.clone());
             }
-            drop(entry_ref);
-            // Remove expired entry atomically
-            self.cache.remove_if(prompt, |_, v| v.created_at.elapsed() > self.ttl);
         }
+        // Remove expired entry
+        cache.remove(prompt);
         None
     }
 
@@ -48,7 +47,8 @@ impl PromptCache {
     }
 
     pub fn set(&self, prompt: &str, response: &str, token_count: usize) {
-        self.cache.insert(prompt.to_string(), CachedResponse {
+        let mut cache = self.cache.lock().unwrap();
+        cache.insert(prompt.to_string(), CachedResponse {
             text: response.to_string(),
             created_at: Instant::now(),
             token_count,
@@ -56,8 +56,9 @@ impl PromptCache {
     }
 
     pub fn clear_expired(&self) {
+        let mut cache = self.cache.lock().unwrap();
         let now = Instant::now();
-        self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= self.ttl);
+        cache.retain(|_, entry| now.duration_since(entry.created_at) <= self.ttl);
     }
 }
 
@@ -93,6 +94,7 @@ mod tests {
         thread::sleep(Duration::from_millis(60));
         cache.clear_expired();
 
-        assert!(cache.cache.is_empty());
+        let cache_lock = cache.cache.lock().unwrap();
+        assert!(cache_lock.is_empty());
     }
 }

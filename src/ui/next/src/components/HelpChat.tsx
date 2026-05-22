@@ -25,36 +25,37 @@ export function HelpChat() {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!inputValue.trim()) return;
 
     const userMessage: Message = { id: Date.now().toString(), sender: 'user', text: inputValue };
     setMessages(prev => [...prev, userMessage]);
-    setInputValue("");    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: inputValue })
-      });
+    setInputValue("");
 
-      if (!response.ok) throw new Error("Failed to fetch");
+    // Mock agent response
+    setTimeout(() => {
+      let responseText = "I found an article that might help.";
+      let link = undefined;
 
-      const data = await response.json();
+      const lowerInput = userMessage.text.toLowerCase();
+      if (lowerInput.includes('store') || lowerInput.includes('vibe')) {
+        responseText = "To change your store's appearance, click 'Change Vibe' at the bottom of the Builder page. This will let you pick new colors and fonts.";
+        link = { url: '/help', title: 'Read: Customizing your store theme →' };
+      } else if (lowerInput.includes('payment') || lowerInput.includes('money')) {
+        responseText = "You can manage payments in the 'Payments' section of your dashboard. You'll need to connect a bank account first.";
+        link = { url: '/help', title: 'Read: How to connect your bank account →' };
+      } else {
+        responseText = "I can help with that. Could you provide a bit more detail about what you're trying to achieve?";
+      }
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         sender: 'agent',
-        text: data.reply,
-        link: data.link
+        text: responseText,
+        link
       }]);
-    } catch (err) {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'agent',
-        text: "Sorry, I'm having trouble connecting right now."
-      }]);
-    };
+    }, 800);
   };
 
   if (process.env.NEXT_PUBLIC_E2E === 'true') {

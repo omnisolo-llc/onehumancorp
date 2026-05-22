@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import { WithTooltip } from '../../../components/TooltipRegistry';
 
 type Props = {
   name: string;

@@ -1,6 +1,6 @@
 use ohc_builtin_agent::{
     auth::auth_mode_from_env,
-    proto::agent_service_server::{AgentServiceServer, AgentService},
+    proto::agent_service_server::AgentServiceServer,
     service::{AgentConfig, AgentServiceImpl, DEFAULT_ADDRESS, SharedAgentService},
 };
 use std::{env, net::SocketAddr};
@@ -68,44 +68,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set up logging and OTEL.
     init_otel();
 
-    let args: Vec<String> = std::env::args().collect();
-    let mut task = None;
-    let mut parent_context_file = None;
-    let mut worktree = None;
-    let mut mailbox = None;
-
-    let mut i = 1;
-    while i < args.len() {
-        match args[i].as_str() {
-            "--task" => {
-                if i + 1 < args.len() {
-                    task = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--parent-context-file" => {
-                if i + 1 < args.len() {
-                    parent_context_file = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--worktree" => {
-                if i + 1 < args.len() {
-                    worktree = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            "--mailbox" => {
-                if i + 1 < args.len() {
-                    mailbox = Some(args[i + 1].clone());
-                    i += 1;
-                }
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-
     let address = get_env("OHC_AGENT_ADDRESS", DEFAULT_ADDRESS);
     let agent_id = get_env(
         "OHC_AGENT_ID",
@@ -130,48 +92,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let auth = auth_mode_from_env();
-
-    let mut svc_impl = AgentServiceImpl::new(agent_id.clone(), cfg, auth);
-    svc_impl.init_memory().await;
-
-    if let Some(t) = task {
-        // Run as a subagent (Fork, Worktree, Teammate)
-        let working_dir = worktree.or(mailbox).unwrap_or_default();
-
-        let parent_context_json = if let Some(path) = parent_context_file {
-            std::fs::read_to_string(&path).unwrap_or_default()
-        } else {
-            String::new()
-        };
-
-        let req = ohc_builtin_agent::proto::agent_service::SubAgentRequest {
-            task: t,
-            working_dir,
-            parent_context_json,
-            ..Default::default()
-        };
-
-        match svc_impl.dispatch_to_sub_agent(tonic::Request::new(req)).await {
-            Ok(resp) => {
-                let inner = resp.into_inner();
-                if !inner.error.is_empty() {
-                    eprintln!("{}", inner.error);
-                    std::process::exit(1);
-                } else {
-                    println!("{}", inner.result);
-                    return Ok(());
-                }
-            }
-            Err(e) => {
-                eprintln!("Subagent dispatch error: {}", e);
-                std::process::exit(1);
-            }
-        }
-    }
-
     info!("Starting OHC builtin agent (Rust) at {} (id: {})", address, agent_id);
 
     let addr: SocketAddr = address.parse()?;
+    let mut svc_impl = AgentServiceImpl::new(agent_id.clone(), cfg, auth);
+    svc_impl.init_memory().await;
     let svc = std::sync::Arc::new(svc_impl);
     let svc_for_redis = svc.clone();
 

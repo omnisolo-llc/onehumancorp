@@ -9,7 +9,6 @@ type TooltipContextType = {
   setTooltipRect: (rect: DOMRect | null) => void;
   tooltipText: string;
   setTooltipText: (text: string) => void;
-  getTooltip: (id: string) => string | undefined;
 };
 
 const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
@@ -18,14 +17,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [tooltipText, setTooltipText] = useState<string>("");
-  const [tooltips, setTooltips] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {});
-  }, []);
 
   return (
-    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
+    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText }}>
       {children}
       {activeTooltip && tooltipRect && (
         <div
@@ -59,14 +53,14 @@ export function useTooltip() {
   return context;
 }
 
-export function WithTooltip({ children, id, defaultText }: { children: ReactNode, id: string, defaultText?: string }) {
-  const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
+export function WithTooltip({ text, children, id }: { text: string, children: ReactNode, id: string }) {
+  const { setActiveTooltip, setTooltipRect, setTooltipText } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const handleMouseEnter = () => {
     if (wrapperRef.current) {
       setTooltipRect(wrapperRef.current.getBoundingClientRect());
-      setTooltipText(getTooltip(id) || defaultText || id);
+      setTooltipText(text);
       setActiveTooltip(id);
     }
   };
