@@ -59,7 +59,7 @@ sequenceDiagram
 </div>
 
 ## Implementation Prompt
-Implement the `shared_tasks` database schema and the task claiming workflow for both PostgreSQL (using `FOR UPDATE SKIP LOCKED`) and SQLite. Update `src/server/orchestration/tasks_db.rs` or equivalent to handle the task DAG and state machine transitions (PENDING -> IN_PROGRESS -> REVIEW -> COMPLETED). Integrate with the Teammate Mesh to broadcast task assignments. Ensure the codebase correctly switches locking strategies based on the runtime mode. Write comprehensive tests verifying the DAG constraints and lock guarantees.
+Implement the `shared_tasks` database schema and the task claiming workflow for both PostgreSQL (using `FOR UPDATE SKIP LOCKED`) and SQLite. Update `src/server/orchestration/tasks_db.go` or equivalent to handle the task DAG and state machine transitions (PENDING -> IN_PROGRESS -> REVIEW -> COMPLETED). Integrate with the Teammate Mesh to broadcast task assignments. Ensure the codebase correctly switches locking strategies based on the runtime mode. Write comprehensive tests verifying the DAG constraints and lock guarantees.
 
 ## Priority
 P0

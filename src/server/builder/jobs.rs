@@ -1,6 +1,6 @@
 use sqlx::PgPool;
 use uuid::Uuid;
-
+use tracing::info;
 
 pub async fn enqueue_publish_site_job(
     pool: &PgPool,
@@ -20,8 +20,8 @@ pub async fn enqueue_publish_site_job(
     let pool_clone = pool.clone();
     tokio::spawn(async move {
         match execute_publish_site_job(&pool_clone, tenant_id, site_id).await {
-            Ok(_) => tracing::info!("Successfully published site {}", site_id),
-            Err(e) => tracing::error!("Failed to publish site {}: {}", site_id, e),
+            Ok(_) => info!("Successfully published site {}", site_id),
+            Err(e) => tracing::error!("Failed to publish site {}: {:?}", site_id, e),
         }
     });
     Ok(())
@@ -32,16 +32,16 @@ async fn execute_publish_site_job(
     tenant_id: Uuid,
     site_id: Uuid,
 ) -> Result<(), sqlx::Error> {
-    tracing::info!("Starting publish process for site {}", site_id);
+    info!("Starting publish process for site {}", site_id);
 
     // 1. Fetch site and pages
     let _pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
     // 2. Mock Site Compilation
-    tracing::info!("Compiling site {} to static PWA/SSR...", site_id);
+    info!("Compiling site {} to static PWA/SSR...", site_id);
 
     // 3. Mock SEO Metadata Generation (via Marketing AI Agent)
-    tracing::info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
+    info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
 
     // 4. Update published_at timestamp
     sqlx::query(
@@ -59,10 +59,10 @@ async fn execute_publish_site_job(
 
     if let Some(s) = site {
         if let Some(domain) = s.domain {
-            tracing::info!("Provisioning SSL certificate for custom domain {}...", domain);
+            info!("Provisioning SSL certificate for custom domain {}...", domain);
         }
     }
 
-    tracing::info!("Site {} published successfully.", site_id);
+    info!("Site {} published successfully.", site_id);
     Ok(())
 }

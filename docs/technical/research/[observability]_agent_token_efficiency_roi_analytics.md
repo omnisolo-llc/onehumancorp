@@ -10,7 +10,7 @@ The OHC swarm consumes significant LLM tokens across various providers. While we
 3. **Redundant Reasoning Waste**: How many tokens are spent in `REVISION_REQUIRED` states or `FAILED` attempts compared to productive output?
 
 ## Research Report
-Current telemetry in `src/server/telemetry/telemetry/mod.rs` tracks `ohc_token_usage_total` with labels for `agent_id`, `role`, `model`, and `type`. However, this data is decoupled from the **outcome** of the tasks.
+Current telemetry in `src/server/telemetry/telemetry.go` tracks `ohc_token_usage_total` with labels for `agent_id`, `role`, `model`, and `type`. However, this data is decoupled from the **outcome** of the tasks.
 - The `TokenForecastWorker` focuses on rate-limiting and billing projections, not performance optimization.
 - There is no mechanism to correlate a specific task's total token consumption with its final `SUCCESS` or `FAILURE` state in Prometheus.
 - ROI (Return on Investment) analysis is currently a manual manual calculation from DB logs.
@@ -25,10 +25,10 @@ Current telemetry in `src/server/telemetry/telemetry/mod.rs` tracks `ohc_token_u
    - Update `RecordTokenUsage` to optionally accept a `taskID` to enable downstream join operations in Prometheus/Grafana.
 
 3. **Code Changes**:
-   - Update `src/server/telemetry/telemetry/mod.rs`:
+   - Update `src/server/telemetry/telemetry.go`:
      - Modify `RecordTokenUsage` to include task context.
      - Add `RecordTaskOutcome(ctx, taskID, status, tokensConsumed)`.
-   - Update `src/server/orchestration/statemachine/machine.rs`:
+   - Update `src/server/orchestration/statemachine/machine.go`:
      - When a task reaches `SUCCESS` or `FAILED`, emit the final token tally.
 
 4. **Grafana Updates**:
@@ -39,11 +39,11 @@ Current telemetry in `src/server/telemetry/telemetry/mod.rs` tracks `ohc_token_u
 
 ## Implementation Prompt
 You are an Implementer. Implement Agent Token ROI analytics:
-1. In `src/server/telemetry/telemetry/mod.rs`:
+1. In `src/server/telemetry/telemetry.go`:
    - Add `ohc_token_usage_by_outcome` (Int64Counter) with labels `outcome`, `agent_role`, `model`.
    - Add `ohc_agent_efficiency_gauge` (Float64Gauge) with labels `agent_role`.
    - Create a function `RecordTaskResolutionEfficiency(ctx, outcome string, role string, model string, tokens int64)`.
-2. In `src/server/orchestration/statemachine/machine.rs` (or wherever tasks are finalized):
+2. In `src/server/orchestration/statemachine/machine.go` (or wherever tasks are finalized):
    - Capture the total tokens consumed during the task's lifecycle (this may require a DB lookup or passing the count through the state machine).
    - Upon transition to `SUCCESS` or `FAILED`, call `telemetry.RecordTaskResolutionEfficiency`.
 3. In `deploy/docker/grafana/provisioning/dashboards/hybrid-telemetry.json` (or a new ROI dashboard):

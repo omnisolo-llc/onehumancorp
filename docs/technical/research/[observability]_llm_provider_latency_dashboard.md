@@ -7,7 +7,7 @@ Create LLM Provider Latency & Error Rate Dashboard
 While OHC tracks token usage efficiently across providers (e.g., Minimax, GPT-4), we lack granular observability into API response latencies and provider-specific error rates in our Grafana dashboards. The absence of this visualization prevents operators from detecting sudden API degradation, timeout bottlenecks, or rate-limiting events from specific LLM providers.
 
 ## Research Report
-- **Context**: The `src/server/telemetry/minimax_metrics.rs` and `src/server/telemetry/telemetry/mod.rs` track token usage, but there is no dedicated dashboard for provider health.
+- **Context**: The `src/server/telemetry/minimax_metrics.go` and `src/server/telemetry/telemetry.go` track token usage, but there is no dedicated dashboard for provider health.
 - **Competitor Analysis**: Leading AI platforms provide real-time dashboards mapping provider latency (P50, P90, P99) and error rates (429, 500, etc.) to quickly swap models if one degrades.
 - **Gap**: The `monitoring/dashboards` directory lacks a dedicated LLM Provider Health dashboard. We are currently blind to external provider performance spikes.
 

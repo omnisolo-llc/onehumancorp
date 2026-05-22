@@ -1,0 +1,103 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+export component Walkthrough inherits Window {
+    width: 100%;
+    min-width: 375px;
+    height: 500px;
+    title: "Automated Setup Guide";
+
+    property <int> current_step: 0;
+
+    background: #f8fafc;
+
+    VerticalBox {
+        spacing: 20px;
+        padding: 24px;
+        alignment: center;
+
+        Text { text: "Interactive Guide: How We Sync Your Data"; font-size: 24px; font-weight: 700; color: #1e293b; }
+
+        Rectangle {
+            background: white;
+            border-color: #e2e8f0;
+            border-width: 1px;
+            border-radius: 16px;
+            width: 100%;
+
+            VerticalBox {
+                padding: 32px;
+                spacing: 16px;
+
+                Text {
+                    text: current_step == 0 ? "1. Gather Data" :
+                          current_step == 1 ? "2. Review Store Items" :
+                          current_step == 2 ? "3. Pack Information" :
+                          current_step == 3 ? "4. Secure Connection" :
+                          current_step == 4 ? "5. Save to Cloud" :
+                          current_step == 5 ? "6. Verify Save" :
+                          "7. Mark Complete";
+                    font-size: 20px;
+                    font-weight: 700;
+                    color: #0284c7;
+                }
+
+                Text {
+                    text: current_step == 0 ? "We collect your store's updates safely on your device." :
+                          current_step == 1 ? "The app checks what new products or changes need saving." :
+                          current_step == 2 ? "Your device gathers all the changes together." :
+                          current_step == 3 ? "We send the updates through a bank-grade secure connection." :
+                          current_step == 4 ? "Your data is safely stored in your private cloud account." :
+                          current_step == 5 ? "The cloud confirms everything was saved perfectly." :
+                          "Your device marks the updates as successfully backed up.";
+                    color: #1e293b;
+                    wrap: word-wrap;
+                }
+
+                Rectangle {
+                    background: #f1f5f9;
+                    border-radius: 8px;
+
+                    HorizontalBox {
+                        padding: 12px;
+                        spacing: 12px;
+                        Text { text: "🔄"; color: #0284c7; }
+                        Text {
+                            text: current_step == 0 ? "App -> Device Storage" :
+                                  current_step == 1 ? "System -> Device Storage" :
+                                  current_step == 2 ? "Device Storage -> System" :
+                                  current_step == 3 ? "Device -> Secure Cloud" :
+                                  current_step == 4 ? "Secure Cloud -> Your Account" :
+                                  current_step == 5 ? "Secure Cloud -> Device" :
+                                  "System -> Device Storage";
+                            color: #0284c7;
+                            wrap: word-wrap;
+                        }
+                    }
+                }
+
+                HorizontalBox {
+                    alignment: center;
+                    spacing: 20px;
+
+                    Button {
+                        text: "Previous Step";
+                        enabled: current_step > 0;
+                        clicked => { current_step = current_step - 1; }
+                    }
+
+                    Text {
+                        text: "Step " + (current_step + 1) + " of 7";
+                        color: #9ca3af;
+                        horizontal-alignment: center;
+                    }
+
+                    Button {
+                        text: "Next Step";
+                        enabled: current_step < 6;
+                        clicked => { current_step = current_step + 1; }
+                    }
+                }
+            }
+        }
+    }
+}

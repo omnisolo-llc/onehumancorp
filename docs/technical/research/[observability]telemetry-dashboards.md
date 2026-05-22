@@ -3,10 +3,10 @@
 # Issue Brief: KAIROS Metrics Grafana Dashboard Visualization
 
 ## Problem Statement
-The OHC `kairos` module in `src/server/orchestration/kairos/metrics.rs` effectively captures distributed state machine transitions, transition durations, and task queue depths via Prometheus metrics (`TransitionsTotal`, `TransitionDuration`, `TaskQueueDepth`). However, there is no corresponding high-fidelity Grafana dashboard to visualize this critical observability data for the hybrid architecture (cloud vs. standalone mode). This gap violates the Full-Spectrum Observability core value that requires every feature exposing metrics to have a corresponding internal user-facing dashboard.
+The OHC `kairos` module in `src/server/orchestration/kairos/metrics.go` effectively captures distributed state machine transitions, transition durations, and task queue depths via Prometheus metrics (`TransitionsTotal`, `TransitionDuration`, `TaskQueueDepth`). However, there is no corresponding high-fidelity Grafana dashboard to visualize this critical observability data for the hybrid architecture (cloud vs. standalone mode). This gap violates the Full-Spectrum Observability core value that requires every feature exposing metrics to have a corresponding internal user-facing dashboard.
 
 ## Research Report
-- Code review reveals that `ohc_kairos_transitions_total`, `ohc_kairos_transition_duration_seconds`, and `ohc_agent_task_queue_depth` are exported by `src/server/orchestration/kairos/metrics.rs`.
+- Code review reveals that `ohc_kairos_transitions_total`, `ohc_kairos_transition_duration_seconds`, and `ohc_agent_task_queue_depth` are exported by `src/server/orchestration/kairos/metrics.go`.
 - The `GetMode()` function tags these metrics with `mode` (cloud, standalone, headless).
 - The `TransitionsTotal` metric is additionally tagged with `status` (destination state).
 - The `monitoring/dashboards` folder currently only contains `chaos_dashboard.json`.

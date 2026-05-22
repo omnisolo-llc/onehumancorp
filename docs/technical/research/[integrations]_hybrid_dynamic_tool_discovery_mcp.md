@@ -17,8 +17,8 @@ The existing `design-hook-dynamic-tool-discovery.md` establishes the framework f
   - If it is Postgres/Cloud, it routes the request to the `Switchboard` microservice via gRPC.
 
 **API Contracts:**
-- `SearchTools(ctx async context, intent string) ([]ToolSpec, error)`
-- `RequestToolSVID(ctx async context, toolName string) (SVID, error)` (Gracefully mocks/bypasses in SQLite).
+- `SearchTools(ctx context.Context, intent string) ([]ToolSpec, error)`
+- `RequestToolSVID(ctx context.Context, toolName string) (SVID, error)` (Gracefully mocks/bypasses in SQLite).
 
 **DB Schema Changes:**
 - For Postgres: None.
@@ -30,11 +30,11 @@ The existing `design-hook-dynamic-tool-discovery.md` establishes the framework f
 
 ## Implementation Prompt
 "Implement the Hybrid Dynamic Tool Discovery MCP tool in `src/server/lib/integrations/hybrid_discovery/`.
-1. Create `discovery.rs` defining the `DiscoveryProxy` and its MCP capabilities (`SearchTools` and `RequestToolSVID`).
+1. Create `discovery.go` defining the `DiscoveryProxy` and its MCP capabilities (`SearchTools` and `RequestToolSVID`).
 2. Implement driver-agnostic logic. To determine if the connection is SQLite, use: `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`.
 3. In SQLite mode, implement a rudimentary Full-Text Search against the local registry, returning valid `ToolSpec` definitions. Bypass SPIRE and generate a local pseudo-SVID.
 4. In Postgres mode, route requests to the remote Switchboard and authenticate using proper SPIRE calls.
-5. Create tests in `discovery_test.rs` verifying routing mechanisms.
+5. Create tests in `discovery_test.go` verifying routing mechanisms.
 6. Create an E2E test starting from UI interaction to verify the fallback logic functions as intended.
 7. Update `BUILD.bazel` to include new dependencies."
 

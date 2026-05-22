@@ -15,12 +15,12 @@ The current `bash_sandbox` in OHC uses simple regex-based filtering (`regexp.Mus
 - **RootFS**: Use a minimal Alpine-based or Scratch-based root filesystem for execution.
 
 ## Implementation Prompt
-Implement a Linux Namespace-based sandbox in `src/server/bash_sandbox/namespace_sandbox.rs`.
+Implement a Linux Namespace-based sandbox in `src/server/bash_sandbox/namespace_sandbox.go`.
 1. Use `os/exec` with `SysProcAttr` to set `Cloneflags` for NEWNS, NEWNET, NEWPID, NEWUTS, and NEWIPC.
 2. Implement a `pivot_root` or `chroot` mechanism to isolate the filesystem to a temporary workspace.
 3. Configure `cgroups` (v2) to limit memory to 256MB and CPU to 0.5 cores.
 4. Disable network access by default, or provide a virtual ethernet pair with strict iptables rules.
-5. Provide unit tests in `namespace_sandbox_test.rs` verifying that the agent cannot see host processes or access host files outside the workspace.
+5. Provide unit tests in `namespace_sandbox_test.go` verifying that the agent cannot see host processes or access host files outside the workspace.
 
 ## Priority
 P0

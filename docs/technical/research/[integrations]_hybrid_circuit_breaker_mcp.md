@@ -36,19 +36,19 @@ graph TD
 - **Standalone Mode:** Implement an in-memory circuit breaker.
 
 **API Contracts:**
-- `ExecuteRequest(ctx async context, service string, req func() error) error`
-- `GetCircuitState(ctx async context, service string) (State, error)`
+- `ExecuteRequest(ctx context.Context, service string, req func() error) error`
+- `GetCircuitState(ctx context.Context, service string) (State, error)`
 
 **Security:**
 - Ensure `organization_id` prefixes are rigorously applied to cache keys in Cloud mode to enforce cross-tenant isolation and prevent one tenant's failures from opening circuits for another.
 
 ## Implementation Prompt
 "Implement the Hybrid Circuit Breaker MCP tool in `src/server/lib/integrations/circuit_breaker/`.
-1. Create `circuit_breaker.rs` defining the `CircuitBreakerManager` and its MCP capabilities (`ExecuteRequest`, `GetCircuitState`).
+1. Create `circuit_breaker.go` defining the `CircuitBreakerManager` and its MCP capabilities (`ExecuteRequest`, `GetCircuitState`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed state tracker ensuring `organization_id` is used as part of the state key.
 4. For Standalone mode, implement a robust in-memory state tracker.
-5. Create comprehensive tests in `circuit_breaker_test.rs`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `circuit_breaker_test.go`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

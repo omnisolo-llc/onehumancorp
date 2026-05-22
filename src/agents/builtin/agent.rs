@@ -1845,7 +1845,7 @@ impl Agent {
                     }
                 }
 
-                // Visual verification (screenshots via Playwright or the Tauri-packaged UI)
+                // Visual Verification (screenshots via Playwright or Slint)
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
                     let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
                     let mut cmd = std::process::Command::new("bash");

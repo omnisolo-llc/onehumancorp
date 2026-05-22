@@ -1,0 +1,64 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export component VideoTutorials inherits Window {
+    width: 100%;
+    preferred-height: 800px;
+    min-width: 375px;
+    title: "Video Tutorials";
+    background: #f8fafc;
+    in-out property <string> selected_video_title: "";
+    in-out property <bool> is_playing: false;
+
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            max-width: 100%;
+            width: 100%;
+            padding: 16px;
+            spacing: 20px;
+
+            Text {
+                text: "Watch & Learn";
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 24px;
+
+                    Rectangle {
+                        background: white; border-radius: 12px;
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #e2e8f0;
+                                border-radius: 8px;
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            }
+                            Text { text: "How to add your first product"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                            Text { text: "A quick 60-second guide to listing items in your store."; color: #475569; wrap: word-wrap; }
+                        }
+                    }
+
+                    Rectangle {
+                        background: white; border-radius: 12px;
+                        VerticalBox {
+                            padding: 16px; spacing: 12px;
+                            Rectangle {
+                                height: 200px;
+                                background: #e2e8f0;
+                                border-radius: 8px;
+                                Text { text: "▶ Play Video"; horizontal-alignment: center; vertical-alignment: center; font-weight: 700; color: #64748b; }
+                            }
+                            Text { text: "Setting up AI Helpers"; font-weight: 700; font-size: 18px; color: #0f172a; }
+                            Text { text: "Learn how to let AI handle your customer emails and social media."; color: #475569; wrap: word-wrap; }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

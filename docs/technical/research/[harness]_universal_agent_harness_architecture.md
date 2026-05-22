@@ -76,8 +76,8 @@ graph TD
 **Task**: Implement the `Universal Agent Harness` based on the research doc.
 
 1.  **Create the Harness Registry**: Under `src/server/harness/`, implement a plugin registry capable of loading execution strategies dynamically (similar to OpenClaw's `pi-embedded-runner`).
-2.  **Integrate AST Validation**: Port the logic for Bash AST validation. Implement `BashASTValidator` in `src/server/harness/security.rs` to parse and reject unsafe compound commands and redirection operators before they hit `bwrap`.
-3.  **Integrate Persistent Browser Daemon**: Create a persistent Playwright/Chromium daemon manager in `src/server/harness/browser.rs`. It must maintain long-lived sessions and expose a local HTTP interface for sub-agents to achieve sub-second execution latency.
+2.  **Integrate AST Validation**: Port the logic for Bash AST validation. Implement `BashASTValidator` in `src/server/harness/security.go` to parse and reject unsafe compound commands and redirection operators before they hit `bwrap`.
+3.  **Integrate Persistent Browser Daemon**: Create a persistent Playwright/Chromium daemon manager in `src/server/harness/browser.go`. It must maintain long-lived sessions and expose a local HTTP interface for sub-agents to achieve sub-second execution latency.
 4.  **Telemetry Integration**: Add OpenTelemetry hooks. Every blocked execution MUST emit `ohc_harness_violation_total` and every execution must measure `ohc_harness_execution_duration_ms`. Ensure PII is redacted using `RedactInterfacePII` before any JSON serialization.
 5.  **State Management**: Ensure all command histories and session checkpoints are synced to the OHC-SIP using `pgvector`.
 6.  **Testing**: Write comprehensive unit tests for `BashASTValidator` covering at least 10 different shell attack vectors. Ensure 100% test coverage.

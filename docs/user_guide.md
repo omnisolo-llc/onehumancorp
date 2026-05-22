@@ -1,16 +1,15 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# User Guide: OHC Desktop App
+# User Guide: OHC Slint App
 
 ## 1. Overview
 
-This guide covers the current OHC desktop workflow. The canonical UI is the
-Tauri v2 app in `src/ui/tauri/`, backed by the Rust server APIs and packaged
-static assets in `src/ui/tauri/next_out`.
+This guide covers the Bazel-native Slint app workflow in `src/app`.
+The app provides a unified, mobile-first onboarding experience for small business owners.
 
 ## 2. Onboarding Flow
 
-The OHC desktop app guides a small-business owner through the launch flow:
+The OHC Slint app features a comprehensive 12-step onboarding wizard:
 1.  **Welcome**: Introduction to OneHumanCorp.
 2.  **Business Type**: Selection of business category (Online Store, Service, etc.).
 3.  **Name & Description**: Naming the business and AI-assisted description.
@@ -29,13 +28,7 @@ The OHC desktop app guides a small-business owner through the launch flow:
 Run the following from the repository root:
 
 ```bash
-bazelisk test //src/e2e:playwright
-```
-
-For the desktop shell itself:
-
-```bash
-bazelisk run //src/ui/tauri:app
+bazelisk test //src/app:app_test
 ```
 
 ## 4. Documentation

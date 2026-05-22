@@ -17,7 +17,7 @@ Traditional SEO (Search Engine Optimization) is becoming secondary to GEO (Gener
 ## Design Doc
 ### High-Level Architecture
 - **Discovery Agent:** Periodically scans the business's public profile and cross-references it against generative search "best practices" (Structured data, schema.org, plain-language clarity).
-- **Visibility Report:** A simple "Generative Score" (0-100) displayed in the Analytics section of the Tauri app.
+- **Visibility Report:** A simple "Generative Score" (0-100) displayed in the Analytics section of the Slint app.
 - **Auto-Optimization:** Agent suggests or auto-applies content changes to improve the business's "vibe" for AI models.
 
 ### Implementation Prompt

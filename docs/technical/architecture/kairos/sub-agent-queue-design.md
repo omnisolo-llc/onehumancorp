@@ -10,12 +10,12 @@ The **Sub-Agent Orchestration Queue** is a critical component of the OHC Hybrid 
 The queue utilizes a state-machine driven backend to coordinate jobs.
 
 ### Component Design
-- **Queue Manager (`src/server/queue.rs` and `src/server/orchestration/queue/`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
+- **Queue Manager (`src/server/orchestration/queue/queue.go`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
 - **Worker Nodes**: Isolated sub-agents spawned to execute specific payloads.
 
 ### Hybrid Strategy
 - **Cloud-Native Mode**: Leverages Redis (e.g., BullMQ style semantics via `redis`) to manage highly concurrent distributed queues. PostgreSQL `FOR UPDATE SKIP LOCKED` ensures robust task claiming across Kubernetes pods without race conditions.
-- **Standalone Mode**: Gracefully degrades to an in-memory or SQLite-backed transaction system, using Rust synchronization primitives to ensure safe local task dispatch.
+- **Standalone Mode**: Gracefully degrades to an in-memory or SQLite-backed transaction system, utilizing application-level `sync.Mutex` locks to ensure safe local task dispatch.
 
 ## 3. Database Schema (PostgreSQL/SQLite Compatible)
 ```sql

@@ -209,7 +209,7 @@ OHC promises full business management from a mobile device. We must formalize th
 - **Offline Capabilities**: Critical reads (dashboard summary) must be cached locally; critical writes (approving agent actions) must use a local retry queue.
 
 ### Implementation Prompt
-Audit and update the core Tauri/React UI components. Ensure all touch targets meet the 44px minimum. Implement a local caching layer (e.g., SQLite or shared preferences) for the main dashboard view and a retry mechanism for critical mutations when offline.
+Audit and update the core Flutter/Slint UI components. Ensure all touch targets meet the 44px minimum. Implement a local caching layer (e.g., SQLite or shared preferences) for the main dashboard view and a retry mechanism for critical mutations when offline.
 
 ### Priority: P0 | Scope: Medium
 

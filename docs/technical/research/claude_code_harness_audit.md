@@ -63,8 +63,8 @@ Based on this research, we need to introduce the following missions for the OHC 
     *   Feed the serialized context directly into the child agent's initialization state.
     *   Implement a `<task-notification>` XML/JSON response pattern for the child to report progress back to the parent asynchronously.
 *   **Implementation Prompt**:
-    1. Open `api/agent_pool.rs` (or equivalent orchestrator file).
-    2. Add a `ForkAgent(ctx async context, parentID string, directive string) (string, error)` function.
+    1. Open `api/agent_pool.go` (or equivalent orchestrator file).
+    2. Add a `ForkAgent(ctx context.Context, parentID string, directive string) (string, error)` function.
     3. Inside `ForkAgent`, retrieve the parent's state from the database.
     4. Clone the state and initialize a new child agent record.
     5. Return the child's `agentID`.

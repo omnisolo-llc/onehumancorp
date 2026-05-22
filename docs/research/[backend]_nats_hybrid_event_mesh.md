@@ -30,7 +30,7 @@ The OHC Hybrid Architecture requires a robust and high-performance eventing syst
 5. **UI Wireframes**: "Event Mesh Status" indicator visualizing active connections and message throughput in the admin dashboard.
 
 ## Implementation Prompt
-"Implement the NATS Event Mesh module in `src/server/integrations/nats/`. The module must provide a `NatsIntegration` struct conforming to the `Integration` interface in `catalog.rs`. It should support connecting to a remote cluster via credentials and configuring a local embedded instance as a fallback/leaf node. Ensure OpenTelemetry metrics (`ohc.nats.messages_published`, `ohc.nats.messages_received`) are instrumented. Write comprehensive E2E tests validating event propagation between a mock Cloud node and a Standalone instance."
+"Implement the NATS Event Mesh module in `src/server/integrations/nats/`. The module must provide a `NatsIntegration` struct conforming to the `Integration` interface in `catalog.go`. It should support connecting to a remote cluster via credentials and configuring a local embedded instance as a fallback/leaf node. Ensure OpenTelemetry metrics (`ohc.nats.messages_published`, `ohc.nats.messages_received`) are instrumented. Write comprehensive E2E tests validating event propagation between a mock Cloud node and a Standalone instance."
 
 ## Priority
 P1

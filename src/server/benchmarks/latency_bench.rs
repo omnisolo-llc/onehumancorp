@@ -122,32 +122,6 @@ pub async fn bench_api_response_time() {
     println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
 }
 
-pub async fn bench_agent_snapshot() {
-    use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
-    let (tx, _rx) = tokio::sync::mpsc::channel(100);
-    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
-    let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-    let db = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
-    let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
-
-    let agent_service = crate::services::agent::service::MyAgentManagerService::new(hub.clone());
-
-    let mut fetch_times = Vec::new();
-    let iterations = 100;
-
-    for _ in 0..iterations {
-        let req = ::server_ohc::orchestration::EmptyRequest {};
-        let mut request = tonic::Request::new(req);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-
-        let start = std::time::Instant::now();
-        let _ = agent_service.get_dashboard_snapshot(request).await;
-        fetch_times.push(start.elapsed().as_micros());
-    }
-    fetch_times.sort();
-    println!("Agent Snapshot Fetch Time: p50: {} us, p95: {} us, p99: {} us", fetch_times[iterations / 2], fetch_times[(iterations as f32 * 0.95) as usize], fetch_times[(iterations as f32 * 0.99) as usize]);
-}
-
 pub async fn bench_dashboard_snapshot() {
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -356,7 +330,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_bench_dashboard_snapshot() {
-        bench_agent_snapshot().await;
         bench_dashboard_snapshot().await;
     }
 

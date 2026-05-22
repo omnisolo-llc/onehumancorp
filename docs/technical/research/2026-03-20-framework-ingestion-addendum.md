@@ -39,7 +39,7 @@ This document synthesizes capabilities from leading AI Agent frameworks (OpenCla
 ### Architecture Hook
 To bridge the memory gap with minimal latency, we will introduce a `MemoryManager` service within the orchestration layer.
 
-```rust
+```go
 // Summary: Interface for handling agent memory.
 // Intent: Standardize memory read/writes across short and long-term storage backends.
 // Params: ctx for cancellation/tracing, agentID for scoping, payload containing state.
@@ -47,10 +47,10 @@ To bridge the memory gap with minimal latency, we will introduce a `MemoryManage
 // Errors: Returns error on backend unavailability or context timeout.
 // Side Effects: Reads/writes from Redis and Vector DB.
 type MemoryManager interface {
-    SaveShortTerm(ctx async context, agentID string, state []byte) error
-    RetrieveShortTerm(ctx async context, agentID string) ([]byte, error)
-    SaveLongTerm(ctx async context, agentID string, embedding []float32, payload []byte) error
-    QueryLongTerm(ctx async context, agentID string, queryEmbedding []float32, topK int) ([][]byte, error)
+    SaveShortTerm(ctx context.Context, agentID string, state []byte) error
+    RetrieveShortTerm(ctx context.Context, agentID string) ([]byte, error)
+    SaveLongTerm(ctx context.Context, agentID string, embedding []float32, payload []byte) error
+    QueryLongTerm(ctx context.Context, agentID string, queryEmbedding []float32, topK int) ([][]byte, error)
 }
 ```
 

@@ -37,12 +37,11 @@ sequenceDiagram
 
 ### 3.2 Data Model & Schema
 #### Memory Models
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct WebhookPayload {
-    agent_id: String,
-    headers: std::collections::HashMap<String, String>,
-    body: Vec<u8>,
+```go
+type WebhookPayload struct {
+    AgentID string            `json:"agent_id"`
+    Headers map[string]string `json:"headers"`
+    Body    []byte            `json:"body"`
 }
 ```
 
@@ -51,7 +50,7 @@ struct WebhookPayload {
 - `POST /api/v1/relay/webhook/{agent_id}`: Accepts incoming webhooks, locates the active stream for `{agent_id}`, and forwards the payload.
 
 ### 3.4 Logic & Algorithms
-- The Local Agent initiates a persistent outbound stream (e.g., via a Tokio channel, WebSocket, or gRPC stream) to the Cloud Relay.
+- The Local Agent initiates a persistent outbound stream (e.g., via a standard Go channel or gRPC stream simulated in memory/TCP) to the Cloud Relay.
 - The Cloud Relay maintains a map of `AgentID` -> `Stream connection`.
 - Upon receiving a webhook, the Cloud Relay checks if the `AgentID` is connected. If yes, it forwards the payload. If not, it drops it or returns 404/503.
 
@@ -59,7 +58,7 @@ struct WebhookPayload {
 ### 4.1 Security & Identity
 - Connections from the Local Tunnel to the Cloud Relay authenticate using SPIFFE SVIDs.
 ### 4.2 Scalability & Performance
-- The relay uses a concurrent Rust map such as `DashMap` or an `Arc<RwLock<_>>` map to track active connections.
+- The Relay uses sync.Map or similar to track active connections.
 ### 4.3 Monitoring & Observability
 - Export metrics for connected agents and forwarded webhooks using OpenTelemetry.
 
@@ -67,7 +66,7 @@ struct WebhookPayload {
 - **Ngrok/Cloudflare Tunnels**: Rejected due to external dependencies and violation of Zero Secrets architecture.
 
 ## 6. Implementation Plan
-1. Implement Cloud Relay service in Rust.
+1. Implement Cloud Relay service in Go.
 2. Implement Local Tunnel MCP tool.
 3. Provide E2E tests verifying the end-to-end flow.
 

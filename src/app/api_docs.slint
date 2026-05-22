@@ -1,0 +1,53 @@
+import { Button, VerticalBox, HorizontalBox, ScrollView } from "std-widgets.slint";
+
+export component ApiDocs inherits Window {
+    preferred-width: 800px;
+    preferred-height: 600px;
+    min-width: 375px;
+    title: "Connect Custom Software";
+    background: #f8fafc;
+    in-out property <string> api_key: "sk_live_...";
+    in-out property <string> endpoint_url: "https://api.ohc.io";
+
+    HorizontalBox {
+        alignment: center;
+        VerticalBox {
+            max-width: 800px;
+            width: 100%;
+            padding: 16px;
+            spacing: 20px;
+
+            Text {
+                text: "Custom Integration";
+                font-size: 24px;
+                font-weight: 700;
+                color: #0f172a;
+            }
+
+            Text {
+                text: "This section is for developers who want to connect OHC to custom software. If you don't write code, you don't need to use this page!";
+                color: #ef4444; // red warning
+                wrap: word-wrap;
+            }
+
+            ScrollView {
+                VerticalBox {
+                    spacing: 24px;
+
+                    VerticalBox {
+                        spacing: 8px;
+                        Text { text: "Product Data Access"; font-weight: 700; font-size: 18px; color: #334155; }
+                        Rectangle {
+                            background: #1e293b; border-radius: 8px; // dark theme for code
+                            VerticalBox {
+                                padding: 16px; spacing: 8px;
+                                Text { text: "Read Product List"; font-weight: 700; color: #10b981; } // green for GET
+                                Text { text: "Returns a list of all products in your store."; color: #cbd5e1; wrap: word-wrap; }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

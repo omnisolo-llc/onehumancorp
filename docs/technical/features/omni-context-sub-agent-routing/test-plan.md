@@ -4,7 +4,7 @@
 
 **Author:** Principal SRE & Automation Agent (L7)
 **Status:** Ready for Execution
-**Target:** `src/server/sip.rs`
+**Target:** `src/server/orchestration/sip.go`
 
 ## 1. Objective
 Verify that the Omni-Context Sub-agent Routing architecture dynamically and reliably injects project-level grounding (`AGENTS.md` and `CLAUDE.md`) into Swarm missions when `DelegateMission` is invoked, adhering to the Fail-Closed security mandate.
@@ -14,7 +14,7 @@ This plan covers the `SIPDB.DelegateMission` function and its interactions with 
 
 ## 3. Test Cases
 
-### 3.1 Unit Testing (`src/server/queue_test.rs and src/server/orchestration/queue/queue_test.rs`)
+### 3.1 Unit Testing (`src/server/orchestration/sip_test.go`)
 *   **TC1: Standard Delegation (No Context Root)**
     *   **Setup:** Initialize `SIPDB` with an empty `ContextRoot`.
     *   **Action:** Call `DelegateMission` with a valid task.
@@ -42,7 +42,7 @@ This plan covers the `SIPDB.DelegateMission` function and its interactions with 
 
 ## 4. Acceptance Criteria
 *   100% pass rate across all Bazel test targets (`bazelisk test //...`).
-*   Code coverage strictly exceeds 95% for `src/server/sip.rs` (specifically the `DelegateMission` function).
+*   Code coverage strictly exceeds 95% for `src/server/orchestration/sip.go` (specifically the `DelegateMission` function).
 *   No file-system lock contention or memory leaks occur during high-concurrency test runs.
 
 ## 5. Execution Environment
