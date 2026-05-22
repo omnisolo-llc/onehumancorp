@@ -70,27 +70,39 @@ graph TD
 
 Agents share memory via the OHC Central Database. Navigate to **Swarm Memory**, search for specific concepts or architectural insights, and review the consolidated knowledge retrieved from past missions.
 
-### Teammate Mesh and AutoDream
+### Teammate Mesh and AutoDream Sync Engine
 
 The Agent Swarm operates using a sophisticated shared memory protocol (OHC-SIP) ensuring Zero WIP and continuous orchestration.
 
 ```mermaid
 sequenceDiagram
+    autonumber
     participant Worker as Agent (Worker)
     participant Mesh as Teammate Mesh (Redis/Local)
-    participant AutoDream as AutoDreamWorker (Background)
+    participant Sync as AutoDream Sync Engine
     participant Embed as LLM Embedding API
     participant DB as PgVector/SQLite
+    participant Archive as Cold Storage
 
-    Worker->>Mesh: 1. Broadcast "Task Started" (mesh:tasks)
-    Worker->>Mesh: 2. Share Findings (mesh:coordination)
-    Worker->>Worker: 3. Complete Task & write to OHC_MEMORY_DIR
-    Worker->>Mesh: 4. Broadcast "Task Completed" (mesh:tasks)
-    AutoDream->>Worker: 5. Wake up & Read OHC_MEMORY_DIR/*.yml
-    AutoDream->>Embed: 6. Request Context Compression (Tokens -> Vector)
-    Embed-->>AutoDream: 7. Return 1536-dim Vector
-    AutoDream->>DB: 8. Upsert to agent_memories (pgvector)
-    AutoDream->>Worker: 9. Prune stale agent_session_data (>24h)
+    Worker->>Mesh: Broadcast "Task Started" (mesh:tasks)
+    Worker->>Mesh: Share Findings (mesh:coordination)
+    Worker->>Worker: Complete Task & write to OHC_MEMORY_DIR
+    Worker->>Mesh: Broadcast "Task Completed" (mesh:tasks)
+
+    Sync->>Mesh: Listen for "Task Completed"
+    Sync->>Worker: Read OHC_MEMORY_DIR/*.yml
+    Sync->>Sync: Deduplicate & Pre-process YAML
+
+    Sync->>Embed: Request Context Compression (Tokens -> Vector)
+    Embed-->>Sync: Return 1536-dim Vector
+
+    Sync->>DB: Upsert to agent_memories (pgvector)
+    DB-->>Sync: Acknowledge Write
+
+    Sync->>Archive: Archive raw session logs
+    Sync->>Worker: Prune stale agent_session_data (>24h)
+
+    note over Sync,DB: Ensures zero-latency context handoff
 ```
 
 ## 4. Troubleshooting
