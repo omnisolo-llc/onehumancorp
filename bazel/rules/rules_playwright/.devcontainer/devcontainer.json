@@ -1,0 +1,15 @@
+{
+  "build": {
+    // instructs devcontainers to use a Dockerfile
+    // rather than a pre-defined image
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker", // docker support
+        "BazelBuild.vscode-bazel" // bazel support
+      ]
+    }
+  }
+}

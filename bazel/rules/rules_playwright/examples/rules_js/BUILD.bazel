@@ -1,0 +1,100 @@
+load("@mrmeku_rules_playwright//playwright:defs.bzl", "playwright_browser_matrix", "playwright_integrity_map")
+load("@npm//:@playwright/test/package_json.bzl", playwright_bin = "bin")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//:http-server/package_json.bzl", http_server_bin = "bin")
+
+npm_link_all_packages(name = "node_modules")
+
+filegroup(
+    name = "todomvc_files",
+    srcs = ["todomvc"],
+    visibility = ["//visibility:public"],
+)
+
+http_server_bin.http_server_binary(
+    name = "test-server",
+    copy_data_to_bin = False,
+    data = [
+        "//:todomvc_files",
+    ],
+    fixed_args = [
+        "$(rootpath //:todomvc_files)",
+        "-p 1234",
+    ],
+)
+
+DATA = glob(["tests/**/*"]) + [
+    "package.json",
+    "playwright.config.ts",
+    "//:node_modules/@playwright/test",
+    ":test-server",
+]
+
+ENV = {
+    "TEST_SERVER": "$(rootpath :test-server)",
+    "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
+}
+
+ALL_BROWSERS = [
+    "@playwright//:chromium-headless-shell",
+    "@playwright//:firefox",
+    "@playwright//:webkit",
+]
+
+playwright_bin.playwright_test(
+    name = "test",
+    args = [
+        "test",
+    ],
+    data = DATA + ALL_BROWSERS,
+    env = ENV | {
+        "CI": "1",
+    },
+    tags = [
+        # Firefox does not run on mac with sandboxing
+        "no-sandbox",
+    ],
+)
+
+playwright_bin.playwright_binary(
+    name = "ui",
+    args = [
+        "test",
+        "--project=chromium",
+        "--ui",
+    ],
+    data = DATA + [
+        "@playwright//:chromium-headless-shell",
+    ],
+    env = ENV,
+)
+
+playwright_bin.playwright_binary(
+    name = "update-snapshots",
+    args = [
+        "test",
+        "--update-snapshots",
+        "--grep=\"Snapshots\"",
+    ],
+    data = DATA + ALL_BROWSERS,
+    env = ENV | {
+        "UPDATE_SNAPSHOTS": "true",
+    },
+)
+
+# Use this target to generate an integrity map for the toolchain within MODULE.bazel
+playwright_integrity_map(
+    name = "playwright_integrity_map",
+    browsers = playwright_browser_matrix(
+        browser_names = [
+            "chromium-headless-shell",
+            "firefox",
+            "webkit",
+        ],
+        platforms = [
+            "mac14-arm64",
+            "ubuntu20.04-x64",
+        ],
+        playwright_repo_name = "playwright",
+    ),
+)
