@@ -679,6 +679,16 @@ impl DB {
                         mission_log TEXT
                     );
 
+                    CREATE TABLE IF NOT EXISTS inbox_messages (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        source TEXT,
+                        content TEXT,
+                        draft_reply TEXT,
+                        status TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS interactions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
