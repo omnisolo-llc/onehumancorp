@@ -116,7 +116,7 @@ impl AutoDreamWorker {
 
              db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
 
-             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
+             db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY", None).await?;
 
              if db.is_sqlite() {
                  sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type, source_mission_id) VALUES (?, ?, ?, ?, ?, ?, ?, NULL)")
