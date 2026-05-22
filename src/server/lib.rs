@@ -236,17 +236,36 @@ struct HttpMetricsResponse {
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
 
     let (active_customers_res, pending_orders_res) = tokio::join!(
         async {
@@ -275,17 +294,36 @@ async fn http_metrics_handler(
 
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
     let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_one(&db.pool)
@@ -1912,14 +1950,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/dashboard/sales",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, store, headers, payload).await }
             }),
         )
         .route(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
