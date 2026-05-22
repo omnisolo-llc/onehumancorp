@@ -555,12 +555,6 @@ mod tests {
     async fn test_customer_success_worker_draft_reply() {
         let db = setup_test_db().await;
         if let DbStore::Sqlite(pool) = &db.store {
-            let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (id TEXT PRIMARY KEY, name TEXT, industry TEXT);").execute(pool).await;
-
-            // Insert a tenant
-            sqlx::query("INSERT INTO tenants (id, name, industry) VALUES ('tenant1', 'Maya Bakery', 'Bakery')")
-                .execute(pool).await.unwrap();
-
             // Insert a task
             let task_payload = json!({
                 "message": "Hello, do you have vegan cakes?"
@@ -582,8 +576,7 @@ mod tests {
             let approval_status: String = row.get("approval_status");
 
             assert_eq!(title, "Draft Reply");
-            // Either the dynamic LLM response or fallback string should be here
-            assert!(content.contains("Hello, do you have vegan cakes?") || content.len() > 0);
+            assert!(content.contains("Hello, do you have vegan cakes?"));
             assert_eq!(approval_status, "PENDING");
         }
     }
@@ -693,61 +686,12 @@ impl CustomerSuccessWorker {
 
         let processed = task.is_some();
         if let Some((id, tenant_id, payload, event_type)) = task {
-            // Fetch business context
-            let (tenant_name, tenant_industry) = match &db.store {
-                crate::db::DbStore::Postgres => {
-                    let row = sqlx::query("SELECT name, industry FROM tenants WHERE id = $1")
-                        .bind(&tenant_id)
-                        .fetch_optional(&db.pool)
-                        .await
-                        .unwrap_or(None);
-                    match row {
-                        Some(r) => (
-                            r.try_get::<String, _>("name").unwrap_or_else(|_| "Your Business".to_string()),
-                            r.try_get::<String, _>("industry").unwrap_or_else(|_| "Business".to_string()),
-                        ),
-                        None => ("Your Business".to_string(), "Business".to_string())
-                    }
-                },
-                crate::db::DbStore::Sqlite(pool) => {
-                    let row = sqlx::query("SELECT name, industry FROM tenants WHERE id = ?")
-                        .bind(&tenant_id)
-                        .fetch_optional(pool)
-                        .await
-                        .unwrap_or(None);
-                    match row {
-                        Some(r) => (
-                            r.try_get::<String, _>("name").unwrap_or_else(|_| "Your Business".to_string()),
-                            r.try_get::<String, _>("industry").unwrap_or_else(|_| "Business".to_string()),
-                        ),
-                        None => ("Your Business".to_string(), "Business".to_string())
-                    }
-                }
-            };
-
             // Draft confirmation message
-            let (title, mut drafted_msg) = if event_type == "OrderProcessed" {
-                ("Draft Confirmation".to_string(), format!("Hi! Your order from {} has been processed and is being prepared for shipment. Thank you!", tenant_name))
+            let (title, drafted_msg) = if event_type == "OrderProcessed" {
+                ("Draft Confirmation".to_string(), format!("Hi! Your order from OHC Store has been processed and is being prepared for shipment. Thank you!"))
             } else {
                 ("Draft Reply".to_string(), format!("Hi! Thanks for reaching out. We received your message: '{}'. One of our team members will get back to you shortly.", payload.get("message").and_then(|m| m.as_str()).unwrap_or("")))
             };
-
-            if event_type == "CustomerMessageReceived" {
-                let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
-                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
-                if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
-                    let reason_req = ::server_ohc::orchestration::ReasonRequest {
-                        prompt,
-                        from_agent_id: "The Ambassador".into(),
-                    };
-                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                        let content = res.into_inner().content;
-                        if !content.is_empty() {
-                            drafted_msg = content;
-                        }
-                    }
-                }
-            }
 
             let task_id = Uuid::new_v4().to_string();
 
@@ -880,7 +824,7 @@ impl PromoterWorker {
                             let product_name = payload_json.get("name").and_then(|n| n.as_str()).unwrap_or("a new product");
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
-                            let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
+                            let prompt = format!("Generate a catchy and engaging social media post (Instagram/X) for our new product: '{}'. Include relevant hashtags and emojis. Be professional but exciting.", product_name);
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
@@ -895,14 +839,14 @@ impl PromoterWorker {
                             }
 
                             let task_id = Uuid::new_v4().to_string();
-                            let title = format!("7-Day Social Calendar: {}", product_name);
+                            let title = format!("Social Media Draft: {}", product_name);
 
                             match &db_social.store {
                                 crate::db::DbStore::Postgres => {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES ($1, $2, $3, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
+                                        VALUES ($1, $2, $3, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', $4)
                                         "#
                                     )
                                     .bind(&task_id)
@@ -916,7 +860,7 @@ impl PromoterWorker {
                                     let _ = sqlx::query(
                                         r#"
                                         INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
-                                        VALUES (?, ?, ?, 'The Promoter drafted a 7-day social media calendar for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
+                                        VALUES (?, ?, ?, 'The Promoter drafted a social media post for your review.', 'PENDING', 'P2', 'HIGH', 'PENDING', ?)
                                         "#
                                     )
                                     .bind(&task_id)

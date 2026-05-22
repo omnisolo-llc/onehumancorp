@@ -22,7 +22,7 @@ export async function GET() {
       id: "3",
       department: "Legal",
       action_risk: "High",
-      description: "Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?",
+      description: "ACTION REQUIRED: Revenue approaching EU VAT threshold. Generate and apply compliance policies?",
       status: "Pending",
       feature_type: "legal_compliance"
     },
@@ -30,7 +30,7 @@ export async function GET() {
       id: "4",
       department: "Marketing",
       action_risk: "Medium",
-      description: "Global Reach: Translate your storefront to Spanish and show local currency for customers in Latin America?",
+      description: "Autonomous Global Localization: Translate storefront to Spanish and localize currency for LATAM visitors?",
       status: "Pending",
       feature_type: "global_localization"
     },
@@ -38,7 +38,7 @@ export async function GET() {
       id: "5",
       department: "Marketing",
       action_risk: "Low",
-      description: "Smart Search Setup: Make your store more visible to customers using AI search tools?",
+      description: "AI Visibility & GEO: Apply automated Generative Engine Optimization for LLM crawlers?",
       status: "Pending",
       feature_type: "ai_geo"
     }

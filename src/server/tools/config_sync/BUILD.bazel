@@ -1,5 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = glob(["*.rs"]),
-    visibility = ["//src/server:__pkg__", "//src/server/tools:__pkg__"],
-)

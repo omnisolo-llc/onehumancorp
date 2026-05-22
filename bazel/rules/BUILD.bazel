@@ -3,7 +3,6 @@ load("@rules_python//python:defs.bzl", "py_binary")
 
 exports_files([
     "gen_dart_yaml.py",
-    "msvc_lib_ar_wrapper.sh",
     "protoc-gen-es.js",
     "ts_proto_wrapper.js",
 ])
