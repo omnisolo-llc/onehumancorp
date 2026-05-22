@@ -30,20 +30,17 @@ impl MyAgentManagerService {
         }
 
         let hub_cost = self.hub.clone();
-        let hub1 = self.hub.clone();
-        let hub2 = self.hub.clone();
-
-        let (agents_res, meetings_res, cost_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || hub1.get_agents()),
-            tokio::task::spawn_blocking(move || hub2.get_meetings()),
-            tokio::task::spawn_blocking(move || {
-                let cost_auditor = hub_cost.get_cost_auditor();
-                (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
-            })
+        let (agents, meetings, cost_res) = tokio::join!(
+            async { self.hub.get_agents() },
+            async { self.hub.get_meetings() },
+            async {
+                tokio::task::spawn_blocking(move || {
+                    let cost_auditor = hub_cost.get_cost_auditor();
+                    (cost_auditor.get_total_cost(), cost_auditor.get_total_tokens(), cost_auditor.get_agent_costs_snapshot())
+                }).await.unwrap_or((0.0, 0, vec![]))
+            }
         );
-        let agents = agents_res.unwrap();
-        let meetings = meetings_res.unwrap();
-        let (total_cost, total_tokens, agent_costs_data) = cost_res.unwrap_or((0.0, 0, vec![]));
+        let (total_cost, total_tokens, agent_costs_data) = cost_res;
 
         let mut agent_costs = Vec::new();
         for (name, cost, _token_used, roi, efficiency, _storage) in agent_costs_data {

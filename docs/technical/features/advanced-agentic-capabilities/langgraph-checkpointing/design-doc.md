@@ -18,16 +18,15 @@
 4. When resuming, `LoadCheckpoint` retrieves the data.
 
 ## 4. API & Data Models
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct Checkpoint {
-    thread_id: String,
-    state: serde_json::Value,
+```go
+type Checkpoint struct {
+  ThreadID string `json:"thread_id"`
+  State map[string]interface{} `json:"state"`
 }
 ```
 
 ## 5. Implementation Details
-- Use typed serde deserialization when reloading checkpoints to ensure schema integrity.
+- Use strict JSON decoding with `dec.DisallowUnknownFields()` when reloading checkpoints to ensure schema integrity.
 - Optimize PostgreSQL indexes on `thread_id`.
 - Maintain Zero-Lock stack compatibility.
 

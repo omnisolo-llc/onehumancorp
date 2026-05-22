@@ -20,14 +20,14 @@ The "Ecosystem Interoperability" feature establishes the One Human Corp (OHC) "A
 - Native execution environments for Python-based frameworks (adapters act as a bridge, relying on external API hooks or sidecar containers for non-Go execution).
 
 ## 3. Detailed Architecture
-### 3.1 Universal Interface (`src/server/interop/protocol.rs`)
+### 3.1 Universal Interface (`src/interop/types.go`)
 The core OHC control plane exposes a `UniversalAgent` interface. Every supported framework has a corresponding adapter that translates framework-specific constructs into OHC events.
 
 ### 3.2 Framework Adapters
-- **OpenClaw Adapter**: Syncs real-time state check-pointing via append-only K8s custom resources and LangGraph event streams.
-- **AutoGen Adapter (`src/agents/builtin/autogen.rs`)**: Maps AutoGen's multi-agent conversational model to OHC's event-driven pub/sub architecture.
-- **CrewAI Adapter (`src/agents/builtin/crewai.rs`)**: Translates CrewAI roles, tasks, and team assignments into LangGraph states.
-- **Semantic Kernel Adapter**: Integrates SK's function calling and prompt orchestration directly into the shared state manager and agent command executor.
+- **OpenClaw Adapter (`openclaw_adapter.go`)**: Syncs real-time state check-pointing via append-only K8s custom resources and LangGraph event streams.
+- **AutoGen Adapter (`autogen_adapter.go`)**: Maps AutoGen's multi-agent conversational model to OHC's event-driven pub/sub architecture.
+- **CrewAI Adapter (`crewai_adapter.go`)**: Translates CrewAI roles, tasks, and team assignments into LangGraph states.
+- **Semantic Kernel Adapter (`semantickernel_adapter.go`)**: Integrates SK's function calling and prompt orchestration directly into the shared state manager and agent command executor.
 
 ### 3.3 Core Infrastructure Components
 - **MCP Switchboard**: Acts as the central proxy for all JSON-RPC tool calls originating from any framework, providing unified rate-limiting and authorization.
