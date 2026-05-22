@@ -207,21 +207,22 @@ export function useWalkthrough() {
 export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<{title: string, duration: string} | null>(null);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string}[]>([
+  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, link?: {url: string, title: string}}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   const helpArticles = [
-    { title: "Getting Started", desc: "Learn the basics of setting up your store." },
-    { title: "My Store", desc: "Manage your products and layout." },
-    { title: "Payments", desc: "Connect your bank and get paid." },
-    { title: "AI Agents", desc: "Hire and manage your AI workforce." },
-    { title: "Marketing", desc: "Grow your audience and sales." },
-    { title: "Account & Billing", desc: "Manage your subscription." },
-    { title: "API Documentation (Advanced)", desc: "Interactive API reference for integrations.", link: "/api-docs" }
+    { title: "Getting Started", desc: "Learn the easy steps to set up your store and sell your first product." },
+    { title: "My Store", desc: "Manage what you sell and how your store looks to your customers." },
+    { title: "Payments", desc: "Connect your bank account so you can get paid safely and quickly." },
+    { title: "AI Agents", desc: "Learn how to hire and manage your team of AI workers who help run your shop." },
+    { title: "Marketing", desc: "Find more customers and grow your business using our simple tools." },
+    { title: "Account & Billing", desc: "Check your bills, see your receipts, and manage your monthly plan." },
+    { title: "API Documentation (Advanced)", desc: "Technical guides for connecting other tools to your store.", link: "/api-docs" }
   ];
 
   const filteredArticles = helpArticles.filter(a =>
@@ -244,9 +245,13 @@ export function HelpWidget() {
       setChatMessages(prev => [...prev, { role: "user", text: val }]);
 
       try {
-        const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: val })
+        });
         const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, link: data.link }]);
       } catch (err) {
         setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
       }
@@ -306,17 +311,14 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Type a short description of your business here. This helps our AI understand what you sell." }, { targetId: "generate-btn", message: "Click this button to let our AI agents build your complete store for you." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "sales-card", message: "This card shows how much money you have made today. Connect your bank account to start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "I am your AI Support Agent! You can activate more specialized agents in the 'Your Team' section to help with marketing and more." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
-                  </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                 </div>
               </div>
@@ -332,7 +334,14 @@ export function HelpWidget() {
                         : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
-                      <div key={idx} className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                      <div key={idx} className="flex flex-col gap-2">
+                        <div className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
+                        {msg.link && (
+                          <a href={msg.link.url} className="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 self-start shadow-sm mb-2">
+                            {msg.link.title}
+                          </a>
+                        )}
+                      </div>
                     ) : (
                       <div key={idx} className={className}>{msg.text}</div>
                     );
@@ -359,7 +368,11 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                    <div
+                      key={v.id}
+                      onClick={() => setActiveVideo(v)}
+                      className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer"
+                    >
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -375,19 +388,37 @@ export function HelpWidget() {
             )}
 
             {tab === "whatsnew" && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-4 text-lg">What's New</h3>
-                <div className="w-full aspect-video bg-gray-200 rounded-xl mb-4 relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
-                   <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">
-                     <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                   </div>
+              <div className="space-y-8">
+                <h3 className="font-bold text-gray-900 text-lg">What's New</h3>
+
+                <div className="space-y-4">
+                  <div className="w-full aspect-video bg-gray-200 rounded-xl relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-blue-200">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    </div>
+                  </div>
+                  <div className="border-l-4 border-blue-600 pl-4">
+                    <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-1 block">Recently Added</span>
+                    <h4 className="font-bold text-gray-900 text-md mb-1">New AI Store Builder</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">Build a full store by just describing your business in a few words. No design skills needed!</p>
+                  </div>
                 </div>
-                <div className="border-l-2 border-blue-600 pl-4 mb-6">
-                  <span className="text-xs font-bold text-blue-600 mb-1 block">TODAY</span>
-                  <h4 className="font-bold text-gray-800 text-sm mb-1">New AI Store Builder</h4>
-                  <p className="text-xs text-gray-600">You can now generate a complete storefront from just a short description of your business.</p>
+
+                <div className="space-y-4 opacity-80">
+                   <div className="w-full aspect-video bg-gray-200 rounded-xl relative overflow-hidden border border-gray-100 shadow-sm flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-green-50 to-emerald-50 flex items-center justify-center text-green-200">
+                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                  </div>
+                  <div className="border-l-4 border-green-500 pl-4">
+                    <h4 className="font-bold text-gray-900 text-md mb-1">One-Click Payments</h4>
+                    <p className="text-xs text-gray-600 leading-relaxed">Connect your bank account even faster. Get paid by your customers in seconds.</p>
+                  </div>
                 </div>
-                <a href="/changelog" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
+
+                <a href="/changelog" className="block text-center bg-gray-100 py-3 rounded-xl text-gray-600 text-sm font-bold hover:bg-gray-200 transition-colors">
+                  View Full Changelog →
+                </a>
               </div>
             )}
           </div>

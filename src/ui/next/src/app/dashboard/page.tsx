@@ -168,7 +168,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                        <WithTooltip id="advanced-settings-tooltip" defaultText="Turn this on to see more technical details about what your AI agents are doing.">
+                          <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                        </WithTooltip>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
                             className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
@@ -275,7 +277,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                <div id="sales-card" className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
@@ -308,6 +310,7 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                      <WithTooltip id="embed-code-tooltip" defaultText="Copy this code to put your store on any other website you own.">
                         <pre className="text-xs text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap">
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>
@@ -315,6 +318,7 @@ export default function Dashboard() {
   <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
 </div>`}
                         </pre>
+                      </WithTooltip>
                         <button
                             onClick={() => {
                                 const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
@@ -351,12 +355,14 @@ export default function Dashboard() {
                     >
                         Referrals
                     </button>
-                    <button
-                        onClick={() => setShowReferralModal(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
-                    >
-                        <span>🎁 Invite a Business & Earn $50</span>
-                    </button>
+                    <WithTooltip id="referral-tooltip" defaultText="Invite other business owners to OHC and earn credits for your own shop.">
+                      <button
+                          onClick={() => setShowReferralModal(true)}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
+                      >
+                          <span>🎁 Invite a Business & Earn $50</span>
+                      </button>
+                    </WithTooltip>
                 </div>
             </div>
 
