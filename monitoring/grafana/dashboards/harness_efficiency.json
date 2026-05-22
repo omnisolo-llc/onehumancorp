@@ -1,0 +1,69 @@
+{
+  "title": "Harness Efficiency Cloud vs Standalone",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "id": 1,
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "title": "Harness Init Latency (Cloud vs Standalone)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_seconds_bucket[5m])) by (le, EnvMode))",
+          "legendFormat": "{{EnvMode}} Init Latency (p95)"
+        }
+      ]
+    },
+    {
+      "title": "Harness DB I/O Latency (Cloud vs Standalone)",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_seconds_bucket[5m])) by (le, EnvMode, operation))",
+          "legendFormat": "{{EnvMode}} {{operation}} Latency (p95)"
+        }
+      ]
+    },
+    {
+      "title": "Execution Events Rate by Mode",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(execution_events_total[5m])) by (EnvMode)",
+          "legendFormat": "{{EnvMode}} Executions/sec"
+        }
+      ]
+    }
+  ]
+}

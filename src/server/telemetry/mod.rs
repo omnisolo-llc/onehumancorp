@@ -1,6 +1,8 @@
 pub use ::server_config as config;
 use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
+use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::SqlitePool;
 use chrono::Utc;
 use std::sync::OnceLock;
 use opentelemetry::global;
@@ -122,8 +124,8 @@ pub async fn record_sqlite_retry_exhausted(pool: &PgPool, operation: &str) -> Re
 pub async fn record_queue_length(pool: &PgPool, delta: i32) -> Result<(), Box<dyn std::error::Error>> {
     let deployment_mode = get_deployment_mode();
 
-    get_queue_length_gauge().add(delta as i64, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode)]);
-    let payload = serde_json::json!({ "delta": delta, "deployment_mode": deployment_mode });
+    get_queue_length_gauge().add(delta as i64, &[opentelemetry::KeyValue::new("EnvMode", deployment_mode)]);
+    let payload = serde_json::json!({ "delta": delta, "EnvMode": deployment_mode });
 
     buffer_metric(pool, "ohc_sub_agent_queue_length", "gauge", delta as f32, payload).await
 }
@@ -195,6 +197,27 @@ pub async fn record_rag_escalation(pool: &PgPool, org_id: &str, error: &str) -> 
 }
 
 
+use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::SqlitePool;
+
+static STANDALONE_SQLITE_POOL: OnceLock<SqlitePool> = OnceLock::new();
+
+async fn get_sqlite_pool() -> &'static SqlitePool {
+    if let Some(pool) = STANDALONE_SQLITE_POOL.get() {
+        return pool;
+    }
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://ohc-standalone.db".to_string());
+    let pool = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to local telemetry buffer DB");
+
+    STANDALONE_SQLITE_POOL.set(pool).ok();
+    STANDALONE_SQLITE_POOL.get().unwrap()
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
@@ -202,6 +225,16 @@ pub async fn buffer_metric(
     value: f32,
     labels: Value,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let deployment_mode = get_deployment_mode();
+    let mut labels_obj = labels.clone();
+    if let serde_json::Value::Object(ref mut map) = labels_obj {
+        map.insert("EnvMode".to_string(), serde_json::Value::String(deployment_mode.to_string()));
+    } else if labels_obj.is_null() {
+        let mut map = serde_json::Map::new();
+        map.insert("EnvMode".to_string(), serde_json::Value::String(deployment_mode.to_string()));
+        labels_obj = serde_json::Value::Object(map);
+    }
+
     // In standalone mode, do not sync telemetry to cloud unless explicitly enabled
     let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
 
@@ -209,20 +242,35 @@ pub async fn buffer_metric(
         return Ok(());
     }
 
-    let redacted_labels = redact_interface_pii(labels);
+    let redacted_labels = redact_interface_pii(labels_obj);
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
-    query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')"
-    )
-    .bind(metric_name)
-    .bind(metric_type)
-    .bind(value)
-    .bind(labels_json)
-    .bind(Utc::now())
-    .execute(pool)
-    .await?;
+    if deployment_mode == "Standalone" {
+        let sqlite_pool = get_sqlite_pool().await;
+        query(
+            "INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value)
+        .bind(&labels_json)
+        .bind(Utc::now().to_rfc3339()) // sqlite does not support TIMESTAMPTZ directly
+        .execute(sqlite_pool)
+        .await?;
+    } else {
+        query(
+            "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')"
+        )
+        .bind(metric_name)
+        .bind(metric_type)
+        .bind(value)
+        .bind(&labels_json)
+        .bind(Utc::now())
+        .execute(pool)
+        .await?;
+    }
 
     Ok(())
 }
@@ -458,7 +506,7 @@ pub fn record_harness_init_latency(latency_seconds: f64) {
     let histogram = get_harness_init_latency();
     let deployment_mode = get_deployment_mode();
     histogram.record(latency_seconds, &[
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        opentelemetry::KeyValue::new("EnvMode", deployment_mode.to_string()),
     ]);
 }
 
@@ -466,7 +514,7 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
     let histogram = get_harness_db_io_latency();
     let deployment_mode = get_deployment_mode();
     histogram.record(latency_seconds, &[
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        opentelemetry::KeyValue::new("EnvMode", deployment_mode.to_string()),
         opentelemetry::KeyValue::new("operation", operation.to_string()),
     ]);
 }

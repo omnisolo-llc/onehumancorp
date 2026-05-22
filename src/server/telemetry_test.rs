@@ -475,7 +475,7 @@ async fn test_queue_length_gauge_initialization() {
 }
 
 #[tokio::test]
-async fn test_record_queue_length_with_deployment_mode() {
+async fn test_record_queue_length_with_env_mode() {
     let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
     let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
         Ok(Ok(p)) => p,
@@ -493,7 +493,7 @@ async fn test_record_queue_length_with_deployment_mode() {
     use sqlx::Row;
     let labels_json: String = row.get("labels_json");
     let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
-    assert!(parsed.get("deployment_mode").is_some());
+    assert!(parsed.get("EnvMode").is_some());
 }
 #[test]
 fn test_standalone_wrapper_audit() {
