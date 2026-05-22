@@ -20,6 +20,11 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
 
         // Check for Swarm Online pill
         await expect(page.locator('text=Swarm Online')).toBeVisible();
+
+        // Verify premium glassmorphism token specifically
+        const header = page.locator('header').first();
+        await expect(header).toHaveCSS('backdrop-filter', 'blur(30px) saturate(2.1)');
+        await expect(header).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
     });
 
     // 3. Verify Grandma Test (No technical developer terminology)
@@ -49,7 +54,7 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
         await expect(snapshotSection.getByText('Pending Orders')).toBeVisible();
 
         // Check that at least some numeric values load
-        await expect(snapshotSection.getByText(/\$?\d+(\.\d{2})?/)).toHaveCount(3);
+        await expect(snapshotSection.getByText(/\$?\d+(\.\d{2})?/)).toHaveCount(5);
     });
 
     // 5. Check fully responsive & full feature coverage

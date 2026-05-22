@@ -19,6 +19,6 @@ The "Hybrid Agentic OS" backlog queue management mechanism (`SyncPendingMissions
 
 <br />
 
-<div style="backdrop-filter: blur(15px); background-color: rgba(255, 255, 255, 0.1); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); padding: 20px; text-align: center;">
+<div style="backdrop-filter: blur(30px) saturate(210%); background-color: rgba(255, 255, 255, 0.65); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.4); padding: 20px; text-align: center;">
     <i>Adhering to the Visual Excellence Mandate: Glassmorphism tokens applied to isolate system signal transparency.</i>
 </div>
