@@ -1972,7 +1972,7 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .merge(webhook_router)
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.", "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.", "launch-btn-tooltip": "Launch your storefront immediately to a live URL.", "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.", "referral-tooltip": "Share your unique link to earn credits when friends join OHC.", "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.", "department-card-tooltip": "Click to view and manage pending approvals for this department.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features. For store setup, check out the Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
