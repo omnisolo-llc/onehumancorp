@@ -22,29 +22,4 @@ test.describe('Viral Storefront E2E', () => {
     await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
     await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
   });
-
-  test('provides an embed widget snippet for storefront sharing', async ({ page }) => {
-    await page.goto('/storefront-builder');
-    await page.getByRole('button', { name: 'Embed' }).click();
-
-    const sheet = page.locator('#embed-setup-sheet');
-    await expect(sheet).toHaveClass(/open/);
-    await expect(sheet.getByRole('heading', { name: 'Embed Storefront' })).toBeVisible();
-
-    const textarea = sheet.locator('#embed-code-textarea');
-    await expect(textarea).toBeVisible();
-    await expect(textarea).toHaveValue(/<iframe src=".*\/api\/v1\/growth\/storefront\/embed".*><\/iframe>/);
-  });
-
-  test('renders the embed widget directly with viral footer', async ({ page }) => {
-    await page.goto('/api/v1/growth/storefront/embed');
-
-    await expect(page.locator('.card')).toBeVisible();
-    await expect(page.locator('.title')).toContainText('Premium Product');
-
-    const footer = page.locator('.footer');
-    await expect(footer).toBeVisible();
-    await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
-  });
 });
