@@ -21,23 +21,68 @@ interface OnboardingState {
   setStartResult: (result: any) => void;
 }
 
-export const useOnboardingStore = create<OnboardingState>((set) => ({
-  step: 1,
-  businessName: '',
-  businessCategory: '',
-  isInstantBuild: false,
-  businessDescription: '',
-  isLoading: false,
-  error: '',
-  intakeData: null,
-  startResult: null,
-  setStep: (step) => set({ step }),
-  setBusinessName: (businessName) => set({ businessName }),
-  setBusinessCategory: (businessCategory) => set({ businessCategory }),
-  setIsInstantBuild: (isInstantBuild) => set({ isInstantBuild }),
-  setBusinessDescription: (businessDescription) => set({ businessDescription }),
-  setIsLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setIntakeData: (intakeData) => set({ intakeData }),
-  setStartResult: (startResult) => set({ startResult }),
-}));
+const loadInitialState = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('ohc_react_wizard_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          step: parsed.step || 1,
+          businessName: parsed.businessName || '',
+          businessCategory: parsed.businessCategory || '',
+          isInstantBuild: parsed.isInstantBuild || false,
+          businessDescription: parsed.businessDescription || '',
+          intakeData: parsed.intakeData || null,
+        };
+      }
+    } catch (e) {
+      console.error('Failed to parse saved state', e);
+    }
+  }
+  return {
+    step: 1,
+    businessName: '',
+    businessCategory: '',
+    isInstantBuild: false,
+    businessDescription: '',
+    intakeData: null,
+  };
+};
+
+export const useOnboardingStore = create<OnboardingState>((set) => {
+  const initialState = loadInitialState();
+
+  const updateStateAndSave = (updates: Partial<OnboardingState>) => {
+    set((state) => {
+      const nextState = { ...state, ...updates };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('ohc_react_wizard_state', JSON.stringify({
+          step: nextState.step,
+          businessName: nextState.businessName,
+          businessCategory: nextState.businessCategory,
+          isInstantBuild: nextState.isInstantBuild,
+          businessDescription: nextState.businessDescription,
+          intakeData: nextState.intakeData,
+        }));
+      }
+      return nextState;
+    });
+  };
+
+  return {
+    ...initialState,
+    isLoading: false,
+    error: '',
+    startResult: null,
+    setStep: (step) => updateStateAndSave({ step }),
+    setBusinessName: (businessName) => updateStateAndSave({ businessName }),
+    setBusinessCategory: (businessCategory) => updateStateAndSave({ businessCategory }),
+    setIsInstantBuild: (isInstantBuild) => updateStateAndSave({ isInstantBuild }),
+    setBusinessDescription: (businessDescription) => updateStateAndSave({ businessDescription }),
+    setIsLoading: (isLoading) => set({ isLoading }),
+    setError: (error) => set({ error }),
+    setIntakeData: (intakeData) => updateStateAndSave({ intakeData }),
+    setStartResult: (startResult) => set({ startResult }),
+  };
+});

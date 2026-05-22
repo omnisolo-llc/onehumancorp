@@ -3453,13 +3453,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -3470,15 +3470,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
+                            <div id="step-3-error" style="display: none; background-color: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 12px; border-radius: 8px; margin-bottom: 16px; font-size: 14px;"></div>
                             <h1>Give your business a name</h1>
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
+                            <button onclick="
+                                const inputs = this.parentElement.querySelectorAll('input[type=text]');
+                                const name = inputs[0].value.trim() || inputs[1].value.trim();
+                                const errorDiv = document.getElementById('step-3-error');
+                                if (!name || name.length < 3) {
+                                    errorDiv.textContent = 'Business name must be at least 3 characters.';
+                                    errorDiv.style.display = 'block';
+                                } else {
+                                    errorDiv.style.display = 'none';
+                                    nextStep(4);
+                                }
+                            " style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3489,7 +3501,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>Add your first product or service</h1>
                             <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -3497,20 +3509,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>Create your account</h1>
                             <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -3521,7 +3533,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden" class="hidden" style="display: none; animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
