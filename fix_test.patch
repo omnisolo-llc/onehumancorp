@@ -1,36 +1,8 @@
-<<<<<<< SEARCH
-        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
-        let db = Arc::new(crate::db::DB { pool: dummy_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-=======
-        let db = Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool.clone()) });
->>>>>>> REPLACE
-<<<<<<< SEARCH
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-=======
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
->>>>>>> REPLACE
-<<<<<<< SEARCH
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
-=======
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
-        let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
->>>>>>> REPLACE
-<<<<<<< SEARCH
-            depth: 0,
-=======
-            depth: Some(0),
->>>>>>> REPLACE
-<<<<<<< SEARCH
-            depth: 0,
-=======
-            depth: Some(0),
->>>>>>> REPLACE
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -4595,7 +4595,6 @@
+                             const path = window.location.pathname;
+                             const pathAliases = { '/business-setup': 'setup-screen' };
+                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+-                            await loadWizardState();
+                             showScreen(screenId);
