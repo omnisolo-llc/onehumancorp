@@ -10,7 +10,7 @@ mod parity_tests {
         let db_id = uuid::Uuid::new_v4().to_string();
         let uri = format!("sqlite:file:{}?mode=memory&cache=shared", db_id);
         let sqlite_pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(2)
             .connect(&uri)
             .await
             .unwrap();
@@ -219,12 +219,29 @@ mod parity_tests {
                 .await
                 .unwrap();
 
-            // To simulate failure on the second we just perform a normal execute. Sqlite won't lock if not explicitly IMMEDIATE so we skip concurrent tx2 since SQLite memory DB max_connections=1 prevents it.
+            // Perform concurrent attempt to update the same row. SQLite handles concurrency differently,
+            // we simulate a timeout or a blocked transaction that fails to update the locked row.
+            let pool_clone = pool.clone();
+            let task_id_clone = task_id.clone();
+            let concurrent_task = tokio::spawn(async move {
+                let mut tx2 = pool_clone.begin().await.unwrap();
+                let res = sqlx::query("UPDATE swarm_tasks SET status = 'IN_PROGRESS' WHERE id = ? AND status = 'PENDING'")
+                    .bind(&task_id_clone)
+                    .execute(&mut *tx2)
+                    .await;
+                match res {
+                    Ok(result) => result.rows_affected(),
+                    Err(_) => 0, // SQLITE_BUSY or similar timeout
+                }
+            });
 
-            let rows_affected = 0; // We just simulate tx isolation correctly since we updated it in tx1
-
-            assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated
+            // SQLite might actually block the second transaction until the first commits, depending on the PRAGMA.
+            // If it blocks, it will take longer, or timeout and fail.
+            // But either way, it should not find the row as PENDING once tx1 commits.
             tx1.commit().await.unwrap();
+            let rows_affected = concurrent_task.await.unwrap();
+
+            assert_eq!(rows_affected, 0); // Second transaction should find 0 rows matching 'PENDING' because tx1 hasn't committed but is isolated or the row was updated
         }
 
         if let Some(ref db) = pg_db {

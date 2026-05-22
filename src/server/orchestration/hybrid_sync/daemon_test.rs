@@ -16,15 +16,7 @@ mod tests {
 
         let pg_pool = PgPoolOptions::new()
             .connect(&database_url)
-            .await;
-
-        let pg_pool = match pg_pool {
-            Ok(p) => p,
-            Err(_) => {
-                // If PG is not running during the test, we'll just mock or skip.
-                return;
-            }
-        };
+            .await.expect("PostgreSQL must be running for daemon tests");
 
         sqlx::query(
             "CREATE TABLE swarm_truth_embeddings (

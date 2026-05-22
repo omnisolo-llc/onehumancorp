@@ -956,12 +956,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_check_health() {
-        // Skip test if no database is available
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required for test_check_health");
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
