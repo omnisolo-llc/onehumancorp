@@ -47,7 +47,7 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
             </div>
           ) : (
             approvals.map(req => (
-              <div key={req.id} className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+              <div key={req.id} className="bg-white rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100">
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
                     req.action_risk.toLowerCase() === 'high'
@@ -69,9 +69,9 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                       Compliance Warning
                     </div>
-                    <div className="text-xs text-orange-700">Sales are approaching €10,000. New tax rules require an updated Privacy Policy.</div>
+                    <div className="text-xs text-orange-700">Projected revenue exceeds €10,000 threshold. VAT registration and updated Privacy Policy required.</div>
                     <div className="bg-white p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
-                      Drafting updated European privacy policy...
+                      Drafting updated Europe-compliant privacy policy...
                     </div>
                   </div>
                 )}
@@ -81,9 +81,9 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                     <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
                       <div className="flex items-center gap-2">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
-                        Global Reach Preview
+                        Localization Preview
                       </div>
-                      <span className="text-[10px] bg-indigo-100 px-2 py-0.5 rounded">Spanish</span>
+                      <span className="text-[10px] bg-indigo-100 px-2 py-0.5 rounded">es-ES</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div className="bg-white p-2 rounded border border-indigo-50">
@@ -102,9 +102,9 @@ export default function ApprovalInbox({ departmentName, approvals, onBack, onApp
                   <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
                      <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                      Smart Search Setup
+                      Generative Engine Optimization
                     </div>
-                    <div className="text-xs text-emerald-700">Updating your store's information so it can be easily found by AI search tools like ChatGPT.</div>
+                    <div className="text-xs text-emerald-700">Optimizing unstructured data for Claude, Gemini, and ChatGPT.</div>
                     <div className="flex gap-2 text-[10px] text-emerald-600 mt-1">
                       <span className="bg-emerald-100 px-2 py-1 rounded">Smart Formatting</span>
                       <span className="bg-emerald-100 px-2 py-1 rounded">Search Engine Data</span>

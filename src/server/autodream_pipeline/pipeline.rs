@@ -59,11 +59,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in autodream_memories
+        // Find tasks that are COMPLETED but not yet in consolidated_memory
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN autodream_memories m ON t.id = m.task_id
+            LEFT JOIN consolidated_memory m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -112,19 +112,22 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        self.db.insert_autodream_memory(
-                            &mem_id,
-                            &tenant_id,
-                            agent_id.as_deref().unwrap_or("system"),
-                            &task_id,
-                            &chunk,
-                            &emb_str,
-                            "TASK_SUMMARY"
-                        ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let insert_query = "
+                            INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, task_id)
+                            VALUES ($1, $2, $3, $4, $5::vector, $6, $7)
+                        ";
 
-                        if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
-                            tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
-                        }
+                        sqlx::query(insert_query)
+                            .bind(&mem_id)
+                            .bind(&tenant_id)
+                            .bind(&agent_id)
+                            .bind(&chunk)
+                            .bind(&emb_str)
+                            .bind("TASK_SUMMARY")
+                            .bind(&task_id)
+                            .execute(&self.db.pool)
+                            .await
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                     }
                     Err(e) => {
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);

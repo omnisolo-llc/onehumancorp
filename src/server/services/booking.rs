@@ -108,15 +108,11 @@ impl BookingService {
 
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
         let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
-            .fetch_all(&mut *tx)
+        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE tenant_id = $1 AND type = 'booking'")
+            .bind(tenant_id)
+            .fetch_all(&pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
 
         let services = rows.into_iter().map(|row| Service {
             id: row.get("id"),
@@ -131,9 +127,6 @@ impl BookingService {
 
     pub async fn upsert_service(service: Service) -> Result<(), String> {
         let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
-
         sqlx::query(
             "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
              VALUES ($1, $2, $3, $4, $5, 'booking') \
@@ -148,25 +141,20 @@ impl BookingService {
         .bind(&service.title)
         .bind(&service.description)
         .bind(service.price_cents)
-        .execute(&mut *tx)
+        .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
         let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
-            .fetch_all(&mut *tx)
+        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings WHERE tenant_id = $1")
+            .bind(tenant_id)
+            .fetch_all(&pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
 
         let bookings = rows.into_iter().map(|row| BookingRecord {
             id: row.get("id"),
@@ -183,9 +171,6 @@ impl BookingService {
 
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
-
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)"
@@ -197,11 +182,10 @@ impl BookingService {
         .bind(booking.start_time)
         .bind(booking.end_time)
         .bind(&booking.status)
-        .execute(&mut *tx)
+        .execute(&pool)
         .await
         .map_err(|e| e.to_string())?;
 
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }

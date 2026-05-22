@@ -27,7 +27,7 @@ impl MercadoPagoClient {
 }
 
 impl MercadoPagoClient {
-    pub async fn create_payment(&self, _amount: f64, _description: &str, _payer_email: &str) -> Result<String, String> {
+    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
         // Mock returning a transaction ID
         Ok("mock_txn_123".to_string())
     }

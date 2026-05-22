@@ -16,10 +16,7 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
 single_version_override(
     module_name = "hermetic_cc_toolchain",
-    patches = [
-        "//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch",
-        "//bazel/patches:hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
-    ],
+    patches = ["//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch"],
     patch_strip = 1,
 )
 
@@ -57,11 +54,6 @@ register_toolchains("@go_sdk//:all")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
-single_version_override(
-    module_name = "rules_rust",
-    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
-    patch_strip = 1,
-)
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
@@ -69,8 +61,11 @@ rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2024",
     extra_target_triples = [
-        "aarch64-pc-windows-gnullvm",
-        "x86_64-pc-windows-gnullvm",
+        "aarch64-pc-windows-msvc",
+        "x86_64-pc-windows-msvc",
+        "x86_64-pc-windows-gnu",
+        "i686-pc-windows-msvc",
+        "i686-pc-windows-gnu",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
         "x86_64-apple-darwin",
@@ -110,21 +105,15 @@ crate.from_cargo(
     ],
     supported_platform_triples = [
         "aarch64-apple-darwin",
-        "aarch64-pc-windows-gnullvm",
+        "aarch64-pc-windows-msvc",
         "aarch64-unknown-linux-gnu",
         "wasm32-unknown-unknown",
         "wasm32-wasip1",
         "x86_64-apple-darwin",
-        "x86_64-pc-windows-gnullvm",
+        "x86_64-pc-windows-msvc",
         "x86_64-unknown-linux-gnu",
         "x86_64-unknown-nixos-gnu",
     ],
-)
-crate.annotation(
-    crate = "windows-sys",
-    patch_args = ["-p1"],
-    patches = ["//bazel/patches:windows_sys_0_48_stable_raw_dylib.patch"],
-    version = "0.48.0",
 )
 crate.annotation(
     build_script_env = {
@@ -137,62 +126,6 @@ crate.annotation(
         "CARGO_PKG_REPOSITORY": "Unknown",
     },
     crate = "rav1e",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "bzip2-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "libsqlite3-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "lzma-sys",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "ring",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "tree-sitter",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "tree-sitter-bash",
-)
-crate.annotation(
-    build_script_env = {
-        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
-    },
-    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
-    crate = "zstd-sys",
 )
 crate.annotation(
     crate = "protoc-gen-prost",

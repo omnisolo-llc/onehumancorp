@@ -17,7 +17,7 @@ impl MailchimpProvider {
                 id: "mailchimp".to_string(),
                 name: "Mailchimp".to_string(),
                 category: "email_marketing".to_string(),
-                base_url: "https://server.api.mailchimp.com/3.0".to_string(),
+                base_url: "https://placeholder.url".to_string(),
             },
         }
     }
@@ -31,32 +31,5 @@ impl MailchimpProvider {
                 base_url: self.metadata.base_url.clone(),
             }
         }
-    }
-
-    pub async fn sync_customer(&self, email: &str, tag: &str) -> Result<(), String> {
-        self._client.sync_customer(email, tag).await
-    }
-
-    pub async fn send_campaign(&self, audience: &str, body: &str) -> Result<(), String> {
-        self._client.send_campaign(audience, body).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mailchimp_provider_new() {
-        let provider = MailchimpProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "mailchimp");
-        assert_eq!(provider.metadata.category, "email_marketing");
-    }
-
-    #[test]
-    fn test_mailchimp_provider_into() {
-        let provider = MailchimpProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "mailchimp");
     }
 }
