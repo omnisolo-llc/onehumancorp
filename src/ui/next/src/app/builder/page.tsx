@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { SmartBlock } from "./components";
-import { Tooltip, useWalkthrough } from "../../components/help";
+import { useWalkthrough } from "../../components/help";
+import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function BuilderPage() {
   const [bio, setBio] = useState("");
@@ -259,7 +260,7 @@ export default function BuilderPage() {
                 </p>
 
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>
-                <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+                <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
                     className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
@@ -269,7 +270,7 @@ export default function BuilderPage() {
                     placeholder="e.g. I run a mobile dog grooming service in Portland"
                     rows={6}
                   />
-                </Tooltip>
+                </WithTooltip>
 
                 <div className="flex gap-4">
                   <button
@@ -279,7 +280,7 @@ export default function BuilderPage() {
                   >
                     Back
                   </button>
-                  <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                  <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                     <button
                       id="generate-btn"
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
@@ -293,7 +294,7 @@ export default function BuilderPage() {
                     >
                       Build Store
                     </button>
-                  </Tooltip>
+                  </WithTooltip>
                 </div>
               </div>
             )}
@@ -466,7 +467,7 @@ export default function BuilderPage() {
               </button>
             )}
           </div>
-          <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+          <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
@@ -475,7 +476,7 @@ export default function BuilderPage() {
               <span>1-Tap Launch</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </button>
-          </Tooltip>
+          </WithTooltip>
         </div>
 
         {/* Upgrade Modal */}

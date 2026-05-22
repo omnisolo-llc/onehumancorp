@@ -2659,9 +2659,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 </head>
                 <body>
                     <nav id="main-nav" style="display: none;">
-                        <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('team-screen')">Your Team</a>
-                        <a onclick="showScreen('setup-screen')">Setup</a>
+                        <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
+                        <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
+                        <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
 
