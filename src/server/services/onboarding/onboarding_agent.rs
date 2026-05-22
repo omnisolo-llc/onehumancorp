@@ -154,8 +154,9 @@ impl OnboardingAgent {
         });
 
         let agent_clone_seed = self.clone();
+        let selected_agents = req.selected_agents.clone();
         let seed_future = tokio::task::spawn(async move {
-            agent_clone_seed.seed_default_agents(&org_id_clone2).await
+            agent_clone_seed.seed_selected_agents(&org_id_clone2, selected_agents).await
         });
 
         let org_id_clone3 = org_id.clone();
@@ -2411,18 +2412,27 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
-        let default_agents = vec![
-            ("Operations", "The Manager", "Operations"),
-            ("Marketing & Advertising", "The Promoter", "Marketing"),
-            ("Sales & Acquisition", "The Salesperson", "Sales"),
-            ("Customer Success", "The Ambassador", "CustomerSuccess"),
+    async fn seed_selected_agents(&self, org_id: &str, selected: Vec<String>) -> Result<(), String> {
+        let mut agents_to_seed = vec![
             ("Finance & Payments", "The Accountant", "Finance"),
             ("Legal & Compliance", "The Protector", "Legal"),
             ("Business Advisory", "The Advisor", "Advisory"),
         ];
 
-        for (name, role, role_id) in default_agents {
+        if selected.is_empty() || selected.contains(&"manager".to_string()) {
+            agents_to_seed.push(("Operations", "The Manager", "Operations"));
+        }
+        if selected.is_empty() || selected.contains(&"promoter".to_string()) {
+            agents_to_seed.push(("Marketing & Advertising", "The Promoter", "Marketing"));
+        }
+        if selected.is_empty() || selected.contains(&"sales".to_string()) {
+            agents_to_seed.push(("Sales & Acquisition", "The Salesperson", "Sales"));
+        }
+        if selected.is_empty() || selected.contains(&"ambassador".to_string()) {
+            agents_to_seed.push(("Customer Success", "The Ambassador", "CustomerSuccess"));
+        }
+
+        for (name, role, role_id) in agents_to_seed {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
             sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)

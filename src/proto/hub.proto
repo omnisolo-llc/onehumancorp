@@ -298,6 +298,7 @@ message StartOnboardingRequest {
   string admin_name = 11;
   string admin_password = 12;
   string price_type = 13;
+  repeated string selected_agents = 14;
 }
 
 message StartOnboardingResponse {
