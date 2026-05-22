@@ -1,11 +1,11 @@
 # Title: Create Hybrid Database Metrics Dashboard for OHC Telemetry
 
 ## Problem Statement
-The One Human Corp (OHC) backend codebase heavily instruments database query latencies, error rates, and SQLite-specific lock contention via OpenTelemetry/Prometheus (e.g., `db.client.operation.duration`, `db.client.operation.errors`, and custom `sqlite_lock_contention` metrics in `src/server/db/provider.go`). However, there is no corresponding Grafana dashboard in `monitoring/dashboards` to visualize this critical telemetry. Without this visualization, operators cannot effectively monitor database bottlenecks or distinguish between Postgres (Cloud-Native Mode) and SQLite (Standalone Mode) performance degradation.
+The One Human Corp (OHC) backend codebase heavily instruments database query latencies, error rates, and SQLite-specific lock contention via OpenTelemetry/Prometheus (e.g., `db.client.operation.duration`, `db.client.operation.errors`, and custom `sqlite_lock_contention` metrics in `src/server/db/provider.rs`). However, there is no corresponding Grafana dashboard in `monitoring/dashboards` to visualize this critical telemetry. Without this visualization, operators cannot effectively monitor database bottlenecks or distinguish between Postgres (Cloud-Native Mode) and SQLite (Standalone Mode) performance degradation.
 
 ## Research Report
 - **Context**: The OHC Hybrid Architecture (OHC-HA) operates in Cloud-Native (PostgreSQL) and Standalone Desktop (SQLite) modes.
-- **Codebase Analysis**: The `src/server/db/provider.go` exposes `db.client.operation.duration` (Histogram) and `db.client.operation.errors` (Counter). Additionally, `src/server/telemetry/telemetry.go` tracks `sqlite_lock_contention`.
+- **Codebase Analysis**: The `src/server/db/provider.rs` exposes `db.client.operation.duration` (Histogram) and `db.client.operation.errors` (Counter). Additionally, `src/server/telemetry/telemetry/mod.rs` tracks `sqlite_lock_contention`.
 - **Gap**: The `monitoring/dashboards` directory currently only contains `chaos_dashboard.json`. No database dashboards exist.
 - **Goal**: Implement a visually premium Grafana dashboard to track these database metrics across modes, fulfilling the "Full-Spectrum Observability" core value.
 

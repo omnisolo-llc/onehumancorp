@@ -11,7 +11,7 @@ The **One Human Corp (OHC) Hybrid Agentic OS** requires a fluid and consistent a
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
-- Define the Standalone Desktop Wrapper lifecycle, bridging local Rust server execution with the Slint application shell.
+- Define the Standalone Desktop Wrapper lifecycle, bridging local Rust server execution with the Tauri application shell.
 - Specify the API contract for the Thin Client Mode, guaranteeing API stability and offline-resilience strategies.
 - Enforce OHC-SIP v2 (Swarm-as-Code) consistency across PostgreSQL (Cloud) and SQLite (Local).
 - Mandate the Visual Excellence (Aesthetic) Standard across all Hybrid clients.
@@ -71,7 +71,7 @@ graph TD
 ## 4. Standalone Wrapper Spec
 
 ### 4.1 Lifecycle Management
-The Slint desktop shell acts as the supervisor for the embedded Rust backend.
+The Tauri desktop shell acts as the supervisor for the embedded Rust backend.
 1.  **Boot**: App starts -> Checks for `OHC_STANDALONE=true` -> Spawns `ohc-server` child process -> Waits for `/healthz`.
 2.  **State**: App points internal HTTP clients to `http://localhost:<dynamic_port>`.
 3.  **Teardown**: App closed -> Sends graceful shutdown signal (SIGTERM) to Rust process.
@@ -112,6 +112,6 @@ All UIs, regardless of Standalone or Thin Client mode, strictly adhere to the OH
 ## 7. Next Steps & Agentic Delegation
 
 - Hand off database abstraction and SQLite schema generation to the Forge (`backend_dev`) agent.
-- Ensure the Slint UI perfectly maps these capabilities across target platforms.
+- Ensure the Tauri UI perfectly maps these capabilities across target platforms.
 
 </div>

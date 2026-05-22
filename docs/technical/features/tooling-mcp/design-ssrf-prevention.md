@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-The `src/integrations/registry.go` package handles connections to external services via user-provided URLs. This design document outlines the strategy for preventing Server-Side Request Forgery (SSRF) vulnerabilities in the Integrations Registry.
+The `src/server/integrations/registry.rs` package handles connections to external services via user-provided URLs. This design document outlines the strategy for preventing Server-Side Request Forgery (SSRF) vulnerabilities in the Integrations Registry.
 
 ## 2. Goals & Non-Goals
 ### 2.1 Goals
@@ -22,10 +22,10 @@ The `src/integrations/registry.go` package handles connections to external servi
 ## 3. Detailed Design
 
 ### 3.1 URL Validation Function
-A new `validateURL(u string) error` function will be added to `registry.go`. This function will perform the following checks:
-1. Parse the URL using `url.ParseRequestURI()`.
+A new `validate_url(input: &str) -> Result<(), Error>` function will be added to `registry.rs`. This function will perform the following checks:
+1. Parse the URL using the Rust `url` crate.
 2. Extract the hostname.
-3. Perform DNS resolution using `net.LookupIP(host)`.
+3. Perform DNS resolution using the async runtime resolver or a dedicated HTTP egress guard.
 4. If DNS resolution fails, the function will return an error (fail-closed).
 5. Iterate through the resolved IP addresses and reject the URL if any IP matches:
    - Loopback (`IsLoopback()`)
@@ -46,8 +46,8 @@ The `Connect()` method in `Registry` will be updated to call `validateURL()` on 
 - **Missing Scheme:** Ensure the URL parser enforces a valid scheme (http/https).
 
 ## 5. Implementation Details
-- **Location:** `src/integrations/registry.go` and `src/integrations/registry_test.go`.
+- **Location:** `src/server/integrations/registry.rs` and adjacent Rust tests.
 - **Language:** Rust.
-- **Dependencies:** Standard library `net` and `net/url`.
+- **Dependencies:** Rust URL parsing and DNS resolution helpers already used by the server stack.
 
 </div>
