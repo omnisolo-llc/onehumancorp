@@ -136,6 +136,7 @@ impl ClaudeSubagentSpawner {
         let mut on_event = |_| {};
         let mut summary_config = config.clone();
         summary_config.injected_context = None; // clear context for summary
+        summary_config.max_tokens = 2000; // explicitly strictly limiting the summary to 2k tokens, as outlined in the spec
 
         let summary = self.parent_agent.run(&summary_config, &summary_prompt, &mut on_event).await?;
         Ok(summary)

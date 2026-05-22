@@ -404,7 +404,7 @@ mod tests {
         assert!(msg.len() < 9000, "Expected output length to be less than 9000 after truncation");
     }
     #[tokio::test]
-    async fn test_subagent_worktree_mode() {
+    async fn test_subagent_worktree_mode_with_multiple_commands() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         // The executor makes 4 command calls in worktree mode:
         runner.push_response(Ok(crate::runner::mock::mock_output(0, "Worktree added", "")));
