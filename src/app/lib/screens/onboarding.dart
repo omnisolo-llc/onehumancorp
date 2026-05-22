@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'agent_dashboard.dart';
 
-enum OnboardingState { welcome, input, generating, dashboard, draft, live }
+enum OnboardingState { welcome, inputName, inputNiche, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
   final http.Client? httpClient;
@@ -17,6 +17,7 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
+  String companyName = '';
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
@@ -39,7 +40,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
-            'company_name': 'AI Generated Store',
+            'company_name': companyName,
             'business_type': 'Auto',
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
@@ -58,11 +59,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-          setState(() => _state = OnboardingState.input);
+          setState(() => _state = OnboardingState.inputName);
         }
       } catch (e) {
         print('Error: \$e');
-        setState(() => _state = OnboardingState.input);
+        setState(() => _state = OnboardingState.inputName);
       }
     }
   }
@@ -123,8 +124,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     switch (_state) {
       case OnboardingState.welcome:
         return _buildWelcomeState();
-      case OnboardingState.input:
-        return _buildInputState();
+      case OnboardingState.inputName:
+        return _buildInputNameState();
+      case OnboardingState.inputNiche:
+        return _buildInputNicheState();
       case OnboardingState.generating:
         return _buildGeneratingState();
       case OnboardingState.dashboard:
@@ -169,7 +172,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           SizedBox(height: 48),
           ElevatedButton(
             onPressed: () {
-              setState(() => _state = OnboardingState.input);
+              setState(() => _state = OnboardingState.inputName);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
@@ -194,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildInputState() {
+  Widget _buildInputNameState() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Form(
@@ -204,7 +207,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome to OHC Smart Builder',
+              'What\'s the name of your business?',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -216,7 +219,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 16),
             Text(
-              'Tell us about your business, and AI will build it.',
+              'Don\'t worry, you can change this later.',
               style: TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
@@ -226,15 +229,99 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
             SizedBox(height: 32),
             TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
+              key: Key('name-input'),
+              initialValue: companyName,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
+              decoration: InputDecoration(
+                labelText: 'Business Name',
+                hintText: 'e.g. Maya\'s Cakes',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => companyName = value!,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() => _state = OnboardingState.inputNiche);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Next',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputNicheState() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'What\'s your niche?',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Products, services, or bookings.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            TextFormField(
+              key: Key('bio-input'),
+              initialValue: bio,
               maxLines: 4,
               textInputAction: TextInputAction.done,
               keyboardType: TextInputType.multiline,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
-                hintText:
-                    'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                hintText: 'e.g. I bake custom wedding cakes',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -249,25 +336,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               onSaved: (value) => bio = value!,
             ),
             SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+            Row(
+              children: [
+                Expanded(
+                  flex: 1,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_formKey.currentState != null) {
+                        _formKey.currentState!.save();
+                      }
+                      setState(() => _state = OnboardingState.inputName);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.grey[800],
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Back',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: ElevatedButton(
+                    onPressed: submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF0066FF),
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Generate Draft',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),

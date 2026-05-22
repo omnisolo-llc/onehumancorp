@@ -21,31 +21,47 @@ void main() {
     await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle();
 
-    // Verify we are on the input screen
-    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
+    // Verify we are on the input name screen
+    expect(find.text('What\'s the name of your business?'), findsOneWidget);
 
-    // Verify TextFormField properties by checking underlying TextField
-    final textFieldWidget = tester.widget<TextField>(find.descendant(
-      of: find.byKey(Key('bio-input')),
+    // Verify Name TextFormField properties
+    final nameFieldWidget = tester.widget<TextField>(find.descendant(
+      of: find.byKey(Key('name-input')),
       matching: find.byType(TextField),
     ));
-    expect(textFieldWidget.textInputAction, TextInputAction.done);
-    expect(textFieldWidget.keyboardType, TextInputType.multiline);
-    expect(textFieldWidget.textCapitalization, TextCapitalization.sentences);
+    expect(nameFieldWidget.textInputAction, TextInputAction.next);
+    expect(nameFieldWidget.textCapitalization, TextCapitalization.words);
 
-    // Tap without entering text to trigger validation
-    await tester.tap(find.text('Build My Storefront'));
+    // Tap next without entering text to trigger validation
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for the bio field
+    // Expect the validator message 'Required' for the name field
+    expect(find.text('Required'), findsOneWidget);
+
+    // Fill out the name form
+    await tester.enterText(find.byKey(Key('name-input')), "Maya's Cakes");
+    await tester.pumpAndSettle();
+
+    // Tap next
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Verify we are on the niche screen
+    expect(find.text('What\'s your niche?'), findsOneWidget);
+
+    // Tap without entering text to trigger validation
+    await tester.tap(find.text('Generate Draft'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Required'), findsOneWidget);
 
     // Fill out the bio form
-    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle.");
     await tester.pumpAndSettle();
 
     // Tap to build my storefront
-    await tester.tap(find.text('Build My Storefront'));
+    await tester.tap(find.text('Generate Draft'));
     await tester.pumpAndSettle();
 
     // Expect to be on Dashboard state
