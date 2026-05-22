@@ -2,10 +2,15 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'agent_dashboard.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
+  final http.Client? httpClient;
+
+  const OnboardingScreen({Key? key, this.httpClient}) : super(key: key);
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
@@ -14,6 +19,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
+  late final http.Client _client;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = widget.httpClient ?? http.Client();
+  }
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
@@ -21,8 +33,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final response = await http.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
+        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
+        final response = await _client.post(
+          Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
@@ -37,7 +50,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'first_product_name': 'Custom Cake Deposit',
             'first_product_price': '25.00',
             'domain_choice': 'subdomain',
-            'price_type': 'fixed'
+            'price_type': 'fixed',
           }),
         );
 
@@ -45,17 +58,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-           setState(() => _state = OnboardingState.input);
+          setState(() => _state = OnboardingState.input);
         }
       } catch (e) {
         print('Error: \$e');
-         setState(() => _state = OnboardingState.input);
+        setState(() => _state = OnboardingState.input);
       }
     }
   }
 
-  void launchStore() {
-    setState(() => _state = OnboardingState.live);
+  Future<void> launchStore() async {
+    try {
+      final response = await _client.post(
+        Uri.parse('http://localhost:8080/api/onboarding/launch'),
+      );
+      if (response.statusCode == 200) {
+        setState(() => _state = OnboardingState.live);
+      }
+    } catch (e) {
+      print('Error launching: \$e');
+    }
   }
 
   @override
@@ -70,7 +92,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 500),
           child: Container(
-            height: MediaQuery.of(context).size.height, // Takes up screen height gracefully
+            height: MediaQuery.of(
+              context,
+            ).size.height, // Takes up screen height gracefully
             padding: EdgeInsets.symmetric(vertical: 20),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -80,7 +104,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.65),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
+                    ),
                   ),
                   child: _buildContent(),
                 ),
@@ -203,7 +230,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                hintText:
+                    'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -213,7 +241,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => bio = value!,
             ),
             SizedBox(height: 32),
@@ -327,7 +356,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.check_circle, size: 48, color: Color(0xFF34C759)),
+                      Icon(
+                        Icons.check_circle,
+                        size: 48,
+                        color: Color(0xFF34C759),
+                      ),
                       SizedBox(height: 16),
                       Text(
                         'Storefront Generated!',
@@ -391,7 +424,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Text(
                 'Preview Mode',
-                style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -429,6 +466,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Text(
                   'Generated based on your bio.',
                   style: TextStyle(color: Colors.grey[500]),
+                ),
+                SizedBox(height: 24),
+                ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: 44, minHeight: 44),
+                  child: IconButton(
+                    icon: Icon(Icons.edit, color: Colors.blue),
+                    onPressed: () {},
+                    tooltip: 'Edit Preview',
+                  ),
                 ),
               ],
             ),
@@ -494,7 +540,10 @@ class StoreLiveScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.65),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.4),
+                      width: 1,
+                    ),
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -505,7 +554,11 @@ class StoreLiveScreen extends StatelessWidget {
                           color: Color(0xFF34C759).withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.check_circle, size: 64, color: Color(0xFF34C759)),
+                        child: Icon(
+                          Icons.check_circle,
+                          size: 64,
+                          color: Color(0xFF34C759),
+                        ),
                       ),
                       SizedBox(height: 32),
                       Text(
@@ -532,7 +585,11 @@ class StoreLiveScreen extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(builder: (_) => AgentDashboard()),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.grey[100],
                             foregroundColor: Color(0xFF1D1D1F),

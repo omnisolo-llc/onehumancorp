@@ -210,7 +210,6 @@ struct HttpErrorResponse {
 #[derive(serde::Deserialize)]
 struct DraftReplyRequest {
     customer_message: Option<String>,
-    business_context: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -237,28 +236,54 @@ struct HttpMetricsResponse {
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
-    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
 
-    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (active_customers_res, pending_orders_res) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        }
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
 
     (
         StatusCode::OK,
@@ -269,17 +294,36 @@ async fn http_metrics_handler(
 
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
     let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_one(&db.pool)
@@ -441,9 +485,35 @@ async fn http_login_handler(
         .into_response()
 }
 
-async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Response {
+async fn draft_reply_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    payload: DraftReplyRequest,
+) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
 
     let api_key = match std::env::var("MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
@@ -456,12 +526,25 @@ async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Resp
         }
     };
 
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
     let customer_message = payload
         .customer_message
         .unwrap_or_else(|| "Do you have vegan options for birthday cakes?".to_string());
-    let business_context = payload
-        .business_context
-        .unwrap_or_else(|| "A friendly bakery that sells vegan celebration cakes and classes.".to_string());
+
+    let business_context = if industry.is_empty() {
+        format!("A business named {}", business_name)
+    } else {
+        format!("A {} business named {}", industry, business_name)
+    };
+
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
@@ -1577,8 +1660,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
+    // Start Token Forecast Worker
+    let token_forecast_worker = Arc::new(crate::workers::token_forecast::TokenForecastWorker::new(db.clone()));
+    token_forecast_worker.start();
+
     // Start Agent Memory Pipeline
-    hub.clone().start_token_burn_rate_worker();
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
     let agent_memory_pipeline = Arc::new(crate::workers::agent_memory_pipeline::AgentMemoryPipeline::new(db.clone(), memory_embedding_api));
     let agent_memory_pipeline_clone = agent_memory_pipeline.clone();
@@ -1722,7 +1808,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
             system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
-            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            max_tokens: {
+                let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
+                if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
+            },
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
@@ -1769,6 +1858,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+async fn get_inbox_messages_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let pool = crate::db::get_pool();
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => {
+            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                use sqlx::Row;
+                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "source": row.get::<String, _>("source"),
+                    "content": row.get::<String, _>("content"),
+                    "draft_reply": row.get::<String, _>("draft_reply"),
+                    "status": row.get::<String, _>("status"),
+                    "created_at": created_at_str,
+                })
+            }).collect();
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch inbox messages: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
     let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
@@ -1779,7 +1899,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler))
+        .route("/inbox", axum::routing::get(ui_handler)).route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
@@ -1847,8 +1967,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route(
             "/api/v1/ai/draft-reply",
-            axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                draft_reply_handler(payload).await
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
+                    draft_reply_handler(db, store, headers, payload).await
+                }
             }),
         )
 
@@ -1856,14 +1980,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/dashboard/sales",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, store, headers, payload).await }
             }),
         )
         .route(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -1886,7 +2012,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .merge(webhook_router)
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.", "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.", "launch-btn-tooltip": "Launch your storefront immediately to a live URL.", "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.", "referral-tooltip": "Share your unique link to earn credits when friends join OHC.", "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.", "department-card-tooltip": "Click to view and manage pending approvals for this department.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features. For store setup, check out the Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -2181,8 +2307,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 24px; 
                             border-radius: 16px;
                             margin-bottom: 18px; 
-                            border: 1px solid var(--border);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             box-shadow: var(--shadow-sm);
+                        }
+                        body.dark-theme .card {
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -2545,8 +2677,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add</button>
-                        <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                        <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
+                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
@@ -2635,6 +2767,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
+                            <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
@@ -2693,11 +2826,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="alert('Adding products is available in the Full Builder. Starting setup...')">Add Product</span>
+                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                        </div>
+                    </div>
+
+                    <!-- Seasonal Promos Generator -->
+                    <div id="seasonal-promo-screen" class="screen glass" style="margin-bottom: 80px;">
+                        <h1>Seasonal Promotion Generator ✨</h1>
+                        <p>Generate highly-converting, AI-styled seasonal campaigns for your business instantly.</p>
+
+                        <div class="card glass">
+                            <label for="promo-occasion" style="display: block; margin-bottom: 8px; font-weight: 500;">Occasion / Season</label>
+                            <input type="text" id="promo-occasion" placeholder="e.g., Summer Sale, Back to School, Halloween" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+
+                            <label for="promo-discount" style="display: block; margin-bottom: 8px; font-weight: 500;">Discount Percentage</label>
+                            <input type="number" id="promo-discount" placeholder="20" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+
+                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
+                        </div>
+
+                        <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
+                            <h3 style="color: var(--primary); margin-top: 0;">Generated Campaign</h3>
+                            <div id="promo-content" style="font-size: 16px; line-height: 1.6; color: #333;"></div>
                         </div>
                     </div>
 
@@ -2715,6 +2869,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
                                 <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1;">
+                                <button style="background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
+                                <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
+                                <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
                             </div>
                         </div>
 
@@ -2753,6 +2913,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Embeddable Storefront Widget -->
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
+                            <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
+                        </div>
+
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -2777,19 +2945,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
                         <div class="card glass">
-                            <h3>Facebook User</h3>
-                            <p>Hello from Facebook!</p>
-                            <button onclick="alert('Configure Facebook')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">Facebook Comment <span style="font-size: 20px;">📘</span></h3>
+                            <p>Are you open on Sundays?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
-                            <h3>Instagram User</h3>
-                            <p>Hello from Instagram!</p>
-                            <button onclick="alert('Configure Instagram')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">Instagram DM <span style="font-size: 20px;">📸</span></h3>
+                            <p>Can I order a custom cake?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Sure, please send details!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
-                            <h3>WhatsApp User</h3>
-                            <p>Hello from WhatsApp!</p>
-                            <button onclick="alert('Configure WhatsApp')">Configure</button>
+                            <h3 style="display: flex; justify-content: space-between; align-items: center;">WhatsApp <span style="font-size: 20px;">💬</span></h3>
+                            <p>Hello, do you deliver?</p>
+                            <button onclick="draftInboxReply(this)">✨ AI Draft</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
@@ -2955,6 +3126,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
                             </div>
 
+                            <!-- Cal.com Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Cal.com</h3>
+                                </div>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                            </div>
+
                             <!-- ActiveCampaign Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -2963,6 +3142,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
+                            </div>
+
+                            <!-- Resend Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Resend</h3>
+                                </div>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
@@ -2992,6 +3179,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                            </div>
+
+                            <!-- Mercado Pago Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
+                                </div>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
@@ -3039,6 +3234,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <select><option>MM/DD/YYYY</option><option>DD/MM/YYYY</option></select>
                         <button onclick="alert('Settings saved!'); showScreen('dashboard-screen')">Save</button>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Cancel</button>
+
+                        <hr/>
+                        <button onclick="showScreen('inbox-screen')">Connect Meta</button>
 
                         <hr/>
                         <h2>Profile</h2>
@@ -3253,7 +3451,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
@@ -3274,8 +3472,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3293,8 +3491,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3307,9 +3505,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3352,7 +3550,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
@@ -3377,6 +3575,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="builder-container">
                             <div class="builder-header">
                                 <h1>Edit Website</h1>
+                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
                                 <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
                             </div>
 
@@ -3397,6 +3596,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Dynamic form inputs -->
                             </div>
                             <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Embed Setup Bottom Sheet -->
+                        <div id="embed-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedSetup()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p>Copy the code below to embed your storefront onto another website.</p>
+                                <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
+                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
+                            </div>
                         </div>
 
                         <!-- Domain Setup Bottom Sheet -->
@@ -3446,12 +3658,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = {};
+                                const state = { step: currentStep };
                                 inputs.forEach((input, index) => {
-                                    if (input.type === 'checkbox') {
-                                        state['checkbox_' + index] = input.checked;
+                                    if (input.placeholder) {
+                                        if (input.type === 'checkbox') {
+                                            state[input.placeholder] = input.checked;
+                                        } else {
+                                            state[input.placeholder] = input.value;
+                                        }
                                     } else {
-                                        state['input_' + index] = input.value;
+                                        // fallback for inputs without placeholder
+                                        if (input.type === 'checkbox') {
+                                            state['checkbox_' + index] = input.checked;
+                                        } else {
+                                            state['input_' + index] = input.value;
+                                        }
                                     }
                                 });
 
@@ -3482,6 +3703,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 input.addEventListener('input', saveWizardState);
                             });
 
+                            let state = null;
                             try {
                                 const res = await fetch('/api/onboarding/state', {
                                     headers: {
@@ -3492,42 +3714,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (res.ok) {
                                     const data = await res.json();
                                     if (data) {
-                                        const state = data;
-                                        inputs.forEach((input, index) => {
-                                            if (input.type === 'checkbox') {
-                                                if (state['checkbox_' + index] !== undefined) {
-                                                    input.checked = state['checkbox_' + index];
-                                                }
-                                            } else {
-                                                if (state['input_' + index] !== undefined) {
-                                                    input.value = state['input_' + index];
-                                                }
-                                            }
-                                        });
-                                        return;
+                                        state = data;
                                     }
                                 }
                             } catch (e) {
                                 console.error('Failed to load state from server', e);
                             }
 
-                            // Fallback to localStorage
-                            const saved = localStorage.getItem('ohc_wizard_state');
-                            if (saved) {
-                                try {
-                                    const state = JSON.parse(saved);
-                                    inputs.forEach((input, index) => {
+                            if (!state) {
+                                const saved = localStorage.getItem('ohc_wizard_state');
+                                if (saved) {
+                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
+                                }
+                            }
+
+                            if (state) {
+                                if (state.step) currentStep = state.step;
+                                inputs.forEach((input, index) => {
+                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
-                                            if (state['checkbox_' + index] !== undefined) {
-                                                input.checked = state['checkbox_' + index];
-                                            }
+                                            input.checked = state[key];
                                         } else {
-                                            if (state['input_' + index] !== undefined) {
-                                                input.value = state['input_' + index];
-                                            }
+                                            input.value = state[key];
                                         }
-                                    });
-                                } catch (e) { console.error('Failed to parse wizard state', e); }
+                                    }
+                                });
+                                // Restore step if needed
+                                if (state.step && state.step > 1) {
+                                    nextStep(state.step);
+                                }
                             }
                         }
 
@@ -3649,6 +3865,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('domain-setup-sheet').classList.add('open');
                             document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
                             document.getElementById('domain-step-1').classList.add('active');
+                        }
+
+                        function showEmbedSetup() {
+                            const origin = window.location.origin;
+                            const embedCode = `<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`;
+                            document.getElementById('embed-code-textarea').value = embedCode;
+                            document.getElementById('embed-setup-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedSetup() {
+                            document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         function closeDomainSetup() {
@@ -3815,12 +4042,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const originalText = btn.textContent;
                             btn.textContent = 'Drafting...';
                             try {
+                                const token = localStorage.getItem('token') || 'test-token';
                                 const response = await fetch('/api/v1/ai/draft-reply', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + token
+                                    },
                                     body: JSON.stringify({
-                                        customer_message: 'Do you have vegan options for birthday cakes?',
-                                        business_context: 'A friendly bakery that sells vegan celebration cakes and classes.'
+                                        customer_message: 'Do you have vegan options for birthday cakes?'
                                     })
                                 });
                                 if (!response.ok) {
@@ -3861,6 +4091,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
+                            'seasonal-promo-screen': '/seasonal-promos',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1'
                         };
@@ -3987,33 +4218,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
-                        let debounceTimer;
-                        document.addEventListener('input', (e) => {
-                            if (e.target.tagName === 'INPUT') {
-                                clearTimeout(debounceTimer);
-                                debounceTimer = setTimeout(() => {
-                                    try {
-                                        const stateData = { step: currentStep };
-                                        document.querySelectorAll('input').forEach(input => {
-                                            if (input.placeholder && input.value) {
-                                                stateData[input.placeholder] = input.value;
-                                            }
-                                        });
-                                        const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                        const userId = localStorage.getItem('user_id') || 'test-user';
-                                        fetch('/api/onboarding/state', {
-                                            method: 'POST',
-                                            headers: {
-                                                'Content-Type': 'application/json',
-                                                'X-Tenant-ID': tenantId,
-                                                'X-User-ID': userId
-                                            },
-                                            body: JSON.stringify(stateData)
-                                        }).catch(console.error);
-                                    } catch (err) {}
-                                }, 500);
-                            }
-                        });
 
                         function validateInputs(stepId) {
                             if (stepId === 4 && currentStep === 3) {
@@ -4026,11 +4230,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const inputs = document.querySelectorAll('#step-5 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a product or service');
+                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
+                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                if (!nameInput || nameInput.value.trim().length === 0) {
+                                    alert('Please enter a product or service name');
+                                    return false;
+                                }
+                                if (!priceInput || priceInput.value.trim().length === 0 || isNaN(parseFloat(priceInput.value))) {
+                                    alert('Please enter a valid price');
                                     return false;
                                 }
                             }
@@ -4225,6 +4432,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
+                        function generateSeasonalPromo() {
+                            const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
+                            const discountInput = document.getElementById('promo-discount').value || '10';
+
+                            // Sanitize inputs to prevent XSS
+                            const occasion = occasionInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const discount = discountInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                            const code = occasionInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) + discountInput.replace(/[^0-9]/g, '');
+
+                            const content = `🎉 <b>${occasion} Special!</b><br><br>Get ready for our amazing ${occasion} deals! For a limited time, enjoy <b>${discount}% OFF</b> your entire order. 🛍️✨<br><br>Use code: <b>${code}</b> at checkout.<br><br>Shop now and don't miss out! 🚀 #ShopLocal #Sale #${occasion.replace(/\s+/g, '')}`;
+                            document.getElementById('promo-content').innerHTML = content;
+                            document.getElementById('promo-result').style.display = 'block';
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -4327,7 +4549,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -4384,46 +4606,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
                             showScreen(screenId);
 
-                            if (screenId === 'setup-screen') {
-                                try {
-                                    let stateData = null;
-                                    const localState = localStorage.getItem('ohc_wizard_state');
-                                    if (localState) {
-                                        try {
-                                            stateData = JSON.parse(localState);
-                                        } catch(e) {}
-                                    }
 
-                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                    const userId = localStorage.getItem('user_id') || 'test-user';
-
-                                    const res = await fetch('/api/onboarding/state', {
-                                        headers: {
-                                            'X-Tenant-ID': tenantId,
-                                            'X-User-ID': userId
-                                        }
-                                    }).catch(() => null);
-
-                                    if (res && res.ok) {
-                                        const data = await res.json();
-                                        if (data && data.step) {
-                                            stateData = data;
-                                        }
-                                    }
-
-                                    if (stateData && stateData.step && stateData.step > 1) {
-                                        // Restore form inputs
-                                        document.querySelectorAll('input').forEach(input => {
-                                            if (input.placeholder && stateData[input.placeholder]) {
-                                                input.value = stateData[input.placeholder];
-                                            }
-                                        });
-                                        nextStep(stateData.step);
-                                    }
-                                } catch (e) {
-                                    console.error('Failed to load state', e);
-                                }
-                            }
                         };
                     </script>
                 </body>
@@ -4432,3 +4615,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     };
     axum::response::Html(content)
 }
+pub mod crypto;

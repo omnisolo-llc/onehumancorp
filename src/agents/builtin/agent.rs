@@ -2,6 +2,7 @@ use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
+use tracing::{info_span, Instrument};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -348,6 +349,8 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let phases = ["Gather", "Act", "Verify"];
@@ -700,7 +703,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             let mut retry_count = 0;
-                            let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
                             loop {
@@ -752,7 +755,7 @@ impl Agent {
                             let tool_name = tool_calls.iter().find(|tc| tc["id"].as_str().unwrap() == id).unwrap()["name"].as_str().unwrap().to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
-                            if count > cfg_max_retries as u64 {
+                            if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                 return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
                             tool_results_json[idx] = serde_json::json!({
@@ -820,7 +823,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         let mut retry_count = 0;
-                        let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
                         loop {
@@ -859,7 +862,7 @@ impl Agent {
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                                 let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
-                                if count > cfg_max_retries as u64 {
+                                if count > std::cmp::min(cfg_max_retries, 2) as u64 {
                                     return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
@@ -1002,6 +1005,8 @@ impl Agent {
         on_event(AgentEvent::RunStarted {
             iteration: 0,
         });
+
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
 
         // Phase 1: Planning
         let planner_system = format!(
@@ -1270,6 +1275,8 @@ impl Agent {
     ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "query");
+
         tokio::spawn(async move {
             let mut on_event = |event: AgentEvent| {
                 // We use an unbounded channel so send does not block or drop events if the consumer is slow.
@@ -1493,6 +1500,8 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
+
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
@@ -1673,7 +1682,17 @@ impl Agent {
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
-            let resp = match self.llm.chat(req).await {
+            let llm_span = info_span!(
+                "llm_interaction",
+                agent_id = %final_cfg.agent_id,
+                model = %final_cfg.model,
+                input_tokens = tracing::field::Empty,
+                output_tokens = tracing::field::Empty,
+                total_tokens = tracing::field::Empty,
+                estimated_cost_usd = tracing::field::Empty,
+            );
+
+            let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
                 Ok(r) => r,
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
@@ -1712,8 +1731,9 @@ impl Agent {
             // Telemetry: Record token usage
             let model_label = KeyValue::new("model", final_cfg.model.clone());
             let agent_label = KeyValue::new("agent_id", final_cfg.agent_id.clone());
-            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
-            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+            let tool_label = KeyValue::new("tool_name", "llm_interaction");
+            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "input")]);
+            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
@@ -1733,8 +1753,13 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
+                cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
             }
+
+            llm_span.record("input_tokens", &turn_input_tokens);
+            llm_span.record("output_tokens", &output_tokens);
+            llm_span.record("total_tokens", &total_tokens);
+            llm_span.record("estimated_cost_usd", &turn_cost);
 
             let stop_reason = resp.stop_reason.as_str();
 
@@ -1968,12 +1993,19 @@ impl Agent {
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
                 let cfg_max_retries = final_cfg.max_retries;
+
+                let tool_span = info_span!(
+                    "tool_execution",
+                    agent_id = %final_cfg.agent_id,
+                    tool_name = %tc_clone.name,
+                );
+
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = cfg_max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
@@ -1994,7 +2026,7 @@ impl Agent {
                             }
                         }
                     }
-                });
+                }.instrument(tool_span));
             }
 
             let ro_results = futures::future::join_all(read_only_futures).await;
@@ -2036,7 +2068,7 @@ impl Agent {
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
-                        if *count > final_cfg.max_retries {
+                        if *count > std::cmp::min(final_cfg.max_retries, 2) {
                             if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                 rewind_attempts_remaining -= 1;
                                 let _ = checkpoint_history.pop();
@@ -2180,12 +2212,17 @@ impl Agent {
                 }
 
                 let mut retry_count = 0;
-                let max_retries = final_cfg.max_retries; // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                let max_retries = std::cmp::min(final_cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                 let mut content = String::new();
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools, &messages).await {
+                    let tool_span = info_span!(
+                        "tool_execution",
+                        agent_id = %final_cfg.agent_id,
+                        tool_name = %tc.name,
+                    );
+                    match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2220,7 +2257,7 @@ impl Agent {
                         Err(ToolError::LlmRecoverable(msg)) => {
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
-                            if *count > final_cfg.max_retries {
+                            if *count > std::cmp::min(final_cfg.max_retries, 2) {
                                 if final_cfg.enable_time_travel_rewind && rewind_attempts_remaining > 0 && checkpoint_history.len() > 1 {
                                     rewind_attempts_remaining -= 1;
                                     let _ = checkpoint_history.pop();
@@ -2536,7 +2573,10 @@ impl Agent {
             if let Some(obj) = args.as_object_mut() {
                 if obj.get("mode").and_then(|v| v.as_str()) == Some("fork") {
                     if let Ok(context_json) = serde_json::to_string(current_messages) {
-                        obj.insert("parent_context_json".to_string(), serde_json::json!(context_json));
+                        let id = uuid::Uuid::new_v4().to_string();
+                        let file_path = format!(".ohc_fork_context_{}.json", id);
+                        let _ = std::fs::write(&file_path, &context_json);
+                        obj.insert("parent_context_file".to_string(), serde_json::json!(file_path));
                     }
                 }
             }
@@ -4316,6 +4356,78 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[tokio::test]
+    async fn test_telemetry_interceptor_and_metrics() {
+        // Just verify it compiles and runs correctly with default config
+        // Opentelemetry global meter no-ops in tests unless configured
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Let's call tools".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "read_tool_1".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "3".to_string(), name: "mutating_tool_1".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: Some("id1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Draft answer"),
+                    usage: Usage { input_tokens: 150, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id2".to_string()),
+                },
+            ]),
+        });
+
+        struct MockTool {
+            name: String,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for MockTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok(format!("{} done", self.name))
+            }
+        }
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "read_tool_1".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockTool { name: "read_tool_1".to_string() }),
+            },
+            crate::tools::Tool {
+                name: "mutating_tool_1".to_string(),
+                description: "".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockTool { name: "mutating_tool_1".to_string() }),
+            }
+        ];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.model = "gpt-4o".to_string();
+        cfg.agent_id = "test-agent-telemetry".to_string();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+    }
+
     use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
     struct MockCheckpointer {
@@ -5656,4 +5768,77 @@ mod hierarchical_prompt_tests {
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
         assert!(!prompt.contains("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']"));
     }
+}
+
+#[tokio::test]
+async fn test_stripe_retry_limit() {
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+
+    struct FailingTool;
+    #[async_trait::async_trait]
+    impl ohc_builtin_agent_tools::ToolExecutor for FailingTool {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Err(ToolError::LlmRecoverable("I always fail".to_string()))
+        }
+    }
+
+    struct RetryMockClient {
+        call_count: tokio::sync::Mutex<usize>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for RetryMockClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            // On every turn, the LLM tries to call the tool again
+            Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "Let me try that tool".to_string(),
+                    tool_calls: vec![ToolCall {
+                        id: format!("call_{}", *count),
+                        name: "failing_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: Some(format!("resp_{}", *count)),
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some(format!("resp_{}", *count)),
+            })
+        }
+    }
+
+    let client = Arc::new(RetryMockClient { call_count: tokio::sync::Mutex::new(0) });
+    let tools = vec![
+        ohc_builtin_agent_tools::Tool {
+            name: "failing_tool".to_string(),
+            description: "Fails".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: Arc::new(FailingTool),
+        }
+    ];
+
+    let agent = Agent::new(client.clone(), tools);
+    let mut cfg = AgentRunConfig::default();
+    cfg.max_retries = 5; // Configure to 5, but our code should clamp to 2
+    cfg.max_iterations = 20;
+
+    let mut on_event = |_| {};
+
+    // The run should fail after exactly 2 retries on the tool call
+    let result = agent.run(&cfg, "Start", &mut on_event).await;
+
+    assert!(result.is_err(), "Run should fail due to retries exceeded");
+    let err_str = result.unwrap_err().to_string();
+    assert!(err_str.contains("failed consecutively beyond max_retries limit"), "Should fail because of retry limit");
+
+    let lock = client.call_count.lock().await;
+    // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
+    assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
 }

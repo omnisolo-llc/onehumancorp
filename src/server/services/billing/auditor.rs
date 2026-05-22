@@ -33,6 +33,7 @@ pub struct CostAuditor {
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
+    tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
     telemetry_tx: Option<tokio::sync::mpsc::UnboundedSender<AuditEvent>>,
     llm_cost_counter: Counter<f64>,
@@ -59,6 +60,7 @@ impl CostAuditor {
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
             agent_output_tokens: Mutex::new(HashMap::new()),
+            tenant_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
             telemetry_tx: None,
             llm_cost_counter,
@@ -99,6 +101,10 @@ impl CostAuditor {
         let mut agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         let current_tokens = agent_output_tokens.entry(event.agent_id.clone()).or_insert(0);
         *current_tokens += event.output_tokens;
+
+        let mut tenant_tokens = self.tenant_tokens.lock().unwrap();
+        let current_tenant_tokens = tenant_tokens.entry(event.tenant_id.clone()).or_insert(0);
+        *current_tenant_tokens += event.output_tokens + event.input_tokens;
 
         self.llm_cost_counter.add(cost, &[KeyValue::new("agent_id", event.agent_id.clone())]);
 
@@ -190,6 +196,16 @@ impl CostAuditor {
     pub fn get_total_tokens(&self) -> i64 {
         let agent_output_tokens = self.agent_output_tokens.lock().unwrap();
         agent_output_tokens.values().sum()
+    }
+
+    pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
+        let tenant_tokens = self.tenant_tokens.lock().unwrap();
+        *tenant_tokens.get(tenant_id).unwrap_or(&0)
+    }
+
+    pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
+        let tenant_costs = self.tenant_costs.lock().unwrap();
+        *tenant_costs.get(tenant_id).unwrap_or(&0.0)
     }
 
     pub fn get_total_revenue(&self) -> f64 {
