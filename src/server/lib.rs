@@ -3543,7 +3543,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Draft Blocks render here -->
                             </div>
 
-                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+                            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                                <button class="secondary" style="flex: 1;" onclick="showEmbedStore()">Embed Store</button>
+                                <button class="fab" style="flex: 2; margin: 0; position: static;" onclick="showDomainSetup()">Publish Changes</button>
+                            </div>
+                        </div>
+
+                        <!-- Embed Store Bottom Sheet -->
+                        <div id="embed-store-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedStore()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                                    Copy this code to embed your OHC storefront on your WordPress, Webflow, or custom site. Let customers buy directly from your existing website!
+                                </p>
+                                <label style="display:block; margin-bottom:8px; font-weight:bold; font-size:12px;">IFRAME CODE</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="embed-code-input" readonly value='<iframe src="https://myshop.ohc.store?embed=true" width="100%" height="600" style="border:none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>' style="width:100%; box-sizing:border-box; background: rgba(0,0,0,0.05); font-family: monospace; font-size: 12px;" />
+                                    <button onclick="copyEmbedCode()" style="white-space: nowrap;">Copy</button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Block Editor Bottom Sheet -->
@@ -3721,6 +3742,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
+
+                        function showEmbedStore() {
+                            const tenant = localStorage.getItem('tenant_id') || 'myshop';
+                            const input = document.getElementById('embed-code-input');
+                            input.value = `<iframe src="https://${tenant}.ohc.store?embed=true" width="100%" height="600" style="border:none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>`;
+                            document.getElementById('embed-store-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedStore() {
+                            document.getElementById('embed-store-sheet').classList.remove('open');
+                        }
+
+                        function copyEmbedCode() {
+                            const input = document.getElementById('embed-code-input');
+                            input.select();
+                            document.execCommand('copy');
+                            alert('Embed code copied!');
+                        }
 
                         function renderStorefrontPreview() {
                             const container = document.getElementById('builder-preview-container');
