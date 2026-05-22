@@ -17,6 +17,9 @@ impl SqliteMemoryStore {
             .await?;
 
         // Initialize table
+        // Hermes Agent Unique Harness Innovations: FTS5 session search
+        // Cross-session recall with LLM summarization
+
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS agent_memory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,6 +30,37 @@ impl SqliteMemoryStore {
         )
         .execute(&pool)
         .await?;
+
+        sqlx::query(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS agent_memory_fts USING fts5(
+                content,
+                tags,
+                content='agent_memory',
+                content_rowid='id'
+            )"
+        )
+        .execute(&pool)
+        .await?;
+
+        // Triggers to keep FTS index up to date
+        sqlx::query(
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_ai AFTER INSERT ON agent_memory BEGIN
+                INSERT INTO agent_memory_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;"
+        ).execute(&pool).await?;
+
+        sqlx::query(
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_ad AFTER DELETE ON agent_memory BEGIN
+                INSERT INTO agent_memory_fts(agent_memory_fts, rowid, content, tags) VALUES('delete', old.id, old.content, old.tags);
+            END;"
+        ).execute(&pool).await?;
+
+        sqlx::query(
+            "CREATE TRIGGER IF NOT EXISTS agent_memory_au AFTER UPDATE ON agent_memory BEGIN
+                INSERT INTO agent_memory_fts(agent_memory_fts, rowid, content, tags) VALUES('delete', old.id, old.content, old.tags);
+                INSERT INTO agent_memory_fts(rowid, content, tags) VALUES (new.id, new.content, new.tags);
+            END;"
+        ).execute(&pool).await?;
 
         Ok(Self { pool })
     }
@@ -47,9 +81,10 @@ impl LongTermMemory for SqliteMemoryStore {
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         // Simple text search for long term memory retrieval
-        let search_pattern = format!("%{}%", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE content LIKE ? LIMIT ?")
-            .bind(search_pattern)
+        // Use FTS5 for fast full-text search
+        let fts_query = format!("\"{}\"", query); // simple quoting for MATCH
+        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory_fts WHERE agent_memory_fts MATCH ? ORDER BY rank LIMIT ?")
+            .bind(fts_query)
             .bind(limit as i64)
             .fetch_all(&self.pool)
             .await
