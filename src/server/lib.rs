@@ -3042,11 +3042,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Agents Page (Agents) -->
                     <div id="team-screen" class="screen">
                         <h1 class="outfit">Agents</h1>
+                        <h2>My Staff</h2>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
+                        <button class="primary" onclick="alert('Hire Agent')">Hire Agent</button>
 
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
-                                <h3 class="outfit">Marketing Pro</h3>
+                                <h3 class="outfit">The Ambassador</h3>
+                                <p>Customer Success</p>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
                                 <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -3059,7 +3062,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">Ops Helper</h3>
+                                <h3 class="outfit">The Manager</h3>
+                                <p>Operations</p>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
                                 <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
@@ -3072,7 +3076,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
-                                <h3 class="outfit">Sales Agent</h3>
+                                <h3 class="outfit">The Salesperson</h3>
+                                <p>Sales</p>
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
                                 <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
@@ -4657,7 +4662,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen' };
+                            const pathAliases = { '/agents': 'team-screen', '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             // State restoration for setup wizard

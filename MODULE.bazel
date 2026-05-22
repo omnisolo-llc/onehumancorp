@@ -227,23 +227,18 @@ bazel_dep(name = "aspect_bazel_lib", version = "2.7.9")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "aspect_rules_js", version = "3.1.2")
 bazel_dep(name = "yq.bzl", version = "0.3.4")
-
-http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-
-http_archive(
-    name = "playwright_chromium_headless_shell",
-    build_file_content = """
-exports_files(["chrome-headless-shell-linux64/chrome-headless-shell"])
-
-filegroup(
-    name = "files",
-    srcs = glob(["**"]),
-    visibility = ["//visibility:public"],
+bazel_dep(name = "rules_playwright", version = "0.5.4")
+local_path_override(
+    module_name = "rules_playwright",
+    path = "bazel/rules/rules_playwright",
 )
-""",
-    sha256 = "88817c574c1838a39f88fda0bbd043b4481fd385fb10e92c323e230844d636ce",
-    urls = ["https://cdn.playwright.dev/builds/cft/148.0.7778.96/linux64/chrome-headless-shell-linux64.zip"],
+
+playwright = use_extension("@rules_playwright//playwright:extensions.bzl", "playwright")
+playwright.repo(
+    name = "playwright",
+    playwright_version = "1.60.0",
 )
+use_repo(playwright, "playwright")
 
 # ── Flutter rules (vendored fork) ─────────────────────────────────────────────
 bazel_dep(name = "rules_flutter", version = "0.0.0")
