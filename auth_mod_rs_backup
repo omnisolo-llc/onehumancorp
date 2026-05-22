@@ -117,7 +117,7 @@ pub struct Store {
     by_oidc: RwLock<HashMap<TenantKey, String>>,
     revoked: RwLock<HashMap<String, DateTime<Utc>>>,
     #[allow(dead_code)]
-    pub secret: Vec<u8>,
+    secret: Vec<u8>,
     #[allow(dead_code)]
     oidc_cfg: RwLock<OIDCConfig>,
 }
@@ -786,15 +786,13 @@ impl AuthService for AuthServiceServerImpl {
 }
 
 #[cfg(test)]
-
-#[cfg(test)]
 mod sentinel_auth_hardening_tests {
     use super::*;
 
     #[test]
     fn test_auth_store_secret_derivation() {
         // Verify that in standalone mode without a secret file, we derive it correctly from SQLITE_KEY
-        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test-key-123")), ("JWT_SECRET", None), ("OHC_MULTITENANT", Some("false"))], || {
+        temp_env::with_vars(vec![("OHC_SQLITE_KEY", Some("test-key-123")), ("JWT_SECRET", None)], || {
              let store = Store::new();
              assert!(!store.secret.is_empty());
              assert_eq!(store.secret.len(), 32);

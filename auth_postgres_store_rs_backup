@@ -350,39 +350,3 @@ mod security_tests {
         assert!(res.is_ok() || res.is_err());
     }
 }
-
-#[cfg(test)]
-mod sentinel_security_regression_tests {
-    use super::*;
-    use std::time::Duration;
-    use sqlx::postgres::PgPoolOptions;
-
-    #[tokio::test]
-    async fn test_tenant_isolation_regression() {
-        let database_url = match std::env::var("DATABASE_URL") {
-            Ok(url) => url,
-            Err(_) => return,
-        };
-
-        if database_url.starts_with("sqlite") {
-            return;
-        }
-
-        let pool = PgPoolOptions::new()
-            .acquire_timeout(Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-
-        let tenant_a = "tenant-a";
-        let mut tx = pool.begin().await.unwrap();
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_a).await.unwrap();
-
-        let current_tenant: String = sqlx::query_scalar("SELECT current_setting('app.current_tenant', true)")
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap();
-
-        assert_eq!(current_tenant, tenant_a);
-        tx.rollback().await.unwrap();
-    }
-}

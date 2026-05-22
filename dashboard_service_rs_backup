@@ -97,14 +97,7 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db1.store {
                     crate::db::DbStore::Postgres => {
-                        let mut tx = match db1.pool.begin().await {
-                            Ok(tx) => tx,
-                            Err(_) => return Ok::<_, String>(results),
-                        };
-                        if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-                            return Ok::<_, String>(results);
-                        }
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&mut *tx).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
                             for r in rows {
                                 let p = ::server_ohc::organization::Product {
                                     id: r.try_get("id").unwrap_or_default(),
@@ -178,14 +171,7 @@ impl DashboardService for MyDashboardService {
                 let mut results = Vec::new();
                 match &db2.store {
                     crate::db::DbStore::Postgres => {
-                        let mut tx = match db2.pool.begin().await {
-                            Ok(tx) => tx,
-                            Err(_) => return Ok::<_, String>(results),
-                        };
-                        if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-                            return Ok::<_, String>(results);
-                        }
-                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&mut *tx).await {
+                        if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db2.pool).await {
                             for r in rows {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
@@ -239,15 +225,8 @@ impl DashboardService for MyDashboardService {
                 let mut org = None;
                 match &db3.store {
                     crate::db::DbStore::Postgres => {
-                        let mut tx = match db3.pool.begin().await {
-                            Ok(tx) => tx,
-                            Err(_) => return Ok::<_, String>(org),
-                        };
-                        if let Err(_) = ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await {
-                            return Ok::<_, String>(org);
-                        }
                         if let Ok(Some(row)) =
-                            sqlx::query(q).bind(&org_id).fetch_optional(&mut *tx).await
+                            sqlx::query(q).bind(&org_id).fetch_optional(&db3.pool).await
                         {
                             org = Some(::server_ohc::organization::Organization {
                                 id: row.try_get("tenant_id").unwrap_or_default(),

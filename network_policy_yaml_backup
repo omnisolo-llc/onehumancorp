@@ -34,6 +34,10 @@ spec:
     - to:
         - namespaceSelector:
             matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
               kubernetes.io/metadata.name: kube-system
           podSelector:
             matchLabels:
@@ -44,15 +48,16 @@ spec:
         - protocol: TCP
           port: 53
     - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app: {{ include "ohc.fullname" . }}-core
-      ports:
-        - protocol: TCP
-          port: {{ .Values.ohcCore.service.port }}
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
     {{- if .Values.cnpg.enabled }}
     - to:
         - namespaceSelector:
@@ -60,8 +65,7 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              cnpg.io/cluster: {{ .Values.cnpg.clusterName }}
-              role: primary
+              app: {{ .Values.cnpg.clusterName }}-rw
       ports:
         - protocol: TCP
           port: 5432
@@ -73,41 +77,19 @@ spec:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
           podSelector:
             matchLabels:
-              app.kubernetes.io/name: redis
-              app.kubernetes.io/instance: {{ .Release.Name }}
+              app: {{ .Release.Name }}-redis-master
       ports:
         - protocol: TCP
           port: 6379
     {{- end }}
-    {{- if .Values.powersync.enabled }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app: {{ include "ohc.fullname" . }}-powersync
-      ports:
-        - protocol: TCP
-          port: {{ .Values.powersync.service.targetPort }}
-    {{- end }}
-    {{- if .Values.chatwoot.enabled }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Release.Namespace }}
-          podSelector:
-            matchLabels:
-              app: {{ include "ohc.fullname" . }}-chatwoot
-      ports:
-        - protocol: TCP
-          port: {{ .Values.chatwoot.service.port }}
-    {{- end }}
     - to:
         - ipBlock:
-            cidr: 0.0.0.0/0
+            cidr: 0.0.0.0/1
             except:
               - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
               - 172.16.0.0/12
               - 192.168.0.0/16
               - 169.254.169.254/32
