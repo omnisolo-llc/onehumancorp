@@ -21,6 +21,7 @@ This directory is the source for the repository documentation site.
 - [Distributed State Machine](features/kairos/distributed_state_machine.md)
 - [AutoDream Pipelines](features/kairos/autodream_pipelines.md)
 - [Memory Consolidation](features/kairos/memory_consolidation.md)
+- [Sub-Agent Queue](features/kairos/sub_agent_queue.md)
 - [Sub-Agent Queue Design](technical/architecture/kairos/sub-agent-queue-design.md)
 
 ## Site Generation
