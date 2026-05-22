@@ -13,6 +13,15 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "rules_pkg", version = "1.2.0")
 bazel_dep(name = "rules_go", version = "0.60.0")
 bazel_dep(name = "gazelle", version = "0.50.0")
+bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
+single_version_override(
+    module_name = "hermetic_cc_toolchain",
+    patches = [
+        "//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch",
+        "//bazel/patches:hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
+    ],
+    patch_strip = 1,
+)
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
 
@@ -48,24 +57,20 @@ register_toolchains("@go_sdk//:all")
 
 # ── Rust support ──────────────────────────────────────────────────────────────
 bazel_dep(name = "rules_rust", version = "0.70.0")
+single_version_override(
+    module_name = "rules_rust",
+    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
+    patch_strip = 1,
+)
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
 rust = use_extension("@rules_rust//rust:extensions.bzl", "rust")
 rust.toolchain(
     edition = "2024",
-    extra_rustc_flags_triples = {
-        "x86_64-pc-windows-gnu": [
-            "-Clinker=/usr/bin/x86_64-w64-mingw32-gcc",
-            "-Lnative=/usr/x86_64-w64-mingw32/lib",
-            "-Lnative=/usr/lib/gcc/x86_64-w64-mingw32/13-posix",
-        ],
-    },
     extra_target_triples = [
-        "x86_64-pc-windows-msvc",
-        "x86_64-pc-windows-gnu",
-        "i686-pc-windows-msvc",
-        "i686-pc-windows-gnu",
+        "aarch64-pc-windows-gnullvm",
+        "x86_64-pc-windows-gnullvm",
         "x86_64-unknown-linux-gnu",
         "aarch64-unknown-linux-gnu",
         "x86_64-apple-darwin",
@@ -103,6 +108,23 @@ crate.from_cargo(
     manifests = [
         "//:Cargo.toml",
     ],
+    supported_platform_triples = [
+        "aarch64-apple-darwin",
+        "aarch64-pc-windows-gnullvm",
+        "aarch64-unknown-linux-gnu",
+        "wasm32-unknown-unknown",
+        "wasm32-wasip1",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-gnullvm",
+        "x86_64-unknown-linux-gnu",
+        "x86_64-unknown-nixos-gnu",
+    ],
+)
+crate.annotation(
+    crate = "windows-sys",
+    patch_args = ["-p1"],
+    patches = ["//bazel/patches:windows_sys_0_48_stable_raw_dylib.patch"],
+    version = "0.48.0",
 )
 crate.annotation(
     build_script_env = {
@@ -117,6 +139,62 @@ crate.annotation(
     crate = "rav1e",
 )
 crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "bzip2-sys",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "libsqlite3-sys",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "lzma-sys",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "ring",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "tree-sitter",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "tree-sitter-bash",
+)
+crate.annotation(
+    build_script_env = {
+        "AR_aarch64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+        "AR_x86_64_pc_windows_gnullvm": "$(execpath @@//bazel/rules:msvc_lib_ar_wrapper.sh)",
+    },
+    build_script_tools = ["@@//bazel/rules:msvc_lib_ar_wrapper.sh"],
+    crate = "zstd-sys",
+)
+crate.annotation(
     crate = "protoc-gen-prost",
     gen_binaries = ["protoc-gen-prost"],
 )
@@ -128,55 +206,6 @@ crate.annotation(
     crate = "tauri-cli",
     gen_binaries = ["cargo-tauri"],
 )
-crate.annotation_select(
-    build_script_env = {
-        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
-        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
-        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
-    },
-    crate = "libsqlite3-sys",
-    triples = [
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ],
-)
-crate.annotation_select(
-    build_script_env = {
-        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
-        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
-        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
-    },
-    crate = "ring",
-    triples = [
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ],
-)
-crate.annotation_select(
-    build_script_env = {
-        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
-        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
-        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
-    },
-    crate = "tree-sitter",
-    triples = [
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ],
-)
-crate.annotation_select(
-    build_script_env = {
-        "AR": "/usr/bin/x86_64-w64-mingw32-ar",
-        "CC": "/usr/bin/x86_64-w64-mingw32-gcc",
-        "CXX": "/usr/bin/x86_64-w64-mingw32-g++",
-    },
-    crate = "tree-sitter-bash",
-    triples = [
-        "x86_64-pc-windows-gnu",
-        "x86_64-pc-windows-msvc",
-    ],
-)
-
 # wasm-bindgen crate version must match what the toolchain provides
 # rules_rust_wasm_bindgen 0.70.0 ships with wasm-bindgen-cli 0.2.105
 # We accept this mismatch and the user will need to update rules_rust_wasm_bindgen
@@ -246,23 +275,24 @@ use_repo(npm, "npm")
 platforms_host = use_extension("@platforms//host:extension.bzl", "host_platform")
 use_repo(platforms_host, "host_platform")
 
-bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
-# TODO: Revisit hermetic LLVM once toolchains_llvm analysis/linking is stable.
-# bazel_dep(name = "toolchains_llvm", version = "1.7.0")
+hermetic_cc = use_extension("@hermetic_cc_toolchain//toolchain:ext.bzl", "toolchains")
+use_repo(hermetic_cc, "zig_sdk")
 
-buildbuddy = use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
-buildbuddy.gcc_toolchain()
-use_repo(buildbuddy, "buildbuddy_toolchain")
+register_toolchains(
+    "@zig_sdk//toolchain:windows_amd64",
+    "@zig_sdk//toolchain:windows_arm64",
+)
 
-register_toolchains("@buildbuddy_toolchain//:all")
+bazel_dep(name = "toolchains_llvm", version = "1.7.0")
 
-# llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
-# llvm.toolchain(
-#     llvm_version = "21.1.8",
-# )
-# use_repo(llvm, "llvm_toolchain")
-#
-# register_toolchains("@llvm_toolchain//:all")
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+llvm.toolchain(
+    name = "llvm_toolchain",
+    llvm_version = "21.1.8",
+)
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all")
 
 oci = use_extension("@rules_oci//oci:extensions.bzl", "oci")
 oci.pull(

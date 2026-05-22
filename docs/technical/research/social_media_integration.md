@@ -1,29 +1,27 @@
-# [Social Media] Integrate Zernio for Unified Inbox
+# [Social Media] Unified Inbox Sync
 
 ## Problem Statement
-Small business owners like Priya (Boutique Owner) and Maya (Home Baker) receive inquiries across Instagram DMs, Facebook Comments, TikTok, and WhatsApp. Managing these separately means delayed responses and lost sales. They need a single, unified inbox to view and reply to all customer messages, and an AI agent to handle common questions ("do you do vegan cakes?") seamlessly across platforms.
+Small business owners like Maya (the home baker) get inquiries via Instagram DMs, WhatsApp, and Facebook comments. Keeping track of all these messages across multiple apps is overwhelming, leading to missed orders and slow response times. They need a single, simple inbox inside the OHC app where all customer messages appear in one place, allowing their AI "Ambassador" to help draft replies.
 
 ## Research Report
-**Evaluated Tool:** Zernio (Unified Social Media API)
-**Alternatives Considered:** Native APIs (Meta Graph, X, TikTok), Ayrshare
-**Pros:** Zernio aggregates multiple platforms into a single API endpoint, reducing OAuth complexity and the need to maintain multiple webhook structures. Excellent parsing quality for DMs and comments.
-**Cons:** Third-party dependency, potential rate limits.
-**Ease of Use for Non-technical Users:** Transparent. The user simply connects their social accounts once and all messages flow into the OHC unified inbox.
-**Pricing:** Estimated at ~$50-100/mo base + volume pricing, scalable for multi-tenant SaaS.
-**Deployment:** Works well in Cloud. For Standalone, OAuth callback handling will require specific configuration or proxying.
+- **Target Tools**: Meta Graph API (Instagram Messaging, Messenger, WhatsApp Business API).
+- **Competitive Analysis**: Tools like ManyChat and Shopify Inbox offer similar integrations, but they often require complex initial setups or separate apps.
+- **Ease of Use**: By utilizing Meta's official APIs, we can create a streamlined OAuth flow. The business owner just clicks "Connect Instagram" and logs in. No technical setup is required.
+- **Pricing**: Meta Graph APIs are generally free for standard messaging. WhatsApp Business has volume-based pricing, but a free tier for initial conversations exists which fits our target personas.
+- **Reputation**: Meta APIs are the industry standard for these integrations, despite occasional strict approval processes for API access.
+- **Advantages and Risks**: Advantage is native reach on the platforms users already use; risk is Meta's strict API approval and account suspension policies.
+- **Cloud vs Standalone**: Works in Cloud mode (central webhooks). Standalone mode would require the user to configure their own Meta App or routing incoming events through the OHC Cloud proxy (which introduces complexity).
 
 ## Design Doc
-**Integration with OHC:**
-- **Trigger:** A new message arrives via Zernio webhooks.
-- **Action:** The system parses the message and routes it to the tenant's unified inbox database.
-- **AI Agent Interaction:** The Customer Success agent ("The Ambassador") receives the incoming message context, drafts a reply, and (if auto-reply is enabled) posts the response back through Zernio.
-- **User View:** A unified "Inbox" screen in the OHC mobile and desktop apps.
+- **Integration Flow**: The user accesses the "Customer Success" department in the OHC app and clicks to connect their social accounts via a standard Meta OAuth popup.
+- **Actions**: Once connected, incoming DMs and comments are fetched and displayed in a unified OHC inbox. The AI Ambassador can read these messages to suggest draft replies. When the user approves a reply, it is sent back through the Meta API to the respective platform.
+- **User Experience**: A seamless, mobile-optimized chat interface inside OHC where messages show a small icon indicating their source (e.g., an Instagram logo).
 
 ## Implementation Prompt
-Implement the backend integration with Zernio to receive webhooks for incoming social messages and send outgoing replies. Create the frontend UI for a unified inbox where users can view and reply to cross-platform messages. Ensure "The Ambassador" AI agent can draft replies within this interface.
+Create a unified inbox feature that allows users to authenticate with Meta and connect their Instagram, Facebook, and WhatsApp accounts. Incoming messages from these platforms should populate a single chat interface within the OHC app. The feature must include the ability to read messages, see which platform they came from, and reply directly from the OHC app, with replies routing back to the correct original platform. Ensure the authentication flow is simple enough for a non-technical user on a mobile device.
 
 ## Priority
-P1
+P0
 
 ## Estimated Scope
 Large

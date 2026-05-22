@@ -9,5 +9,10 @@ sh_binary(
     name = "rust_lint",
     srcs = ["rust_lint.sh"],
     tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "@platforms//os:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
 )

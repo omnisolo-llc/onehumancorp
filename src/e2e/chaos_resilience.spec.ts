@@ -22,7 +22,7 @@ test.describe('E2E Chaos Resilience', () => {
   });
 
   test('keeps dashboard and inbox interactions responsive', async ({ page }, testInfo) => {
-    test.skip(!process.env.MINIMAX_API_KEY, 'MINIMAX_API_KEY is required for real AI draft generation and judging.');
+
     await expect(page.getByText("Today's Sales")).toBeVisible();
     await page.getByRole('button', { name: 'Check Messages' }).click();
 

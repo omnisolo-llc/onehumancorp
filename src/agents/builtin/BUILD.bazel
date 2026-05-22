@@ -85,6 +85,7 @@ rust_library(
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
         "//src/server/pricing:server_pricing",
+        "//src/server/telemetry:server_telemetry",
     ] + [
         "@crates//:tempfile",
         "@crates//:base64",
@@ -176,6 +177,7 @@ rust_binary(
         crate = ":ohc_builtin_agent_lib",
         args = [module],
         edition = "2024",
+        size = "small",
         target_compatible_with = select({
             "@platforms//os:linux": [],
             "//conditions:default": ["@platforms//:incompatible"],
@@ -201,6 +203,7 @@ rust_test(
     name = "masking_tests",
     srcs = ["masking_tests.rs"],
     edition = "2024",
+    size = "small",
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -220,6 +223,7 @@ rust_test(
     name = "compaction_tests",
     srcs = ["compaction_tests.rs"],
     edition = "2024",
+    size = "small",
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
