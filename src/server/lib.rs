@@ -3659,6 +3659,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
                                 const state = { step: currentStep };
+                                Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
                                     if (input.placeholder) {
                                         if (input.type === 'checkbox') {
@@ -3744,6 +3745,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (state.step && state.step > 1) {
                                     nextStep(state.step);
                                 }
+
+                                // Restore onboardingState
+                                if (state.business_type) onboardingState.business_type = state.business_type;
+                                if (state.payment_pref) onboardingState.payment_pref = state.payment_pref;
+                                if (state.website_template) onboardingState.website_template = state.website_template;
+                                if (state.domain_choice) onboardingState.domain_choice = state.domain_choice;
                             }
                         }
 
@@ -4137,21 +4144,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setBusinessType(type) {
                             onboardingState.business_type = type;
+                            saveWizardState();
                             nextStep(3);
                         }
 
                         function setPaymentPref(pref) {
                             onboardingState.payment_pref = pref;
+                            saveWizardState();
                             nextStep(7);
                         }
 
                         function setTemplate(template, btn) {
                             onboardingState.website_template = template;
+                            saveWizardState();
                             selectWizardOption(btn);
                         }
 
                         function setDomainChoice(choice, btn) {
                             onboardingState.domain_choice = choice;
+                            saveWizardState();
                             selectWizardOption(btn);
                         }
 
