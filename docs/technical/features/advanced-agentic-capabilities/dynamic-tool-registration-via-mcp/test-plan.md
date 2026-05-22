@@ -29,7 +29,7 @@ Validate the dynamic synthesis and injection of tool schemas, verify secure rout
 
 ## 3. Automation & CI/CD
 - All unit and integration tests must be integrated into the Bazel `//...` test suite.
-- Coverage MUST exceed 95% for `src/server/orchestration/mcp_gateway.go`.
+- Coverage should exercise `src/server/integrations/mcp_gateway.rs` and the dynamic tool registration path.
 - Avoid arbitrary `time.Sleep()` for async tool executions; strictly use deterministic polling loops.
 
 </div>

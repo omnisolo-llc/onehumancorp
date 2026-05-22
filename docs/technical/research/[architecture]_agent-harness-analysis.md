@@ -123,14 +123,14 @@ package harness
 import "context"
 
 type SandboxBackend interface {
-    ExecuteCommand(ctx context.Context, cmd string) (*ExecutionResult, error)
-    ReadFile(ctx context.Context, path string) ([]byte, error)
-    WriteFile(ctx context.Context, path string, content []byte) error
+    ExecuteCommand(ctx async context, cmd string) (*ExecutionResult, error)
+    ReadFile(ctx async context, path string) ([]byte, error)
+    WriteFile(ctx async context, path string, content []byte) error
 }
 
 type HarnessLifecycle interface {
-    RunAttempt(ctx context.Context, agentID string, prompt string) (*AttemptResult, error)
-    ResetSession(ctx context.Context, sessionID string) error
+    RunAttempt(ctx async context, agentID string, prompt string) (*AttemptResult, error)
+    ResetSession(ctx async context, sessionID string) error
 }
   </code></pre>
 </div>
@@ -139,9 +139,9 @@ type HarnessLifecycle interface {
   <h2>Implementation Prompt</h2>
   <p>Implement the Agent Harness architecture in Go under <code>src/server/harness/</code>:</p>
   <ol>
-    <li>Create <code>sandbox.go</code> defining the <code>SandboxBackend</code> interface and a <code>DockerBackend</code> implementation. Use <code>OHCMultitenant</code> env var to conditionally enable K8s support.</li>
-    <li>Create <code>sync.go</code> for the <code>FileSyncBridge</code> using a struct that hashes files and syncs deltas. Protect the state with distributed Redis locks.</li>
-    <li>Create <code>lifecycle.go</code> defining the <code>HarnessLifecycle</code> interface.</li>
+    <li>Create <code>sandbox.rs</code> defining the <code>SandboxBackend</code> interface and a <code>DockerBackend</code> implementation. Use <code>OHCMultitenant</code> env var to conditionally enable K8s support.</li>
+    <li>Create <code>sync.rs</code> for the <code>FileSyncBridge</code> using a struct that hashes files and syncs deltas. Protect the state with distributed Redis locks.</li>
+    <li>Create <code>lifecycle.rs</code> defining the <code>HarnessLifecycle</code> interface.</li>
     <li>Ensure 100% unit test coverage for all new files.</li>
     <li>All metrics MUST be exported using OpenTelemetry.</li>
     <li>Verify implementation via <code>bazelisk test //src/server/harness/...</code>.</li>

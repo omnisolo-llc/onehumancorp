@@ -25,14 +25,14 @@ OHC currently requires an advanced, robust Agent Harness. By inspecting the open
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
 ### 1. Unified Harness Containerization
-- **OpenClaw & Claude Code Parity**: Implement `src/server/harness/sandbox.go` to handle dynamic container lifecycle (spin up/down) acting as the execution boundary.
+- **OpenClaw & Claude Code Parity**: Implement `src/server/harness/sandbox.rs` to handle dynamic container lifecycle (spin up/down) acting as the execution boundary.
 - **Contract**: gRPC interface to stream standard input/output from the sandbox container back to the host system securely, similar to Claude Code's `SandboxManager`. Define explicit configurations for `NetworkRestrictionConfig` and `FsWriteRestrictionConfig`.
 
 ### 2. AST-Based Security Parsing
-- **Claude Code Parity**: Integrate a Tree-sitter AST parser before command execution in `src/server/harness/security.go` to dynamically analyze bash commands for security check events (e.g., `tengu_bash_security_check_triggered`).
+- **Claude Code Parity**: Integrate a Tree-sitter AST parser before command execution in `src/server/harness/security.rs` to dynamically analyze bash commands for security check events (e.g., `tengu_bash_security_check_triggered`).
 
 ### 3. Error Recovery and Execution Loop
-- **Hermes Parity**: Implement `src/server/harness/loop.go` mapping to Hermes' robust state and error management, handling LLM tool format errors (e.g., JSON malformations) without panicking.
+- **Hermes Parity**: Implement `src/server/harness/loop.rs` mapping to Hermes' robust state and error management, handling LLM tool format errors (e.g., JSON malformations) without panicking.
 
 ### 4. OpenTelemetry Integration
 - **Claude Code Parity**: Incorporate OpenTelemetry metrics (`harness_sandbox_started`, `harness_tool_error_recovered`, `harness_tool_executed`, `harness_sandbox_bypass_attempted`) into Prometheus.
@@ -60,9 +60,9 @@ graph TD;
 ## Implementation Prompt
 Implementer Agent: Please build out the Unified Harness based on the Claude Code, OpenClaw, and Hermes paradigms.
 
-1. Implement `src/server/harness/sandbox.go` providing a Docker-backed sandbox environment with explicit Network/FS restrictions. Ensure the execution boundary intercepts container metrics.
-2. Implement `src/server/harness/security.go` adding an AST-based shell parser to block destructive or obfuscated commands.
-3. Implement `src/server/harness/loop.go` with a built-in error classifier for handling malformed tool responses from AI models gracefully.
+1. Implement `src/server/harness/sandbox.rs` providing a Docker-backed sandbox environment with explicit Network/FS restrictions. Ensure the execution boundary intercepts container metrics.
+2. Implement `src/server/harness/security.rs` adding an AST-based shell parser to block destructive or obfuscated commands.
+3. Implement `src/server/harness/loop.rs` with a built-in error classifier for handling malformed tool responses from AI models gracefully.
 4. Integrate OpenTelemetry to trace every step of the sandbox execution and security validation (`harness_sandbox_started`, `harness_tool_executed`, `harness_sandbox_bypass_attempted`). Include 100% unit test coverage.
 5. Ensure code handles `RedactInterfacePII` where applicable before logging.
 
