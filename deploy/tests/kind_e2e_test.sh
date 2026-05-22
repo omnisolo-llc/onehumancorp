@@ -349,6 +349,11 @@ helm upgrade --install redis bitnami/redis \
   --namespace "${NAMESPACE}" \
   --set architecture=standalone \
   --set auth.enabled=false \
+  --set master.resourcesPreset=none \
+  --set master.resources.requests.cpu=100m \
+  --set master.resources.requests.memory=128Mi \
+  --set master.resources.limits.cpu=200m \
+  --set master.resources.limits.memory=256Mi \
   --wait --timeout 120s
 
 # ── Cloud/web mode ─────────────────────────────────────────────────────────────
