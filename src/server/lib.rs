@@ -236,17 +236,36 @@ struct HttpMetricsResponse {
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
 
     let (active_customers_res, pending_orders_res) = tokio::join!(
         async {
@@ -275,17 +294,36 @@ async fn http_metrics_handler(
 
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
 
     let tenant_id = payload.tenant_id;
+    if tenant_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
     let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_one(&db.pool)
@@ -1770,7 +1808,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
             system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
-            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            max_tokens: {
+                let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
+                if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
+            },
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
@@ -1817,6 +1858,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+async fn get_inbox_messages_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let pool = crate::db::get_pool();
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => {
+            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                use sqlx::Row;
+                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "source": row.get::<String, _>("source"),
+                    "content": row.get::<String, _>("content"),
+                    "draft_reply": row.get::<String, _>("draft_reply"),
+                    "status": row.get::<String, _>("status"),
+                    "created_at": created_at_str,
+                })
+            }).collect();
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch inbox messages: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
     let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
@@ -1827,7 +1899,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler))
+        .route("/inbox", axum::routing::get(ui_handler)).route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
@@ -1908,14 +1980,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             "/api/v1/dashboard/sales",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_sales_handler(db, store, headers, payload).await }
             }),
         )
         .route(
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, headers, payload).await }
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpSalesRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -1938,7 +2012,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .merge(webhook_router)
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.", "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.", "launch-btn-tooltip": "Launch your storefront immediately to a live URL.", "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.", "referral-tooltip": "Share your unique link to earn credits when friends join OHC.", "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.", "department-card-tooltip": "Click to view and manage pending approvals for this department.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features. For store setup, check out the Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -3389,8 +3463,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3408,8 +3482,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3422,9 +3496,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3467,7 +3541,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
