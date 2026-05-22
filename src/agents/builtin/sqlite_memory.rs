@@ -11,9 +11,23 @@ pub struct SqliteMemoryStore {
 
 impl SqliteMemoryStore {
     pub async fn new(db_url: &str) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        use std::str::FromStr;
+        use sqlx::sqlite::SqliteConnectOptions;
+
+        let mut conn_opts = SqliteConnectOptions::from_str(db_url)?
+            .create_if_missing(true);
+
+        let key = std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+        if key.is_empty() {
+            panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
+        }
+
+        let pragma_key = format!("'{}'", key.replace('\'', "''"));
+        conn_opts = conn_opts.pragma("key", pragma_key);
+
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(db_url)
+            .connect_with(conn_opts)
             .await?;
 
         // Initialize table
@@ -69,6 +83,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_memory_store() {
+        std::env::set_var("OHC_SQLITE_KEY", "test_key");
         let store = SqliteMemoryStore::new("sqlite::memory:").await.unwrap();
 
         store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
