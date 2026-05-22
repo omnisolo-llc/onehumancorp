@@ -204,4 +204,33 @@ describe('WebsiteBuilderPage', () => {
     consoleSpy.mockRestore();
   });
 
+  test('verifies design tokens: border-radius of main card is 16px', () => {
+    const { container } = render(<WebsiteBuilderPage />);
+    const card = container.querySelector('.shadow-2xl');
+    expect(card).toHaveStyle({ borderRadius: '16px' });
+  });
+
+  test('verifies design tokens: button border-radius is 8px', () => {
+    render(<WebsiteBuilderPage />);
+    const btn = screen.getByRole('button', { name: 'Build My Storefront' });
+    expect(btn).toHaveStyle({ borderRadius: '8px' });
+  });
+
+  test('verifies design tokens: glass background rgba is correct', () => {
+    const { container } = render(<WebsiteBuilderPage />);
+    const card = container.querySelector('.shadow-2xl');
+    expect(card).toHaveStyle({ background: 'rgba(255, 255, 255, 0.65)' });
+  });
+
+  test('verifies design tokens: glass backdrop filter is correct', () => {
+    const { container } = render(<WebsiteBuilderPage />);
+    const card = container.querySelector('.shadow-2xl');
+    expect(card).toHaveStyle({ backdropFilter: 'blur(30px) saturate(210%)' });
+  });
+
+  test('verifies design tokens: border is correct', () => {
+    const { container } = render(<WebsiteBuilderPage />);
+    const card = container.querySelector('.shadow-2xl');
+    expect(card).toHaveStyle({ border: '1px solid rgba(255, 255, 255, 0.4)' });
+  });
 });

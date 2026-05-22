@@ -113,4 +113,26 @@ test.describe('Website Builder Full E2E', () => {
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('text=ohc.store')).toBeVisible();
   });
+
+  test('verifies design tokens in nextjs builder workflow', async ({ page }) => {
+    await page.goto('/builder');
+
+    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+
+    const mainCard = page.locator('div.w-\\[375px\\]');
+
+    // Check border radius 16px (24px was removed)
+    await expect(mainCard).toHaveCSS('border-radius', '16px');
+
+    // Check background rgba(255, 255, 255, 0.65)
+    await expect(mainCard).toHaveCSS('background-color', 'rgba(255, 255, 255, 0.65)');
+
+    // Check button border radius 8px
+    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+    await textarea.fill('I run a coffee shop');
+
+    const btn = page.getByRole('button', { name: 'Build My Storefront' });
+    await expect(btn).toBeEnabled();
+    await expect(btn).toHaveCSS('border-radius', '8px');
+  });
 });
