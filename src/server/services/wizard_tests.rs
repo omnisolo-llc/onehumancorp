@@ -1,5 +1,5 @@
 use super::*;
-use ::server_ohc::orchestration::*;
+use crate::orchestration::*;
 use tonic::Request;
 
 #[tokio::test]
