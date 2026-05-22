@@ -126,3 +126,5 @@ debian-binary
 dummy.*
 dummy_*
 .next/
+/*.patch
+
