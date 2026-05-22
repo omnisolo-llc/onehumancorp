@@ -16,8 +16,8 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
 single_version_override(
     module_name = "hermetic_cc_toolchain",
-    patches = ["//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch"],
     patch_strip = 1,
+    patches = ["//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch"],
 )
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
@@ -139,6 +139,7 @@ crate.annotation(
     crate = "tauri-cli",
     gen_binaries = ["cargo-tauri"],
 )
+
 # wasm-bindgen crate version must match what the toolchain provides
 # rules_rust_wasm_bindgen 0.70.0 ships with wasm-bindgen-cli 0.2.105
 # We accept this mismatch and the user will need to update rules_rust_wasm_bindgen
@@ -260,3 +261,12 @@ use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+use_repo(
+    go_deps,
+    "cc_mvdan_sh_v3",
+    "io_opentelemetry_go_otel",
+    "io_opentelemetry_go_otel_trace",
+)
