@@ -126,11 +126,7 @@ impl DB {
             }
 
             // Enforce SQLCipher for Standalone mode unconditionally
-            let key = if let Some(k) = database_url.split("key=").nth(1) {
-                k.split('&').next().unwrap_or("").to_string()
-            } else {
-                std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
-            };
+            let key = std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
 
             if key.is_empty() {
                 panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");

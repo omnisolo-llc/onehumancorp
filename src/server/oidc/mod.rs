@@ -5,6 +5,7 @@ use std::sync::RwLock;
 use std::sync::OnceLock;
 use chrono::{Utc, Duration};
 use ::server_common::Claims;
+use ::server_config;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct OIDCConfig {
@@ -192,6 +193,11 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         roles.push("VIEWER".to_string());
     }
     
+    let org_id = raw.get("organization_id").and_then(|v| v.as_str()).map(|s| s.to_string());
+    if ::server_config::get().multitenant && (org_id.is_none() || org_id.as_deref().unwrap().trim().is_empty()) {
+        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+    }
+
     Ok(Claims {
         sub: {
             let sub = raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string();
@@ -201,7 +207,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
-        organization_id: None,
+        organization_id: org_id,
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
