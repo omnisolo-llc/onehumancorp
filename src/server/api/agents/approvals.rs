@@ -54,32 +54,19 @@ async fn list_approvals(
         None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
     };
 
-    // Assuming we fetch all and paginate manually for now given simple DB fetch
-    // Real cursor implementation would need DB level ordering and limit
-    let mut approvals = orchestrator.get_pending_approvals(&tenant_id).await;
-
-    // Sort to ensure stable pagination
-    approvals.sort_by(|a, b| a.id.cmp(&b.id));
-
     let limit = query.limit.unwrap_or(20);
 
-    let start_idx = match query.cursor {
-        Some(cursor) => approvals.iter().position(|a| a.id == cursor).unwrap_or(0),
-        None => 0,
-    };
+    // Fetch from DB using cursor pagination
+    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
 
-    let end_idx = std::cmp::min(start_idx + limit, approvals.len());
-
-    let paginated_approvals = approvals[start_idx..end_idx].to_vec();
-
-    let next_cursor = if end_idx < approvals.len() {
-        Some(approvals[end_idx].id.clone())
+    let next_cursor = if approvals.len() == limit {
+        approvals.last().map(|a| a.id.clone())
     } else {
         None
     };
 
     (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: paginated_approvals,
+        pending_approvals: approvals,
         next_cursor,
     })).into_response()
 }

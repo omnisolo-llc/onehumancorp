@@ -32,4 +32,27 @@ impl ZoomProvider {
             }
         }
     }
+
+    pub async fn create_meeting(&self, topic: &str) -> Result<String, String> {
+        self._client.create_meeting(topic).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_zoom_provider_new() {
+        let provider = ZoomProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "zoom");
+        assert_eq!(provider.metadata.category, "video");
+    }
+
+    #[test]
+    fn test_zoom_provider_into() {
+        let provider = ZoomProvider::new("test_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "zoom");
+    }
 }
