@@ -2876,6 +2876,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
                                 <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
                             </div>
+                            <div style="margin-top: 16px; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;">
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
+                                <div id="invite-copied-msg" style="display: none; margin-top: 8px; color: white; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">Invite message copied!</div>
+                            </div>
                         </div>
 
                         <!-- Progress Section -->
