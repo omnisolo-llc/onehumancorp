@@ -20,19 +20,10 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Maya's Cakes");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
-
-    // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
+    // Fill in the bio
+    await page.getByPlaceholder("e.g. I am Maya. I bake custom vegan cakes in Seattle. Maya's Cakes. Prices start at $50.").fill("I am Maya. I bake custom vegan cakes in Seattle. Maya's Cakes.");
 
     // Click Generate Draft
     await page.getByRole('button', { name: /Generate Draft/i }).click();
@@ -62,19 +53,10 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Carlos Plumbing");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
-
-    // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I fix pipes and leaks");
+    // Fill in the bio
+    await page.getByPlaceholder("e.g. I am Maya. I bake custom vegan cakes in Seattle. Maya's Cakes. Prices start at $50.").fill("I am Carlos. I fix pipes and leaks. Carlos Plumbing.");
 
     // Click Generate Draft
     await page.getByRole('button', { name: /Generate Draft/i }).click();

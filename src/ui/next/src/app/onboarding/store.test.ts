@@ -5,9 +5,8 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
-    expect(state.businessName).toBe('');
-    expect(state.businessCategory).toBe('');
-    expect(state.isLoading).toBe(false);
+    expect(state.bio).toBe('');
+        expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
     expect(state.startResult).toBeNull();
@@ -18,15 +17,11 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('should update businessName', () => {
-    useOnboardingStore.getState().setBusinessName('Test Name');
-    expect(useOnboardingStore.getState().businessName).toBe('Test Name');
+  it('should update bio', () => {
+    useOnboardingStore.getState().setBio('Test Bio');
+    expect(useOnboardingStore.getState().bio).toBe('Test Bio');
   });
 
-  it('should update businessCategory', () => {
-    useOnboardingStore.getState().setBusinessCategory('Test Category');
-    expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
-  });
 
   it('should update isLoading', () => {
     useOnboardingStore.getState().setIsLoading(true);
