@@ -3,7 +3,7 @@ use flate2::read::GzDecoder;
 use flate2::Compression;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use std::io::{Write, Read};
+use std::io::{Write, Read, Cursor};
 
 const COMPRESSION_PREFIX: &str = "gz_b64:";
 
@@ -68,6 +68,41 @@ pub fn minify_json_prompt(data: &str) -> String {
     data.to_string()
 }
 
+/// Optimizes an image by resizing it to a maximum dimension and converting it to WebP.
+pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), String> {
+    let img = image::load_from_memory(data).map_err(|e| e.to_string())?;
+
+    // Only resize if it exceeds max_dim
+    let (width, height) = image::GenericImageView::dimensions(&img);
+    let resized = if width > max_dim || height > max_dim {
+        img.thumbnail(max_dim, max_dim)
+    } else {
+        img
+    };
+
+    let mut webp_data = Vec::new();
+    let mut cursor = Cursor::new(&mut webp_data);
+
+    // We use a default quality for WebP encoding
+    resized.write_to(&mut cursor, image::ImageFormat::WebP).map_err(|e| e.to_string())?;
+
+    Ok((webp_data, "image/webp".to_string()))
+}
+
+pub fn is_image_extension(ext: &str) -> bool {
+    matches!(ext.to_lowercase().as_str(), "png" | "jpg" | "jpeg" | "webp" | "gif" | "bmp")
+}
+
+pub fn get_optimized_key(key: &str) -> String {
+    let path = std::path::Path::new(key);
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        if is_image_extension(ext) && ext.to_lowercase() != "webp" {
+            return path.with_extension("webp").to_string_lossy().to_string();
+        }
+    }
+    key.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -129,5 +164,41 @@ mod tests {
         // Invalid json should return as-is
         let invalid = "{ invalid json ]";
         assert_eq!(minify_json_prompt(invalid), invalid);
+    }
+
+    #[test]
+    fn test_is_image_extension() {
+        assert!(is_image_extension("png"));
+        assert!(is_image_extension("JPG"));
+        assert!(!is_image_extension("txt"));
+    }
+
+    #[test]
+    fn test_get_optimized_key() {
+        assert_eq!(get_optimized_key("test.png"), "test.webp");
+        assert_eq!(get_optimized_key("test.jpg"), "test.webp");
+        assert_eq!(get_optimized_key("test.webp"), "test.webp");
+        assert_eq!(get_optimized_key("test.txt"), "test.txt");
+    }
+
+    #[test]
+    fn test_optimize_image_valid() {
+        use image::{ImageBuffer, Rgb};
+
+        // Create a 10x10 RGB image
+        let img: ImageBuffer<Rgb<u8>, Vec<u8>> = ImageBuffer::new(10, 10);
+        let mut png_data = Vec::new();
+        let mut cursor = Cursor::new(&mut png_data);
+        img.write_to(&mut cursor, image::ImageFormat::Png).unwrap();
+
+        let (optimized, mime) = optimize_image(&png_data, 5).unwrap();
+        assert_eq!(mime, "image/webp");
+        assert!(!optimized.is_empty());
+
+        // Verify it's actually WebP and resized
+        let opt_img = image::load_from_memory(&optimized).unwrap();
+        let (w, h) = image::GenericImageView::dimensions(&opt_img);
+        assert!(w <= 5);
+        assert!(h <= 5);
     }
 }
