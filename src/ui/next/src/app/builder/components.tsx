@@ -101,15 +101,22 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
     return (
-      <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
+      <div className="py-8 bg-white flex flex-col items-center justify-center border-t border-gray-100 font-inter">
+        <div className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Start Your Own Store</div>
         <a
           href={`ohc://join?ref=${tenantId}`}
-          className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+          className="group relative flex items-center gap-3 px-6 py-3 bg-gray-50 hover:bg-white rounded-2xl border border-gray-200 hover:border-blue-200 shadow-sm hover:shadow-md transition-all duration-300"
         >
-          <span className="font-inter">Powered by</span>
-          <span className="font-outfit font-bold tracking-tight">OHC</span>
-          <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-300 pointer-events-none"></div>
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-inner relative z-10">
+             <span className="text-white font-outfit font-bold text-xs">OHC</span>
+          </div>
+          <div className="flex flex-col relative z-10">
+            <span className="text-[11px] font-medium text-gray-500 leading-tight">Powered by</span>
+            <span className="font-outfit font-bold text-sm text-gray-900 leading-tight group-hover:text-blue-700 transition-colors">One Human Corp</span>
+          </div>
+          <svg className="w-5 h-5 ml-1 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </a>
       </div>
