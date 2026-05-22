@@ -10,6 +10,13 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.locator('nav')).toBeVisible();
     await expect(page.getByText("Today's Sales")).toBeVisible();
     await expect(page.getByText("$114.99")).toBeVisible({ timeout: 10000 });
+
+    // Verify that mock data section is removed
+    await expect(page.getByText("Referral Program")).toBeHidden();
+    await expect(page.getByText("Active Referrals")).toBeHidden();
+    await expect(page.getByText("Revenue from Referrals")).toBeHidden();
+    await expect(page.getByText("Pending Rewards")).toBeHidden();
+    await expect(page.getByText("🎁 Invite a Business & Earn $50")).toBeHidden();
   });
 
   test('verify setup wizard starts and preserves real form state', async ({ page }) => {
