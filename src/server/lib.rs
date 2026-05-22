@@ -210,7 +210,6 @@ struct HttpErrorResponse {
 #[derive(serde::Deserialize)]
 struct DraftReplyRequest {
     customer_message: Option<String>,
-    business_context: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -248,17 +247,24 @@ async fn http_metrics_handler(
     }
 
     let tenant_id = payload.tenant_id;
-    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
 
-    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (active_customers_res, pending_orders_res) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        }
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
 
     (
         StatusCode::OK,
@@ -441,9 +447,35 @@ async fn http_login_handler(
         .into_response()
 }
 
-async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Response {
+async fn draft_reply_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    payload: DraftReplyRequest,
+) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
 
     let api_key = match std::env::var("MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
@@ -456,12 +488,25 @@ async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Resp
         }
     };
 
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
     let customer_message = payload
         .customer_message
         .unwrap_or_else(|| "Do you have vegan options for birthday cakes?".to_string());
-    let business_context = payload
-        .business_context
-        .unwrap_or_else(|| "A friendly bakery that sells vegan celebration cakes and classes.".to_string());
+
+    let business_context = if industry.is_empty() {
+        format!("A business named {}", business_name)
+    } else {
+        format!("A {} business named {}", industry, business_name)
+    };
+
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
@@ -1850,8 +1895,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route(
             "/api/v1/ai/draft-reply",
-            axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                draft_reply_handler(payload).await
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
+                    draft_reply_handler(db, store, headers, payload).await
+                }
             }),
         )
 
@@ -3443,6 +3492,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="builder-container">
                             <div class="builder-header">
                                 <h1>Edit Website</h1>
+                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
                                 <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
                             </div>
 
@@ -3463,6 +3513,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Dynamic form inputs -->
                             </div>
                             <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Embed Setup Bottom Sheet -->
+                        <div id="embed-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedSetup()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p>Copy the code below to embed your storefront onto another website.</p>
+                                <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
+                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
+                            </div>
                         </div>
 
                         <!-- Domain Setup Bottom Sheet -->
@@ -3721,6 +3784,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('domain-step-1').classList.add('active');
                         }
 
+                        function showEmbedSetup() {
+                            const origin = window.location.origin;
+                            const embedCode = `<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`;
+                            document.getElementById('embed-code-textarea').value = embedCode;
+                            document.getElementById('embed-setup-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedSetup() {
+                            document.getElementById('embed-setup-sheet').classList.remove('open');
+                        }
+
                         function closeDomainSetup() {
                             document.getElementById('domain-setup-sheet').classList.remove('open');
                         }
@@ -3885,12 +3959,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const originalText = btn.textContent;
                             btn.textContent = 'Drafting...';
                             try {
+                                const token = localStorage.getItem('token') || 'test-token';
                                 const response = await fetch('/api/v1/ai/draft-reply', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + token
+                                    },
                                     body: JSON.stringify({
-                                        customer_message: 'Do you have vegan options for birthday cakes?',
-                                        business_context: 'A friendly bakery that sells vegan celebration cakes and classes.'
+                                        customer_message: 'Do you have vegan options for birthday cakes?'
                                     })
                                 });
                                 if (!response.ok) {
