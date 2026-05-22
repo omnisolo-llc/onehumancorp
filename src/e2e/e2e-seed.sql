@@ -53,9 +53,19 @@ SET username = EXCLUDED.username,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, feature_type, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-1', 'e2e-tenant', 'customer_success', 'Test request', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-2', 'e2e-tenant', 'operations', 'Another request', 'PENDING', 'LOW', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-mkt-1', 'e2e-tenant', 'marketing', 'Global Reach: Translate your storefront to Spanish and show local currency for customers in Latin America?', 'PENDING', 'MEDIUM', 'global_localization', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-mkt-2', 'e2e-tenant', 'marketing', 'Smart Search Setup: Make your store more visible to customers using AI search tools?', 'PENDING', 'LOW', 'ai_geo', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-risk-high', 'e2e-tenant', 'legal', 'High Risk Action', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-risk-low', 'e2e-tenant', 'legal', 'Low Risk Action', 'PENDING', 'LOW', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-legal-1', 'e2e-tenant', 'legal', 'Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?', 'PENDING', 'HIGH', 'legal_compliance', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('mock-legal-2', 'e2e-tenant', 'legal', 'Action Required: Your sales are approaching the EU tax limit. Should we update your tax and privacy policies to keep you compliant?', 'PENDING', 'HIGH', 'legal_compliance', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-mock-1', 'e2e-tenant', 'customer_success', 'Draft email for review: Maya ordered a vegan cake', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-mock-2', 'e2e-tenant', 'marketing', 'Draft Instagram Post: New vegan cakes available!', 'PENDING', 'LOW', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
