@@ -62,7 +62,7 @@ graph TD
 ## 5. Implementation Mission Directive
 
 ### Implementation Prompt
-"Implement a standalone Go-based Hybrid Agent Harness runner in `src/backend/harness/runner.go`.
+"Implement a standalone Rust-based Hybrid Agent Harness runner in `src/backend/harness/runner.rs`.
 The runner must:
 1. Wrap user-provided commands using `bwrap` to enforce read-only system mounts and restricted workspace mounts based on Go struct configuration.
 2. Intercept and log network traffic by establishing a local `socat` based HTTP/SOCKS proxy wrapper and passing the appropriate `HTTP_PROXY` env vars.

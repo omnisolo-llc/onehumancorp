@@ -27,7 +27,7 @@ A key capability of OHC is aesthetic superiority. Every agent, when generating a
 
 ### 2.4 Hermetic Sandboxing
 Agents execute within Bazel's hermetic sandboxes. This prevents dirty states and non-deterministic builds.
-- When generating code, agents must never modify `BUILD.bazel` manually; instead, they trigger `bazelisk run //:gazelle` to synchronize targets automatically.
+- When generating code, agents must keep Bazel metadata synchronized with the repository's Rust/Bazel rules and verify the affected targets with Bazel.
 
 ## 3. Designing a New Hybrid Capability
 

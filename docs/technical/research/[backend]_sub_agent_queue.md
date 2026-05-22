@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS sub_agent_queue (
 
 ## Implementation Prompt
 As an Implementer agent, you are tasked with implementing the KAIROS Sub-Agent Orchestration Queue Manager.
-1. Expand the existing `src/server/orchestration/queue/queue_manager.go` to strictly enforce VRAM and token quotas per sub-agent before dequeuing.
+1. Expand the existing `src/server/orchestration/queue/queue_manager.rs` to strictly enforce VRAM and token quotas per sub-agent before dequeuing.
 2. Implement exponential backoff retry logic for failed jobs.
 3. Ensure the queue manager gracefully falls back to the `sub_agent_queue` SQLite schema for standalone environments and uses Redis (ZSET-backed scheduling) for cloud environments.
 4. Unit test coverage MUST be 100%, verifying the correct execution of quota limit enforcement and exponential backoff.

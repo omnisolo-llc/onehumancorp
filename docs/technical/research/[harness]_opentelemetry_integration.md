@@ -41,10 +41,10 @@ graph TD
 ```
 
 ## Implementation Prompt
-1. Add OpenTelemetry metric initialization to `src/server/harness/sandbox.go`.
+1. Add OpenTelemetry metric initialization to `src/server/harness/sandbox.rs`.
 2. Increment the `ohc_sandbox_violation_total` counter whenever the AST validator or `bwrap` process blocks an execution attempt.
 3. Ensure the metric includes tags for `agent_id`, `violation_type` (e.g., `path_traversal`, `blocked_command`, `network_deny`), and `harness_mode`.
-4. Add comprehensive unit tests in `src/server/harness/sandbox_test.go` verifying metric emissions during blocked executions.
+4. Add comprehensive unit tests in `src/server/harness/sandbox_test.rs` verifying metric emissions during blocked executions.
 
 ## Priority
 P1

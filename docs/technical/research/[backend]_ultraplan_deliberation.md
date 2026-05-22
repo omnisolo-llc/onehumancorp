@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS ultraplan_state (
 ## Implementation Prompt
 Implement the UltraPlan Deliberation State Machine.
 1. Create the `ultraplan_state` schema in PostgreSQL with a fallback for local SQLite usage.
-2. Implement the state transitions (PENDING -> DELIBERATING -> DONE) and DAG dependency validation logic in `src/server/orchestration/ultraplan.go`.
+2. Implement the state transitions (PENDING -> DELIBERATING -> DONE) and DAG dependency validation logic in `src/server/orchestration/ultraplan.rs`.
 3. Integrate with the Teammate Mesh to broadcast deliberation milestones to the swarm.
 4. Provide comprehensive unit tests verifying lock contention guarantees and state transition invariants.
 

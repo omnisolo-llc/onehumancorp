@@ -20,19 +20,19 @@ Current agentic OS implementations often rely on polling or heavy message broker
 - **Standalone Mode:** Implement an in-memory WebSocket registry for local, single-node execution.
 
 **API Contracts:**
-- `Broadcast(ctx context.Context, topic string, payload []byte) error`
-- `RegisterConnection(ctx context.Context, conn *websocket.Conn, topic string) error`
+- `Broadcast(ctx async context, topic string, payload []byte) error`
+- `RegisterConnection(ctx async context, conn *websocket.Conn, topic string) error`
 
 **Security:**
 - Enforce `organization_id` based topic isolation in Cloud mode to prevent cross-tenant data leakage.
 
 ## Implementation Prompt
 "Implement the Hybrid WebSockets MCP tool in `src/server/lib/integrations/websockets/`.
-1. Create `websockets.go` defining the `WebSocketManager` and its MCP capabilities (`Broadcast`, `RegisterConnection`).
+1. Create `websockets.rs` defining the `WebSocketManager` and its MCP capabilities (`Broadcast`, `RegisterConnection`).
 2. Implement environment-agnostic logic, checking `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` for Cloud mode.
 3. For Cloud mode, implement Redis Pub/Sub integration for message distribution, ensuring `organization_id` prefixes on topics.
 4. For Standalone mode, implement an in-memory connection registry.
-5. Create comprehensive tests in `websockets_test.go`, verifying both Cloud (mocked Redis) and Standalone behaviors. Ensure 100% test coverage.
+5. Create comprehensive tests in `websockets_test.rs`, verifying both Cloud (mocked Redis) and Standalone behaviors. Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

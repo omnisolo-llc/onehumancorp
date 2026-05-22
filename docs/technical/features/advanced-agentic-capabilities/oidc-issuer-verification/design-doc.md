@@ -7,7 +7,7 @@
 **Scope:** Integration within the core Orchestration Hub and the MCP Gateway, adhering to the Zero-Lock paradigm.
 
 ## 2. Architecture & Components
-Implements rigid `aud` (audience) and `iss` (issuer) claim checking in the Rust backend middleware using the `go-oidc` package. It fetches and caches the provider's JWKS to cryptographically verify the signature of every incoming JWT.
+Implements rigid `aud` (audience) and `iss` (issuer) claim checking in the Rust backend middleware. It fetches and caches the provider's JWKS to cryptographically verify the signature of every incoming JWT.
 
 ## 3. Data Flow
 1. **Trigger:** The feature is invoked via Agent intent or a K8s event.

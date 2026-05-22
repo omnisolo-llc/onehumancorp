@@ -36,19 +36,19 @@ graph TD
 - **Standalone Mode:** Implement an SQLite-backed flag store for local evaluation.
 
 **API Contracts:**
-- `EvaluateFlag(ctx context.Context, flagKey string, userContext map[string]interface{}) (bool, error)`
-- `ListFlags(ctx context.Context) ([]string, error)`
+- `EvaluateFlag(ctx async context, flagKey string, userContext map[string]interface{}) (bool, error)`
+- `ListFlags(ctx async context) ([]string, error)`
 
 **Security:**
 - Ensure `organization_id` is strictly used in Cloud mode to scope feature flag evaluation and prevent cross-tenant data leakage.
 
 ## Implementation Prompt
 "Implement the Hybrid Feature Flags MCP tool in `src/server/lib/integrations/feature_flags/`.
-1. Create `feature_flags.go` defining the `FeatureFlagsManager` and its MCP capabilities (`EvaluateFlag`, `ListFlags`).
+1. Create `feature_flags.rs` defining the `FeatureFlagsManager` and its MCP capabilities (`EvaluateFlag`, `ListFlags`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement the flag evaluation using Postgres, ensuring `organization_id` is used to scope the query.
 4. For Standalone mode, implement a robust SQLite-backed flag store.
-5. Create comprehensive tests in `feature_flags_test.go`, mocking Postgres and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `feature_flags_test.rs`, mocking Postgres and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Create at least one comprehensive E2E test to verify the flag evaluation capability.
 7. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 

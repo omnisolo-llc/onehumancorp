@@ -8,7 +8,7 @@ This report analyzes the Agent Harness and Sandbox implementation of the leaked 
 ## 2. Competitive Analysis: Claude Code vs. OHC
 | Feature | Claude Code (Market Leader) | OHC Hybrid OS | Gap |
 | :--- | :--- | :--- | :--- |
-| **Sandbox Execution** | Yes, `bwrap`/`sandbox-exec` | Yes, basic blockedPatterns in `bash_sandbox/sandbox.go` | Minimal |
+| **Sandbox Execution** | Yes, `bwrap`/`sandbox-exec` | Yes, basic blockedPatterns in `harness/sandbox/manager.rs` | Minimal |
 | **Sandbox Escape Mitigations** | Advanced (Git internal path write blocking, cwd manipulation checks) | Basic Regexp matching | **Critical Gap** |
 | **Telemetry Injection** | Injects `<sandbox_violations>` directly into `stderr` | None | **Critical Gap** |
 | **User Override** | LLM-driven `dangerouslyDisableSandbox` capability | Strict policies only | **Feature Gap** |

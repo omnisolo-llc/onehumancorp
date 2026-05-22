@@ -3,7 +3,7 @@
 # Hybrid MCP RAG Protocol - Synthesis
 
 ## Introduction
-This document defines the schema and Go interface requirements for bridging the Local SQLite state with the Cloud PostgreSQL state.
+This document defines the schema and Rust service requirements for bridging the local SQLite state with the cloud PostgreSQL state.
 
 ## Schema Requirements
 The `agent_missions` table in the SQLite daemon must be augmented with additional columns to facilitate synchronization.
@@ -18,51 +18,40 @@ ALTER TABLE agent_missions ADD COLUMN last_synced_at TIMESTAMP;
 
 These fields allow the daemon to track which tasks have been escalated, track errors, and receive the ID returned from the Cloud.
 
-## Go Interfaces
+## Rust Interfaces
 
-```go
-package cloudsync
-
-import (
-	"context"
-	"time"
-)
-
-// MissionPayload defines the structure of the task payload
-type MissionPayload struct {
-	Role    string `json:"role"`
-	Task    string `json:"task"`
-	Context string `json:"context,omitempty"`
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct MissionPayload {
+    role: String,
+    task: String,
+    context: Option<String>,
 }
 
-// LocalMission represents a row in the local agent_missions table
-type LocalMission struct {
-	ID             string
-	Status         string
-	Payload        MissionPayload
-	CreatedAt      time.Time
-	SyncedToCloud  bool
-	CloudMissionID string
-	SyncError      string
-	LastSyncedAt   time.Time
+struct LocalMission {
+    id: String,
+    status: String,
+    payload: MissionPayload,
+    created_at: chrono::DateTime<chrono::Utc>,
+    synced_to_cloud: bool,
+    cloud_mission_id: Option<String>,
+    sync_error: Option<String>,
+    last_synced_at: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-// CloudSynchronizer handles pushing local missions to the cloud and pulling updates
-type CloudSynchronizer interface {
-	// PushPendingMissions finds tasks marked for escalation and sends them to the cloud
-	PushPendingMissions(ctx context.Context) error
-
-	// PullMissionUpdates polls the cloud for updates to previously escalated tasks
-	PullMissionUpdates(ctx context.Context) error
+#[async_trait::async_trait]
+trait CloudSynchronizer {
+    async fn push_pending_missions(&self) -> anyhow::Result<()>;
+    async fn pull_mission_updates(&self) -> anyhow::Result<()>;
 }
 
-// LocalRepository defines the interface for interacting with the local SQLite agent_missions table
-type LocalRepository interface {
-	GetPendingSync(ctx context.Context, limit int) ([]LocalMission, error)
-	MarkSynced(ctx context.Context, localID string, cloudID string) error
-	MarkSyncError(ctx context.Context, localID string, syncError string) error
-	GetActiveEscalations(ctx context.Context) ([]LocalMission, error)
-	UpdateLocalStatus(ctx context.Context, localID string, newStatus string) error
+#[async_trait::async_trait]
+trait LocalRepository {
+    async fn get_pending_sync(&self, limit: i64) -> anyhow::Result<Vec<LocalMission>>;
+    async fn mark_synced(&self, local_id: &str, cloud_id: &str) -> anyhow::Result<()>;
+    async fn mark_sync_error(&self, local_id: &str, sync_error: &str) -> anyhow::Result<()>;
+    async fn get_active_escalations(&self) -> anyhow::Result<Vec<LocalMission>>;
+    async fn update_local_status(&self, local_id: &str, new_status: &str) -> anyhow::Result<()>;
 }
 ```
 

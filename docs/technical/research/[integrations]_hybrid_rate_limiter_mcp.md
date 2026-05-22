@@ -17,19 +17,19 @@ Most existing agentic frameworks configure rate limits statically or rely strict
 - **Standalone Mode:** Implement an in-memory or SQLite-backed token bucket algorithm.
 
 **API Contracts:**
-- `RequestTokens(ctx context.Context, bucket string, amount int) (bool, error)`
-- `GetRateLimitStatus(ctx context.Context, bucket string) (RateLimitInfo, error)`
+- `RequestTokens(ctx async context, bucket string, amount int) (bool, error)`
+- `GetRateLimitStatus(ctx async context, bucket string) (RateLimitInfo, error)`
 
 **Security:**
 - Ensure `organization_id` prefixes are rigorously applied to bucket keys in Cloud mode to enforce cross-tenant isolation.
 
 ## Implementation Prompt
 "Implement the Hybrid Rate Limiter MCP tool in `src/server/lib/integrations/rate_limiter/`.
-1. Create `rate_limiter.go` defining the `RateLimiterManager` and its MCP capabilities (`RequestTokens`, `GetRateLimitStatus`).
+1. Create `rate_limiter.rs` defining the `RateLimiterManager` and its MCP capabilities (`RequestTokens`, `GetRateLimitStatus`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed token bucket algorithm ensuring `organization_id` is used as part of the cache key.
 4. For Standalone mode, implement a robust in-memory or SQLite token bucket.
-5. Create comprehensive tests in `rate_limiter_test.go`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `rate_limiter_test.rs`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

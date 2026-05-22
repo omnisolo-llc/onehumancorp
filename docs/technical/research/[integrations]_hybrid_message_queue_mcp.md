@@ -15,8 +15,8 @@ Current agentic architectures generally hardcode their message brokers. Tools li
 - **Standalone Mode:** Implement a SQLite-backed task queue or in-memory channel system for single-node execution.
 
 **API Contracts:**
-- `Publish(ctx context.Context, topic string, payload []byte) error`
-- `Subscribe(ctx context.Context, topic string, handler func(payload []byte) error) error`
+- `Publish(ctx async context, topic string, payload []byte) error`
+- `Subscribe(ctx async context, topic string, handler func(payload []byte) error) error`
 
 **Security:**
 - Apply tenant prefixes to topics/channels in Cloud mode to enforce tenant isolation.
@@ -24,12 +24,12 @@ Current agentic architectures generally hardcode their message brokers. Tools li
 
 ## Implementation Prompt
 "Implement the Hybrid Message Queue MCP tool in `src/server/lib/integrations/message_queue/`.
-1. Create `message_queue.go` defining the `MessageQueueManager` and its MCP capabilities (`Publish`, `Subscribe`).
+1. Create `message_queue.rs` defining the `MessageQueueManager` and its MCP capabilities (`Publish`, `Subscribe`).
 2. Implement dynamic routing to initialize the Cloud driver or the Standalone driver based on the environment configuration.
 3. For Cloud mode, implement a distributed message broker driver (e.g., Redis Pub/Sub or Streams). Ensure tenant isolation by prefixing topics.
 4. For Standalone mode, implement a local SQLite-backed queue or an in-memory queue.
 5. Apply PII redaction to payloads.
-6. Create comprehensive tests in `message_queue_test.go` covering both modes with mocks. Ensure 100% test coverage.
+6. Create comprehensive tests in `message_queue_test.rs` covering both modes with mocks. Ensure 100% test coverage.
 7. Update or create the adjacent `BUILD.bazel` file to include the new files and dependencies in the `srcs` array."
 
 ## Priority

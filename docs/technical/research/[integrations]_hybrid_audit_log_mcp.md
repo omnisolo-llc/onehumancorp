@@ -15,8 +15,8 @@ Market analysis reveals that most agent frameworks treat logging as simple unstr
 - **Standalone Mode:** Utilize the local SQLite database to persist events.
 
 **API Contracts:**
-- `LogEvent(ctx context.Context, action string, resource string, details map[string]interface{}) error`
-- `QueryEvents(ctx context.Context, filter EventFilter, limit int) ([]AuditEvent, error)`
+- `LogEvent(ctx async context, action string, resource string, details map[string]interface{}) error`
+- `QueryEvents(ctx async context, filter EventFilter, limit int) ([]AuditEvent, error)`
 
 **Security:**
 - Ensure `organization_id` is automatically attached and strictly enforced in Cloud mode.
@@ -24,12 +24,12 @@ Market analysis reveals that most agent frameworks treat logging as simple unstr
 
 ## Implementation Prompt
 "Implement the Hybrid Audit Log MCP tool in `src/server/lib/integrations/audit_log/`.
-1. Create `audit_log.go` defining the `AuditLogger` and its MCP capabilities (`LogEvent`, `QueryEvents`).
+1. Create `audit_log.rs` defining the `AuditLogger` and its MCP capabilities (`LogEvent`, `QueryEvents`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Postgres-backed driver ensuring `organization_id` is used to partition events.
 4. For Standalone mode, implement a robust SQLite-backed driver.
 5. Apply `RedactInterfacePII` to all event details before persistence.
-6. Create comprehensive tests in `audit_log_test.go`, mocking the database drivers and validating the Standalone local fallback. Ensure 100% test coverage.
+6. Create comprehensive tests in `audit_log_test.rs`, mocking the database drivers and validating the Standalone local fallback. Ensure 100% test coverage.
 7. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

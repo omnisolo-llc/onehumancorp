@@ -15,8 +15,8 @@ Market research indicates that most Model Context Protocol (MCP) implementations
 - Must support both `*sql.DB` driver variants (SQLite and Postgres), dynamically inspecting the driver using `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`.
 
 **API Contracts:**
-- `PushState(ctx context.Context, payload SyncPayload) error`
-- `PullState(ctx context.Context, filter SyncFilter) (*SyncPayload, error)`
+- `PushState(ctx async context, payload SyncPayload) error`
+- `PullState(ctx async context, filter SyncFilter) (*SyncPayload, error)`
 
 **DB Schema Changes:**
 - None required; relies on existing data structures (e.g., orchestration events).
@@ -26,9 +26,9 @@ Market research indicates that most Model Context Protocol (MCP) implementations
 
 ## Implementation Prompt
 "Implement the Hybrid MCP Sync tool in `src/server/lib/integrations/hybrid_sync/`.
-1. Create `sync.go` defining the `SyncManager` and its MCP capabilities (`PushState` and `PullState`).
+1. Create `sync.rs` defining the `SyncManager` and its MCP capabilities (`PushState` and `PullState`).
 2. Implement driver-agnostic logic. To determine if the connection is SQLite, use: `db != nil && fmt.Sprintf("%T", db.Driver()) == "*sqlite.Driver"`. For SQLite, strip Postgres-specific prefixes, replace `NOW()` with `CURRENT_TIMESTAMP`, and remove `FOR UPDATE SKIP LOCKED`.
-3. Create tests in `sync_test.go` using `t.TempDir()` for isolated testing. Never hardcode workspace directories.
+3. Create tests in `sync_test.rs` using `tempfile::tempdir()` for isolated testing. Never hardcode workspace directories.
 4. Update or create the adjacent `BUILD.bazel` file, ensuring `srcs` array accurately reflects the new files."
 
 ## Priority

@@ -15,7 +15,7 @@
 | :--- | :---: | :--- |
 | **Pending Branches** | <span style="color:#00e676">Low</span> | Multiple palette and perf optimization branches verified. No high-risk security flaws observed in the main branch. |
 | **Tool Usage** | <span style="color:#ffea00">Medium</span> | Dynamic MCP tool ingestion (`blobinspector` being implemented) poses a potential risk if Cloud Tenant context leaks into Standalone bounds. Requires strict interface wrapping. |
-| **Database Locks** | <span style="color:#00e676">Low</span> | Livelock risk (TOCTOU) was previously patched in Sentry Phase 1 `chaos_mesh_test.go`. |
+| **Database Locks** | <span style="color:#00e676">Low</span> | Livelock risk (TOCTOU) was previously patched in the Rust chaos/orchestration tests. |
 
 ---
 
@@ -38,7 +38,7 @@
 
 **Objective:** Verify that all "ML-Resilience" rules apply equally to Cloud-native (Postgres) and Standalone Desktop (SQLite) environments.
 
-*   **Test:** `TestSIPDB_ChaosParity` added to `chaos_mesh_test.go`.
+*   **Test:** SIPDB chaos parity coverage lives with the Rust chaos/orchestration test targets.
 *   **Methodology:** Tested `PruneStaleMissions` explicitly in an injected `OHC_STANDALONE=true` (SQLite) environment and `OHC_STANDALONE=false` (Postgres mocked interface) environment.
 *   **Result:** <span style="color:#00e676">**100% GREEN**</span>. Both databases correctly gracefully recovered from connection pool stress.
 

@@ -34,19 +34,19 @@ graph TD
 ```
 
 **API Contracts:**
-- `Publish(ctx context.Context, topic string, payload []byte) error`
-- `Subscribe(ctx context.Context, topic string) (<-chan []byte, error)`
+- `Publish(ctx async context, topic string, payload []byte) error`
+- `Subscribe(ctx async context, topic string) (<-chan []byte, error)`
 
 **Security:**
 - Ensure `organization_id` prefixes are strictly applied to topics in Cloud mode to enforce cross-tenant data isolation and prevent cross-talk between instances.
 
 ## Implementation Prompt
 "Implement the Hybrid PubSub MCP tool in `src/server/lib/integrations/pubsub/`.
-1. Create `pubsub.go` defining the `PubSubManager` and its MCP capabilities (`Publish`, `Subscribe`).
+1. Create `pubsub.rs` defining the `PubSubManager` and its MCP capabilities (`Publish`, `Subscribe`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement Redis Pub/Sub integration using `go-redis`, ensuring `organization_id` is used as part of the topic key for isolation.
 4. For Standalone mode, implement a robust in-memory event bus.
-5. Create comprehensive tests in `pubsub_test.go`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `pubsub_test.rs`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

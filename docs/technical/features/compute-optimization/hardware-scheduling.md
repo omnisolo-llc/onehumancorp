@@ -24,13 +24,14 @@ When an agent is "Hired" or assigned a "Complex Task", the Hub calculates a plac
 
 ## 3. Data Model Extensions
 
-### 3.1 Hardware Profile (`src/domain/compute.go`)
-```go
-type ComputeProfile struct {
-    RoleID       string   `json:"role_id"`
-    MinVRAM      int      `json:"min_vram_gb"`
-    PreferredGPU string   `json:"preferred_gpu_type"` // "h100", "a10g"
-    Priority     int      `json:"scheduling_priority"`
+### 3.1 Hardware Profile (`src/server/domain/compute.rs`)
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ComputeProfile {
+    role_id: String,
+    min_vram_gb: i32,
+    preferred_gpu_type: String, // "h100", "a10g"
+    scheduling_priority: i32,
 }
 ```
 

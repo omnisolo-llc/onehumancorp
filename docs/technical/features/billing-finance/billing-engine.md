@@ -20,15 +20,16 @@ The Billing Engine provides real-time, token-level visibility into the operation
 
 ## 3. Detailed Design
 
-### 3.1 Token Tracking Logic (`src/billing/tracker.go`)
+### 3.1 Token Tracking Logic (`src/server/billing.rs`)
 The `Tracker` intercepts usage events and calculates cost using a high-precision decimal approach:
-```go
-type Usage struct {
-    AgentID          string    `json:"agentId"`
-    PromptTokens     int64     `json:"promptTokens"`
-    CompletionTokens int64     `json:"completionTokens"`
-    Model            string    `json:"model"`
-    CostUSD          float64   `json:"costUsd"` // Calculated at ingestion
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct Usage {
+    agent_id: String,
+    prompt_tokens: i64,
+    completion_tokens: i64,
+    model: String,
+    cost_usd: f64, // calculated at ingestion
 }
 ```
 **Formula:**

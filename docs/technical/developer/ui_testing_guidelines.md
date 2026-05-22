@@ -8,10 +8,14 @@ As part of the **Visual Excellence Mandate** for One Human Corp, all UI changes 
 
 For UI stability, vulnerability verification, and aesthetic regression testing, the mandatory use of the Playwright `browser` tool is strictly required across the development process.
 
-### Hard Wait Requirement for Slint Web
-When visually verifying Slint Web changes locally using Playwright (e.g., via port `8080`), you must account for the Slint Web canvas initialization and rendering pipeline.
+### Wait for the App to Settle
+When visually verifying the current Tauri-packaged web UI or the local server UI
+with Playwright, wait for the real page readiness signal instead of relying on
+the removed Slint canvas pipeline.
 
-Scripts **must** include a sufficient hard wait (e.g., 30 seconds) for the Slint Web canvas to fully initialize and render before attempting to take a screenshot or assert element visibility.
+Scripts should wait for network idle and a stable application element before
+taking screenshots or asserting visibility. Use a short timeout only when the
+test is intentionally covering loading behavior.
 
 **Example Python / Playwright snippet:**
 
@@ -25,9 +29,8 @@ async def verify_dashboard():
         page = await browser.new_page()
         await page.goto("http://localhost:8080")
 
-        # MANDATORY: Wait for Slint Web canvas to initialize
-        print("Waiting 30 seconds for Slint Canvas...")
-        await asyncio.sleep(30)
+        await page.wait_for_load_state("networkidle")
+        await page.wait_for_selector("body")
 
         # Verify the Premium Feel
         await page.screenshot(path="dashboard_verification.png")
@@ -38,7 +41,9 @@ asyncio.run(verify_dashboard())
 
 ## 2. Testing Glassmorphism
 
-When applying Glassmorphism effects in Slint using `blur` and `background` properties, ensure your Playwright visual regression tests capture these layers accurately.
+When applying glassmorphism effects in the Tauri-packaged web UI, ensure your
+Playwright visual regression tests capture blur, transparency, and background
+layers accurately.
 
 ## 3. Playwright Artifacts for Palette PRs
 
