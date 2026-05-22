@@ -38,6 +38,7 @@ nav:
       - KAIROS Orchestration: features/kairos_orchestration.md
       - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
       - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
+      - KAIROS Sub-Agent Queue: features/kairos/sub_agent_queue.md
       - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
       - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
   - Technical:

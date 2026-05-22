@@ -126,3 +126,4 @@ debian-binary
 dummy.*
 dummy_*
 .next/
+venv/
