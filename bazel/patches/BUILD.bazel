@@ -2,5 +2,4 @@ exports_files([
     "hermetic_cc_toolchain_zig_windows_linker_args.patch",
     "hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
     "rules_rust_windows_gnullvm_platforms.patch",
-    "windows_sys_0_48_stable_raw_dylib.patch",
 ])

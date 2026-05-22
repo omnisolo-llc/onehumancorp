@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/onboarding.dart';
-import 'screens/inbox.dart';
 
 void main() {
   runApp(MyApp());
@@ -14,7 +13,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: InboxScreen(), // Changed to InboxScreen to show the new unified inbox by default for testing
+      home: OnboardingScreen(),
     );
   }
 }

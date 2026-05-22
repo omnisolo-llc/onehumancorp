@@ -328,31 +328,6 @@ export default function BuilderPage() {
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h1>
           <p className="text-gray-500 mb-6 text-sm">Your automated storefront is successfully published.</p>
 
-          {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
-            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-1">Sell Anywhere 💻</h2>
-            <p className="text-xs text-gray-500 mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
-                <pre className="text-[10px] text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
-{`<div id="ohc-embed-root"></div>
-<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
-<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
-</div>`}
-                </pre>
-                <button
-                    onClick={() => {
-                        const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${tenantId}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
-                        navigator.clipboard.writeText(code);
-                        alert("Copied embed code to clipboard!");
-                    }}
-                    className="absolute top-2 right-2 bg-white text-gray-700 border border-gray-200 px-2 py-1 rounded text-[10px] font-semibold hover:bg-gray-50 transition-colors"
-                >
-                    Copy
-                </button>
-            </div>
-          </div>
-
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
@@ -535,9 +510,6 @@ export default function BuilderPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
-        @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
-        }
       `}} />
     </div>
   );

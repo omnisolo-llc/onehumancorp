@@ -150,10 +150,9 @@ impl TaskQueue for SQLiteTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_run_after = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = ?, run_after = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = ?, run_after = datetime(CURRENT_TIMESTAMP, '+' || ? || ' seconds'), updated_at = CURRENT_TIMESTAMP WHERE id = ?")
                     .bind(next_attempt)
-                    .bind(new_run_after)
+                    .bind(backoff_seconds)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await

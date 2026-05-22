@@ -613,42 +613,6 @@ impl DB {
                         mission_log TEXT
                     );
 
-                    CREATE TABLE IF NOT EXISTS inbox_messages (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT,
-                        source TEXT,
-                        content TEXT,
-                        draft_reply TEXT,
-                        status TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-
-                    CREATE TABLE IF NOT EXISTS interactions (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        customer_id TEXT NOT NULL,
-                        channel TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        embedding BLOB,
-                        metadata TEXT DEFAULT '{}',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-                    CREATE TABLE IF NOT EXISTS agent_actions (
-                        id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        agent_id TEXT NOT NULL,
-                        interaction_id TEXT,
-                        action_type TEXT NOT NULL,
-                        payload TEXT DEFAULT '{}',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
-                    );
-
                     CREATE TABLE IF NOT EXISTS telemetry_buffer (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         metric_name TEXT NOT NULL,

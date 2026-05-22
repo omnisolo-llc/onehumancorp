@@ -111,27 +111,39 @@ impl Provider for LocalProvider {
         let mut final_data = data.to_vec();
 
         // Auto-optimization for images: Resize and convert to WebP
-        let extension = Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
-        let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
+        let is_optimizable_image = key.ends_with(".png") || key.ends_with(".jpg") || key.ends_with(".jpeg");
+        let reported_size = if is_optimizable_image && data.len() > 1024 {
             let original_size = data.len();
-            match ::server_pricing::compression::optimize_image(data, 1024) {
-                Ok((optimized_data, _)) => {
-                    final_data = optimized_data;
-                    key_str = ::server_pricing::compression::get_optimized_key(key);
+            if let Ok(img) = image::load_from_memory(data) {
+                let resized = img.thumbnail(1024, 1024);
+                let mut webp_data = Vec::new();
+                // Using Cursor for WebP encoding
+                let mut cursor = std::io::Cursor::new(&mut webp_data);
+                if resized.write_to(&mut cursor, image::ImageFormat::WebP).is_ok() {
+                    final_data = webp_data;
+
+                    if key.ends_with(".png") {
+                        key_str = key.replace(".png", ".webp");
+                    } else if key.ends_with(".jpg") {
+                        key_str = key.replace(".jpg", ".webp");
+                    } else if key.ends_with(".jpeg") {
+                        key_str = key.replace(".jpeg", ".webp");
+                    }
+
                     let compressed_size = final_data.len();
                     tracing::info!(
                         key = %key_str,
                         original = original_size,
                         actual_compressed = compressed_size,
                         saved = original_size - compressed_size,
-                        "Auto-optimized image to WebP via compression utility"
+                        "Auto-optimized image to WebP"
                     );
                     compressed_size
-                }
-                Err(e) => {
-                    tracing::warn!("Image optimization failed for {}: {}. Saving original.", key, e);
+                } else {
                     original_size
                 }
+            } else {
+                original_size
             }
         } else {
             data.len()
@@ -153,24 +165,7 @@ impl Provider for LocalProvider {
             }
         }
 
-        #[cfg(unix)]
-        let res = async {
-            let mut options = tokio::fs::OpenOptions::new();
-            options.write(true).create(true).truncate(true);
-
-            #[cfg(unix)]
-            {
-                options.mode(0o600);
-            }
-
-            use tokio::io::AsyncWriteExt;
-            let mut file = options.open(&path).await?;
-            file.write_all(&final_data).await
-        }.await;
-
-        #[cfg(not(unix))]
         let res = tokio::fs::write(&path, final_data).await;
-
         if res.is_ok() {
             let _ = ::server_telemetry::record_storage_rw_cost(
                 &crate::db::get_pool(),

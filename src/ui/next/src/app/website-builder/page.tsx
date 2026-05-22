@@ -119,64 +119,24 @@ export default function WebsiteBuilderPage() {
     }
   };
 
-  const glassStyle = {
-    background: 'rgba(255, 255, 255, 0.65)',
-    backdropFilter: 'blur(30px) saturate(210%)',
-    border: '1px solid rgba(255, 255, 255, 0.4)',
-    borderRadius: '16px',
-    boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
-  };
-
-  const glassDarkStyle = {
-    background: 'rgba(22, 22, 26, 0.7)',
-    backdropFilter: 'blur(30px) saturate(210%)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '16px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)'
-  };
-
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="w-full max-w-[375px] min-h-[100dvh] sm:min-h-[812px] shadow-2xl overflow-hidden flex flex-col relative glass-container sm:rounded-[16px]">
-          <style dangerouslySetInnerHTML={{__html: `
-            .glass-container {
-              background: rgba(255, 255, 255, 0.65);
-              backdrop-filter: blur(30px) saturate(210%);
-              border: 1px solid rgba(255, 255, 255, 0.4);
-            }
-            @media (prefers-color-scheme: dark) {
-              .glass-container {
-                background: rgba(22, 22, 26, 0.7);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-              }
-              .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
-                color: #F5F5F7;
-              }
-              .glass-container p, .glass-container .text-gray-500, .glass-container label {
-                color: #A1A1A6;
-              }
-              .glass-container textarea, .glass-container .bg-white\\/70 {
-                background: rgba(0, 0, 0, 0.3);
-                color: #F5F5F7;
-                border-color: rgba(255, 255, 255, 0.2);
-              }
-            }
-          `}} />
-          <div className="px-6 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+
+          <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
               <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                Zero tech skills needed. We do the heavy lifting.
+                Review and add any extra details to help our AI generate the perfect store.
               </p>
 
               <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>
               <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
-                  enterKeyHint="done"
-                  autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
+                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
@@ -211,25 +171,10 @@ export default function WebsiteBuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="w-full max-w-[375px] min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative justify-center items-center glass-container sm:rounded-[16px]">
-          <style dangerouslySetInnerHTML={{__html: `
-            .glass-container {
-              background: rgba(255, 255, 255, 0.65);
-              backdrop-filter: blur(30px) saturate(210%);
-              border: 1px solid rgba(255, 255, 255, 0.4);
-            }
-            @media (prefers-color-scheme: dark) {
-              .glass-container {
-                background: rgba(22, 22, 26, 0.7);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-              }
-              .glass-container p, .glass-container .text-gray-500 {
-                color: #A1A1A6;
-              }
-            }
-          `}} />
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0071E3] mb-4"></div>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 justify-center items-center"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 font-medium">Agents are building your store...</p>
         </div>
       </div>
@@ -238,39 +183,10 @@ export default function WebsiteBuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="w-full max-w-[375px] min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden text-center p-8 justify-center glass-container sm:rounded-[16px]">
-          <style dangerouslySetInnerHTML={{__html: `
-            .glass-container {
-              background: rgba(255, 255, 255, 0.65);
-              backdrop-filter: blur(30px) saturate(210%);
-              border: 1px solid rgba(255, 255, 255, 0.4);
-            }
-            @media (prefers-color-scheme: dark) {
-              .glass-container {
-                background: rgba(22, 22, 26, 0.7);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-              }
-              .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
-                color: #F5F5F7;
-              }
-              .glass-container p, .glass-container .text-gray-500 {
-                color: #A1A1A6;
-              }
-              .glass-container .bg-gray-50 {
-                background: rgba(0, 0, 0, 0.3);
-                border-color: rgba(255, 255, 255, 0.2);
-              }
-              .glass-container .text-gray-700 {
-                color: #F5F5F7;
-              }
-              .glass-container .bg-gray-100 {
-                background: rgba(255, 255, 255, 0.1);
-                color: #F5F5F7;
-              }
-            }
-          `}} />
-          <div className="w-16 h-16 bg-[#eef2ff] text-[#34C759] rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center"
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h1>
@@ -278,7 +194,7 @@ export default function WebsiteBuilderPage() {
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
-            <button className="text-[#0071E3] font-semibold text-sm hover:underline shrink-0">Copy</button>
+            <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           <button
@@ -294,25 +210,9 @@ export default function WebsiteBuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <div className="w-full max-w-[375px] min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative overflow-hidden glass-container sm:rounded-[16px]">
-        <style dangerouslySetInnerHTML={{__html: `
-            .glass-container {
-              background: rgba(255, 255, 255, 0.65);
-              backdrop-filter: blur(30px) saturate(210%);
-              border: 1px solid rgba(255, 255, 255, 0.4);
-            }
-            @media (prefers-color-scheme: dark) {
-              .glass-container {
-                background: rgba(22, 22, 26, 0.7);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-              }
-              .glass-container .bg-white\\/90 {
-                background: rgba(22, 22, 26, 0.9);
-                border-color: rgba(255, 255, 255, 0.1);
-              }
-            }
-          `}} />
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden"
+           style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
@@ -329,7 +229,7 @@ export default function WebsiteBuilderPage() {
           <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
               style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >

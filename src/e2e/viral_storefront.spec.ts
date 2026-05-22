@@ -16,44 +16,10 @@ test.describe('Viral Storefront E2E', () => {
     await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
   });
 
-  test('opens embed store workflow', async ({ page }) => {
-    await page.goto('/storefront-builder');
-    await page.getByRole('button', { name: 'Embed Store' }).click();
-    await expect(page.getByRole('heading', { name: 'Embed Storefront' })).toBeVisible();
-    await expect(page.locator('#embed-code-input')).toBeVisible();
-    const inputValue = await page.locator('#embed-code-input').inputValue();
-    expect(inputValue).toContain('<iframe src="https://e2e-tenant.ohc.store?embed=true"');
-  });
-
   test('displays Powered by OHC footer in storefront preview', async ({ page }) => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.powered-by-footer')).toBeVisible();
     await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
     await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
-  });
-
-  test('provides an embed widget snippet for storefront sharing', async ({ page }) => {
-    await page.goto('/storefront-builder');
-    await page.getByRole('button', { name: 'Embed' }).click();
-
-    const sheet = page.locator('#embed-setup-sheet');
-    await expect(sheet).toHaveClass(/open/);
-    await expect(sheet.getByRole('heading', { name: 'Embed Storefront' })).toBeVisible();
-
-    const textarea = sheet.locator('#embed-code-textarea');
-    await expect(textarea).toBeVisible();
-    await expect(textarea).toHaveValue(/<iframe src=".*\/api\/v1\/growth\/storefront\/embed".*><\/iframe>/);
-  });
-
-  test('renders the embed widget directly with viral footer', async ({ page }) => {
-    await page.goto('/api/v1/growth/storefront/embed');
-
-    await expect(page.locator('.card')).toBeVisible();
-    await expect(page.locator('.title')).toContainText('Premium Product');
-
-    const footer = page.locator('.footer');
-    await expect(footer).toBeVisible();
-    await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
   });
 });
