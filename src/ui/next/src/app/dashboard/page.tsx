@@ -219,7 +219,7 @@ export default function Dashboard() {
                                 </div>
                                 {showAdvanced && payload && (
                                     <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
-                                        <div className="text-gray-400 mb-1">Technical Payload:</div>
+                        <div className="text-gray-400 mb-1">Technical Details:</div>
                                         <pre>{payload}</pre>
                                     </div>
                                 )}

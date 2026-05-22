@@ -221,7 +221,7 @@ export function HelpWidget() {
     { title: "AI Agents", desc: "Hire and manage your AI workforce." },
     { title: "Marketing", desc: "Grow your audience and sales." },
     { title: "Account & Billing", desc: "Manage your subscription." },
-    { title: "API Documentation (Advanced)", desc: "Interactive API reference for integrations.", link: "/api-docs" }
+    { title: "Connection Guide (Advanced)", desc: "Guide for connecting your favorite tools.", link: "/api-docs" }
   ];
 
   const filteredArticles = helpArticles.filter(a =>

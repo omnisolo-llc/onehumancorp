@@ -8,9 +8,9 @@ import "swagger-ui-react/swagger-ui.css";
 const swaggerSpec = {
   openapi: "3.0.0",
   info: {
-    title: "OHC Advanced API Reference",
+    title: "OHC Connection Reference",
     version: "1.0.0",
-    description: "API Reference for advanced users integrating with OneHumanCorp.",
+    description: "Guide for advanced users connecting tools with OneHumanCorp.",
   },
   servers: [
     {
@@ -22,7 +22,7 @@ const swaggerSpec = {
     "/api/orgs/register": {
       post: {
         summary: "Register an Organization",
-        description: "Registers a new tenant organization in the multi-tenant OHC environment.",
+        description: "Registers a new organization.",
         tags: ["Tenants"],
         requestBody: {
           required: true,
@@ -60,8 +60,8 @@ const swaggerSpec = {
     },
     "/api/agents/task": {
       post: {
-        summary: "Dispatch a task",
-        description: "Dispatches a new task to the AI Swarm Orchestrator.",
+        summary: "Assign a task",
+        description: "Assigns a new task to your AI team.",
         tags: ["Agents"],
         requestBody: {
           required: true,
@@ -97,8 +97,8 @@ const swaggerSpec = {
     },
     "/api/agents/status": {
       get: {
-        summary: "Get workforce status",
-        description: "Retrieves the current status of the agent swarm workforce.",
+        summary: "Get team status",
+        description: "Retrieves the current status of your AI team.",
         tags: ["Agents"],
         parameters: [
           {
