@@ -15,6 +15,9 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
+  // Growth Loop: AI Review Requests State
+  const [isAiReviewsEnabled, setIsAiReviewsEnabled] = useState<boolean>(true);
+
   useEffect(() => {
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
@@ -252,6 +255,46 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+         {/* Growth Loop: Automated AI Review Requests */}
+         <section className="mb-10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Automated AI Review Requests</h2>
+                    <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${isAiReviewsEnabled ? 'bg-green-50 border-green-100' : 'bg-gray-50 border-gray-200'}`}>
+                        <span className={`text-xs font-medium ${isAiReviewsEnabled ? 'text-green-600' : 'text-gray-500'}`}>
+                            {isAiReviewsEnabled ? 'Active' : 'Paused'}
+                        </span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-sm font-medium text-gray-600">Auto-send review requests via AI</span>
+                    <button
+                        onClick={() => setIsAiReviewsEnabled(!isAiReviewsEnabled)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${isAiReviewsEnabled ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                    >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isAiReviewsEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                    <div className="text-sm font-medium mb-1 text-gray-600">Requests Sent</div>
+                    <div className="text-3xl font-bold font-outfit text-gray-900">128</div>
+                </div>
+
+                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                    <div className="text-sm font-medium mb-1 text-gray-600">Reviews Collected</div>
+                    <div className="text-3xl font-bold font-outfit text-gray-900">42</div>
+                </div>
+
+                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px' }}>
+                    <div className="text-sm font-medium mb-1 text-gray-600">Conversion Rate</div>
+                    <div className="text-3xl font-bold font-outfit text-gray-900">32.8%</div>
+                </div>
             </div>
          </section>
 
