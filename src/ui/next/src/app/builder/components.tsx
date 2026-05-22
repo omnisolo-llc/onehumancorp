@@ -98,69 +98,18 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
-  if (type === "Analytics") {
-    return (
-      <div className="p-6 bg-white font-inter border-y border-gray-100 my-4 shadow-sm rounded-xl">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold font-outfit text-gray-900">Business Overview</h2>
-          <span className="text-xs font-semibold px-2 py-1 bg-green-100 text-green-700 rounded-md">Live</span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Today's Sales</p>
-            <p className="text-2xl font-bold text-gray-900">{props.todaySales || "$420.00"}</p>
-            <p className="text-xs text-green-600 font-medium mt-1 flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
-              12% from yesterday
-            </p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-            <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1">Active Orders</p>
-            <p className="text-2xl font-bold text-gray-900">{props.activeOrders || "14"}</p>
-            <p className="text-xs text-blue-600 font-medium mt-1 flex items-center gap-1">
-              3 ready to ship
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-indigo-100 transition-colors">
-          <div>
-            <h3 className="font-bold text-indigo-900 font-outfit text-sm">🎉 Milestone Unlocked</h3>
-            <p className="text-xs text-indigo-700 mt-1">You reached {props.totalCustomers || "100"} customers!</p>
-          </div>
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just reached ${props.totalCustomers || "100"} customers on my new store! Built with @OneHumanCorp 🚀 ${props.url || 'https://ohc.store'}`)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-indigo-600 text-white px-3 py-2 rounded-lg text-xs font-semibold shadow-sm hover:bg-indigo-700 transition-colors"
-          >
-            Share
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
     return (
-      <div className="py-8 bg-white flex flex-col items-center justify-center border-t border-gray-100 font-inter">
-        <div className="mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Start Your Own Store</div>
+      <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
         <a
           href={`ohc://join?ref=${tenantId}`}
-          className="group relative flex items-center gap-3 px-6 py-3 bg-gray-50 hover:bg-white rounded-2xl border border-gray-200 hover:border-blue-200 shadow-sm hover:shadow-md transition-all duration-300"
+          className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 rounded-2xl transition-opacity duration-300 pointer-events-none"></div>
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-inner relative z-10">
-             <span className="text-white font-outfit font-bold text-xs">OHC</span>
-          </div>
-          <div className="flex flex-col relative z-10">
-            <span className="text-[11px] font-medium text-gray-500 leading-tight">Powered by</span>
-            <span className="font-outfit font-bold text-sm text-gray-900 leading-tight group-hover:text-blue-700 transition-colors">One Human Corp</span>
-          </div>
-          <svg className="w-5 h-5 ml-1 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <span className="font-inter">Powered by</span>
+          <span className="font-outfit font-bold tracking-tight">OHC</span>
+          <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
           </svg>
         </a>
       </div>
