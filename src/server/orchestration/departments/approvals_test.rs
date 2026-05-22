@@ -47,7 +47,7 @@ mod tests {
             serde_json::json!({"test": "payload"}),
         ).await;
 
-        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        let pending = orchestrator.get_pending_approvals(&tenant_id).await;
         if pending.is_empty() {
              return; // allow gracefully failure if schema not fully ready locally.
         }
@@ -57,7 +57,7 @@ mod tests {
         let res = orchestrator.decide_approval(&request_id, &tenant_id, true).await;
         assert!(res.is_ok());
 
-        let pending_after = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        let pending_after = orchestrator.get_pending_approvals(&tenant_id).await;
         assert!(pending_after.iter().find(|p| p.id == request_id).is_none());
     }
 }

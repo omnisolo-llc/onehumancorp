@@ -80,19 +80,14 @@ impl ToolExecutor for SubagentExecutor {
                 Err(e) => Err(ToolError::LlmRecoverable(format!("Subagent failed: {}", e))),
             }
         } else if mode == "fork" {
-            let parent_context_file = args.get("parent_context_file").and_then(|v| v.as_str()).unwrap_or("");
+            let parent_context_json = args.get("parent_context_json").and_then(|v| v.as_str()).unwrap_or("");
 
             let mut envs = vec![];
             if let Ok(addr) = std::env::var("OHC_AGENT_ADDRESS") {
                 envs.push(("OHC_AGENT_ADDRESS".to_string(), addr));
             }
 
-            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context-file", &parent_context_file], None, envs).await;
-
-            // Clean up the temporary context file
-            if !parent_context_file.is_empty() {
-                let _ = tokio::fs::remove_file(parent_context_file).await;
-            }
+            let output = self.runner.run("ohc_builtin_agent", &["--task", &task, "--parent-context", &parent_context_json], None, envs).await;
 
             let res = match output {
                 Ok(out) => {
