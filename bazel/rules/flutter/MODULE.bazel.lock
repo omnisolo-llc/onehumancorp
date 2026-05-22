@@ -778,6 +778,13 @@
               "version": "4.25.2"
             }
           },
+          "yq_windows_arm64": {
+            "repoRuleId": "@@aspect_bazel_lib+//lib/private:yq_toolchain.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "windows_arm64",
+              "version": "4.25.2"
+            }
+          },
           "yq_darwin_arm64": {
             "repoRuleId": "@@aspect_bazel_lib+//lib/private:yq_toolchain.bzl%yq_platform_repo",
             "attributes": {

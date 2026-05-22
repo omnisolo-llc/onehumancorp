@@ -263,3 +263,5 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Tauri v2.
 
 Historical Slint components included: dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, and API docs.
+
+resolves #7869

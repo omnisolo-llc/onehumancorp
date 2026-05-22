@@ -128,12 +128,6 @@ export default function MyPlanPage() {
                             }}
                         ></div>
                     </div>
-                    {planData?.ai_actions_limit && planData.ai_actions_used >= planData.ai_actions_limit && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800 flex items-start gap-2">
-                            <span className="text-lg">💡</span>
-                            <p>You've reached your free action limit. While you can still use the app, upgrading to Starter gives you 1,000 actions and faster response times for just $29/mo.</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Storage */}
@@ -154,12 +148,6 @@ export default function MyPlanPage() {
                             }}
                         ></div>
                     </div>
-                    {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
-                        <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 flex items-start gap-2">
-                            <span className="text-lg">📦</span>
-                            <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
-                        </div>
-                    )}
                 </div>
             </div>
         </section>
