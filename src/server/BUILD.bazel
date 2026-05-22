@@ -155,6 +155,7 @@ rust_binary(
     for module in [
         "analytics",
         "benchmarks",
+        "chaos",
         "db",
         "msgbus",
         "pipeline",
