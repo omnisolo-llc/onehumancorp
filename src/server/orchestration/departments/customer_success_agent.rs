@@ -27,6 +27,7 @@ impl Department for CustomerSuccessAgent {
         vec![
             "tenant.order.fulfillment_ready".to_string(),
             "tenant.message.received".to_string(),
+            "agent:customer_success:approved".to_string(),
         ]
     }
 
@@ -41,6 +42,13 @@ impl Department for CustomerSuccessAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "agent:customer_success:approved" {
+            // Actual logic to send the message when approved.
+            // For now, we simulate sending the message.
+            tracing::info!("Simulating sending approved message for tenant");
+            return Ok(());
+        }
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
