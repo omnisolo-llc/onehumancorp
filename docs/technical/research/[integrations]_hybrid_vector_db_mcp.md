@@ -15,8 +15,8 @@ Market research indicates that typical agentic frameworks (like CrewAI, AutoGen)
 - **Standalone Mode:** Utilize `sqlite-vss` (or an equivalent local embedding store) for zero-dependency local operation.
 
 **API Contracts:**
-- `StoreEmbedding(ctx context.Context, collection string, id string, vector []float32, metadata map[string]interface{}) error`
-- `SearchSimilar(ctx context.Context, collection string, vector []float32, limit int) ([]SearchResult, error)`
+- `StoreEmbedding(ctx async context, collection string, id string, vector []float32, metadata map[string]interface{}) error`
+- `SearchSimilar(ctx async context, collection string, vector []float32, limit int) ([]SearchResult, error)`
 
 **Security:**
 - Must validate `organization_id` in cloud mode.
@@ -24,10 +24,10 @@ Market research indicates that typical agentic frameworks (like CrewAI, AutoGen)
 
 ## Implementation Prompt
 "Implement the Hybrid Vector DB MCP tool in `src/server/lib/integrations/vector_db/`.
-1. Create `vector_db.go` defining the `VectorStoreManager` and its MCP capabilities (`StoreEmbedding` and `SearchSimilar`).
+1. Create `vector_db.rs` defining the `VectorStoreManager` and its MCP capabilities (`StoreEmbedding` and `SearchSimilar`).
 2. Implement driver-agnostic logic. To determine if the connection is Cloud, use: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`. For Cloud, implement the logic using `pgvector`. For Standalone, use `sqlite-vss`.
 3. Ensure `organization_id` filtering is rigidly applied in Cloud Mode.
-4. Create tests in `vector_db_test.go` mocking both `pgvector` and `sqlite-vss`.
+4. Create tests in `vector_db_test.rs` mocking both `pgvector` and `sqlite-vss`.
 5. Update or create the adjacent `BUILD.bazel` file, ensuring `srcs` array accurately reflects the new files."
 
 ## Priority

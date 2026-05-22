@@ -35,16 +35,16 @@ graph TD
 - **Standalone Mode:** Implement a lightweight, embedded Certificate Authority (CA) that issues compliant SPIFFE IDs (`spiffe://local.ohc.io/...`) and signs JWTs in-memory.
 
 **API Contracts:**
-- `GetIdentityToken(ctx context.Context, audience string) (string, error)` (Returns JWT).
-- `GetX509Certificate(ctx context.Context) ([]byte, error)` (Returns mTLS materials).
+- `GetIdentityToken(ctx async context, audience string) (string, error)` (Returns JWT).
+- `GetX509Certificate(ctx async context) ([]byte, error)` (Returns mTLS materials).
 
 ## Implementation Prompt
 "Implement the Hybrid SPIFFE Identity MCP tool in `src/server/lib/integrations/spiffe_identity/`.
-1. Create `identity.go` defining the `IdentityManager` MCP capabilities.
+1. Create `identity.rs` defining the `IdentityManager` MCP capabilities.
 2. Use `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` to toggle modes.
 3. For Cloud mode, implement a client calling the SPIFFE Workload API.
 4. For Standalone mode, write an embedded, in-memory SVID issuer generating valid SPIFFE IDs.
-5. Add 100% test coverage in `identity_test.go`, mocking the Workload API and validating the local CA.
+5. Add 100% test coverage in `identity_test.rs`, mocking the Workload API and validating the local CA.
 6. Write an E2E test proving an agent can acquire an identity in Standalone mode without a running SPIRE server.
 7. Update `BUILD.bazel` to include new dependencies."
 

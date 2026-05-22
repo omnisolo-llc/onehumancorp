@@ -29,7 +29,7 @@ To ensure backward compatibility and seamless parsing across various agent sub-t
 ```
 
 ## 3. Validation Strategy
-The Teammate Mesh unified gateway (`src/server/api/mesh/middleware.go`) serves as the gatekeeper.
+The Teammate Mesh unified gateway (`src/server/api/mesh_handler.rs`) serves as the gatekeeper.
 
 - **Strict Enforcement**: The middleware must unmarshal incoming JSON and verify the explicit presence of `agent_id`, `channel`, `event_type`, and `data`.
 - **Rejection Protocol**: Any payload missing one or more of these root keys must immediately be rejected with an `HTTP 400 Bad Request` and a standard error message specifying the missing OHC-SIP fields.

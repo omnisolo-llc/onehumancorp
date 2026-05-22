@@ -21,10 +21,10 @@ The OHC Hybrid Agentic OS requires seamless synchronization between local single
 ## Implementation Prompt
 **Task:** Implement the PowerSync integration bridging local SQLite and cloud PostgreSQL.
 1. Deploy the PowerSync service via Helm or Kubernetes manifests, configuring it to connect to the central OHC PostgreSQL database and applying necessary RLS policies for tenant isolation.
-2. Integrate the PowerSync client SDK into the Go standalone daemon (`src/server/orchestration/hybrid_sync/hybrid_sync.go` and `src/server/auth/powersync.go`), ensuring it syncs the SQLite database locally to the cloud.
+2. Integrate the PowerSync client SDK into the Rust standalone daemon (`src/server/orchestration/hybrid_sync/hybrid_sync.rs` and `src/server/auth/powersync.rs`), ensuring it syncs the SQLite database locally to the cloud.
 3. Use SPIFFE/SPIRE certificates for authenticating the sync connection.
 4. Create E2E tests validating bidirectional sync of a mock RAG context record.
-**File Paths:** `src/server/orchestration/hybrid_sync/hybrid_sync.go`, `src/server/auth/powersync.go`
+**File Paths:** `src/server/orchestration/hybrid_sync/hybrid_sync.rs`, `src/server/auth/powersync.rs`
 **Expected Outcome:** A fully functional bidirectional sync of RAG context between SQLite and Postgres, passing all automated tests.
 
 ## Priority

@@ -29,7 +29,7 @@ graph TD
     class D,E,F,G,H premium;
 ```
 
-1.  **Local Proxy Component**: A new component running in the Standalone Desktop (Slint Host/Embedded Rust Server) that initiates a secure, reverse-tunneled gRPC or WebSocket connection to the OHC Cloud Orchestrator.
+1.  **Local Proxy Component**: A new component running in the Standalone Desktop (Tauri host/embedded Rust server) that initiates a secure, reverse-tunneled gRPC or WebSocket connection to the OHC Cloud Orchestrator.
 2.  **Authentication**: This connection MUST use SPIFFE/SPIRE zero-trust identity, exchanging short-lived JWTs/SVIDs to authenticate the Standalone Desktop instance to the Cloud Orchestrator.
 3.  **MCP Integration**: The Local Proxy will expose the local MCP server's JSON-RPC interface over this reverse tunnel. The Cloud Orchestrator's MCP Switchboard will register this reverse-tunneled connection as a dynamic tool provider for the authenticated user's session.
 4.  **Security Boundaries**: The Local Proxy must strictly enforce read/write policies using the existing `bwrap` integration and intercept local network requests.
