@@ -11,6 +11,7 @@ pub struct Incident {
     pub root_cause_analysis: String,
     pub resolution_plan_id: String,
     pub status: String, // INVESTIGATING, PROPOSED, RESOLVED
+    pub category: String, // bug, feature, refactor, cleanup, docs, security
 }
 
 pub struct AlertParser;
@@ -26,9 +27,27 @@ impl AlertParser {
                 root_cause_analysis: "".to_string(),
                 resolution_plan_id: "".to_string(),
                 status: "INVESTIGATING".to_string(),
+                category: "bug".to_string(),
             });
         }
         Err("unknown alert".to_string())
+    }
+
+    pub fn categorize_signal(&self, signal: &str) -> String {
+        let lower = signal.to_lowercase();
+        if lower.contains("security") || lower.contains("vulnerability") || lower.contains("cve") {
+            "security".to_string()
+        } else if lower.contains("feature") {
+            "feature".to_string()
+        } else if lower.contains("refactor") || lower.contains("debt") {
+            "refactor".to_string()
+        } else if lower.contains("cleanup") || lower.contains("prune") {
+            "cleanup".to_string()
+        } else if lower.contains("doc") {
+            "docs".to_string()
+        } else {
+            "bug".to_string()
+        }
     }
 }
 
@@ -60,6 +79,7 @@ mod tests {
         assert_eq!(incident.summary, "HighErrorRate");
         assert_eq!(incident.severity, "P0");
         assert_eq!(incident.status, "INVESTIGATING");
+        assert_eq!(incident.category, "bug");
         assert!(incident.id.starts_with("inc-"));
 
         // Unknown Alert

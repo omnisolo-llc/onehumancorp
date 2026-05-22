@@ -350,7 +350,7 @@ impl Worker {
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
-                                    tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
+                                    tracing::warn!("Worker failed to process job: {}, error: {}", job.id, e);
                                     if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
                                         retry_job.attempts += 1;
@@ -367,7 +367,7 @@ impl Worker {
                             // No job available
                         }
                         Err(e) => {
-                            tracing::error!("Worker failed to dequeue job: {}", e);
+                            tracing::warn!("Worker failed to dequeue job: {}", e);
                         }
                     }
                 }
@@ -458,11 +458,11 @@ impl WorkerPool {
                                 Ok(payload) => {
                                     tracing::debug!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
-                                        tracing::error!("Worker {} handler failed: {}", i, e);
+                                        tracing::warn!("Worker {} handler failed: {}", i, e);
                                     }
                                 }
                                 Err(e) => {
-                                    tracing::error!("Worker {} failed to pop: {}", i, e);
+                                    tracing::warn!("Worker {} failed to pop: {}", i, e);
                                 }
                             }
                         }
@@ -621,7 +621,7 @@ impl QueueManager {
                                         let _ = self.mark_completed(&job.id, &job.tenant_id).await;
                                     }
                                     Err(e) => {
-                                        tracing::error!("Job handler failed: {}, error: {}", job.id, e);
+                                        tracing::warn!("Job handler failed: {}, error: {}", job.id, e);
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);

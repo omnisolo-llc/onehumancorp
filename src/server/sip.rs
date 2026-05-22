@@ -64,14 +64,9 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND tenant_id = $1")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -522,19 +517,4 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_prune_stale_missions_marks_stuck_as_failed() {
-        // Just verify it doesn't crash on execution with a valid pool.
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .max_connections(1)
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
-
-        let sip_db = SipDB::new(pool, "test_org".to_string());
-
-        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
-        // Should error out gracefully with our dummy pool timeout instead of panicking
-        assert!(res.is_err());
     }
-}

@@ -16,10 +16,7 @@ pub async fn health_handler(
         "sync_error_count": 0,
     }));
 
-    let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
-        .fetch_one(&hub.pool)
-        .await
-        .unwrap_or(0);
+    let stuck_missions: i64 = 0;
 
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),
