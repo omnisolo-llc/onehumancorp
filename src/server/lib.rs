@@ -1817,6 +1817,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+async fn get_inbox_messages_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let pool = crate::db::get_pool();
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => {
+            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                use sqlx::Row;
+                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "source": row.get::<String, _>("source"),
+                    "content": row.get::<String, _>("content"),
+                    "draft_reply": row.get::<String, _>("draft_reply"),
+                    "status": row.get::<String, _>("status"),
+                    "created_at": created_at_str,
+                })
+            }).collect();
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch inbox messages: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
     let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
