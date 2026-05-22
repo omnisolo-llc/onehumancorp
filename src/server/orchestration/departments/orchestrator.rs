@@ -192,7 +192,8 @@ impl DepartmentOrchestrator {
                         if !success {
                             tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
                             let dl_id = Uuid::new_v4().to_string();
-                            let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
+                            let sanitized_payload = ::server_telemetry::redact_interface_pii(event.payload.clone());
+                            let dl_payload = serde_json::to_string(&sanitized_payload).unwrap_or_default();
 
                             match &self.db.store {
                                 DbStore::Postgres => {

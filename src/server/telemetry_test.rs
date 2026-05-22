@@ -607,6 +607,29 @@ fn test_multi_tenant_pii_leakage_guardrail() {
 }
 
 #[test]
+fn test_dead_letter_pii_redaction() {
+    let payload = serde_json::json!({
+        "tenant_id": "tenant-abc",
+        "user_email": "jane.doe@example.com",
+        "billing_address": "456 Market St, SF",
+        "transaction": {
+            "credit_card": "4111-1111-1111-1111",
+            "amount": 99.99
+        }
+    });
+
+    // In orchestrator.rs we now use redact_interface_pii before serializing
+    // the dead letter payload. We verify the redactor catches these properly.
+    let redacted = ::server_telemetry::redact_interface_pii(payload);
+
+    assert_eq!(redacted["tenant_id"], "tenant-abc", "tenant_id should be kept");
+    assert_eq!(redacted["user_email"], "[REDACTED]", "user_email must be redacted");
+    assert_eq!(redacted["billing_address"], "[REDACTED]", "billing_address must be redacted");
+    assert_eq!(redacted["transaction"]["credit_card"], "[REDACTED]", "nested PII must be redacted");
+    assert_eq!(redacted["transaction"]["amount"], 99.99, "amount should remain intact");
+}
+
+#[test]
 fn test_harness_telemetry_recording() {
     // This test ensures the metric recording logic runs without panicking.
     // It calls the `record_harness_init_latency` and `record_harness_db_io_latency` functions.
