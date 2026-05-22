@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'in_person_pos.dart';
 
 class AgentDashboard extends StatefulWidget {
   @override
@@ -93,6 +94,17 @@ class _AgentDashboardState extends State<AgentDashboard> {
                         return _buildGlassmorphismCard(item);
                       },
                     ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (context) => InPersonPosScreen(),
+          ));
+        },
+        backgroundColor: Color(0xFF0066FF),
+        child: Icon(Icons.add, color: Colors.white, size: 32),
+        elevation: 4,
+        tooltip: 'In-Person Sale',
+      ),
     );
   }
 
