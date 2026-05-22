@@ -21,8 +21,6 @@ pub struct IntegrationsRegistry {
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
-    cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
-    google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
@@ -58,8 +56,6 @@ impl IntegrationsRegistry {
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -215,14 +211,6 @@ impl IntegrationsRegistry {
             let mut clients = self.calendly_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calendly::provider::CalendlyProvider::new(creds.api_token.clone())));
         }
-        if integration_id == "cal_com" {
-            let mut clients = self.cal_com_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::cal_com::provider::CalComProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "google_calendar" {
-            let mut clients = self.google_calendar_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
-        }
         if integration_id == "mailchimp" {
             let mut clients = self.mailchimp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mailchimp::provider::MailchimpProvider::new(creds.api_token.clone())));
@@ -357,51 +345,6 @@ impl IntegrationsRegistry {
             }
         }
         Err("issue not found".to_string())
-    }
-
-    pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "google_calendar" {
-                let clients = self.google_calendar_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.get_free_busy(time_min, time_max).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "google_calendar" {
-                let clients = self.google_calendar_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_event(summary, start_time, end_time).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn get_booking_link(&self, integration_id: &str, event_type: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "cal_com" {
-                let clients = self.cal_com_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.get_booking_link(event_type).await;
-        }
-        Err("integration not found or not supported".to_string())
     }
 }
 
