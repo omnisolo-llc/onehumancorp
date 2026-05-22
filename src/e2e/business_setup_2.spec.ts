@@ -42,7 +42,6 @@ test.describe('Business Setup Wizard - Part 2', () => {
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Bold' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
 
     await expect(page.getByRole('heading', { name: 'Choose your domain' })).toBeVisible();
     await expect(page.getByRole('button', { name: /Free OHC Domain/ })).toBeVisible();

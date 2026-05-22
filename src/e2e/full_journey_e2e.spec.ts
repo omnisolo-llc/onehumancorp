@@ -40,11 +40,9 @@ test.describe('Onboarding Guide E2E Journey', () => {
 
     // 7. Theme
     await page.click('text="Modern"');
-    await page.click('button:has-text("Next →")');
 
     // 8. Domain
     await page.click('text="🌐 Free OHC Domain"');
-    await page.click('button:has-text("Next →")');
 
     // 9. Review & Launch
     await expect(page.locator('text="Publish my business"')).toBeVisible();

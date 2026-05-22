@@ -3340,8 +3340,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" placeholder="What is your business called?" autocomplete="organization" enterkeyhint="next" style="border-radius: 8px;" />
+                            <input type="text" placeholder="e.g. Maya's Cakes" enterkeyhint="done" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3359,8 +3359,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" placeholder="What is the name of this product?" enterkeyhint="next" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" placeholder="0.00" enterkeyhint="done" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3373,9 +3373,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" placeholder="e.g. Maya Smith" autocomplete="name" enterkeyhint="next" style="border-radius: 8px;" />
+                            <input type="email" inputmode="email" autocomplete="email" placeholder="you@email.com" enterkeyhint="next" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" placeholder="Password" enterkeyhint="done" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3387,13 +3387,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
                                 <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
                             </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-9" class="hidden" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
@@ -3512,7 +3510,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
+                                const state = { step: currentStep, ...onboardingState };
                                 inputs.forEach((input, index) => {
                                     if (input.placeholder) {
                                         if (input.type === 'checkbox') {
@@ -3584,6 +3582,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (state) {
                                 if (state.step) currentStep = state.step;
+                                if (state.business_type) onboardingState.business_type = state.business_type;
+                                if (state.payment_pref) onboardingState.payment_pref = state.payment_pref;
+                                if (state.website_template) onboardingState.website_template = state.website_template;
+                                if (state.domain_choice) onboardingState.domain_choice = state.domain_choice;
+
+                                syncVisualState();
+
                                 inputs.forEach((input, index) => {
                                     const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
@@ -3975,6 +3980,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             domain_choice: 'subdomain'
                         };
 
+                        function syncVisualState() {
+                            const steps = [
+                                { selector: '#step-2 button.secondary', key: 'business_type' },
+                                { selector: '#step-8 button.secondary', key: 'website_template' },
+                                { selector: '#step-9 button.secondary', key: 'domain_choice' }
+                            ];
+                            steps.forEach(group => {
+                                const value = onboardingState[group.key];
+                                if (value) {
+                                    document.querySelectorAll(group.selector).forEach(btn => {
+                                        if (btn.textContent.includes(value)) {
+                                            const parent = btn.parentElement;
+                                            parent.querySelectorAll('button.secondary').forEach(b => b.classList.remove('selected'));
+                                            btn.classList.add('selected');
+                                        }
+                                    });
+                                }
+                            });
+                        }
+
                         function setBusinessType(type) {
                             onboardingState.business_type = type;
                             nextStep(3);
@@ -3988,11 +4013,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function setTemplate(template, btn) {
                             onboardingState.website_template = template;
                             selectWizardOption(btn);
+                            setTimeout(() => nextStep(9), 100);
                         }
 
                         function setDomainChoice(choice, btn) {
                             onboardingState.domain_choice = choice;
                             selectWizardOption(btn);
+                            setTimeout(() => nextStep(10), 100);
                         }
 
                         async function publishBusiness(btn) {
@@ -4097,10 +4124,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
                                 try {
-                                    const stateData = { step: stepId };
-                                    document.querySelectorAll('input').forEach(input => {
-                                        if (input.placeholder && input.value) {
-                                            stateData[input.placeholder] = input.value;
+                                    const stateData = { step: stepId, ...onboardingState };
+                                    document.querySelectorAll('#setup-screen input').forEach((input, index) => {
+                                        if (input.placeholder) {
+                                            if (input.type === 'checkbox') {
+                                                stateData[input.placeholder] = input.checked;
+                                            } else {
+                                                stateData[input.placeholder] = input.value;
+                                            }
+                                        } else {
+                                            // fallback for inputs without placeholder
+                                            if (input.type === 'checkbox') {
+                                                stateData['checkbox_' + index] = input.checked;
+                                            } else {
+                                                stateData['input_' + index] = input.value;
+                                            }
                                         }
                                     });
                                     localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
@@ -4161,18 +4199,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
 
                                 try {
-                                    let businessType = '';
-                                    document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                        if (b.classList.contains('selected') || document.activeElement === b) {
-                                            businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
-                                        }
-                                    });
+                                    let businessType = onboardingState.business_type || '';
                                     let companyName = document.querySelector('#step-3 input[type="text"]')?.value || '';
                                     let companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1]?.value || '';
                                     let firstProductName = document.querySelector('#step-5 input[type="text"]')?.value || '';
                                     let firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1]?.value || '';
-                                    let websiteTemplate = document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
-                                    let domainChoice = document.querySelector('#step-9 button.selected')?.innerText || '';
+                                    let websiteTemplate = onboardingState.website_template || 'Modern';
+                                    let domainChoice = onboardingState.domain_choice || '';
 
                                     if (domainChoice.includes('Free')) {
                                         domainChoice = 'free';
@@ -4198,7 +4231,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         admin_name: "",
                                         admin_password: "",
                                         price_type: "fixed",
-                                        payment_pref: "online"
+                                        payment_pref: onboardingState.payment_pref || "online"
                                     };
 
                                     const res = await fetch('/api/onboarding/start', {

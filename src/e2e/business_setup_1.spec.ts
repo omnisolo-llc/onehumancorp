@@ -40,9 +40,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByPlaceholder('Password').fill('password123');
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: 'Modern' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Free OHC Domain/ }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
     await page.getByRole('button', { name: /Publish my business/ }).click();
 
     await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible();
