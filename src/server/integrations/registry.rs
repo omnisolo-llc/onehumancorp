@@ -130,6 +130,19 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
+                 "manychat" => {
+                     let clients = self.manychat_clients.read().unwrap();
+                     if let Some(client) = clients.get(integration_id) {
+                         let client = client.clone();
+                         let to = channel.to_string();
+                         let text = content.to_string();
+                         tokio::spawn(async move {
+                             if let Err(e) = client.send_message("instagram", &to, &text).await {
+                                 tracing::error!("Failed to send Manychat message: {}", e);
+                             }
+                         });
+                     }
+                 }
                  "meta" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
@@ -370,6 +383,111 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn fetch_event_types(&self, integration_id: &str) -> Result<Vec<String>, String> {
+        let client = {
+            if integration_id == "calendly" {
+                let clients = self.calendly_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_event_types().await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn sync_customer(&self, integration_id: &str, email: &str, tag: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "mailchimp" {
+                let clients = self.mailchimp_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sync_customer(email, tag).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn send_campaign(&self, integration_id: &str, audience: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "mailchimp" {
+                let clients = self.mailchimp_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_campaign(audience, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn mercadopago_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "mercadopago" {
+                let clients = self.mercadopago_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_checkout_preference(price_id, tenant_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_rates(weight, dimensions).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn purchase_label(&self, integration_id: &str, rate_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.purchase_label(rate_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn create_meeting(&self, integration_id: &str, topic: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_meeting(topic).await;
         }
         Err("integration not found or not supported".to_string())
     }
