@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
-use chrono::Utc;
+
 use crate::db::get_pool;
 
 #[derive(Deserialize)]

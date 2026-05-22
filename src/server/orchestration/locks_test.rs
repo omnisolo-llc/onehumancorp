@@ -1,5 +1,5 @@
 use super::locks::{StandaloneLock, DistributedLock};
-use std::time::Duration;
+
 
 #[tokio::test]
 async fn test_standalone_lock_acquire() {

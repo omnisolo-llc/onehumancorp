@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::{Mutex, OwnedMutexGuard};
 use std::collections::HashMap;
-use std::time::Duration;
+
 
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {
@@ -67,7 +67,7 @@ impl RedisLock {
 #[async_trait::async_trait]
 impl DistributedLock for RedisLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        let mut conn = self.client.get_async_connection().await.map_err(|e| e.to_string())?;
+        let mut conn = self.client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
         let key = format!("ohc:lock:task:{}", task_id);
 
         let acquired: bool = redis::cmd("SET")
