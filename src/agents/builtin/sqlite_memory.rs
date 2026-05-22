@@ -83,7 +83,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sqlite_memory_store() {
-        std::env::set_var("OHC_SQLITE_KEY", "test_key");
+        unsafe { std::env::set_var("OHC_SQLITE_KEY", "test_key"); }
         let store = SqliteMemoryStore::new("sqlite::memory:").await.unwrap();
 
         store.store("The secret code is 42", vec!["secret".to_string()]).await.unwrap();
