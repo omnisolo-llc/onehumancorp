@@ -1,0 +1,12 @@
+{
+  "devDependencies": {
+    "@playwright/test": "1.52.0",
+    "@types/http-server": "^0.12.4",
+    "@types/node": "^22.10.8",
+    "http-server": "^14.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": []
+  },
+  "scripts": {}
+}
