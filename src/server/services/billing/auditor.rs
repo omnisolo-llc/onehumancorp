@@ -203,11 +203,6 @@ impl CostAuditor {
         *tenant_tokens.get(tenant_id).unwrap_or(&0)
     }
 
-    pub fn get_tenant_cost(&self, tenant_id: &str) -> f64 {
-        let tenant_costs = self.tenant_costs.lock().unwrap();
-        *tenant_costs.get(tenant_id).unwrap_or(&0.0)
-    }
-
     pub fn get_total_revenue(&self) -> f64 {
         let agent_revenues = self.agent_revenues.lock().unwrap();
         agent_revenues.values().sum()

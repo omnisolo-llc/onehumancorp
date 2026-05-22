@@ -11,25 +11,8 @@ def _playwright_target_name(spec):
     """Convert a spec filename to a valid Bazel target name."""
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
-def define_playwright_tests(specs, data = [], server = None):
+def define_playwright_tests(specs):
     """Generate one sh_test target per *.spec.ts file, plus a test_suite."""
-    common_data = [
-        "//src/e2e:fixtures.ts",
-        "//src/e2e:ai-judge.ts",
-        "//src/e2e:global-setup.ts",
-        "//src/e2e:e2e-seed.sql",
-        "//deploy:docker-compose.e2e.yml",
-        "//:playwright.config.ts",
-        "//:package.json",
-        "//:package-lock.json",
-        "@playwright//:chromium-headless-shell",
-        "@playwright//:firefox",
-        "@playwright//:webkit",
-        "@playwright//:ffmpeg",
-    ] + data
-    if server:
-        common_data.append(server)
-
     targets = []
     for spec in sorted(specs):
         name = _playwright_target_name(spec)
@@ -37,7 +20,22 @@ def define_playwright_tests(specs, data = [], server = None):
             name = name,
             srcs = ["//bazel/rules/playwright:playwright_test.sh"],
             args = ["$(rootpath {})".format(spec)],
-            data = [spec] + common_data,
+            data = [
+                spec,
+                "//src/e2e:fixtures.ts",
+                "//src/e2e:ai-judge.ts",
+                "//src/e2e:global-setup.ts",
+                "//src/e2e:e2e-seed.sql",
+                "//src/server:server",
+                "//deploy:docker-compose.e2e.yml",
+                "//:playwright.config.ts",
+                "//:package.json",
+                "//:package-lock.json",
+                "@playwright//:chromium-headless-shell",
+                "@playwright//:firefox",
+                "@playwright//:webkit",
+                "@playwright//:ffmpeg",
+            ],
             env = {
                 "BASE_URL": "http://localhost:18789",
                 "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",

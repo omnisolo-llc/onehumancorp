@@ -155,7 +155,6 @@ rust_binary(
     for module in [
         "analytics",
         "benchmarks",
-        "chaos",
         "db",
         "msgbus",
         "pipeline",
@@ -166,7 +165,6 @@ rust_binary(
         "ultraplan",
         "orchestration",
         "interop",
-        "services",
     ]
 ]
 

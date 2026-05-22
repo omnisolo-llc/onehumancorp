@@ -152,10 +152,9 @@ impl TaskQueue for PgTaskQueue {
             } else {
                 // Exponential backoff
                 let backoff_seconds = 1 << next_attempt;
-                let new_run_after = chrono::Utc::now() + chrono::Duration::seconds(backoff_seconds as i64);
-                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
+                sqlx::query("UPDATE sub_agent_jobs SET status = 'QUEUED', attempts = $1, run_after = CURRENT_TIMESTAMP + ($2 || ' seconds')::interval, updated_at = CURRENT_TIMESTAMP WHERE id = $3")
                     .bind(next_attempt)
-                    .bind(new_run_after)
+                    .bind(backoff_seconds)
                     .bind(job_id)
                     .execute(&mut *tx)
                     .await

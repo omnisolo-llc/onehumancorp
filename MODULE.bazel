@@ -221,10 +221,9 @@ use_repo(rules_pkg_rpm, "rules_pkg_rpmbuild")
 register_toolchains("@rules_pkg_rpmbuild//:all")
 
 bazel_dep(name = "rules_oci", version = "2.3.0")
-bazel_dep(name = "aspect_bazel_lib", version = "2.7.9")
+bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
-bazel_dep(name = "aspect_rules_js", version = "3.1.2")
-bazel_dep(name = "yq.bzl", version = "0.3.4")
+bazel_dep(name = "aspect_rules_js", version = "3.0.3")
 bazel_dep(name = "rules_playwright", version = "0.5.4")
 git_override(
     module_name = "rules_playwright",
@@ -328,16 +327,3 @@ use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
-
-yq_ext_win = use_extension("@yq.bzl//yq:extensions.bzl", "yq")
-use_repo(
-    yq_ext_win,
-    "yq_darwin_amd64",
-    "yq_darwin_arm64",
-    "yq_linux_amd64",
-    "yq_linux_arm64",
-    "yq_linux_ppc64le",
-    "yq_linux_s390x",
-    "yq_windows_amd64",
-    "yq_windows_arm64",
-)

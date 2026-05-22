@@ -54,7 +54,6 @@ impl PgCheckpointer {
     }
 }
 
-/// GitCheckpointer handles time-travel debugging and progress files.
 pub struct GitCheckpointer {
     // State Management: Git Commit Checkpointing Mechanic
     repo_path: PathBuf,
