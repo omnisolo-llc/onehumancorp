@@ -141,7 +141,7 @@ journey
 **Design Doc:**
 - **High-Level Architecture**: Introduce specific agent personas (e.g., "The Ambassador" for Customer Success). Triggers should be event-driven (`MessageReceived`, `CartAbandoned`). State Management uses the PostgreSQL `SKIP LOCKED` pattern.
 - **Mobile UX Flow (375px First)**: Display an "Agent Activity Feed" on the home screen showing recent actions, allowing users to tap and click "Approve". Settings should provide toggles for specific behaviors.
-- **Implementation Prompt**: Implement the backend job queue and agent event processing loop to enable autonomous AI actions. Create the Flutter mobile UI (perfect rendering at 375px) to display the "Agent Activity Feed" on the home dashboard. The feature must be entirely transparent to the user, with plain-language descriptions.
+- **Implementation Prompt**: Implement the backend job queue and agent event processing loop to enable autonomous AI actions. Create the Tauri mobile UI (perfect rendering at 375px) to display the "Agent Activity Feed" on the home dashboard. The feature must be entirely transparent to the user, with plain-language descriptions.
 - **Estimated Scope**: Large
 
 ### Issue Brief: Zero-Jargon Mobile-First Dashboard (P1)
@@ -149,7 +149,7 @@ journey
 **Problem Statement:** Current dashboards (Shopify, Wix) use complex e-commerce terminology (SKUs, DNS). Non-technical owners (Fatima) manage businesses from their phones and are confused by this jargon.
 
 **Design Doc:**
-- **High-Level Architecture**: UI Framework in Flutter. Design System uses OHC Premium Token library (Glassmorphism, Outfit/Inter typography). State Management via Riverpod.
+- **High-Level Architecture**: UI Framework in Tauri (React/Next.js). Design System uses OHC Premium Token library (Glassmorphism, Outfit/Inter typography). State Management via React state.
 - **Mobile UX Flow (375px First)**: Home screen focuses on plain-language metrics ("You made $150 today"). Action buttons must be large touch targets (≥ 44x44px). Group settings by business function (e.g., "My Money").
-- **Implementation Prompt**: Redesign the core dashboard UI in Flutter strictly adhering to the 375px mobile-first mandate. Ensure all terminology is plain language. Implement the OHC Premium Design System tokens for a high-end feel.
+- **Implementation Prompt**: Redesign the core dashboard UI in Tauri strictly adhering to the 375px mobile-first mandate. Ensure all terminology is plain language. Implement the OHC Premium Design System tokens for a high-end feel.
 - **Estimated Scope**: Medium

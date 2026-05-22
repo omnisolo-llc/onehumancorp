@@ -33,4 +33,4 @@ The "Marketing & Advertising" agent is deeply integrated into the builder:
 2.  **AI Integration:**
     *   Develop the prompt architecture and tool definitions for the "Marketing & Advertising" agent to manipulate the block structure.
 3.  **Frontend Development:**
-    *   Consume the APIs to build the 375px-first mobile editor in Flutter.
+    *   Consume the APIs to build the 375px-first mobile editor in Tauri.

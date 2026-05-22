@@ -26,7 +26,7 @@ pkg_tar(
 )
 
 # Published as onehumancorp/server – the single canonical image.
-# Serves both the API and the Flutter web UI (static assets).
+# Serves the backend API.
 oci_image(
     name = "server_image",
     base = "@distroless_cc",

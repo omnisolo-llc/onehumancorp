@@ -34,8 +34,8 @@ bazelisk test //src/app:app_test
 ## 4. Documentation
 
 Please refer to the detailed architecture documents in the `docs/` folder:
-- [KAIROS Architecture](../technical/architecture/kairos/master-design-doc.md)
-- [API Playbook](../api/playbook.md)
+- [KAIROS Architecture](technical/architecture/kairos/master-design-doc.md)
+- [API Playbook](api/playbook.md)
 
 </div>
 

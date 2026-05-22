@@ -62,7 +62,6 @@ graph TD;
 |-----------|----------|---------|
 | `src/ui/tauri/` | **Rust/HTML/JSON** | Canonical Tauri v2 desktop UI and packaged static frontend |
 | `src/ui/next/` | **React/TypeScript** | Legacy/prototype Next.js web client retained until route and asset references are fully audited |
-| `src/app/` | **Rust** | Backend agent client (formerly Slint UI, deprecated) |
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
@@ -75,7 +74,7 @@ graph TD;
 
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
-- **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
+- **[Sub-Agent Queue](docs/technical/architecture/kairos/sub-agent-queue-design.md):** Learn how vast amounts of agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](docs/features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ### Remote clients and standalone mode
@@ -86,12 +85,11 @@ Headless server deployments keep the API, auth, health probes, and metrics onlin
 
 ### Multi-tenancy
 
-In cloud-native mode (`OHC_MULTITENANT=true`) the `TenantRegistry` in
-`src/server/dashboard/tenant.go` lazily provisions an organisation-scoped
-`Server` per `organization_id` and routes authenticated requests to the correct
-tenant handler. Dashboard snapshots, meetings, agent operations, approvals,
-handoffs, and other server-local state are isolated per tenant handler, and the
-HTTP layer filters org-visible data when shared persistence is used.
+In cloud-native mode (`OHC_MULTITENANT=true`) the Rust HTTP and repository
+layers route authenticated requests by `organization_id`. Dashboard snapshots,
+meetings, agent operations, approvals, handoffs, and other server-local state are
+scoped per tenant handler, and shared persistence paths apply org-visible
+filters.
 
 Shared-database persistence hardening is still ongoing, so the repo should not
 yet claim perfect end-to-end schema-level tenant isolation for every future
@@ -258,8 +256,8 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 
 `src/ui/next/` remains in the repository while references to its routes and assets are audited. It is not the canonical UI, and new provider flows should be implemented in the Tauri app.
 
-### Slint UI (Deprecated)
+### Slint UI (Removed)
 
-The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Tauri v2.
-
-Historical Slint components included: dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, and API docs.
+The old Slint UI has been removed. The canonical desktop surface is the Tauri v2
+app in `src/ui/tauri/`, with packaged static assets under
+`src/ui/tauri/next_out`. Do not add new `.slint` files or Slint build targets.

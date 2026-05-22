@@ -79,7 +79,7 @@ stateDiagram-v2
 ### Key Design Decisions
 1.  **Software Over Hardware:** Eliminate the need for Maya or Fatima to buy a $200 external display.
 2.  **Biometric-Driven:** Passwords are too slow for an active food cart line. Re-entry to the Merchant State *must* use native FaceID/Fingerprint for sub-second unlocking.
-3.  **Application-Level Sandbox:** We cannot fully override the OS, but we can intercept all navigation actions within the Flutter/React Native container to create a "walled garden" during checkout.
+3.  **Application-Level Sandbox:** We cannot fully override the OS, but we can intercept all navigation actions within the Tauri container to create a "walled garden" during checkout.
 
 ## Implementation Prompt
 **To the Implementer Swarm:**

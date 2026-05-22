@@ -11,8 +11,8 @@ The repo is intentionally built as a hybrid cloud-native and desktop product:
 
 1. Cloud-native shared service: a horizontally scalable Rust API tier backed by Postgres, with `OHC_MULTITENANT=true` enabling org-aware routing.
 2. Headless API deployment: the same backend with `OHC_HEADLESS=true`, used by remote mobile or desktop clients that should not receive a hosted web UI.
-3. Desktop standalone mode: the Slint desktop app manages a local backend lifecycle and local SQLite-backed state.
-4. Remote client mode: the Slint app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
+3. Desktop standalone mode: the Tauri v2 desktop app manages a local backend lifecycle and local SQLite-backed state.
+4. Remote client mode: the Tauri app acts mainly as a UI, connects to a configured backend URL, and authenticates against a remote OHC deployment.
 
 ## Prerequisites
 | Tool | Minimum Version | Install |
@@ -76,7 +76,6 @@ mono/
 ├── docs/                    Architecture and feature documentation
 └── src/
     ├── agents/              Agent provider registry, workers, and MCP bundles
-    ├── app/                 Slint client for desktop and web
     ├── cli/                 CLI tooling
     ├── proto/               Protobuf definitions
     └── server/              Rust backend services and runtime entrypoint
@@ -101,8 +100,8 @@ bazel build //...
 # Build just the backend binary
 bazel build //src/server:server
 
-# Build the Slint app (via Bazel)
-bazel build //src/app:app
+# Build the Tauri desktop app
+bazel build //src/ui/tauri:app
 ```
 
 ### Test
@@ -114,8 +113,8 @@ bazel test //...
 # Run all Rust unit tests
 bazel test //src/server/...
 
-# Run Slint component tests
-bazel test //src/app:app_test
+# Run browser end-to-end tests
+bazel test //src/e2e:playwright
 
 # Run deploy artefact verification
 bazel test //deploy:deploy_artifacts_test
@@ -131,7 +130,7 @@ bazel test //... --cache_test_results=no
 
 # Launch the local development environment (run these in separate terminals)
 bazelisk run //src/server:server
-bazelisk run //src/app:app
+bazelisk run //src/ui/tauri:app
 
 # Build Linux package artifacts
 bazelisk build //release:app_deb
@@ -145,8 +144,8 @@ bazelisk build //release:app_rpm
 # Rust clippy / vet (run via Bazel)
 bazel build //... --keep_going
 
-# Slint linter
-cd src/app && cargo clippy
+# Tauri Rust checks
+bazel build //src/ui/tauri:app
 ```
 
 ---
@@ -159,13 +158,13 @@ cd src/app && cargo clippy
 bazel test //src/server/...
 ```
 
-### Slint App Tests
+### UI Tests
 
 ```bash
-bazel test //src/app:app_test
+bazel test //src/e2e:playwright
 ```
 
-The Bazel target `//src/app:app_test` runs headless component tests for all Slint UI components.
+The Bazel target `//src/e2e:playwright` runs the browser suite against the real server and UI. The Tauri shell target is `//src/ui/tauri:app`.
 
 ### Kind End-to-End Test
 
@@ -249,7 +248,7 @@ docker compose -f deploy/docker-compose.yml down -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `FRONTEND_STATIC_DIR` | `src/app/pkg` | Path to compiled Slint web artifacts |
+| `FRONTEND_STATIC_DIR` | `src/ui/tauri/next_out` | Path to packaged static frontend assets |
 
 ---
 
@@ -305,6 +304,6 @@ Install Playwright browsers:
 npx playwright install --with-deps chromium
 ```
 
-The Bazel `app_web_e2e_test` target handles this automatically.
+The Bazel `//src/e2e:playwright` target handles this automatically.
 
 </div>
