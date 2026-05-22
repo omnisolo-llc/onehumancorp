@@ -164,12 +164,6 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
     } else {
         return Err("OIDC token missing expiration".to_string());
     }
-
-    if let Some(nbf) = raw.get("nbf").and_then(|v| v.as_i64()) {
-        if nbf > current_ts {
-            return Err("OIDC token not yet valid".to_string());
-        }
-    }
     
     let mut roles = Vec::new();
     if let Some(r) = raw.get("roles") {
