@@ -68,11 +68,14 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
+        .route("/storefront/embed", get(handle_storefront_embed))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
+        .route("/referrals/generate", post(handle_referral_generate))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -88,6 +91,17 @@ pub struct InviteIdRequest {
 }
 
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ReferralGenerateResponse {
+    pub referral_link: String,
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TeamInvitesMetricsResponse {
+    pub total_invites: i64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTeamInviteRequest {
@@ -139,21 +153,59 @@ async fn handle_track_visitor(
     Json(TrackVisitorResponse { tracked: true })
 }
 
+async fn handle_storefront_embed() -> impl IntoResponse {
+    let html = r##"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .card { border: 1px solid #eaeaea; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .title { font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }
+        .price { color: #555; font-size: 1rem; margin: 0 0 16px 0; }
+        .btn { display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        .footer { text-align: center; margin-top: 16px; font-size: 0.85rem; }
+        .footer a { color: #333; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2 class="title">Premium Product</h2>
+        <p class="price">$49.99</p>
+        <a href="#" class="btn">Buy Now</a>
+        <div class="footer">
+            <a href="ohc://join?ref=embed">⚡ Powered by OHC</a>
+        </div>
+    </div>
+</body>
+</html>
+"##;
+    axum::response::Html(html)
+}
+
 async fn handle_check_milestones(
     Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
             id: "1".to_string(),
-            title: "First Teammate".to_string(),
-            description: "Hire your first AI agent".to_string(),
+            title: String::from("First Teammate"),
+            description: String::from("Hire your first AI agent"),
             reached: true,
         },
         Milestone {
             id: "2".to_string(),
-            title: "Global Reach".to_string(),
-            description: "Connect to a partner organization".to_string(),
+            title: String::from("Global Reach"),
+            description: String::from("Connect to a partner organization"),
             reached: false,
+        },
+        Milestone {
+            id: "3".to_string(),
+            title: "🎉 10th Order!".to_string(),
+            description: "You've successfully processed your 10th order on OHC.".to_string(),
+            reached: true,
         },
     ];
     Json(MilestonesResponse { milestones })
@@ -168,6 +220,19 @@ async fn handle_get_team_invites(
 
     match tracker.get_team_invites(&query.team_id).await {
         Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_team_invites_metrics(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
+) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.get_team_invites_count(&query.team_id).await {
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -208,6 +273,31 @@ async fn handle_referral_convert(
             state.hub.referral_tracker().record_conversion(&req.id);
             Ok(Json(()))
         }
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+
+async fn handle_referral_generate(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
+    let ref_code = uuid::Uuid::new_v4().to_string();
+    let ref_id = uuid::Uuid::new_v4().to_string();
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+
+    match sqlx::query("INSERT INTO referrals (id, organization_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
+        .bind(&ref_id)
+        .bind(&auth_info.org_id)
+        .bind(&auth_info.agent_id)
+        .bind(&ref_code)
+        .bind(now)
+        .execute(&state.pool)
+        .await
+    {
+        Ok(_) => Ok(Json(ReferralGenerateResponse {
+            referral_link: format!("https://ohc.app/ref/{}", ref_code),
+        })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -307,6 +397,15 @@ mod tests {
         };
         let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
         assert!(accept_res.is_ok());
+
+        // Call metrics handler directly
+        let metrics_query = GetTeamInvitesQuery {
+            team_id: "team-test-direct".to_string(),
+        };
+        let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
+        assert!(metrics_res.is_ok());
+        let metrics_res_json = metrics_res.unwrap().0;
+        assert_eq!(metrics_res_json.total_invites, 1);
     }
 
     #[tokio::test]
@@ -393,6 +492,34 @@ mod tests {
             .bind(ref_id)
             .fetch_one(&pool).await.unwrap();
         assert_eq!(conversions, 1);
+    }
+
+
+    #[tokio::test]
+    async fn test_referral_generate() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let auth_info = ::server_auth::orchestration::AuthInfo {
+            spiffe_id: "spiffe://ohc.app/test".to_string(),
+            org_id: "test-org".to_string(),
+            agent_id: "test-agent".to_string(),
+        };
+
+        let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        let ref_link = res.0.referral_link;
+        assert!(ref_link.starts_with("https://ohc.app/ref/"));
+
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE organization_id = 'test-org' AND user_id = 'test-agent'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
     }
 
     #[tokio::test]
