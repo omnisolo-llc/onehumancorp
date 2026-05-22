@@ -1,3 +1,7 @@
+## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
+- Scaling (Cloud): Tighten Playwright Bazel test deps.
+- Privacy/Offline (Standalone): Tighten Playwright Bazel test deps.
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
