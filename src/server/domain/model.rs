@@ -85,7 +85,7 @@ pub struct _ModelProvider {
     pub id: String,
     pub r#type: _ProviderType,
     pub name: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub api_key_env_var: String,
     pub base_url: String,
     pub timeout_ms: i32,
@@ -101,7 +101,7 @@ pub struct _ModelProvider {
 pub struct _ModelInstance {
     pub id: String,
     pub name: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub provider_type: _ProviderType,
     pub provider_id: String,
     pub model_id: String,
@@ -135,7 +135,7 @@ impl _ModelInstance {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct _ModelBinding {
     pub id: String,
-    pub organization_id: String,
+    pub tenant_id: String,
     pub agent_id: String,
     pub model_instance_id: String,
     pub is_default: bool,
@@ -145,7 +145,7 @@ pub struct _ModelBinding {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct _OrganizationModelConfig {
-    pub organization_id: String,
+    pub tenant_id: String,
     pub providers: Vec<_ModelProvider>,
     pub model_instances: Vec<_ModelInstance>,
     pub bindings: Vec<_ModelBinding>,

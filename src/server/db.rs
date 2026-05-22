@@ -348,6 +348,72 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS catalog_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        description TEXT,
+                        item_type TEXT NOT NULL, -- Physical, Service, Digital, Subscription
+                        price REAL DEFAULT 0,
+                        currency TEXT DEFAULT 'USD',
+                        metadata TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS item_variants (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        catalog_item_id TEXT REFERENCES catalog_items(id) ON DELETE CASCADE,
+                        sku TEXT,
+                        name TEXT,
+                        price_adjustment REAL DEFAULT 0,
+                        metadata TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_ledger (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        catalog_item_id TEXT REFERENCES catalog_items(id) ON DELETE CASCADE,
+                        variant_id TEXT REFERENCES item_variants(id) ON DELETE CASCADE,
+                        change_amount INTEGER NOT NULL,
+                        reason TEXT NOT NULL,
+                        transaction_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS order_lines (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+                        variant_id TEXT REFERENCES item_variants(id) ON DELETE CASCADE,
+                        quantity INTEGER DEFAULT 1,
+                        unit_price REAL DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS payments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+                        amount REAL NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        payment_method TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS fulfillments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+                        status TEXT DEFAULT 'pending',
+                        tracking_number TEXT,
+                        provider TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
                     CREATE TABLE IF NOT EXISTS onboarding_state (
                         tenant_id TEXT NOT NULL,
                         user_id TEXT NOT NULL,

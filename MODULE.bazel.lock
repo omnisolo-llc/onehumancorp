@@ -17613,6 +17613,13 @@
               "version": "4.45.1"
             }
           },
+          "yq_windows_arm64": {
+            "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
+            "attributes": {
+              "platform": "windows_arm64",
+              "version": "4.45.1"
+            }
+          },
           "yq_darwin_arm64": {
             "repoRuleId": "@@yq.bzl+//yq/toolchain:platforms.bzl%yq_platform_repo",
             "attributes": {
