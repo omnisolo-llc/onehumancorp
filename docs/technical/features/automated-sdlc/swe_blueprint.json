@@ -100,7 +100,7 @@
               "protocol_details": "Ensure new tests pass green and no legacy 'flicker' is introduced."
             }
           ],
-          "constraints": ["Zero Ambiguity: Infer patterns from existing *_test.go files.", "Quality: Code must be lint-clean."]
+          "constraints": ["Zero Ambiguity: Infer patterns from existing Rust test files.", "Quality: Code must be lint-clean."]
         },
         {
           "id": "ui-architect",

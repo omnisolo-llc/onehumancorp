@@ -15,8 +15,8 @@ Market research indicates that most frameworks like CrewAI and AutoGen rely heav
 - **Standalone Mode:** Utilize a Go library like `github.com/zalando/go-keyring` to interact securely with the OS native keychain.
 
 **API Contracts:**
-- `GetSecret(ctx context.Context, key string) (string, error)`
-- `PutSecret(ctx context.Context, key string, value string) error`
+- `GetSecret(ctx async context, key string) (string, error)`
+- `PutSecret(ctx async context, key string, value string) error`
 
 **Security:**
 - Must validate `organization_id` in cloud mode.
@@ -24,10 +24,10 @@ Market research indicates that most frameworks like CrewAI and AutoGen rely heav
 
 ## Implementation Prompt
 "Implement the Hybrid MCP Secrets Vault tool in `src/server/lib/integrations/secrets_vault/`.
-1. Create `vault.go` defining the `VaultManager` and its MCP capabilities (`GetSecret` and `PutSecret`).
+1. Create `vault.rs` defining the `VaultManager` and its MCP capabilities (`GetSecret` and `PutSecret`).
 2. Implement driver-agnostic logic. To determine if the connection is Cloud, use: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`. For Cloud, use standard K8s Secret APIs. For Standalone, use `github.com/zalando/go-keyring`.
 3. Ensure `GetSecret` output is wrapped in a type that triggers `RedactInterfacePII` to prevent PII leakage.
-4. Create tests in `vault_test.go` mocking both the OS Keyring and K8s API.
+4. Create tests in `vault_test.rs` mocking both the OS Keyring and K8s API.
 5. Update or create the adjacent `BUILD.bazel` file, ensuring `srcs` array accurately reflects the new files."
 
 ## Priority

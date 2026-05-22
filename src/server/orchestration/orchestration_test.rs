@@ -13,6 +13,8 @@ async fn test_task_decomposition_service() {
         .await
         .expect("Failed to initialize database");
     let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
+    let dummy_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap();
     let db = DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) };
 
     match &db.store {

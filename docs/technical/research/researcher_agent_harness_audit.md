@@ -36,7 +36,7 @@ OpenClaw treats every agent as a disposable container.
 - **Security Audits**: Continuous auditing of the Docker config to prevent privilege escalation.
 
 ### 3. OHC Gap Analysis (The "Valley of Vulnerability")
-Our current implementation in `src/server/bash_sandbox/sandbox.go` relies on `regexp.MustCompile` to block `sudo`, `rm -rf /`, etc. This is easily bypassed via encoding tricks or symlinks.
+Our current implementation in `src/server/harness/sandbox/manager.rs` relies on `regexp.MustCompile` to block `sudo`, `rm -rf /`, etc. This is easily bypassed via encoding tricks or symlinks.
 
 ---
 
