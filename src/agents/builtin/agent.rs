@@ -2,6 +2,7 @@ use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use opentelemetry::{global, KeyValue};
+use tracing::{info_span, Instrument};
 
 use crate::budget::{check_token_budget, BudgetAction, BudgetTracker};
 use crate::guardrails::GuardrailRegistry;
@@ -348,6 +349,8 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");
 
         let mut messages = vec![crate::types::Message::user(initial_message)];
         let phases = ["Gather", "Act", "Verify"];
@@ -1003,6 +1006,8 @@ impl Agent {
             iteration: 0,
         });
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_structured");
+
         // Phase 1: Planning
         let planner_system = format!(
             "You are an expert planner. Create a strict JSON plan to solve the user's task using the available tools.\nYour output MUST be a valid JSON array of objects, where each object has:\n- `tool`: the exact name of the tool\n- `args`: a JSON object containing the arguments for the tool\n\nAvailable tools:\n{}\n\nReturn ONLY the JSON array. Do not include markdown formatting or any other text.",
@@ -1270,6 +1275,8 @@ impl Agent {
     ) -> tokio::sync::mpsc::UnboundedReceiver<AgentEvent> {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "query");
+
         tokio::spawn(async move {
             let mut on_event = |event: AgentEvent| {
                 // We use an unbounded channel so send does not block or drop events if the consumer is slow.
@@ -1493,6 +1500,8 @@ impl Agent {
 
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
+
         let meter = global::meter("ohc_agent");
         let token_counter = meter.u64_counter("ohc_agent_token_usage_total").build();
         let cost_counter = meter.f64_counter("ohc_agent_cost_estimate_usd").build();
@@ -1673,7 +1682,17 @@ impl Agent {
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
-            let resp = match self.llm.chat(req).await {
+            let llm_span = info_span!(
+                "llm_interaction",
+                agent_id = %final_cfg.agent_id,
+                model = %final_cfg.model,
+                input_tokens = tracing::field::Empty,
+                output_tokens = tracing::field::Empty,
+                total_tokens = tracing::field::Empty,
+                estimated_cost_usd = tracing::field::Empty,
+            );
+
+            let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
                 Ok(r) => r,
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
@@ -1712,8 +1731,9 @@ impl Agent {
             // Telemetry: Record token usage
             let model_label = KeyValue::new("model", final_cfg.model.clone());
             let agent_label = KeyValue::new("agent_id", final_cfg.agent_id.clone());
-            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "input")]);
-            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), KeyValue::new("type", "output")]);
+            let tool_label = KeyValue::new("tool_name", "llm_interaction");
+            token_counter.add(turn_input_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "input")]);
+            token_counter.add(output_tokens as u64, &[model_label.clone(), agent_label.clone(), tool_label.clone(), KeyValue::new("type", "output")]);
 
             // Enforce Server-side token budget strictly every turn
             if global_turn_tokens >= final_cfg.max_task_tokens {
@@ -1733,8 +1753,13 @@ impl Agent {
             );
 
             if turn_cost > 0.0 {
-                cost_counter.add(turn_cost, &[model_label, agent_label]);
+                cost_counter.add(turn_cost, &[model_label, agent_label, tool_label]);
             }
+
+            llm_span.record("input_tokens", &turn_input_tokens);
+            llm_span.record("output_tokens", &output_tokens);
+            llm_span.record("total_tokens", &total_tokens);
+            llm_span.record("estimated_cost_usd", &turn_cost);
 
             let stop_reason = resp.stop_reason.as_str();
 
@@ -1968,6 +1993,13 @@ impl Agent {
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
                 let cfg_max_retries = final_cfg.max_retries;
+
+                let tool_span = info_span!(
+                    "tool_execution",
+                    agent_id = %final_cfg.agent_id,
+                    tool_name = %tc_clone.name,
+                );
+
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
@@ -1994,7 +2026,7 @@ impl Agent {
                             }
                         }
                     }
-                });
+                }.instrument(tool_span));
             }
 
             let ro_results = futures::future::join_all(read_only_futures).await;
@@ -2185,7 +2217,12 @@ impl Agent {
                 let mut error = String::new();
 
                 loop {
-                    match self.execute_tool(&tc, &session_tools, &messages).await {
+                    let tool_span = info_span!(
+                        "tool_execution",
+                        agent_id = %final_cfg.agent_id,
+                        tool_name = %tc.name,
+                    );
+                    match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -4309,6 +4346,78 @@ mod tests {
 
         let mut cfg = AgentRunConfig::default();
         // Specifically setting a model that triggers cost estimation logic
+        cfg.model = "gpt-4o".to_string();
+        cfg.agent_id = "test-agent-telemetry".to_string();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Hello", &mut on_event).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_telemetry_interceptor_and_metrics() {
+        // Just verify it compiles and runs correctly with default config
+        // Opentelemetry global meter no-ops in tests unless configured
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: Message {
+                        role: Role::Assistant,
+                        content: "Let's call tools".to_string(),
+                        tool_calls: vec![
+                            ToolCall { id: "1".to_string(), name: "read_tool_1".to_string(), arguments: serde_json::Value::Null },
+                            ToolCall { id: "3".to_string(), name: "mutating_tool_1".to_string(), arguments: serde_json::Value::Null },
+                        ],
+                        tool_results: vec![],
+                        response_id: Some("id1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: Usage { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                },
+                ChatResponse {
+                    message: Message::assistant("Draft answer"),
+                    usage: Usage { input_tokens: 150, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id2".to_string()),
+                },
+            ]),
+        });
+
+        struct MockTool {
+            name: String,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::tools::ToolExecutor for MockTool {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
+                Ok(format!("{} done", self.name))
+            }
+        }
+
+        let tools = vec![
+            crate::tools::Tool {
+                name: "read_tool_1".to_string(),
+                description: "".to_string(),
+                is_read_only: true,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockTool { name: "read_tool_1".to_string() }),
+            },
+            crate::tools::Tool {
+                name: "mutating_tool_1".to_string(),
+                description: "".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: Arc::new(MockTool { name: "mutating_tool_1".to_string() }),
+            }
+        ];
+
+        let agent = Agent::new(client, tools);
+
+        let mut cfg = AgentRunConfig::default();
         cfg.model = "gpt-4o".to_string();
         cfg.agent_id = "test-agent-telemetry".to_string();
 

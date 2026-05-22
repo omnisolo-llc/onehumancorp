@@ -53,6 +53,7 @@ rust_library(
         "langgraph.rs",
         "autogen.rs",
         "lib.rs",
+        "local_provider.rs",
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
@@ -85,6 +86,7 @@ rust_library(
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
         "//src/server/pricing:server_pricing",
+        "//src/server/telemetry:server_telemetry",
     ] + [
         "@crates//:tempfile",
         "@crates//:base64",
@@ -195,6 +197,7 @@ rust_binary(
         "output_parser",
         "pubsub",
         "registry",
+        "local_provider",
     ]
 ]
 
