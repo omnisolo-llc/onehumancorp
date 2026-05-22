@@ -499,7 +499,7 @@ export default function Dashboard() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Help a Business Grow!</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              When your friends launch their storefront on OHC, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
+              When your friends launch their storefront on OHC, they get priority AI setup, and you earn <WithTooltip id="credit-tooltip" defaultText="Earn credits to use on premium tools when you refer a friend."><strong className="text-gray-900">$50 credit</strong></WithTooltip> toward your premium tools.
             </p>
 
             <div className="space-y-4">
