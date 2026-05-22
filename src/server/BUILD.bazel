@@ -27,55 +27,55 @@ rust_library(
         "store.rs",
         "tasks.rs",
         "ultraplan.rs",
+        "//src/server/agents:srcs",
         "//src/server/api:srcs",
         "//src/server/autodream:srcs",
         "//src/server/autodream_pipeline:srcs",
-        "//src/server/builder:srcs",
-        "//src/server/agents:srcs",
-        "//src/server/storage:srcs",
         "//src/server/benchmarks:srcs",
-        "//src/server/orchestration:srcs",
-        "//src/server/workers:srcs",
-        "//src/server/tools:srcs",
-        "//src/server/interop:srcs",
-        "//src/server/integrations:srcs",
+        "//src/server/builder:srcs",
         "//src/server/domain:srcs",
+        "//src/server/integrations:srcs",
+        "//src/server/interop:srcs",
+        "//src/server/orchestration:srcs",
         "//src/server/services:srcs",
+        "//src/server/storage:srcs",
+        "//src/server/tools:srcs",
+        "//src/server/workers:srcs",
     ],
+    compile_data = ["//src/server/services:srcs"],
     data = ["//src/server/migrations"],
     edition = "2024",
-    compile_data = ["//src/server/services:srcs"],
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server/utils:server_utils",
-        "//src/server/config:server_config",
-        "//src/server/oidc:server_oidc",
-        "//src/server/telemetry:server_telemetry",
-        "//src/server/harness:server_harness",
-        "//src/server/auth:server_auth",
-        "//src/server/pricing:server_pricing",
-        "//src/server/common:server_common",
-        "//src/server/ohc:server_ohc",
-        "//src/proto:mcp_proxy_tonic",
-        "//src/proto:mcp_proxy_prost",
-        "//src/proto:hub_tonic",
-        "//src/proto:billing_tonic",
-        "//src/proto:app_tonic",
-        "//src/proto:docs_tonic",
-        "//src/proto:docs_prost",
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
         "//src/proto:agent_service_tonic",
-        "//src/proto:organization_prost",
+        "//src/proto:app_tonic",
+        "//src/proto:billing_tonic",
         "//src/proto:common_prost",
+        "//src/proto:docs_prost",
+        "//src/proto:docs_tonic",
+        "//src/proto:hub_tonic",
         "//src/proto:interop_prost",
-        "//src/agents/builtin:ohc_builtin_agent_lib",
-        "//src/agents/builtin:core",
+        "//src/proto:mcp_proxy_prost",
+        "//src/proto:mcp_proxy_tonic",
+        "//src/proto:organization_prost",
+        "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
+        "//src/server/config:server_config",
+        "//src/server/harness:server_harness",
+        "//src/server/ohc:server_ohc",
+        "//src/server/oidc:server_oidc",
+        "//src/server/pricing:server_pricing",
+        "//src/server/telemetry:server_telemetry",
+        "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
-        "@crates//:axum",
         "@crates//:async-nats",
+        "@crates//:axum",
         "@crates//:base64",
         "@crates//:bcrypt",
         "@crates//:chrono",
@@ -100,32 +100,176 @@ rust_library(
         "@crates//:serde_yaml",
         "@crates//:sha2",
         "@crates//:sqlx",
+        "@crates//:temp-env",
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
-        "@crates//:uuid",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
+        "@crates//:uuid",
         "@crates//:walkdir",
-        "@crates//:temp-env",
     ],
 )
 
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
-    edition = "2024",
     compile_data = ["//src/server/services:srcs"],
+    edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
-        "//src/proto:mcp_proxy_tonic",
-        "//src/proto:mcp_proxy_prost",
         ":server_lib",
+        "//src/proto:mcp_proxy_prost",
+        "//src/proto:mcp_proxy_tonic",
         "@crates//:tokio",
     ],
+)
+
+filegroup(
+    name = "e2e_agents_rust_srcs",
+    srcs = [
+        "hub.rs",
+        "pipeline.rs",
+        "scheduler.rs",
+        "sip.rs",
+        "tasks.rs",
+        "ultraplan.rs",
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/server/agents:srcs",
+        "//src/server/api:e2e_agents_srcs",
+        "//src/server/orchestration:srcs",
+        "//src/server/services:e2e_agent_srcs",
+        "//src/server/workers:srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_auth_rust_srcs",
+    srcs = [
+        "crypto.rs",
+        "db.rs",
+        "seeder.rs",
+        "settings.rs",
+        "//src/server/auth:server_auth",
+        "//src/server/common:server_common",
+        "//src/server/config:server_config",
+        "//src/server/oidc:server_oidc",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_billing_rust_srcs",
+    srcs = [
+        "billing.rs",
+        "//src/server/api:e2e_billing_srcs",
+        "//src/server/integrations:e2e_billing_srcs",
+        "//src/server/pricing:server_pricing",
+        "//src/server/services:e2e_billing_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_builder_rust_srcs",
+    srcs = [
+        "minimax.rs",
+        "//src/server/api:e2e_builder_srcs",
+        "//src/server/autodream:srcs",
+        "//src/server/autodream_pipeline:srcs",
+        "//src/server/builder:srcs",
+        "//src/server/storage:srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_dashboard_rust_srcs",
+    srcs = [
+        "analytics.rs",
+        "hub.rs",
+        "store.rs",
+        "//src/server/api:e2e_growth_srcs",
+        "//src/server/services:e2e_dashboard_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_growth_rust_srcs",
+    srcs = [
+        "//src/server/api:e2e_growth_srcs",
+        "//src/server/services:e2e_growth_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_health_rust_srcs",
+    srcs = [
+        "chaos.rs",
+        "//src/server/api:e2e_health_srcs",
+        "//src/server/chaos_fallback",
+        "//src/server/orchestration:srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_integrations_rust_srcs",
+    srcs = [
+        "//src/server/integrations:e2e_srcs",
+        "//src/server/services:e2e_integration_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_onboarding_rust_srcs",
+    srcs = [
+        "//src/server/api:e2e_onboarding_srcs",
+        "//src/server/services:e2e_onboarding_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_sync_rust_srcs",
+    srcs = [
+        "autodream_sync.rs",
+        "powersync.rs",
+        "//src/server/api:e2e_mesh_srcs",
+        "//src/server/interop:srcs",
+        "//src/server/services:e2e_sync_srcs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_telemetry_rust_srcs",
+    srcs = [
+        "analytics.rs",
+        "powersync.rs",
+        "//src/server/api:e2e_telemetry_srcs",
+        "//src/server/services:e2e_ops_srcs",
+        "//src/server/services:e2e_sync_srcs",
+        "//src/server/telemetry:server_telemetry",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_web_shell_rust_srcs",
+    srcs = [
+        "lib.rs",
+        "main.rs",
+    ],
+    visibility = ["//src/e2e:__pkg__"],
 )
 
 # Individual unit test targets for server_lib
@@ -133,8 +277,11 @@ rust_binary(
     rust_test(
         name = module + "_unit_test",
         size = "large",
+        args = [
+            "--test",
+            module,
+        ],
         crate = ":server_lib",
-        args = ["--test", module],
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
         edition = "2024",
         env = {
@@ -175,18 +322,18 @@ rust_test(
     size = "large",
     srcs = ["queue_test.rs"],
     edition = "2024",
-    deps = [
-        ":server_lib",
-        "@crates//:tokio",
-        "@crates//:serde_json",
-        "@crates//:uuid",
-        "@crates//:chrono",
-        "@crates//:sqlx",
-    ],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    deps = [
+        ":server_lib",
+        "@crates//:chrono",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:uuid",
+    ],
 )
 
 rust_test(
@@ -195,30 +342,33 @@ rust_test(
     srcs = ["telemetry_test.rs"],
     data = ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
+        ":server_lib",
         "//src/server/config:server_config",
         "//src/server/telemetry:server_telemetry",
-        ":server_lib",
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:temp-env",
         "@crates//:tokio",
         "@crates//:walkdir",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_test(
     name = "powersync_test",
     size = "large",
+    args = [
+        "--test",
+        "power_sync",
+    ],
+    compile_data = ["//src/server/services:srcs"],
     crate = ":server_lib",
-    args = ["--test", "power_sync"],
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
-    compile_data = ["//src/server/services:srcs"],
     env = {
         "RUST_TEST_THREADS": "1",
     },
@@ -239,17 +389,17 @@ rust_test(
     name = "crypto_test",
     size = "small",
     srcs = ["crypto.rs"],
+    compile_data = ["//src/server/services:srcs"],
     crate_root = "crypto.rs",
     edition = "2024",
-    compile_data = ["//src/server/services:srcs"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "//src/server/utils:server_utils",
-        "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
+        "//src/proto:mcp_proxy_tonic",
+        "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:hmac",
@@ -266,8 +416,11 @@ exports_files([
 rust_test(
     name = "hybrid_sync_unit_test",
     size = "large",
+    args = [
+        "--test",
+        "hybrid_sync",
+    ],
     crate = ":server_lib",
-    args = ["--test", "hybrid_sync"],
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {
@@ -281,18 +434,18 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
+        "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tree-sitter-bash",
         "@crates//:walkdir",
-        "@crates//:temp-env",
     ],
 )
 
 rust_test(
     name = "api_growth_unit_test",
     size = "large",
-    crate = ":server_lib",
     args = ["api::growth"],
+    crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {
@@ -311,13 +464,14 @@ rust_test(
     ],
 )
 
-
-
 rust_test(
     name = "config_sync_unit_test",
     size = "large",
+    args = [
+        "--test",
+        "tools::config_sync",
+    ],
     crate = ":server_lib",
-    args = ["--test", "tools::config_sync"],
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
     env = {
@@ -331,10 +485,10 @@ rust_test(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        "@crates//:tokio",
         "@crates//:serde_json",
         "@crates//:sqlx",
-        "@crates//:tempfile",
         "@crates//:temp-env",
+        "@crates//:tempfile",
+        "@crates//:tokio",
     ],
 )

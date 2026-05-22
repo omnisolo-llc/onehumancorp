@@ -21,5 +21,56 @@ filegroup(
         "//src/server/services/scheduler:srcs",
         "//src/server/services/sync:srcs",
     ],
-    visibility = ["//src/server:__pkg__"]
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_agent_srcs",
+    srcs = ["//src/server/services/agent:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_billing_srcs",
+    srcs = ["//src/server/services/billing:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_dashboard_srcs",
+    srcs = [
+        "//src/server/services/dashboard:srcs",
+        "//src/server/services/org:srcs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_growth_srcs",
+    srcs = ["//src/server/services/growth:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_integration_srcs",
+    srcs = ["//src/server/services/integration:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_onboarding_srcs",
+    srcs = ["//src/server/services/onboarding:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_ops_srcs",
+    srcs = ["//src/server/services/ops:srcs"],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_sync_srcs",
+    srcs = ["//src/server/services/sync:srcs"],
+    visibility = ["//src/server:__pkg__"],
 )

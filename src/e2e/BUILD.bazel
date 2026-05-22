@@ -1,6 +1,105 @@
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//bazel/rules/playwright:playwright_tests.bzl", "define_playwright_tests")
 
+AGENTS_RUST_DEPS = ["//src/server:e2e_agents_rust_srcs"]
+
+AUTH_RUST_DEPS = ["//src/server:e2e_auth_rust_srcs"]
+
+BILLING_RUST_DEPS = ["//src/server:e2e_billing_rust_srcs"]
+
+BUILDER_RUST_DEPS = ["//src/server:e2e_builder_rust_srcs"]
+
+DASHBOARD_RUST_DEPS = ["//src/server:e2e_dashboard_rust_srcs"]
+
+GROWTH_RUST_DEPS = ["//src/server:e2e_growth_rust_srcs"]
+
+HEALTH_RUST_DEPS = ["//src/server:e2e_health_rust_srcs"]
+
+INTEGRATIONS_RUST_DEPS = ["//src/server:e2e_integrations_rust_srcs"]
+
+ONBOARDING_RUST_DEPS = ["//src/server:e2e_onboarding_rust_srcs"]
+
+SYNC_RUST_DEPS = ["//src/server:e2e_sync_rust_srcs"]
+
+TELEMETRY_RUST_DEPS = ["//src/server:e2e_telemetry_rust_srcs"]
+
+WEB_SHELL_RUST_DEPS = ["//src/server:e2e_web_shell_rust_srcs"]
+
+PLAYWRIGHT_RUST_DEPS_BY_SPEC = {
+    "agents.spec.ts": AGENTS_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "app.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS + AGENTS_RUST_DEPS,
+    "approval_inbox.spec.ts": AGENTS_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "auth_roles.spec.ts": [],
+    "autonomous_ops.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + BUILDER_RUST_DEPS,
+    "business_manager.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + ONBOARDING_RUST_DEPS,
+    "business_setup_1.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "business_setup_2.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "business_share.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + ONBOARDING_RUST_DEPS + GROWTH_RUST_DEPS,
+    "canvas_storefront_builder.spec.ts": BUILDER_RUST_DEPS + GROWTH_RUST_DEPS,
+    "chaos_resilience.spec.ts": HEALTH_RUST_DEPS + BUILDER_RUST_DEPS + DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS,
+    "chat.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS,
+    "cross_device_onboarding.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "dashboard.spec.ts": DASHBOARD_RUST_DEPS + GROWTH_RUST_DEPS,
+    "dashboard_mesh_ui.spec.ts": DASHBOARD_RUST_DEPS + SYNC_RUST_DEPS,
+    "dashboard_nav.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + ONBOARDING_RUST_DEPS,
+    "dashboard_ux.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS,
+    "dashboard_ux_extra.spec.ts": DASHBOARD_RUST_DEPS + GROWTH_RUST_DEPS,
+    "department_tasks.spec.ts": AGENTS_RUST_DEPS,
+    "diagnostics.spec.ts": HEALTH_RUST_DEPS + TELEMETRY_RUST_DEPS,
+    "echo_navigation.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + ONBOARDING_RUST_DEPS,
+    "echo_ux_friction.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS,
+    "email_marketing.spec.ts": GROWTH_RUST_DEPS + INTEGRATIONS_RUST_DEPS,
+    "free_tier.spec.ts": BILLING_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "full_journey_e2e.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS + AGENTS_RUST_DEPS + GROWTH_RUST_DEPS + BILLING_RUST_DEPS,
+    "grandmother_test.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS + AGENTS_RUST_DEPS,
+    "grandmother_ux_test.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS + AGENTS_RUST_DEPS,
+    "grow_business.spec.ts": GROWTH_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "health_monitoring.spec.ts": HEALTH_RUST_DEPS + TELEMETRY_RUST_DEPS,
+    "help.spec.ts": AGENTS_RUST_DEPS + INTEGRATIONS_RUST_DEPS,
+    "inbox.spec.ts": AGENTS_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "integrations.spec.ts": INTEGRATIONS_RUST_DEPS,
+    "kairos_orchestration.spec.ts": AGENTS_RUST_DEPS + SYNC_RUST_DEPS,
+    "landing_ux.spec.ts": DASHBOARD_RUST_DEPS,
+    "lens_audit.spec.ts": TELEMETRY_RUST_DEPS + HEALTH_RUST_DEPS,
+    "login.spec.ts": [],
+    "login_lens.spec.ts": [],
+    "login_ux.spec.ts": ONBOARDING_RUST_DEPS,
+    "logs.spec.ts": TELEMETRY_RUST_DEPS,
+    "meetings.spec.ts": INTEGRATIONS_RUST_DEPS + AGENTS_RUST_DEPS,
+    "onboarding.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "playwright_kairos_mesh.spec.ts": SYNC_RUST_DEPS + AGENTS_RUST_DEPS,
+    "pricing.spec.ts": BILLING_RUST_DEPS,
+    "prompt_tuning.spec.ts": AGENTS_RUST_DEPS,
+    "referrals.spec.ts": GROWTH_RUST_DEPS,
+    "scribe_extra.spec.ts": AGENTS_RUST_DEPS,
+    "seasonal_promo.spec.ts": GROWTH_RUST_DEPS + BUILDER_RUST_DEPS,
+    "security.spec.ts": [],
+    "settings.spec.ts": DASHBOARD_RUST_DEPS,
+    "setup_wizard_comprehensive.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "social_media_autopost.spec.ts": GROWTH_RUST_DEPS + INTEGRATIONS_RUST_DEPS,
+    "success_milestones.spec.ts": GROWTH_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "tasks.spec.ts": AGENTS_RUST_DEPS,
+    "team_invites_metrics.spec.ts": GROWTH_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "telemetry_sync.spec.ts": TELEMETRY_RUST_DEPS + SYNC_RUST_DEPS,
+    "telemetry_visualizer.spec.ts": TELEMETRY_RUST_DEPS + BILLING_RUST_DEPS,
+    "test_billing_limits.spec.ts": BILLING_RUST_DEPS + DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS,
+    "test_e2e_run.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS + GROWTH_RUST_DEPS + DASHBOARD_RUST_DEPS,
+    "test_glassmorphism.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS,
+    "test_simple.spec.ts": [],
+    "tool_integrations.spec.ts": INTEGRATIONS_RUST_DEPS,
+    "transport_bridge.spec.ts": SYNC_RUST_DEPS,
+    "users.spec.ts": DASHBOARD_RUST_DEPS,
+    "ux_dashboard_simplification.spec.ts": DASHBOARD_RUST_DEPS + AGENTS_RUST_DEPS + ONBOARDING_RUST_DEPS,
+    "ux_friction_audit.spec.ts": DASHBOARD_RUST_DEPS,
+    "ux_grandma_flow.spec.ts": DASHBOARD_RUST_DEPS + ONBOARDING_RUST_DEPS + INTEGRATIONS_RUST_DEPS,
+    "viral_embed.spec.ts": GROWTH_RUST_DEPS,
+    "viral_referral.spec.ts": GROWTH_RUST_DEPS,
+    "viral_storefront.spec.ts": GROWTH_RUST_DEPS + BUILDER_RUST_DEPS,
+    "virtual_meeting_walkthrough.spec.ts": AGENTS_RUST_DEPS + INTEGRATIONS_RUST_DEPS,
+    "website_builder.spec.ts": BUILDER_RUST_DEPS + GROWTH_RUST_DEPS,
+    "wizard_refinement.spec.ts": ONBOARDING_RUST_DEPS + BUILDER_RUST_DEPS + AGENTS_RUST_DEPS + DASHBOARD_RUST_DEPS,
+}
+
 # Shell script wrapper for running ALL playwright tests via docker compose
 # (manual invocation: `bazel run //src/e2e:run_playwright_e2e`)
 sh_binary(
@@ -19,8 +118,10 @@ sh_binary(
 )
 
 # Per-spec Playwright test targets.
-# These intentionally do not depend on //src/server:server; the manual
-# run_playwright_e2e target owns building and starting the local server.
 # Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
-define_playwright_tests(glob(["*.spec.ts"]))
+define_playwright_tests(
+    glob(["*.spec.ts"]),
+    default_rust_deps = AUTH_RUST_DEPS + WEB_SHELL_RUST_DEPS,
+    rust_deps_by_spec = PLAYWRIGHT_RUST_DEPS_BY_SPEC,
+)

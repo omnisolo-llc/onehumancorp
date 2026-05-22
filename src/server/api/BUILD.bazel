@@ -2,8 +2,8 @@ filegroup(
     name = "srcs",
     srcs = [
         "autodream.rs",
-        "billing_webhook.rs",
         "billing_api.rs",
+        "billing_webhook.rs",
         "billing_webhook_test.rs",
         "growth.rs",
         "health.rs",
@@ -12,6 +12,71 @@ filegroup(
         "telemetry.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_agents_srcs",
+    srcs = [
+        "//src/server/api/agents:srcs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_billing_srcs",
+    srcs = [
+        "billing_api.rs",
+        "billing_webhook.rs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_builder_srcs",
+    srcs = [
+        "autodream.rs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_growth_srcs",
+    srcs = [
+        "growth.rs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_health_srcs",
+    srcs = [
+        "health.rs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_mesh_srcs",
+    srcs = [
+        "mesh_handler.rs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_onboarding_srcs",
+    srcs = [
+        "//src/server/api/onboarding:srcs",
+    ],
+    visibility = ["//src/server:__pkg__"],
+)
+
+filegroup(
+    name = "e2e_telemetry_srcs",
+    srcs = [
+        "telemetry.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
