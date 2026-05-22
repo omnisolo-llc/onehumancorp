@@ -1,5 +1,5 @@
-issue_category: research
-research_report:
-  description: "Omni-Sync Agent Market Research and Issue Brief"
-  findings: "Identified POS-to-Web syncing complexity as a major pain point. Proposed Omni-Sync Agent as a solution."
-  market_segment: "SMB E-commerce platforms"
+issue_category: cleanup
+debt_report:
+  description: "Bump version to v0.4.42"
+  impact: "low"
+  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
