@@ -21,8 +21,7 @@ def define_playwright_tests(specs, data = [], server = None):
         "//:node_modules/playwright-core",
         "//scripts:run-playwright.mjs",
         server,
-        "@playwright_chromium_headless_shell//:chrome-headless-shell-linux64/chrome-headless-shell",
-        "@playwright_chromium_headless_shell//:files",
+        "@playwright//:chromium-headless-shell",
     ] + data
 
     sh_test(
@@ -30,7 +29,7 @@ def define_playwright_tests(specs, data = [], server = None):
         srcs = ["//bazel/rules/playwright:playwright_test.sh"],
         data = sorted(specs) + common_data,
         env = {
-            "PLAYWRIGHT_CHROMIUM_EXECUTABLE": "$(rootpath @playwright_chromium_headless_shell//:chrome-headless-shell-linux64/chrome-headless-shell)",
+            "PLAYWRIGHT_CHROMIUM_EXECUTABLE": "$(rootpath @playwright//:chromium-headless-shell)/chrome-headless-shell-linux64/chrome-headless-shell",
         },
         size = "large",
         timeout = "eternal",

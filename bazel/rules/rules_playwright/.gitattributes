@@ -1,0 +1,3 @@
+# In code review, collapse generated files
+docs/*.md linguist-generated=true
+

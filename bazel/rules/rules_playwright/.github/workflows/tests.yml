@@ -1,0 +1,42 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+# One active job per PR, cancel older ones on push
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      # Install only Playwright system dependencies
+      - name: Install Playwright system dependencies
+        run: npx playwright install-deps
+
+      - name: Build and Test WORKSPACE example
+        working-directory: examples/workspace
+        run: bazelisk test //...
+
+      - name: Build and Test MODULE.bazel example
+        working-directory: examples/rules_js
+        run: bazelisk test //... --test_output=all
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: bazel-testlogs
+          path: bazel-testlogs
