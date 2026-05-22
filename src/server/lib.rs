@@ -218,10 +218,8 @@ struct DraftReplyResponse {
 }
 
 
-#[derive(serde::Deserialize)]
-struct HttpSalesRequest {
-    tenant_id: String,
-}
+#[derive(serde::Deserialize, serde::Serialize, Default)]
+struct HttpSalesRequest {}
 
 #[derive(serde::Serialize)]
 struct HttpSalesResponse {
@@ -237,16 +235,32 @@ struct HttpMetricsResponse {
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     headers: axum::http::HeaderMap,
-    axum::Json(payload): axum::Json<HttpSalesRequest>,
+    axum::Json(_payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
 
-    let tenant_id = payload.tenant_id;
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let store = crate::auth::Store::new();
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
 
     let (active_customers_res, pending_orders_res) = tokio::join!(
         async {
@@ -276,16 +290,33 @@ async fn http_metrics_handler(
 async fn http_sales_handler(
     db: std::sync::Arc<db::DB>,
     headers: axum::http::HeaderMap,
-    axum::Json(payload): axum::Json<HttpSalesRequest>,
+    axum::Json(_payload): axum::Json<HttpSalesRequest>,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
 
-    if headers.get("authorization").is_none() {
-        return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response();
-    }
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
 
-    let tenant_id = payload.tenant_id;
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let store = crate::auth::Store::new();
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
+
     let sales: f64 = sqlx::query_scalar("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_one(&db.pool)
@@ -3037,7 +3068,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function updateApprovalSetting(deptId, isChecked) {
-                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
+
                             alert(`Settings updated for ${deptId}.`);
                         }
                     </script>
@@ -4435,7 +4466,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/v1/dashboard/sales', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
+                                    body: JSON.stringify({})
                                 })
                                 .then(res => res.json())
                                 .then(data => {
@@ -4447,7 +4478,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/v1/dashboard/metrics', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
+                                    body: JSON.stringify({})
                                 })
                                 .then(res => res.json())
                                 .then(data => {
