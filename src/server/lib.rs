@@ -2148,15 +2148,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
-                    <meta property="og:title" content="OneHuman Corp">
-                    <meta property="og:description" content="The world's first Hybrid Agentic OS. Launch and grow your business with autonomous AI agents.">
-                    <meta property="og:image" content="https://onehumancorp.io/og-image.png">
-                    <meta property="og:url" content="https://onehumancorp.io">
-                    <meta property="og:type" content="website">
-                    <meta name="twitter:card" content="summary_large_image">
-                    <meta name="twitter:title" content="OneHuman Corp">
-                    <meta name="twitter:description" content="The world's first Hybrid Agentic OS. Launch and grow your business with autonomous AI agents.">
-                    <meta name="twitter:image" content="https://onehumancorp.io/og-image.png">
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
@@ -2875,6 +2866,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
                                 <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
                                 <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
+                            </div>
+                            <div style="margin-top: 16px; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;">
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
+                                <div id="invite-copied-msg" style="display: none; margin-top: 8px; color: white; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">Invite message copied!</div>
                             </div>
                         </div>
 
@@ -3659,6 +3654,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
                                 const state = { step: currentStep };
+                                Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
                                     if (input.placeholder) {
                                         if (input.type === 'checkbox') {
@@ -3744,6 +3740,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (state.step && state.step > 1) {
                                     nextStep(state.step);
                                 }
+
+                                // Restore onboardingState
+                                if (state.business_type) onboardingState.business_type = state.business_type;
+                                if (state.payment_pref) onboardingState.payment_pref = state.payment_pref;
+                                if (state.website_template) onboardingState.website_template = state.website_template;
+                                if (state.domain_choice) onboardingState.domain_choice = state.domain_choice;
                             }
                         }
 
@@ -4137,21 +4139,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function setBusinessType(type) {
                             onboardingState.business_type = type;
+                            saveWizardState();
                             nextStep(3);
                         }
 
                         function setPaymentPref(pref) {
                             onboardingState.payment_pref = pref;
+                            saveWizardState();
                             nextStep(7);
                         }
 
                         function setTemplate(template, btn) {
                             onboardingState.website_template = template;
+                            saveWizardState();
                             selectWizardOption(btn);
                         }
 
                         function setDomainChoice(choice, btn) {
                             onboardingState.domain_choice = choice;
+                            saveWizardState();
                             selectWizardOption(btn);
                         }
 
@@ -4484,40 +4490,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (id === 'dashboard-screen') {
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
-                                fetch('/api/v1/dashboard/sales', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
+                                Promise.all([
+                                    fetch('/api/v1/dashboard/sales', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json()),
+                                    fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json())
+                                ])
+                                .then(([salesData, metricsData]) => {
                                     const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
-                                })
-                                .catch(err => console.error('Error fetching sales:', err));
+                                    if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
 
-                                fetch('/api/v1/dashboard/metrics', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
                                     const banner = document.getElementById('milestone-share-banner');
                                     const countEl = document.getElementById('milestone-customers-count');
                                     const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
                                     if (banner && countEl && !dismissed) {
-                                        if (data.active_customers > 0) {
+                                        if (metricsData.active_customers > 0) {
                                             banner.style.display = 'flex';
                                             banner.classList.remove('hidden');
-                                            countEl.textContent = data.active_customers;
+                                            countEl.textContent = metricsData.active_customers;
                                         } else {
                                             banner.style.display = 'none';
                                             banner.classList.add('hidden');
                                         }
                                     }
                                 })
-                                .catch(err => console.error('Error fetching metrics:', err));
+                                .catch(err => console.error('Error fetching dashboard data:', err));
                             }
 
                             if (id === 'my-plan-screen') {

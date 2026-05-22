@@ -36,19 +36,19 @@ graph TD
 - **Standalone Mode:** Implement an in-memory or SQLite-backed locking mechanism.
 
 **API Contracts:**
-- `AcquireLock(ctx async context, resource string, ttl time.Duration) (string, error)` (Returns a lock token).
-- `ReleaseLock(ctx async context, resource string, token string) error`.
+- `AcquireLock(ctx context.Context, resource string, ttl time.Duration) (string, error)` (Returns a lock token).
+- `ReleaseLock(ctx context.Context, resource string, token string) error`.
 
 **Security:**
 - Ensure `organization_id` prefixes are rigorously applied to resource keys in Cloud mode to enforce cross-tenant isolation and prevent one tenant from locking another tenant's resources.
 
 ## Implementation Prompt
 "Implement the Hybrid Distributed Lock MCP tool in `src/server/lib/integrations/distributed_lock/`.
-1. Create `lock.rs` defining the `LockManager` and its MCP capabilities (`AcquireLock`, `ReleaseLock`).
+1. Create `lock.go` defining the `LockManager` and its MCP capabilities (`AcquireLock`, `ReleaseLock`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed distributed lock ensuring `organization_id` is used as part of the lock key. Use a library like `bsm/redislock` or implement a standard Redlock algorithm.
 4. For Standalone mode, implement a robust in-memory or SQLite-backed lock.
-5. Create comprehensive tests in `lock_test.rs`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `lock_test.go`, mocking Redis and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Create an E2E test verifying that two simulated agents cannot concurrently hold a lock for the same resource. Mock the AI models.
 7. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 

@@ -71,11 +71,11 @@ interface SandboxExecutionResponse {
 ## Implementation Prompt
 Implement a Bubblewrap (`bwrap`) based Agent Harness Sandbox in Go.
 
-1.  **File Path:** `src/server/agents/harness/bwrap_sandbox.rs`
+1.  **File Path:** `src/server/agents/harness/bwrap_sandbox.go`
 2.  **Functionality:** Create a struct `BwrapSandbox` that takes a `SandboxExecutionRequest` and executes the command using `bwrap`.
 3.  **Security:** Mount the `workdir` with read-write access. Mount `/usr` and `/lib` as read-only. Unshare network (`--unshare-net`) unless explicitly requested.
 4.  **Telemetry:** Wrap the execution in an OpenTelemetry span, recording the command, exit code, and execution time.
-5.  **Testing:** Create `src/server/agents/harness/bwrap_sandbox_test.rs` with 100% coverage, ensuring successful execution and proper isolation (e.g., verifying network access is blocked).
+5.  **Testing:** Create `src/server/agents/harness/bwrap_sandbox_test.go` with 100% coverage, ensuring successful execution and proper isolation (e.g., verifying network access is blocked).
 6.  **E2E Test:** Create an E2E test to verify the complete Sandbox flow. Start from the home page after user login via the UI. Navigate the full feature flow by clicking links and buttons. After the process completes, assert the final product matches what the design docs describe. Every path must be covered with 100% E2E test coverage. Do not mock network requests.
 
 ## Priority

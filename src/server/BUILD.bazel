@@ -1,6 +1,11 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 
+filegroup(
+    name = "srcs",
+    srcs = glob(["**/*.rs"]),
+)
+
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
@@ -166,6 +171,7 @@ rust_binary(
         "ultraplan",
         "orchestration",
         "interop",
+        "workers",
     ]
 ]
 
@@ -192,7 +198,10 @@ rust_test(
     name = "telemetry_test",
     size = "large",
     srcs = ["telemetry_test.rs"],
-    data = ["//deploy/scripts:ohc-standalone.sh"],
+    data = [
+        "//deploy/scripts:ohc-standalone.sh",
+        "//src/server:srcs",
+    ],
     edition = "2024",
     deps = [
         "//src/server/config:server_config",
