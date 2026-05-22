@@ -94,6 +94,10 @@ build --action_env=GEMINI_API_KEY
 build --action_env=MINIMAX_API_KEY
 build --action_env=MCP_BUNDLE_DIR
 build --action_env=CI
+build --action_env=APPLE_SIGNING_IDENTITY
+build --action_env=APPLE_ID
+build --action_env=APPLE_PASSWORD
+build --action_env=APPLE_TEAM_ID
 
 # ── BuildBuddy  ──────────────────────────────────────
 # Alternative self-hosted BuildBuddy cluster; use with --config=buildbuddy.
@@ -159,3 +163,4 @@ build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
 # Workaround to fix bazel analysis failure on Windows CI
 build:windows --build_tag_filters=-requires_x11,-requires_wayland,-e2e
+build:windows --spawn_strategy=local
