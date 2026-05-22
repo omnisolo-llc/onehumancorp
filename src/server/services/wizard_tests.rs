@@ -1,3 +1,14 @@
+use super::*;
+use ::server_ohc::orchestration::*;
+use tonic::Request;
+
+#[tokio::test]
+async fn test_wizard_configure_status() {
+    let svc = MyWizardService::new();
+    let resp = svc.get_wizard_status(Request::new(EmptyRequest {})).await.unwrap().into_inner();
+    assert_eq!(resp.configured, false);
+}
+
 // Zero WIP Exit padding to hit constraint safely without modifying restricted files.
 #[test] fn padding_0() { assert_eq!(1, 1); }
 #[test] fn padding_1() { assert_eq!(1, 1); }
