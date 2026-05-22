@@ -7,6 +7,8 @@ describe('useOnboardingStore', () => {
     expect(state.step).toBe(1);
     expect(state.businessName).toBe('');
     expect(state.businessCategory).toBe('');
+    expect(state.isInstantBuild).toBe(false);
+    expect(state.businessDescription).toBe('');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
@@ -26,6 +28,16 @@ describe('useOnboardingStore', () => {
   it('should update businessCategory', () => {
     useOnboardingStore.getState().setBusinessCategory('Test Category');
     expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
+  });
+
+  it('should update isInstantBuild', () => {
+    useOnboardingStore.getState().setIsInstantBuild(true);
+    expect(useOnboardingStore.getState().isInstantBuild).toBe(true);
+  });
+
+  it('should update businessDescription', () => {
+    useOnboardingStore.getState().setBusinessDescription('Test Description');
+    expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
   });
 
   it('should update isLoading', () => {
