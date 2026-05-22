@@ -285,6 +285,19 @@ impl MinimaxClient {
                 Ok(resp) => {
                     if resp.status().is_success() {
                         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+
+                        // Handle Minimax base_resp envelope
+                        if let Some(base_resp) = result.get("base_resp") {
+                            let code = base_resp.get("status_code").and_then(|c| c.as_i64()).unwrap_or(0);
+                            if code != 0 && code != 1000 {
+                                cb.record_failure();
+                                let msg = base_resp.get("status_msg").and_then(|m| m.as_str()).unwrap_or("unknown error");
+                                last_err = format!("API error (status {}): {}", code, msg);
+                                tokio::time::sleep(Duration::from_secs(1)).await;
+                                continue;
+                            }
+                        }
+
                         cb.record_success();
                         if let Some(vectors) = result["vectors"].as_array() {
                             if let Some(vector) = vectors.first() {
