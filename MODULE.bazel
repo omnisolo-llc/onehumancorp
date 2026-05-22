@@ -345,3 +345,7 @@ use_repo(
     "yq_windows_amd64",
     "yq_windows_arm64",
 )
+
+# rules_js resolves host yq by apparent repo name while parsing pnpm-lock.yaml.
+# Make the Windows ARM64 yq repo visible to its npm extension on ARM64 runners.
+inject_repo(npm, "yq_windows_arm64")
