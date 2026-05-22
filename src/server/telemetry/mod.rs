@@ -1,3 +1,4 @@
+pub mod sync_worker;
 pub use ::server_config as config;
 use serde_json::{Value, Map};
 use sqlx::{PgPool, query};
@@ -196,9 +197,6 @@ pub async fn record_rag_escalation(pool: &PgPool, org_id: &str, error: &str) -> 
     buffer_metric(pool, "ohc_rag_escalation_total", "counter", 1.0, serde_json::json!({ "organization_id": org_id, "error": error })).await
 }
 
-
-use sqlx::sqlite::SqlitePoolOptions;
-use sqlx::SqlitePool;
 
 static STANDALONE_SQLITE_POOL: OnceLock<SqlitePool> = OnceLock::new();
 
