@@ -208,7 +208,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, showDocsLink?: boolean}[]>([
+  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -228,26 +228,12 @@ export function HelpWidget() {
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([
-    { id: 1, title: "How to add a product", duration: "1:20" },
-    { id: 2, title: "Setting up payments", duration: "1:15" },
-    { id: 3, title: "Managing inventory", duration: "0:50" },
-    { id: 4, title: "Adding team members", duration: "1:05" },
-    { id: 5, title: "Reviewing orders", duration: "1:10" },
-    { id: 6, title: "Connecting social media", duration: "1:25" },
-    { id: 7, title: "Using the builder", duration: "1:30" },
-    { id: 8, title: "Understanding analytics", duration: "1:00" },
-    { id: 9, title: "Fulfilling orders", duration: "0:45" },
-    { id: 10, title: "Processing refunds", duration: "0:55" }
-  ]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
 
   useEffect(() => {
-    // Local videos take precedence if no API
     fetch("/api/videos")
       .then(res => res.json())
-      .then(data => {
-        if (data && data.length > 0) setVideos(data);
-      })
+      .then(data => setVideos(data))
       .catch(() => {});
   }, []);
 
@@ -260,9 +246,9 @@ export function HelpWidget() {
       try {
         const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
         const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: data.reply }]);
       } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now.", showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
       }
     }
   };
@@ -323,7 +309,7 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "View the real-time actions performed by your AI workforce." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Connect your bank account here." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
@@ -346,14 +332,7 @@ export function HelpWidget() {
                         : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
-                      <div key={idx} className={className}>
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.showDocsLink && (
-                          <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href="/api-docs" className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
-                          </div>
-                        )}
-                      </div>
+                      <div key={idx} className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
                     ) : (
                       <div key={idx} className={className}>{msg.text}</div>
                     );
