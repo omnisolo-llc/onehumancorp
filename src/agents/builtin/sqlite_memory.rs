@@ -18,11 +18,10 @@ impl SqliteMemoryStore {
 
         // Initialize table
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS agent_memory (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                content TEXT NOT NULL,
-                tags TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            "CREATE VIRTUAL TABLE IF NOT EXISTS agent_memory USING fts5(
+                content,
+                tags,
+                created_at UNINDEXED
             )"
         )
         .execute(&pool)
@@ -46,9 +45,9 @@ impl LongTermMemory for SqliteMemoryStore {
     }
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        // Simple text search for long term memory retrieval
-        let search_pattern = format!("%{}%", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE content LIKE ? LIMIT ?")
+        // FTS5 session search for long term memory retrieval
+        let search_pattern = format!("\"{}\"", query);
+        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
             .bind(search_pattern)
             .bind(limit as i64)
             .fetch_all(&self.pool)
