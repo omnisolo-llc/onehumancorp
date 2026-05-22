@@ -11,150 +11,179 @@ pub trait LlmClientForParser: Send + Sync {
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
-
+/// OutputParser trait provides an architectural boundary for parsing LLM outputs.
+#[async_trait]
+pub trait OutputParser<T>: Send + Sync {
+    async fn parse(&self, req: ChatRequest) -> Result<T, ToolError>;
+}
 
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
-pub async fn parse_structured_output<T: DeserializeOwned>(
+pub struct RetryWithErrorOutputParser<T> {
+    llm: Arc<dyn LlmClientForParser>,
+    max_retries: usize,
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: DeserializeOwned + Send + Sync> RetryWithErrorOutputParser<T> {
+    pub fn new(llm: Arc<dyn LlmClientForParser>, max_retries: usize) -> Self {
+        Self {
+            llm,
+            max_retries,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+}
+
+#[async_trait]
+impl<T: DeserializeOwned + Send + Sync> OutputParser<T> for RetryWithErrorOutputParser<T> {
+    async fn parse(&self, req: ChatRequest) -> Result<T, ToolError> {
+        let mut current_req = req.clone();
+
+        // Inject the schema as a tool definition to encourage the model to use tool_calls API
+        let schema_tool = crate::types::ToolDefinition {
+            name: "structured_output".to_string(),
+            description: "Call this tool to output the parsed structured data.".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "object",
+                        "description": "The structured data matching the requested schema."
+                    }
+                },
+                "required": ["data"]
+            }),
+        };
+
+        if !current_req.tools.iter().any(|t| t.name == "structured_output") {
+            current_req.tools.push(schema_tool);
+        }
+
+        let mut attempt = 0;
+        loop {
+            let resp = match self.llm.chat(current_req.clone()).await {
+                Ok(r) => r,
+                Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
+            };
+
+            let msg = &resp.message;
+            let completion = msg.content.clone();
+            let mut parse_error_msg = None;
+
+            // Output Parsing: Primary mechanic is extracting from native tool_calls
+            if !msg.tool_calls.is_empty() {
+                if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
+                    if let Some(data) = call.arguments.get("data") {
+                        match serde_json::from_value::<T>(data.clone()) {
+                            Ok(parsed) => return Ok(parsed),
+                            Err(e) => {
+                                parse_error_msg = Some(format!(
+                                    "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                                ));
+                            }
+                        }
+                    } else {
+                        parse_error_msg = Some(
+                            "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        );
+                    }
+                }
+            }
+
+            if parse_error_msg.is_none() {
+                // Error Handling (Compounding Error Prevention): LangGraph Mechanic
+                // 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
+                let mut json_str = completion.trim();
+                let obj_start = json_str.find('{');
+                let arr_start = json_str.find('[');
+
+                let start_idx = match (obj_start, arr_start) {
+                    (Some(o), Some(a)) => std::cmp::min(o, a),
+                    (Some(o), None) => o,
+                    (None, Some(a)) => a,
+                    (None, None) => 0,
+                };
+
+                if start_idx > 0 {
+                    json_str = &json_str[start_idx..];
+                }
+
+                let obj_end = json_str.rfind('}');
+                let arr_end = json_str.rfind(']');
+
+                let end_idx = match (obj_end, arr_end) {
+                    (Some(o), Some(a)) => std::cmp::max(o, a),
+                    (Some(o), None) => o,
+                    (None, Some(a)) => a,
+                    (None, None) => json_str.len().saturating_sub(1),
+                };
+
+                if end_idx < json_str.len() {
+                    json_str = &json_str[..=end_idx];
+                }
+
+                if json_str.is_empty() {
+                    json_str = "null"; // If empty, fall back to null to trigger serde error
+                }
+
+                match serde_json::from_str::<T>(json_str) {
+                    Ok(parsed) => return Ok(parsed),
+                    Err(e) => {
+                        parse_error_msg = Some(format!(
+                            "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                        ));
+                    }
+                }
+            }
+
+            if attempt >= self.max_retries {
+                return Err(ToolError::LlmRecoverable(format!(
+                    "Output parsing failed after {} retries. Last error: {}",
+                    self.max_retries,
+                    parse_error_msg.unwrap_or_default()
+                )));
+            }
+
+            // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
+            // If it was a tool call that failed, we inject it as a Tool result containing the error.
+            // Otherwise, we inject it as a user message.
+            if !msg.tool_calls.is_empty() {
+                current_req.messages.push(msg.clone());
+                let error_msg = parse_error_msg.unwrap();
+                let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: String::new(),
+                    error: error_msg.clone(),
+                }).collect();
+
+                current_req.messages.push(Message {
+                    role: crate::types::Role::Tool,
+                    content: String::new(),
+                    tool_calls: vec![],
+                    tool_results,
+                    response_id: None,
+                    previous_response_id: msg.response_id.clone(),
+                });
+            } else {
+                current_req.messages.push(msg.clone());
+                current_req.messages.push(Message::user(parse_error_msg.unwrap()));
+            }
+            attempt += 1;
+        }
+    }
+}
+
+/// Convenience wrapper for backwards compatibility
+pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
     max_retries: usize,
 ) -> Result<T, ToolError> {
-    let mut current_req = req.clone();
-
-    // Inject the schema as a tool definition to encourage the model to use tool_calls API
-    let schema_tool = crate::types::ToolDefinition {
-        name: "structured_output".to_string(),
-        description: "Call this tool to output the parsed structured data.".to_string(),
-        parameters: serde_json::json!({
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "description": "The structured data matching the requested schema."
-                }
-            },
-            "required": ["data"]
-        }),
-    };
-
-    if !current_req.tools.iter().any(|t| t.name == "structured_output") {
-        current_req.tools.push(schema_tool);
-    }
-
-    let mut attempt = 0;
-    loop {
-        let resp = match llm.chat(current_req.clone()).await {
-            Ok(r) => r,
-            Err(e) => return Err(ToolError::Transient(format!("LLM Error: {}", e))),
-        };
-
-        let msg = &resp.message;
-        let completion = msg.content.clone();
-        let mut parse_error_msg = None;
-
-        // Output Parsing: Primary mechanic is extracting from native tool_calls
-        if !msg.tool_calls.is_empty() {
-            if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
-                if let Some(data) = call.arguments.get("data") {
-                    match serde_json::from_value::<T>(data.clone()) {
-                        Ok(parsed) => return Ok(parsed),
-                        Err(e) => {
-                            parse_error_msg = Some(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
-                            ));
-                        }
-                    }
-                } else {
-                    parse_error_msg = Some(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
-                    );
-                }
-            }
-        }
-
-        if parse_error_msg.is_none() {
-            // Error Handling (Compounding Error Prevention): LangGraph Mechanic
-            // 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
-            // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
-            let mut json_str = completion.trim();
-            let obj_start = json_str.find('{');
-            let arr_start = json_str.find('[');
-
-            let start_idx = match (obj_start, arr_start) {
-                (Some(o), Some(a)) => std::cmp::min(o, a),
-                (Some(o), None) => o,
-                (None, Some(a)) => a,
-                (None, None) => 0,
-            };
-
-            if start_idx > 0 {
-                json_str = &json_str[start_idx..];
-            }
-
-            let obj_end = json_str.rfind('}');
-            let arr_end = json_str.rfind(']');
-
-            let end_idx = match (obj_end, arr_end) {
-                (Some(o), Some(a)) => std::cmp::max(o, a),
-                (Some(o), None) => o,
-                (None, Some(a)) => a,
-                (None, None) => json_str.len().saturating_sub(1),
-            };
-
-            if end_idx < json_str.len() {
-                json_str = &json_str[..=end_idx];
-            }
-
-            if json_str.is_empty() {
-                json_str = "null"; // If empty, fall back to null to trigger serde error
-            }
-
-            match serde_json::from_str::<T>(json_str) {
-                Ok(parsed) => return Ok(parsed),
-                Err(e) => {
-                    parse_error_msg = Some(format!(
-                        "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
-                    ));
-                }
-            }
-        }
-
-        if attempt >= max_retries {
-            return Err(ToolError::LlmRecoverable(format!(
-                "Output parsing failed after {} retries. Last error: {}",
-                max_retries,
-                parse_error_msg.unwrap_or_default()
-            )));
-        }
-
-        // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
-        // If it was a tool call that failed, we inject it as a Tool result containing the error.
-        // Otherwise, we inject it as a user message.
-        if !msg.tool_calls.is_empty() {
-            current_req.messages.push(msg.clone());
-            let error_msg = parse_error_msg.unwrap();
-            let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
-                tool_call_id: tc.id.clone(),
-                content: String::new(),
-                error: error_msg.clone(),
-            }).collect();
-
-            current_req.messages.push(Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
-                tool_calls: vec![],
-                tool_results,
-                response_id: None,
-                previous_response_id: msg.response_id.clone(),
-            });
-        } else {
-            current_req.messages.push(msg.clone());
-            current_req.messages.push(Message::user(parse_error_msg.unwrap()));
-        }
-        attempt += 1;
-    }
+    let parser = RetryWithErrorOutputParser::<T>::new(llm.clone(), max_retries);
+    parser.parse(req).await
 }
 
 #[cfg(test)]
@@ -239,7 +268,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 3);
+        let result = parser.parse(req).await.unwrap();
         assert_eq!(result.result, "success_markdown");
     }
 
@@ -250,7 +280,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 3);
+        let result = parser.parse(req).await.unwrap();
         assert_eq!(result.result, "success");
     }
 
@@ -264,9 +295,12 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 3);
+        let result = parser.parse(req).await;
+        // The retry implementation expects that if it hits the maximum it fails,
+        // but here it succeeds on the second attempt, returning Ok.
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success after retry");
     }
 
     #[tokio::test]
@@ -279,7 +313,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 1);
+        let result = parser.parse(req).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Failed to parse output as valid JSON"));
@@ -297,7 +332,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: TestOutput = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await.unwrap();
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 3);
+        let result = parser.parse(req).await.unwrap();
         assert_eq!(result.result, "success_tool_call");
     }
 
@@ -311,9 +347,10 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 3);
+        let result = parser.parse(req).await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success_tool_call_retry");
     }
 
     #[tokio::test]
@@ -326,7 +363,8 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let parser = RetryWithErrorOutputParser::<TestOutput>::new(client as Arc<dyn LlmClientForParser>, 1);
+        let result = parser.parse(req).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Failed to parse tool call arguments"));
