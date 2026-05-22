@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'agent_dashboard.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
@@ -20,17 +21,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
+  final TextEditingController _bioController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
+    _fetchState();
+  }
+
+  @override
+  void dispose() {
+    _bioController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchState() async {
+    try {
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
+      final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/state'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            if (data['bio'] != null) {
+              bio = data['bio'];
+              _bioController.text = bio;
+            }
+            if (data['step'] != null) {
+              int stepIndex = data['step'] as int;
+              if (stepIndex >= 0 && stepIndex < OnboardingState.values.length) {
+                _state = OnboardingState.values[stepIndex];
+              }
+            }
+          });
+        }
+      }
+    } catch (e) {
+      print('Error fetching state: $e');
+    }
   }
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
       setState(() => _state = OnboardingState.generating);
+      _saveState(bio);
 
       try {
         final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
@@ -77,6 +115,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
     } catch (e) {
       print('Error launching: \$e');
+    }
+  }
+
+  Future<void> _saveState(String currentBio) async {
+    try {
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
+      await _client.post(
+        Uri.parse('$baseUrl/api/onboarding/state'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'bio': currentBio,
+          'step': _state.index,
+        }),
+      );
+    } catch (e) {
+      print('Error saving state: $e');
     }
   }
 
@@ -227,6 +281,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             SizedBox(height: 32),
             TextFormField(
               key: Key('bio-input'), // for testing or just semantics
+              controller: _bioController,
+              autofocus: true,
               maxLines: 4,
               textInputAction: TextInputAction.done,
               keyboardType: TextInputType.multiline,
@@ -247,6 +303,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               validator: (value) =>
                   value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => bio = value!,
+              onChanged: (value) {
+                bio = value;
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                _debounce = Timer(const Duration(milliseconds: 500), () {
+                  _saveState(value);
+                });
+              },
             ),
             SizedBox(height: 32),
             ElevatedButton(

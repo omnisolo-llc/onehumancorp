@@ -11,6 +11,12 @@ void main() {
         return http.Response('{"status": "ok"}', 200);
       } else if (request.url.path == '/api/onboarding/launch') {
         return http.Response('{"status": "ok"}', 200);
+      } else if (request.url.path == '/api/onboarding/state') {
+        if (request.method == 'GET') {
+          return http.Response('{"bio": "Existing saved bio."}', 200);
+        } else if (request.method == 'POST') {
+          return http.Response('{"status": "ok"}', 200);
+        }
       }
       return http.Response('Not Found', 404);
     });
@@ -32,8 +38,13 @@ void main() {
     expect(textFieldWidget.textInputAction, TextInputAction.done);
     expect(textFieldWidget.keyboardType, TextInputType.multiline);
     expect(textFieldWidget.textCapitalization, TextCapitalization.sentences);
+    expect(textFieldWidget.controller?.text, "Existing saved bio.");
 
-    // Tap without entering text to trigger validation
+    // Fill out the bio form with empty to trigger validation
+    await tester.enterText(find.byKey(Key('bio-input')), "");
+    await tester.pumpAndSettle();
+
+    // Tap to build my storefront
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
