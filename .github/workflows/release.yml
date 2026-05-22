@@ -160,18 +160,22 @@ jobs:
         include:
           - name: windows-x86_64
             runner: windows-latest
+            bundles: msi,nsis
             patterns: "*.msi *.exe"
             install_linux_deps: false
           - name: macos-aarch64
             runner: macos-15
+            bundles: dmg
             patterns: "*.dmg"
             install_linux_deps: false
           - name: macos-x86_64
             runner: macos-15-intel
+            bundles: dmg
             patterns: "*.dmg"
             install_linux_deps: false
           - name: linux-x86_64
             runner: ubuntu-latest
+            bundles: deb,rpm
             patterns: "*.deb *.rpm"
             install_linux_deps: true
     steps:
@@ -185,10 +189,11 @@ jobs:
           sudo apt-get install -y --no-install-recommends --fix-missing \
             build-essential pkg-config libssl-dev \
             libdbus-1-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
-            libjavascriptcoregtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev libsoup-3.0-dev libxdo-dev \
-            libxcb-shape0-dev libxcb-xfixes0-dev \
-            ca-certificates curl wget file git patchelf rpm
+            libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
+            ca-certificates curl git patchelf rpm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -234,6 +239,12 @@ jobs:
             build --color=yes
             build --show_timestamps
 
+      - name: Build Tauri CLI with Bazel
+        run: |
+          bazelisk build @crates//:tauri-cli__cargo-tauri
+          tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
+          echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
+
       - name: Install macOS signing assets
         if: runner.os == 'macOS'
         env:
@@ -271,21 +282,26 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build Tauri installer
-        run: bazelisk build //src/ui/tauri:tauri_desktop_installers
+        run: cargo tauri build --bundles "${{ matrix.bundles }}"
+        working-directory: src/ui/tauri
 
       - name: Collect desktop installer artifacts
         run: |
           mkdir -p dist
-          bazelisk cquery --output=files //src/ui/tauri:tauri_desktop_installers > desktop-installer-files.txt
+          roots=()
+          for root in target src/ui/tauri/target; do
+            if [[ -d "$root/release/bundle" ]]; then
+              roots+=("$root/release/bundle")
+            fi
+          done
+          if [[ ${#roots[@]} -eq 0 ]]; then
+            echo "No Tauri bundle directory found" >&2
+            exit 1
+          fi
           for pattern in ${{ matrix.patterns }}; do
             while IFS= read -r artifact; do
-              [[ -f "$artifact" ]] || continue
-              case "$(basename "$artifact")" in
-                $pattern)
-                  cp "$artifact" "dist/${{ matrix.name }}-$(basename "$artifact")"
-                  ;;
-              esac
-            done < desktop-installer-files.txt
+              cp "$artifact" "dist/${{ matrix.name }}-$(basename "$artifact")"
+            done < <(find "${roots[@]}" -type f -name "$pattern")
           done
           if ! find dist -type f | grep -q .; then
             echo "No desktop installer artifacts matched ${{ matrix.patterns }}" >&2
