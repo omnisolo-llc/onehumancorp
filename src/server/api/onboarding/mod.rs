@@ -13,6 +13,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
+        .route("/draft", get(get_draft).post(save_draft))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -30,6 +31,40 @@ async fn process_intake_handler(
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
     match agent.process_intake(&payload.description).await {
         Ok(data) => Ok(Json(data)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn get_draft(
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    match agent.get_onboarding_state(tenant_id).await {
+        Ok(state) => {
+            // For now, extract the bio field if we store it as a general state document
+            // If there's no state or bio, returning an empty json is fine
+            if let Some(bio) = state.get("bio") {
+                Ok(Json(serde_json::json!({ "bio": bio })))
+            } else {
+                Ok(Json(serde_json::json!({ "bio": "" })))
+            }
+        },
+        Err(_) => Ok(Json(serde_json::json!({ "bio": "" }))), // fallback
+    }
+}
+
+async fn save_draft(
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<serde_json::Value>,
+) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+
+    // Persist as step 0 or merge into state. Here we treat step=0 as drafting phase.
+    match agent.save_onboarding_state(tenant_id, user_id, 0, &payload).await {
+        Ok(_) => Ok(axum::http::StatusCode::OK),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
