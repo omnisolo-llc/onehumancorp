@@ -2,6 +2,7 @@ filegroup(
     name = "srcs",
     srcs = [
         "mod.rs",
+        "sandbox.rs",
         "//src/server/agents/mcp:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
