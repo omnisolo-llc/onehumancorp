@@ -56,6 +56,8 @@ impl PgCheckpointer {
 
 pub struct GitCheckpointer {
     // State Management: Git Commit Checkpointing Mechanic
+    // As per the Master Catalog (Claude Code Mechanic): Uses git commits as checkpoints
+    // and local progress files as structured scratchpads.
     repo_path: PathBuf,
 }
 
