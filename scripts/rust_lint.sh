@@ -8,6 +8,6 @@ if [[ ${#targets[@]} -eq 0 ]]; then
   targets=(//...)
 fi
 
-exec bazelisk test \
+exec npx bazelisk test \
   --@rules_rust//rust/settings:extra_rustc_flag=-Dwarnings \
   "${targets[@]}"
