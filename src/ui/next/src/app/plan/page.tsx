@@ -97,9 +97,12 @@ export default function MyPlanPage() {
                     <h2 className="text-sm font-medium text-gray-500 mb-1">Estimated Next Bill</h2>
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
-                <div className="flex flex-col justify-center">
+                <div className="flex flex-col justify-center gap-2">
                     <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
                         Upgrade Plan
+                    </button>
+                    <button onClick={() => router.push('/cost-dashboard')} className="w-full py-3 bg-gray-200 text-gray-800 font-medium rounded-lg hover:bg-gray-300 transition-colors">
+                        View Cost Details
                     </button>
                 </div>
             </div>
