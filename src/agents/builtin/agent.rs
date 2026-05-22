@@ -1880,15 +1880,16 @@ impl Agent {
                     };
 
                     struct ParserClientWrapper {
-                        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+                        llm: Arc<dyn ohc_builtin_agent_llm::LlmClient>,
                     }
                     #[async_trait::async_trait]
                     impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
-                        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                        async fn chat(&self, req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                             self.llm.chat(req).await
                         }
                     }
-                    let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
+
+                    let parser_client: Arc<dyn crate::output_parser::LlmClientForParser> = Arc::new(ParserClientWrapper { llm: self.llm.clone() });
                     match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
                         Ok(eval) => {
                             if eval.status.to_uppercase() == "REJECT" {
