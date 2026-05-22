@@ -2704,8 +2704,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
 
                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
+                                <p style="margin: 0; font-weight: bold; color: white; text-align: left; margin-right: 12px;">Your Referral Link</p>
                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                                <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Copied');">Copy</button>
                             </div>
                         </div>
 
@@ -2750,8 +2751,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
                                 </div>
-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
                             </div>
+                            <button class="secondary" style="margin-top: 12px; width: 100%;" onclick="alert('Export Data shown')">Export Data</button>
+                        </div>
+                        <div class="card glass" style="margin-top: 24px;">
+                            <h3 style="margin-bottom: 4px;">Invite Message</h3>
+                            <div style="background: rgba(0,0,0,0.05); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                Launch your business online instantly with OHC! Use my invite link: ohc://join?ref=DEFAULT
+                            </div>
+                            <button onclick="navigator.clipboard.writeText('Launch your business online instantly with OHC! Use my invite link: ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
+                            <p id="invite-copied-msg" style="display: none; color: green; font-size: 14px; margin-top: 8px;">Invite message copied!</p>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
