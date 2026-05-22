@@ -3244,7 +3244,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 0 auto; max-width: 375px; overflow: hidden; position: relative;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
@@ -4007,32 +4007,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
 
                         function validateInputs(stepId) {
+                            let isValid = true;
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => {
+                                    if (inp.value.trim().length > 0) valid = true;
+                                    inp.addEventListener('input', () => { inp.style.border = ''; });
+                                });
                                 if (!valid) {
-                                    alert('Please enter a business name');
-                                    return false;
+                                    inputs.forEach(inp => { inp.style.border = '2px solid #FF3B30'; });
+                                    isValid = false;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
                                 const inputs = document.querySelectorAll('#step-5 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => {
+                                    if (inp.value.trim().length > 0) valid = true;
+                                    inp.addEventListener('input', () => { inp.style.border = ''; });
+                                });
                                 if (!valid) {
-                                    alert('Please enter a product or service');
-                                    return false;
+                                    inputs.forEach(inp => { inp.style.border = '2px solid #FF3B30'; });
+                                    isValid = false;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
-                                    alert('Please enter a valid email address');
-                                    return false;
+                                    if (emailInput) {
+                                        emailInput.style.border = '2px solid #FF3B30';
+                                        emailInput.addEventListener('input', () => { emailInput.style.border = ''; });
+                                    }
+                                    isValid = false;
                                 }
                             }
-                            return true;
+                            return isValid;
                         }
 
 
@@ -4076,17 +4086,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
+                                    d.style.transition = 'opacity 150ms cubic-bezier(0.4, 0, 0.2, 1)';
+                                    d.style.opacity = '0';
                                     d.classList.add('hidden');
                                     d.style.display = 'none'; // Fallback for old e2e logic
-                                    setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
+                                    setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 150);
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
                                 }
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
+                                next.style.transition = 'opacity 250ms cubic-bezier(0.4, 0, 0.2, 1)';
+                                next.style.opacity = '0';
                                 next.style.display = 'block'; // Fallback for old e2e logic
-                                setTimeout(() => next.classList.remove('hidden'), 10);
+                                setTimeout(() => {
+                                    next.classList.remove('hidden');
+                                    next.style.opacity = '1';
+                                }, 10);
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
