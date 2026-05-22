@@ -327,3 +327,11 @@ use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+use_repo(
+    go_deps,
+    "org_golang_google_grpc",
+    "org_golang_google_protobuf",
+)

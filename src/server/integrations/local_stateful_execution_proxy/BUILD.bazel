@@ -1,0 +1,23 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "local_stateful_execution_proxy",
+    srcs = ["proxy.go", "metrics.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/integrations/local_stateful_execution_proxy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:mcp_proxy_go_proto",
+        "@org_golang_google_grpc//:grpc",
+    ],
+)
+
+go_test(
+    name = "local_stateful_execution_proxy_test",
+    srcs = ["proxy_test.go"],
+    embed = [":local_stateful_execution_proxy"],
+    deps = [
+        "//src/proto:mcp_proxy_go_proto",
+        "@org_golang_google_grpc//:grpc",
+        "@org_golang_google_grpc//credentials/insecure",
+    ],
+)

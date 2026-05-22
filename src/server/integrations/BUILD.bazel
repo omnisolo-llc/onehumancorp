@@ -34,3 +34,5 @@ filegroup(
     ],
     visibility = ["//src/server:__pkg__"],
 )
+
+# The go binary is exposed via its own BUILD file.
