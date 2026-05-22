@@ -139,7 +139,18 @@ impl Provider for LocalProvider {
 
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
-            tokio::fs::create_dir_all(parent).await?;
+            #[cfg(unix)]
+            {
+                tokio::fs::DirBuilder::new()
+                    .mode(0o700)
+                    .recursive(true)
+                    .create(parent)
+                    .await?;
+            }
+            #[cfg(not(unix))]
+            {
+                tokio::fs::create_dir_all(parent).await?;
+            }
         }
 
         // Quota Enforcement
