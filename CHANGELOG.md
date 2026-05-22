@@ -1,3 +1,11 @@
+## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Improved cloud scaling and multi-tenant capabilities.
+
+### Privacy/Offline Improvements
+- Enhanced offline telemetry privacy rules and standalone features.
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
