@@ -1,3 +1,11 @@
+## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Enhance multi-environment promotion across Cloud staging.
+
+### Privacy/Offline Improvements
+- Enforce local offline usage and privacy for Standalone desktop beta builds.
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
