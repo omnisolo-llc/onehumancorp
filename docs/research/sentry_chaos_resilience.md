@@ -8,7 +8,7 @@ This report outlines the rigorous stress-testing and chaos engineering experimen
 
 We verified functional parity between Cloud (PostgreSQL) and Standalone (SQLite) modes:
 
-* **Tenant Isolation (RLS/Scoping)**: Confirmed via `src/server/db/rls_integration_test.rs` and `src/server/db/unified_data_model_test.rs`. Both databases correctly isolate records to their respective tenants.
+* **Tenant Isolation (RLS/Scoping)**: Confirmed via `srcs/server/db/rls_integration_test.go` and `srcs/server/db/unified_data_model_test.go`. Both databases correctly isolate records to their respective tenants.
 * **Graceful Degradation for Tests**: Following strict memory guidelines, our CI environment properly degrades when real databases are missing by utilizing `t.Skipf()`. Removing these skips would violate parity and resilience rules.
 
 ## 3. Chaos Engineering Validations

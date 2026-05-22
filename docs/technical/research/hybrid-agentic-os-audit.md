@@ -18,7 +18,7 @@ Current market leaders focus primarily on pure-cloud or pure-local modalities. O
 | Capability | Replit Agent | Claude Code | OpenClaw | **OHC (The Hybrid Standard)** |
 | :--- | :--- | :--- | :--- | :--- |
 | **Cloud-Native Mode** | Full (Containerized) | None | Full (K8s) | **Multi-tenant Postgres/Redis horizontal scale** |
-| **Standalone Desktop Mode** | None | Full (CLI) | None | **Local SQLite with native Tauri host shell** |
+| **Standalone Desktop Mode** | None | Full (CLI) | None | **Local SQLite with native Slint Host shell** |
 | **Air-gapped Execution** | No | No (API required) | No | **Yes (via local fallback & embedded models)** |
 | **Agent Auth / Identity** | User-tied OAuth | CLI API Key | Static Tokens | **SPIFFE/SPIRE zero-trust native identity** |
 ### The Discovery
@@ -55,7 +55,7 @@ Based on the audit, the following high-fidelity mission is prioritized for immed
 
 ```mermaid
 graph TD
-    A[User Trigger (Tauri Desktop)] -->|Resource Check| B{Local Compute Available?}
+    A[User Trigger (Slint Desktop)] -->|Resource Check| B{Local Compute Available?}
     B -- Yes --> C[Execute via Local SQLite SIPDB]
     B -- No --> D[Initiate Swarm Bursting]
     D -->|SPIFFE Auth| E[OHC Headless Cloud API]
