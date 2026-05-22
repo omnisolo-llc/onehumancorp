@@ -85,6 +85,7 @@ rust_library(
         "//src/agents/builtin/llm",
         "//src/agents/builtin/tools",
         "//src/server/pricing:server_pricing",
+        "//src/server/telemetry:server_telemetry",
     ] + [
         "@crates//:tempfile",
         "@crates//:base64",
