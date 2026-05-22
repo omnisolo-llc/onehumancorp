@@ -20,6 +20,11 @@ export default function Dashboard() {
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+  // Growth Loop: Automated Review Request State
+  const [isReviewGenerating, setIsReviewGenerating] = useState<boolean>(false);
+  const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
+  const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
+
 
   useEffect(() => {
     async function checkMilestones() {
@@ -131,6 +136,30 @@ export default function Dashboard() {
         if (ws) ws.close();
     };
   }, []);
+
+  const handleGenerateReviewCampaign = async () => {
+    setIsReviewGenerating(true);
+    try {
+      const response = await fetch("/api/v1/growth/campaign/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Automated Review Request",
+          subject: "How did we do? Leave a review!",
+          body: "We hope you loved your recent purchase. Please leave a review.",
+          target_segment: "recent_buyers_no_review"
+        })
+      });
+      const data = await response.json();
+      setReviewEmailsSent(data.emails_sent);
+      setReviewCampaignSent(true);
+    } catch (e) {
+      console.error("Failed to generate review campaign", e);
+    } finally {
+      setIsReviewGenerating(false);
+    }
+  };
+
 
   const handleApprove = async (id: string, approved: boolean) => {
     try {
@@ -328,6 +357,37 @@ export default function Dashboard() {
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💻</div>
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
+                </div>
+            </div>
+         </section>
+
+
+         {/* Growth Loop: Automated AI Review Requests */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: "#1D1D1F" }}>Automated Review Requests</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: "rgba(255, 255, 255, 0.03)", backdropFilter: "blur(20px) saturate(200%)", border: "1px solid rgba(255, 255, 255, 0.08)", borderColor: "rgba(0,0,0,0.05)", backgroundColor: "#ffffff" }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Your Trust Score</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+                        You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    </p>
+                    {reviewCampaignSent ? (
+                        <div className="inline-flex items-center gap-2 text-green-600 font-semibold bg-green-50 px-4 py-2 rounded-lg border border-green-100">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            Campaign sent to {reviewEmailsSent} customers!
+                        </div>
+                    ) : (
+                        <button onClick={handleGenerateReviewCampaign} disabled={isReviewGenerating} className={`px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-all ${isReviewGenerating ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"}`}>
+                            {isReviewGenerating ? "Generating..." : "✨ Send AI Review Requests"}
+                        </button>
+                    )}
                 </div>
             </div>
          </section>
