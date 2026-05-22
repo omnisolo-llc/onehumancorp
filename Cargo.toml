@@ -63,6 +63,7 @@ prost-types = { workspace = true }
 tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
+strsim = "0.11.1"
 
 [build-dependencies]
 tonic-build = "0.12"

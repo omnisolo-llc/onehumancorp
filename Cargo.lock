@@ -5539,6 +5539,7 @@ dependencies = [
  "serde_yaml",
  "sha2",
  "sqlx",
+ "strsim",
  "tauri-cli",
  "temp-env",
  "tempfile",

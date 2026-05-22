@@ -68,6 +68,7 @@ rust_library(
         "registry.rs",
         "service.rs",
         "consolidation_worker.rs",
+        "expert_team.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -90,6 +91,7 @@ rust_library(
     ] + [
         "@crates//:tempfile",
         "@crates//:base64",
+        "@crates//:strsim",
         "@crates//:chrono",
         "@crates//:flate2",
         "@crates//:futures",
