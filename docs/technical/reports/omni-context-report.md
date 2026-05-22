@@ -45,7 +45,7 @@ graph TD
 
 ## Validation & Implementation Feasibility
 
-Technically feasible by extending the current `agent_missions` table injection logic (in `src/server/orchestration/sip.go` or `tasks.go`). The orchestrator simply scans the root for `AGENTS.md` and appends its contents directly to the `payload` TEXT blob under a `[SYSTEM GROUNDING]` namespace.
+Technically feasible by extending the current `agent_missions` table injection logic in the Rust SIP/task modules. The orchestrator simply scans the root for `AGENTS.md` and appends its contents directly to the `payload` TEXT blob under a `[SYSTEM GROUNDING]` namespace.
 
 This design document initiates the workflow to create a formal mission brief for implementation.
 

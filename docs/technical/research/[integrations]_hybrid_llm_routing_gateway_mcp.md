@@ -38,8 +38,8 @@ graph TD;
 - **Standalone Mode:** Connect directly to `localhost:11434` (Ollama default) or similar local socket for offline inference.
 
 **API Contracts:**
-- `GenerateCompletion(ctx context.Context, prompt string, model string, options map[string]interface{}) (string, error)`
-- `GenerateEmbeddings(ctx context.Context, text string, model string) ([]float32, error)`
+- `GenerateCompletion(ctx async context, prompt string, model string, options map[string]interface{}) (string, error)`
+- `GenerateEmbeddings(ctx async context, text string, model string) ([]float32, error)`
 
 **Security:**
 - Apply `RedactInterfacePII` to all prompts in Cloud Mode before sending payload to external LLM providers.
@@ -47,12 +47,12 @@ graph TD;
 
 ## Implementation Prompt
 "Implement the Hybrid LLM Routing Gateway MCP tool in `src/server/lib/integrations/llm_router/`.
-1. Create `llm_router.go` defining the `LLMRouterManager` and its MCP capabilities (`GenerateCompletion`, `GenerateEmbeddings`).
+1. Create `llm_router.rs` defining the `LLMRouterManager` and its MCP capabilities (`GenerateCompletion`, `GenerateEmbeddings`).
 2. Implement dynamic routing logic based on `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud Mode, implement the HTTP client integrating with the LiteLLM gateway, ensuring tenant headers (`X-Tenant-ID`) are injected.
 4. For Standalone Mode, implement integration with the Ollama REST API (`http://localhost:11434/api/generate`).
 5. Ensure prompts undergo PII Redaction in Cloud Mode.
-6. Create comprehensive tests in `llm_router_test.go` with mocked HTTP responses for both modes. Ensure 100% test coverage.
+6. Create comprehensive tests in `llm_router_test.rs` with mocked HTTP responses for both modes. Ensure 100% test coverage.
 7. Update or create the adjacent `BUILD.bazel` file, including the new files in the `srcs` array."
 
 ## Priority

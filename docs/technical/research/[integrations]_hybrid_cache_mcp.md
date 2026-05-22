@@ -15,9 +15,9 @@ Market analysis shows that typical agentic frameworks hardcode caching backends,
   - `Cloud`: Redis-backed cache via go-redis.
 
 **API Contracts:**
-- `GetCache(ctx context.Context, key string) ([]byte, error)`
-- `SetCache(ctx context.Context, key string, value []byte, ttl time.Duration) error`
-- `DeleteCache(ctx context.Context, key string) error`
+- `GetCache(ctx async context, key string) ([]byte, error)`
+- `SetCache(ctx async context, key string, value []byte, ttl time.Duration) error`
+- `DeleteCache(ctx async context, key string) error`
 
 **Security:**
 - Cloud mode MUST validate `organization_id` to strictly enforce cross-tenant key isolation (e.g., prefix keys with `tenant_id:`).
@@ -25,11 +25,11 @@ Market analysis shows that typical agentic frameworks hardcode caching backends,
 
 ## Implementation Prompt
 "Implement the Hybrid Cache Manager MCP tool in `src/server/lib/integrations/hybrid_cache/`.
-1. Create `cache.go` defining the `CacheManager` and its MCP capabilities (`GetCache`, `SetCache`, `DeleteCache`).
+1. Create `cache.rs` defining the `CacheManager` and its MCP capabilities (`GetCache`, `SetCache`, `DeleteCache`).
 2. Implement environment-agnostic logic. Check `os.Getenv(\"OHC_MULTITENANT\") == \"true\"` to determine the driver.
 3. For Standalone mode, implement a basic local in-memory driver (e.g., using a thread-safe map or a lightweight LRU cache).
 4. For Cloud mode, implement a Redis-backed driver using `go-redis`. Ensure tenant isolation using `organization_id` by prefixing all keys.
-5. Create tests in `cache_test.go`. Test both the local in-memory driver and the Redis driver (use a mock Redis client or miniredis). Ensure 100% test coverage.
+5. Create tests in `cache_test.rs`. Test both the local in-memory driver and the Redis driver (use a mock Redis client or miniredis). Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

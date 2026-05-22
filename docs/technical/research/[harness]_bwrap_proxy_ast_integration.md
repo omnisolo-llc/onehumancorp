@@ -6,7 +6,7 @@
 Implement Unified Bwrap Sandboxing, Egress Proxy, and AST Validation Engine
 
 ## Problem Statement
-OHC’s Agent Harness currently uses rudimentary regex to filter shell commands (`bash_sandbox.go`) and executes processes with the same host permissions and network access as the orchestrator. Without robust execution boundaries, agents risk modifying critical host files (sandbox escape) or performing unauthorized network egress. Conversely, market leaders like Claude Code isolate shell commands via unprivileged namespaces (`bwrap`), employ dynamic system-call blocking (`seccomp-bpf`), intercept all network traffic via local HTTP/SOCKS proxies, and use abstract syntax tree (AST) validation for granular command-level restriction.
+OHC’s Agent Harness currently uses rudimentary regex to filter shell commands (`bash_sandbox.rs`) and executes processes with the same host permissions and network access as the orchestrator. Without robust execution boundaries, agents risk modifying critical host files (sandbox escape) or performing unauthorized network egress. Conversely, market leaders like Claude Code isolate shell commands via unprivileged namespaces (`bwrap`), employ dynamic system-call blocking (`seccomp-bpf`), intercept all network traffic via local HTTP/SOCKS proxies, and use abstract syntax tree (AST) validation for granular command-level restriction.
 
 ## Research Report
 ### Deep Audit: Leaked Claude Code (v2.1.88)
@@ -28,10 +28,10 @@ Claude Code encapsulates agent terminal execution inside an `@anthropic-ai/sandb
 ## Design Doc
 We propose the **Unified Agent Worktree Harness (UAWH)** in `src/server/harness/`, which integrates the KAIROS Orchestrator to the host securely:
 
-1.  **AST Parser (`parser.go`)**: Pre-flight command validation leveraging an AST parser (like `mvdan.cc/sh/v3/syntax`) to block obfuscated injections, subshells, and redirections.
-2.  **OS Sandbox Runner (`bwrap.go`)**: Wraps `bwrap` execution. Enforces `--ro-bind / /` globally and specific `--bind <workspace> <workspace>` access. Drops namespaces (`--unshare-all`).
-3.  **Network Proxy & Proxy Telemetry (`proxy.go`)**: Sets up a local `socat`/Go-based proxy. Injects `HTTP_PROXY` inside the `bwrap` jail to evaluate network requests.
-4.  **Security Observability (`telemetry.go`)**: Binds blocked AST evaluations and blocked network egress to Prometheus via OpenTelemetry (`ohc_harness_security_violation_total`).
+1.  **AST Parser (`parser.rs`)**: Pre-flight command validation leveraging an AST parser (like `tree-sitter-bash/syntax`) to block obfuscated injections, subshells, and redirections.
+2.  **OS Sandbox Runner (`bwrap.rs`)**: Wraps `bwrap` execution. Enforces `--ro-bind / /` globally and specific `--bind <workspace> <workspace>` access. Drops namespaces (`--unshare-all`).
+3.  **Network Proxy & Proxy Telemetry (`proxy.rs`)**: Sets up a local `socat`/Rust-based proxy. Injects `HTTP_PROXY` inside the `bwrap` jail to evaluate network requests.
+4.  **Security Observability (`telemetry/mod.rs`)**: Binds blocked AST evaluations and blocked network egress to Prometheus via OpenTelemetry (`ohc_harness_security_violation_total`).
 
 ### Architecture Diagram
 
@@ -59,11 +59,11 @@ graph TD
 **Role:** Implementer Agent
 **Task:** Build the core execution engine of the Unified Agent Worktree Harness.
 
-1.  **AST Parser Module**: In `src/server/harness/parser.go`, implement a `ValidateCommand(cmd string) error` function using `mvdan.cc/sh/v3/syntax`. Parse the command and return an error if the AST contains redirection nodes (`>`) or subshell executions (`$()`).
-2.  **Bwrap Runner**: In `src/server/harness/bwrap.go`, implement a `RunInSandbox(ctx context.Context, cmd string, workspace string, allowNet bool) error` adapter. Construct the `bwrap` command with flags: `--unshare-all`, `--ro-bind / /`, `--bind <workspace> <workspace>`. Add `--share-net` if network is allowed.
-3.  **Network Proxy Adapter**: In `src/server/harness/proxy.go`, implement a local HTTP MITM proxy that inspects network requests and only passes them through if the requested domain is explicitly allowed by the agent config.
+1.  **AST Parser Module**: In `src/server/harness/parser.rs`, implement a `ValidateCommand(cmd string) error` function using `tree-sitter-bash/syntax`. Parse the command and return an error if the AST contains redirection nodes (`>`) or subshell executions (`$()`).
+2.  **Bwrap Runner**: In `src/server/harness/bwrap.rs`, implement a `RunInSandbox(ctx async context, cmd string, workspace string, allowNet bool) error` adapter. Construct the `bwrap` command with flags: `--unshare-all`, `--ro-bind / /`, `--bind <workspace> <workspace>`. Add `--share-net` if network is allowed.
+3.  **Network Proxy Adapter**: In `src/server/harness/proxy.rs`, implement a local HTTP MITM proxy that inspects network requests and only passes them through if the requested domain is explicitly allowed by the agent config.
 4.  **Metrics Integration**: Add OpenTelemetry counters `ohc_harness_security_violation_total` and increment when `ValidateCommand` fails or proxy requests are blocked. Ensure `telemetry.RedactInterfacePII` sanitizes inputs.
-5.  **Testing**: Write comprehensive Go unit tests (`parser_test.go`, `bwrap_test.go`, `proxy_test.go`) achieving 100% test coverage. Supply malicious strings to `parser_test.go` to ensure they are trapped.
+5.  **Testing**: Write comprehensive Rust unit tests (`parser_test.rs`, `bwrap_test.rs`, `proxy_test.rs`) achieving 100% test coverage. Supply malicious strings to `parser_test.rs` to ensure they are trapped.
 
 ## Priority
 P0
