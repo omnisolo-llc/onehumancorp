@@ -1,3 +1,12 @@
+## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement LLM-as-judge subagent verification loops (sensors) and prompt caching cost tracking.
+
+### Privacy/Offline Improvements
+- Implement local stateful execution proxy and viral storefront loop for Standalone desktop beta builds.
+
+
 ## v0.4.44 (Cloud) / v0.4.44+1 (Standalone)
 
 ### Cloud Scaling Improvements
