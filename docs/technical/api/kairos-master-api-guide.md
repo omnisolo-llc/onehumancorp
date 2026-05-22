@@ -89,6 +89,7 @@ sequenceDiagram
 ## 3. Shared Task List and Distributed State Machine
 
 The Shared Task List manages the distributed state machine, preventing race conditions when sub-agents claim tasks.
+See [Distributed State Machine Feature](../../features/kairos/distributed_state_machine.md) for more info.
 
 ```mermaid
 stateDiagram-v2
@@ -156,6 +157,7 @@ sequenceDiagram
 ## 4. Sub-Agent Queuing Workflow
 
 The API queues and routes tasks to the appropriate sub-agents depending on your deployment mode (Cloud-Native or Standalone).
+See [Sub-Agent Queue Feature](../../features/kairos/sub_agent_queue.md) for more info.
 
 ```mermaid
 graph TD
@@ -176,6 +178,7 @@ graph TD
 ## 5. AutoDream Pipeline
 
 The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session_data` and the runtime memory directory (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory`) into long-term vector embeddings in `pgvector`. This process runs autonomously as part of the backend orchestration loop.
+See [AutoDream Pipelines Feature](../../features/kairos/autodream_pipelines.md) for more info.
 
 ```mermaid
 graph TD
