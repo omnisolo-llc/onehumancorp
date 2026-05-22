@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -17,6 +17,40 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
+  useEffect(() => {
+    // Fetch state for cross-device persistence
+    const fetchState = async () => {
+      try {
+        const response = await fetch('/api/onboarding/state');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.step) setStep(data.step);
+          if (data.businessName) setBusinessName(data.businessName);
+          if (data.businessCategory) setBusinessCategory(data.businessCategory);
+        }
+      } catch (err) {
+        console.error("Failed to load onboarding state", err);
+      }
+    };
+    fetchState();
+  }, []);
+
+  const saveState = async (newStep: number, currentName: string, currentCategory: string) => {
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step: newStep,
+          businessName: currentName,
+          businessCategory: currentCategory
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to save onboarding state", err);
+    }
+  };
+
   const handleNext = () => {
     if (step === 1 && !businessName.trim()) {
       setError("Please enter your business name.");
@@ -27,7 +61,9 @@ export default function OnboardingWizard() {
       return;
     }
     setError("");
-    setStep(step + 1);
+    const nextStep = step + 1;
+    setStep(nextStep);
+    saveState(nextStep, businessName, businessCategory);
   };
 
   const handleIntakeSubmit = async () => {
@@ -55,6 +91,7 @@ export default function OnboardingWizard() {
       const data = await response.json();
       setIntakeData(data);
       setStep(3); // Go to review step
+      saveState(3, businessName, businessCategory);
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -94,6 +131,7 @@ export default function OnboardingWizard() {
       const data = await response.json();
       setStartResult(data);
       setStep(4); // Go to live step
+      saveState(4, businessName, businessCategory);
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -152,6 +190,7 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -173,6 +212,7 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleIntakeSubmit()}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
