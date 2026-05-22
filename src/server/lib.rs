@@ -1886,6 +1886,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
+        .nest("/api/docs", crate::api::docs::router())
         .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);

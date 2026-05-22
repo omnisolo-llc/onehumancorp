@@ -10,6 +10,7 @@ filegroup(
         "mesh_handler.rs",
         "mod.rs",
         "telemetry.rs",
+        "docs.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",
     ],
