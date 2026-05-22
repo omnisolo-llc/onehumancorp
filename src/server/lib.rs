@@ -210,7 +210,6 @@ struct HttpErrorResponse {
 #[derive(serde::Deserialize)]
 struct DraftReplyRequest {
     customer_message: Option<String>,
-    business_context: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -248,17 +247,24 @@ async fn http_metrics_handler(
     }
 
     let tenant_id = payload.tenant_id;
-    let active_customers: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
 
-    let pending_orders: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (active_customers_res, pending_orders_res) = tokio::join!(
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        }
+    );
+
+    let active_customers = active_customers_res.unwrap_or(0);
+    let pending_orders = pending_orders_res.unwrap_or(0);
 
     (
         StatusCode::OK,
@@ -441,9 +447,35 @@ async fn http_login_handler(
         .into_response()
 }
 
-async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Response {
+async fn draft_reply_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    payload: DraftReplyRequest,
+) -> axum::response::Response {
     use axum::http::StatusCode;
     use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
 
     let api_key = match std::env::var("MINIMAX_API_KEY") {
         Ok(key) if !key.trim().is_empty() => key,
@@ -456,12 +488,25 @@ async fn draft_reply_handler(payload: DraftReplyRequest) -> axum::response::Resp
         }
     };
 
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
     let customer_message = payload
         .customer_message
         .unwrap_or_else(|| "Do you have vegan options for birthday cakes?".to_string());
-    let business_context = payload
-        .business_context
-        .unwrap_or_else(|| "A friendly bakery that sells vegan celebration cakes and classes.".to_string());
+
+    let business_context = if industry.is_empty() {
+        format!("A business named {}", business_name)
+    } else {
+        format!("A {} business named {}", industry, business_name)
+    };
+
     let prompt = format!(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
@@ -539,7 +584,18 @@ impl HubService for MyHubService {
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
+        let payment_fees_f64 = if total_revenue_f64 > 0.0 {
+            let card_fee = (total_revenue_f64 * crate::integrations::stripe::routing::PaymentRouter::CARD_FEE_PERCENTAGE) + crate::integrations::stripe::routing::PaymentRouter::CARD_FEE_FIXED;
+            let ach_fee = (total_revenue_f64 * crate::integrations::stripe::routing::PaymentRouter::ACH_FEE_PERCENTAGE).min(crate::integrations::stripe::routing::PaymentRouter::ACH_FEE_CAP);
+
+            if crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(total_revenue_f64) == crate::integrations::stripe::routing::PaymentMethod::Ach {
+                ach_fee
+            } else {
+                card_fee
+            }
+        } else {
+            0.0
+        };
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
@@ -1673,9 +1729,18 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));
     let mkt_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(dept_orchestrator.clone())));
+    let sales_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::sales_agent::SalesAgent::new(dept_orchestrator.clone())));
+    let finance_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::finance_agent::FinanceAgent::new(dept_orchestrator.clone())));
+    let legal_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::legal_agent::LegalAgent::new(dept_orchestrator.clone())));
+    let business_advisory_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent::new(dept_orchestrator.clone())));
+
     dept_orchestrator.register_department(ops_agent).await;
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
+    dept_orchestrator.register_department(sales_agent).await;
+    dept_orchestrator.register_department(finance_agent).await;
+    dept_orchestrator.register_department(legal_agent).await;
+    dept_orchestrator.register_department(business_advisory_agent).await;
 
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
@@ -1725,7 +1790,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
             system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
-            max_tokens: std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048),
+            max_tokens: {
+                let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
+                if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
+            },
             temperature: std::env::var("OHC_TEMPERATURE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
             max_iterations: std::env::var("OHC_MAX_ITERATIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(100),
             max_context_messages: std::env::var("OHC_MAX_CONTEXT_MESSAGES").ok().and_then(|v| v.parse().ok()).unwrap_or(80),
@@ -1772,6 +1840,37 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+async fn get_inbox_messages_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let pool = crate::db::get_pool();
+    match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => {
+            let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
+                use sqlx::Row;
+                let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
+                let created_at_str = created_at.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default();
+                serde_json::json!({
+                    "id": row.get::<String, _>("id"),
+                    "tenant_id": row.get::<String, _>("tenant_id"),
+                    "source": row.get::<String, _>("source"),
+                    "content": row.get::<String, _>("content"),
+                    "draft_reply": row.get::<String, _>("draft_reply"),
+                    "status": row.get::<String, _>("status"),
+                    "created_at": created_at_str,
+                })
+            }).collect();
+            (axum::http::StatusCode::OK, axum::Json(messages)).into_response()
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch inbox messages: {}", e);
+            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response()
+        }
+    }
+}
+
     let db_for_sales = db.clone();
     let app = axum::Router::new()
         .route("/", axum::routing::get(ui_handler))
@@ -1850,8 +1949,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .route(
             "/api/v1/ai/draft-reply",
-            axum::routing::post(|axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
-                draft_reply_handler(payload).await
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
+                    draft_reply_handler(db, store, headers, payload).await
+                }
             }),
         )
 
@@ -2537,7 +2640,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('team-screen')">Your Team</a>
+                        <a onclick="showScreen('team-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
@@ -2598,7 +2701,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('team-screen')">Your Team</button>
+                            <button onclick="showScreen('team-screen')">Agents</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
@@ -2629,7 +2732,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
+                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2905,9 +3008,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Agents Page (Your Team) -->
+                    <!-- Agents Page (Agents) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
+                        <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -3340,8 +3443,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3359,8 +3462,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3373,9 +3476,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" class="hidden" style="display: none;">
@@ -3400,7 +3503,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>🎉 Success! Your business is live! 🎉</h1>
+                            <h1>CONFETTI SUCCESS</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
@@ -3418,7 +3521,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
@@ -3443,6 +3546,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="builder-container">
                             <div class="builder-header">
                                 <h1>Edit Website</h1>
+                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
                                 <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
                             </div>
 
@@ -3450,7 +3554,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Draft Blocks render here -->
                             </div>
 
-                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+                            <div style="display: flex; gap: 8px; margin-top: 16px;">
+                                <button class="secondary" style="flex: 1;" onclick="showEmbedStore()">Embed Store</button>
+                                <button class="fab" style="flex: 2; margin: 0; position: static;" onclick="showDomainSetup()">Publish Changes</button>
+                            </div>
+                        </div>
+
+                        <!-- Embed Store Bottom Sheet -->
+                        <div id="embed-store-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedStore()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">
+                                    Copy this code to embed your OHC storefront on your WordPress, Webflow, or custom site. Let customers buy directly from your existing website!
+                                </p>
+                                <label style="display:block; margin-bottom:8px; font-weight:bold; font-size:12px;">IFRAME CODE</label>
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="embed-code-input" readonly value='<iframe src="https://myshop.ohc.store?embed=true" width="100%" height="600" style="border:none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>' style="width:100%; box-sizing:border-box; background: rgba(0,0,0,0.05); font-family: monospace; font-size: 12px;" />
+                                    <button onclick="copyEmbedCode()" style="white-space: nowrap;">Copy</button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Block Editor Bottom Sheet -->
@@ -3463,6 +3588,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- Dynamic form inputs -->
                             </div>
                             <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                        </div>
+
+                        <!-- Embed Setup Bottom Sheet -->
+                        <div id="embed-setup-sheet" class="bottom-sheet glass">
+                            <div class="bottom-sheet-header">
+                                <h2>Embed Storefront</h2>
+                                <button class="bottom-sheet-close" onclick="closeEmbedSetup()">×</button>
+                            </div>
+                            <div style="padding: 16px;">
+                                <p>Copy the code below to embed your storefront onto another website.</p>
+                                <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
+                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
+                            </div>
                         </div>
 
                         <!-- Domain Setup Bottom Sheet -->
@@ -3616,6 +3754,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         let rearrangeMode = false;
                         let activeBlockId = null;
 
+                        function showEmbedStore() {
+                            const tenant = localStorage.getItem('tenant_id') || 'myshop';
+                            const input = document.getElementById('embed-code-input');
+                            input.value = `<iframe src="https://${tenant}.ohc.store?embed=true" width="100%" height="600" style="border:none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"></iframe>`;
+                            document.getElementById('embed-store-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedStore() {
+                            document.getElementById('embed-store-sheet').classList.remove('open');
+                        }
+
+                        function copyEmbedCode() {
+                            const input = document.getElementById('embed-code-input');
+                            input.select();
+                            document.execCommand('copy');
+                            alert('Embed code copied!');
+                        }
+
                         function renderStorefrontPreview() {
                             const container = document.getElementById('builder-preview-container');
                             if (!container) return;
@@ -3719,6 +3875,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('domain-setup-sheet').classList.add('open');
                             document.querySelectorAll('.domain-setup').forEach(el => el.classList.remove('active'));
                             document.getElementById('domain-step-1').classList.add('active');
+                        }
+
+                        function showEmbedSetup() {
+                            const origin = window.location.origin;
+                            const embedCode = `<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`;
+                            document.getElementById('embed-code-textarea').value = embedCode;
+                            document.getElementById('embed-setup-sheet').classList.add('open');
+                        }
+
+                        function closeEmbedSetup() {
+                            document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         function closeDomainSetup() {
@@ -3885,12 +4052,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const originalText = btn.textContent;
                             btn.textContent = 'Drafting...';
                             try {
+                                const token = localStorage.getItem('token') || 'test-token';
                                 const response = await fetch('/api/v1/ai/draft-reply', {
                                     method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + token
+                                    },
                                     body: JSON.stringify({
-                                        customer_message: 'Do you have vegan options for birthday cakes?',
-                                        business_context: 'A friendly bakery that sells vegan celebration cakes and classes.'
+                                        customer_message: 'Do you have vegan options for birthday cakes?'
                                     })
                                 });
                                 if (!response.ok) {
@@ -4082,9 +4252,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
+                                const nameInput = document.querySelectorAll('#step-7 input[type="text"]')[0];
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
-                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                const passwordInput = document.querySelector('#step-7 input[type="password"]');
+
+                                if (!nameInput || nameInput.value.trim().length === 0) {
+                                    alert('Please enter your name');
+                                    return false;
+                                }
+
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailInput || emailInput.value.trim().length === 0 || !emailRegex.test(emailInput.value.trim())) {
                                     alert('Please enter a valid email address');
+                                    return false;
+                                }
+
+                                if (!passwordInput || passwordInput.value.trim().length < 8) {
+                                    alert('Password must be at least 8 characters long');
                                     return false;
                                 }
                             }
@@ -4444,6 +4628,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            // State restoration for setup wizard
+                            if (screenId === 'setup-screen' || path === '/website-builder') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: { 'X-Tenant-ID': tenantId }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                            if (stateData.step > 1 && stateData.step <= 10) {
+                                                currentStep = parseInt(stateData.step);
+                                                // Initialize wizard at the saved step
+                                                document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                                    if (d.id.startsWith('step-')) {
+                                                        d.classList.add('hidden');
+                                                        d.style.display = 'none';
+                                                    }
+                                                });
+                                                const target = document.getElementById('step-' + currentStep);
+                                                if (target) {
+                                                    target.style.display = 'block';
+                                                    target.classList.remove('hidden');
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to restore wizard state:', e);
+                                }
+                            }
+
                             showScreen(screenId);
 
 

@@ -33,8 +33,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
+        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
         final response = await _client.post(
-          Uri.parse('http://localhost:8080/api/onboarding/start'),
+          Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
@@ -227,6 +228,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextFormField(
               key: Key('bio-input'), // for testing or just semantics
               maxLines: 4,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.multiline,
+              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
                 hintText:

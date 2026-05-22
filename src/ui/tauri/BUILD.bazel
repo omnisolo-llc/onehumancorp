@@ -4,6 +4,7 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
+load("//bazel/rules:tauri_desktop.bzl", "tauri_desktop_package")
 load("//bazel/rules:tauri_mobile.bzl", "tauri_mobile_package")
 
 bool_flag(
@@ -171,6 +172,93 @@ TAURI_MOBILE_SRCS = glob([
     "build.rs",
     "tauri.conf.json",
 ]
+
+TAURI_DESKTOP_SRCS = glob([
+    "src/**/*.rs",
+    "capabilities/**",
+    "next_out/**",
+    "icons/**",
+], allow_empty = True) + [
+    "//:Cargo.lock",
+    "//:Cargo.toml",
+    "Cargo.toml",
+    "build.rs",
+    "tauri.conf.json",
+]
+
+tauri_desktop_package(
+    name = "tauri_linux_deb",
+    out = "ohc-desktop.deb",
+    package_type = "deb",
+    srcs = TAURI_DESKTOP_SRCS,
+    target_compatible_with = select({
+        "//:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+tauri_desktop_package(
+    name = "tauri_linux_rpm",
+    out = "ohc-desktop.rpm",
+    package_type = "rpm",
+    srcs = TAURI_DESKTOP_SRCS,
+    target_compatible_with = select({
+        "//:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+tauri_desktop_package(
+    name = "tauri_macos_dmg",
+    out = "ohc-desktop.dmg",
+    package_type = "dmg",
+    srcs = TAURI_DESKTOP_SRCS,
+    target_compatible_with = select({
+        "//:macos": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+tauri_desktop_package(
+    name = "tauri_windows_msi",
+    out = "ohc-desktop.msi",
+    package_type = "msi",
+    srcs = TAURI_DESKTOP_SRCS,
+    target_compatible_with = select({
+        "//:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+tauri_desktop_package(
+    name = "tauri_windows_nsis",
+    out = "ohc-desktop.exe",
+    package_type = "nsis",
+    srcs = TAURI_DESKTOP_SRCS,
+    target_compatible_with = select({
+        "//:windows": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+filegroup(
+    name = "tauri_desktop_installers",
+    srcs = select({
+        "//:linux": [
+            ":tauri_linux_deb",
+            ":tauri_linux_rpm",
+        ],
+        "//:macos": [
+            ":tauri_macos_dmg",
+        ],
+        "//:windows": [
+            ":tauri_windows_msi",
+            ":tauri_windows_nsis",
+        ],
+        "//conditions:default": [],
+    }),
+    visibility = ["//visibility:public"],
+)
 
 tauri_mobile_package(
     name = "tauri_android_apk",

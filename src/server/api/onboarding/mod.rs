@@ -12,6 +12,7 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
         .route("/state", get(get_state).post(save_state))
+        .route("/launch", post(launch_onboarding))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -40,6 +41,23 @@ async fn start_onboarding(
     match agent.start_onboarding(payload).await {
         Ok(res) => Ok(Json(res)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn launch_onboarding(
+    State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
+) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    let current_step = 5; // Launch step
+
+    let state = serde_json::json!({
+        "status": "launched"
+    });
+    match agent.save_onboarding_state(tenant_id, user_id, current_step, &state).await {
+        Ok(_) => Ok(Json(state)),
+        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
 

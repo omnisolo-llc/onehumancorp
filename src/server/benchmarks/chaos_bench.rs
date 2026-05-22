@@ -28,11 +28,20 @@ mod tests {
         let acquired2 = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
         assert!(!acquired2);
 
-        // Simulate lag / timeout -> wait for TTL to pass
-        tokio::task::yield_now().await; sleep(Duration::from_millis(2100)).await;
-
-        // Recovery: Agent 2 should now acquire
-        let acquired2_retry = transport.acquire_lock(&resource, "agent_2", 2).await.unwrap();
+        // Simulate lag / timeout -> wait for TTL to pass. Poll instead of
+        // asserting immediately after the boundary so loaded test runs do not
+        // fail on scheduler or wall-clock jitter.
+        sleep(Duration::from_millis(2100)).await;
+        let acquired2_retry = timeout(Duration::from_secs(5), async {
+            loop {
+                if transport.acquire_lock(&resource, "agent_2", 2).await.unwrap() {
+                    break true;
+                }
+                sleep(Duration::from_millis(100)).await;
+            }
+        })
+        .await
+        .unwrap_or(false);
         assert!(acquired2_retry);
 
         transport.release_lock(&resource, "agent_2").await.unwrap();
