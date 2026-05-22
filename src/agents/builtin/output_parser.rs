@@ -75,8 +75,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
 
         if parse_error_msg.is_none() {
-            // Error Handling (Compounding Error Prevention): LangGraph Mechanic
-            // 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+            // Fallback mechanic: Legacy RetryWithErrorOutputParser
             // Extract JSON from raw text and feed the original prompt, the failed completion, and the parsing error back to the model.
             let mut json_str = completion.trim();
             let obj_start = json_str.find('{');
@@ -122,37 +121,16 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
         }
 
         if attempt >= max_retries {
-            return Err(ToolError::LlmRecoverable(format!(
+            return Err(ToolError::Fatal(format!(
                 "Output parsing failed after {} retries. Last error: {}",
                 max_retries,
                 parse_error_msg.unwrap_or_default()
             )));
         }
 
-        // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
-        // If it was a tool call that failed, we inject it as a Tool result containing the error.
-        // Otherwise, we inject it as a user message.
-        if !msg.tool_calls.is_empty() {
-            current_req.messages.push(msg.clone());
-            let error_msg = parse_error_msg.unwrap();
-            let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
-                tool_call_id: tc.id.clone(),
-                content: String::new(),
-                error: error_msg.clone(),
-            }).collect();
-
-            current_req.messages.push(Message {
-                role: crate::types::Role::Tool,
-                content: String::new(),
-                tool_calls: vec![],
-                tool_results,
-                response_id: None,
-                previous_response_id: msg.response_id.clone(),
-            });
-        } else {
-            current_req.messages.push(msg.clone());
-            current_req.messages.push(Message::user(parse_error_msg.unwrap()));
-        }
+        // Feed the original prompt, the failed completion, and the parsing error back to the model
+        current_req.messages.push(msg.clone());
+        current_req.messages.push(Message::user(parse_error_msg.unwrap()));
         attempt += 1;
     }
 }

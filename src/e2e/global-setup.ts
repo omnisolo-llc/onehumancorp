@@ -22,7 +22,7 @@ async function waitForApp(baseURL: string) {
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  return;
+  throw new Error(`Timed out waiting for app at ${baseURL}`);
 }
 
 function seedDatabase() {
