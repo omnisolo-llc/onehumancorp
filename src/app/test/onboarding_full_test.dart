@@ -24,6 +24,15 @@ void main() {
     // Verify we are on the input screen
     expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
 
+    // Verify TextFormField properties by checking underlying TextField
+    final textFieldWidget = tester.widget<TextField>(find.descendant(
+      of: find.byKey(Key('bio-input')),
+      matching: find.byType(TextField),
+    ));
+    expect(textFieldWidget.textInputAction, TextInputAction.done);
+    expect(textFieldWidget.keyboardType, TextInputType.multiline);
+    expect(textFieldWidget.textCapitalization, TextCapitalization.sentences);
+
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();

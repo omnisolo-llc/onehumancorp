@@ -16,11 +16,11 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
 single_version_override(
     module_name = "hermetic_cc_toolchain",
+    patch_strip = 1,
     patches = [
         "//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch",
         "//bazel/patches:hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
     ],
-    patch_strip = 1,
 )
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
@@ -59,9 +59,10 @@ register_toolchains("@go_sdk//:all")
 bazel_dep(name = "rules_rust", version = "0.70.0")
 single_version_override(
     module_name = "rules_rust",
-    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
     patch_strip = 1,
+    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
 )
+
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
@@ -206,6 +207,7 @@ crate.annotation(
     crate = "tauri-cli",
     gen_binaries = ["cargo-tauri"],
 )
+
 # wasm-bindgen crate version must match what the toolchain provides
 # rules_rust_wasm_bindgen 0.70.0 ships with wasm-bindgen-cli 0.2.105
 # We accept this mismatch and the user will need to update rules_rust_wasm_bindgen
@@ -223,18 +225,18 @@ register_toolchains("@rules_pkg_rpmbuild//:all")
 bazel_dep(name = "rules_oci", version = "2.3.0")
 bazel_dep(name = "aspect_bazel_lib", version = "2.7.9")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
-bazel_dep(name = "aspect_rules_js", version = "3.0.3")
+bazel_dep(name = "aspect_rules_js", version = "3.1.2")
+bazel_dep(name = "yq.bzl", version = "0.3.4")
 bazel_dep(name = "rules_playwright", version = "0.5.4")
-git_override(
+local_path_override(
     module_name = "rules_playwright",
-    remote = "https://github.com/mrmeku/rules_playwright",
-    tag = "v0.5.4",
+    path = "bazel/rules/rules_playwright",
 )
 
 playwright = use_extension("@rules_playwright//playwright:extensions.bzl", "playwright")
 playwright.repo(
     name = "playwright",
-    playwright_version = "1.50.1",
+    playwright_version = "1.60.0",
 )
 use_repo(playwright, "playwright")
 
@@ -288,7 +290,11 @@ bazel_dep(name = "toolchains_llvm", version = "1.7.0")
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
     name = "llvm_toolchain",
-    llvm_version = "21.1.8",
+    llvm_versions = {
+        "": "21.1.8",
+        # toolchains_llvm 1.7.0 has no 21.1.8 x86_64 macOS archive.
+        "darwin-x86_64": "15.0.7",
+    },
 )
 use_repo(llvm, "llvm_toolchain")
 
@@ -327,3 +333,20 @@ use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
+
+yq_ext_win = use_extension("@yq.bzl//yq:extensions.bzl", "yq")
+use_repo(
+    yq_ext_win,
+    "yq_darwin_amd64",
+    "yq_darwin_arm64",
+    "yq_linux_amd64",
+    "yq_linux_arm64",
+    "yq_linux_ppc64le",
+    "yq_linux_s390x",
+    "yq_windows_amd64",
+    "yq_windows_arm64",
+)
+
+# rules_js resolves host yq by apparent repo name while parsing pnpm-lock.yaml.
+# Make the Windows ARM64 yq repo visible to its npm extension on ARM64 runners.
+inject_repo(npm, "yq_windows_arm64")
