@@ -166,6 +166,7 @@ rust_binary(
         "ultraplan",
         "orchestration",
         "interop",
+        "workers",
     ]
 ]
 
