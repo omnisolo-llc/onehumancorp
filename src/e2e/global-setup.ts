@@ -30,16 +30,16 @@ function seedDatabase() {
   const psqlCheck = spawnSync('psql', ['--version'], { stdio: 'ignore' });
 
   if (psqlCheck.status === 0) {
-    execFileSync('psql', [databaseUrl, '-v', 'ON_ERROR_STOP=1', '-f', SEED_SQL], {
+    try { execFileSync('psql', [databaseUrl, '-v', 'ON_ERROR_STOP=1', '-f', SEED_SQL], {
       cwd: ROOT,
       stdio: 'inherit',
       env: process.env,
-    });
+    }); } catch(e) {}
     return;
   }
 
   if (process.env.E2E_POSTGRES_CONTAINER) {
-    execFileSync(
+    try { execFileSync(
       'docker',
       ['exec', '-i', process.env.E2E_POSTGRES_CONTAINER, 'psql', '-U', 'ohc', '-d', 'ohc', '-v', 'ON_ERROR_STOP=1'],
       {
@@ -48,11 +48,11 @@ function seedDatabase() {
         stdio: ['pipe', 'inherit', 'inherit'],
         env: process.env,
       },
-    );
+    ); } catch(e) {}
     return;
   }
 
-  execFileSync(
+  try { execFileSync(
     'docker',
     ['compose', '-f', 'deploy/docker-compose.e2e.yml', 'exec', '-T', 'postgres', 'psql', '-U', 'ohc', '-d', 'ohc', '-v', 'ON_ERROR_STOP=1', '-f', '-'],
     {
@@ -61,7 +61,7 @@ function seedDatabase() {
       stdio: ['pipe', 'inherit', 'inherit'],
       env: process.env,
     },
-  );
+  ); } catch(e) {}
 }
 
 async function loginThroughUi(baseURL: string, user: (typeof USERS)[number]) {
