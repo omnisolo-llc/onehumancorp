@@ -2,8 +2,6 @@ packages:
   - "."
   - "src/proto"
   - "src/cli"
-allowBuilds:
-  esbuild: set this to true or false
 pnpm:
   onlyBuiltDependencies:
     - google-protobuf
