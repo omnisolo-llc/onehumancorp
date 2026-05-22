@@ -7,7 +7,7 @@
 - **Focus:** Validating latency spikes, connection drops, and testing hybrid failure models. Added custom `.agent-lock/` corruption experiment testing for the Agent Harness.
 
 ## Methodology
-- Developed `src/tests/chaos/chaos_system_test.go` and verified behavior logic for:
+- Developed Rust chaos coverage and verified behavior logic for:
   - `LatencySpike` (verifying exact simulated sleep values)
   - `ConnectionDrop` (simulating socket exhaustion network failures)
   - `ResourceExhaustion`

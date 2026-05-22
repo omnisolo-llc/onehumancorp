@@ -7,7 +7,7 @@
 **Last Updated:** 2026-03-19
 
 ## 1. Overview
-This test plan details the testing strategy for the SSRF prevention feature in the Integrations Registry (`src/integrations/registry.go`). It ensures that malicious URLs cannot be used to establish connections to internal or restricted network resources.
+This test plan details the testing strategy for the SSRF prevention feature in the Integrations Registry (`src/server/integrations/registry.rs`). It ensures that malicious URLs cannot be used to establish connections to internal or restricted network resources.
 
 ## 2. Test Strategy
 - **Unit Testing:** Implement comprehensive unit tests using Table-Driven tests in Go to validate the `validateURL()` function behavior across a wide range of URL types.
@@ -32,9 +32,9 @@ This test plan details the testing strategy for the SSRF prevention feature in t
 | UT-13 | `TestConnection`| Call `TestConnection` with Link-Local IP | Error |
 
 ## 4. Implementation Details
-- The tests will be added to `src/integrations/registry_test.go`.
+- The tests will be added to `src/server/integrations/registry.rs tests`.
 - The tests should achieve >95% coverage for the `validateURL` function and related branches in `Connect()` and `TestConnection()`.
-- Tests will follow standard Go testing practices and inherit patterns from existing `*_test.go` files.
+- Tests will follow standard Rust testing practices and inherit patterns from existing Rust unit and integration tests.
 
 ## 5. Edge Cases
 - **DNS Rebinding:** Ensure the test suite considers DNS resolution and specifically tests `net.LookupIP` mocking.

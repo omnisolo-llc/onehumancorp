@@ -12,7 +12,7 @@ This report analyzes the Agent Harness and Sandbox implementation of the leaked 
 
 | Feature | Claude Code (Market Leader) | OHC Hybrid OS | Gap |
 | :--- | :--- | :--- | :--- |
-| **Sandbox Execution** | Yes, `bwrap`/`sandbox-exec` | Yes, basic blockedPatterns in `bash_sandbox/sandbox.go` | Minimal |
+| **Sandbox Execution** | Yes, `bwrap`/`sandbox-exec` | Yes, basic blockedPatterns in `harness/sandbox/manager.rs` | Minimal |
 | **Sandbox Escape Mitigations** | Advanced (Git internal path write blocking) | Basic Regexp matching | **Critical Gap** |
 | **Telemetry Injection** | Injects `<sandbox_violations>` directly into `stderr` | Basic string appending | Minimal |
 | **User Override** | LLM-driven `dangerouslyDisableSandbox` capability | Strict policies only | **Feature Gap** |

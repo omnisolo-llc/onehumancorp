@@ -89,9 +89,9 @@ flowchart TD
 **Role**: Principal Systems Engineer & Bolt (L7)
 **Task**: Implement the OHC Zero-Trust Harness using Bubblewrap and AST Validation.
 
-1. **Sandbox Layer**: Create a new package `src/harness/sandbox/bwrap.go`. Implement a wrapper that takes an arbitrary shell command and executes it inside a `bwrap` container. The container must have `--unshare-all`, mount `/` as ro-bind, and mount a temporary `workspace` directory as rw-bind.
-2. **AST Security Filter**: Create `src/harness/security/ast_filter.go`. Integrate a tree-sitter or native bash parser to evaluate the command before it enters `bwrap`. Block process substitution (`<()`), `eval`, and any backtick/`$()` substitutions. Return detailed Go error structs on violation.
-3. **Telemetry**: In `src/harness/telemetry/metrics.go`, add Prometheus counters for `ohc_harness_executions_total` and `ohc_harness_violations_total`. Ensure all blocked commands log an OpenTelemetry span with `violation_reason`.
+1. **Sandbox Layer**: Create a new package `src/harness/sandbox/bwrap.rs`. Implement a wrapper that takes an arbitrary shell command and executes it inside a `bwrap` container. The container must have `--unshare-all`, mount `/` as ro-bind, and mount a temporary `workspace` directory as rw-bind.
+2. **AST Security Filter**: Create `src/harness/security/ast_filter.rs`. Integrate a tree-sitter or native bash parser to evaluate the command before it enters `bwrap`. Block process substitution (`<()`), `eval`, and any backtick/`$()` substitutions. Return detailed Rust error types on violation.
+3. **Telemetry**: In `src/harness/telemetry/metrics.rs`, add Prometheus counters for `ohc_harness_executions_total` and `ohc_harness_violations_total`. Ensure all blocked commands log an OpenTelemetry span with `violation_reason`.
 4. **Testing**: Provide 100% unit test coverage for the AST parser preventing at least 10 different bash injection attacks. Add an E2E test verifying a malicious command fails to touch the real filesystem.
 
 ## Priority
