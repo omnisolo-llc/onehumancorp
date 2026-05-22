@@ -254,13 +254,16 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let run_id = Uuid::new_v4().to_string();
 
     let mut join_handles = Vec::new();
+    let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(10));
 
     for i in 0..iterations {
         let q = queue.clone();
         let name = name.to_string();
         let run_id = run_id.clone();
+        let sem = semaphore.clone();
 
         join_handles.push(tokio::spawn(async move {
+            let _permit = sem.acquire_owned().await.unwrap();
             let job = Job {
                 id: format!("job_{}_{}_{}", name, run_id, i),
                 tenant_id: "benchmark_tenant".to_string(),

@@ -339,7 +339,7 @@ impl DashboardService for MyDashboardService {
             if orig_len > 0 {
                 original_prompts_len += orig_len;
 
-                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                let compressed = ::server_pricing::compression::compress_lossless(prompt).unwrap_or_else(|_| prompt.to_string());
 
                 compressed_prompts_len += compressed.len();
             }
@@ -350,7 +350,7 @@ impl DashboardService for MyDashboardService {
             let orig_len = prompt.len();
             if orig_len > 0 {
                 original_prompts_len += orig_len;
-                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                let compressed = ::server_pricing::compression::compress_lossless(prompt).unwrap_or_else(|_| prompt.to_string());
                 compressed_prompts_len += compressed.len();
             }
         }
@@ -385,7 +385,7 @@ impl DashboardService for MyDashboardService {
         let mut final_agents = _filtered_agents
             .into_iter()
             .map(|a| {
-                let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
+                let compressed_name = ::server_pricing::compression::compress_lossless(&a.name).unwrap_or_else(|_| a.name.clone());
 
                 ::server_ohc::agent::Agent {
                     id: a.id,
@@ -400,6 +400,8 @@ impl DashboardService for MyDashboardService {
         if req.mobile_optimized {
             for agent in final_agents.iter_mut() {
                 agent.name = String::new();
+                agent.role = ::server_ohc::common::Role::Unspecified as i32;
+                agent.status = ::server_ohc::common::AgentStatus::Idle as i32;
             }
         }
 
