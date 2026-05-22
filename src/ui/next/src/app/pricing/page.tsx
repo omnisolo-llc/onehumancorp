@@ -7,7 +7,7 @@ export default function PricingPage() {
   const router = useRouter();
 
   const handleUpgrade = (tier: string) => {
-    alert(`Redirecting to Stripe checkout for ${tier} plan...`);
+    router.push('/checkout');
   };
 
   return (

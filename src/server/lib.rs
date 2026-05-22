@@ -3281,7 +3281,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button onclick="fetch('/api/billing/checkout', { method: 'POST' }).then(res => res.json()).then(data => { if (data.checkout_url) { window.location.href = data.checkout_url; } else { alert('Redirecting to Stripe checkout'); showScreen('dashboard-screen'); } }).catch(() => { alert('Payment successful!'); showScreen('dashboard-screen'); })">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>

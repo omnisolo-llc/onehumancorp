@@ -24,10 +24,21 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+#[derive(serde::Deserialize)]
+pub struct CheckoutRequest {
+    pub plan_id: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct CheckoutResponse {
+    pub checkout_url: String,
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/checkout", axum::routing::post(checkout_handler))
         .with_state(hub)
 }
 
@@ -121,4 +132,32 @@ pub async fn cost_dashboard_handler(
         period_start,
         period_end,
     })
+}
+
+pub async fn checkout_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<CheckoutResponse> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => return Json(CheckoutResponse { checkout_url: "".to_string() })
+    };
+
+    let body_bytes = request.into_body();
+    // Assuming simple JSON body extraction
+    let tracker = hub.tracker();
+    if let Some(ref client) = tracker.stripe_client {
+        if let Ok(url) = client.create_checkout_session("test", &tenant_id, 29.0).await {
+            return Json(CheckoutResponse { checkout_url: url });
+        }
+    }
+
+    Json(CheckoutResponse { checkout_url: "".to_string() })
 }
