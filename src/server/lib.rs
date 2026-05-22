@@ -267,23 +267,17 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res) = tokio::join!(
-        async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
-        }
-    );
+    let metrics_row: Option<(i64, i64)> = sqlx::query_as(
+        "SELECT \
+            (SELECT COUNT(*) FROM users WHERE tenant_id = $1) as active_customers, \
+            (SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending') as pending_orders"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None);
 
-    let active_customers = active_customers_res.unwrap_or(0);
-    let pending_orders = pending_orders_res.unwrap_or(0);
+    let (active_customers, pending_orders) = metrics_row.unwrap_or((0, 0));
 
     (
         StatusCode::OK,
@@ -4484,40 +4478,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (id === 'dashboard-screen') {
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
-                                fetch('/api/v1/dashboard/sales', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
-                                })
-                                .catch(err => console.error('Error fetching sales:', err));
-
-                                fetch('/api/v1/dashboard/metrics', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    const banner = document.getElementById('milestone-share-banner');
-                                    const countEl = document.getElementById('milestone-customers-count');
-                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
-                                    if (banner && countEl && !dismissed) {
-                                        if (data.active_customers > 0) {
-                                            banner.style.display = 'flex';
-                                            banner.classList.remove('hidden');
-                                            countEl.textContent = data.active_customers;
-                                        } else {
-                                            banner.style.display = 'none';
-                                            banner.classList.add('hidden');
+                                Promise.all([
+                                    fetch('/api/v1/dashboard/sales', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json()).catch(err => { console.error('Error fetching sales:', err); return null; }),
+                                    fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json()).catch(err => { console.error('Error fetching metrics:', err); return null; })
+                                ]).then(([salesData, metricsData]) => {
+                                    if (salesData) {
+                                        const salesEl = document.getElementById('todays-sales');
+                                        if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
+                                    }
+                                    if (metricsData) {
+                                        const banner = document.getElementById('milestone-share-banner');
+                                        const countEl = document.getElementById('milestone-customers-count');
+                                        const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
+                                        if (banner && countEl && !dismissed) {
+                                            if (metricsData.active_customers > 0) {
+                                                banner.style.display = 'flex';
+                                                banner.classList.remove('hidden');
+                                                countEl.textContent = metricsData.active_customers;
+                                            } else {
+                                                banner.style.display = 'none';
+                                                banner.classList.add('hidden');
+                                            }
                                         }
                                     }
-                                })
-                                .catch(err => console.error('Error fetching metrics:', err));
+                                });
                             }
 
                             if (id === 'my-plan-screen') {

@@ -1,0 +1,73 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -4484,33 +4484,31 @@
+
+                             if (id === 'dashboard-screen') {
+                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+-                                fetch('/api/v1/dashboard/sales', {
+-                                    method: 'POST',
+-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+-                                    body: JSON.stringify({ tenant_id: tenant })
+-                                })
+-                                .then(res => res.json())
+-                                .then(data => {
+-                                    const salesEl = document.getElementById('todays-sales');
+-                                    if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
+-                                })
+-                                .catch(err => console.error('Error fetching sales:', err));
+-
+-                                fetch('/api/v1/dashboard/metrics', {
+-                                    method: 'POST',
+-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+-                                    body: JSON.stringify({ tenant_id: tenant })
+-                                })
+-                                .then(res => res.json())
+-                                .then(data => {
+-                                    const banner = document.getElementById('milestone-share-banner');
+-                                    const countEl = document.getElementById('milestone-customers-count');
+-                                    const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
+-                                    if (banner && countEl && !dismissed) {
+-                                        if (data.active_customers > 0) {
+-                                            banner.style.display = 'flex';
+-                                            banner.classList.remove('hidden');
+-                                            countEl.textContent = data.active_customers;
+-                                        } else {
+-                                            banner.style.display = 'none';
+-                                            banner.classList.add('hidden');
+-                                        }
+-                                    }
+-                                })
+-                                .catch(err => console.error('Error fetching metrics:', err));
++                                Promise.all([
++                                    fetch('/api/v1/dashboard/sales', {
++                                        method: 'POST',
++                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
++                                        body: JSON.stringify({ tenant_id: tenant })
++                                    }).then(res => res.json()).catch(err => { console.error('Error fetching sales:', err); return null; }),
++                                    fetch('/api/v1/dashboard/metrics', {
++                                        method: 'POST',
++                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
++                                        body: JSON.stringify({ tenant_id: tenant })
++                                    }).then(res => res.json()).catch(err => { console.error('Error fetching metrics:', err); return null; })
++                                ]).then(([salesData, metricsData]) => {
++                                    if (salesData) {
++                                        const salesEl = document.getElementById('todays-sales');
++                                        if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
++                                    }
++                                    if (metricsData) {
++                                        const banner = document.getElementById('milestone-share-banner');
++                                        const countEl = document.getElementById('milestone-customers-count');
++                                        const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
++                                        if (banner && countEl && !dismissed) {
++                                            if (metricsData.active_customers > 0) {
++                                                banner.style.display = 'flex';
++                                                banner.classList.remove('hidden');
++                                                countEl.textContent = metricsData.active_customers;
++                                            } else {
++                                                banner.style.display = 'none';
++                                                banner.classList.add('hidden');
++                                            }
++                                        }
++                                    }
++                                });
+                             }
