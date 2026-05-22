@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 interface OnboardingState {
   step: number;
+  businessType: string;
   businessName: string;
   businessCategory: string;
   isLoading: boolean;
@@ -9,6 +10,7 @@ interface OnboardingState {
   intakeData: any;
   startResult: any;
   setStep: (step: number) => void;
+  setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
   setBusinessCategory: (category: string) => void;
   setIsLoading: (loading: boolean) => void;
@@ -19,6 +21,7 @@ interface OnboardingState {
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   step: 1,
+  businessType: '',
   businessName: '',
   businessCategory: '',
   isLoading: false,
@@ -26,6 +29,7 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   intakeData: null,
   startResult: null,
   setStep: (step) => set({ step }),
+  setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
   setBusinessCategory: (businessCategory) => set({ businessCategory }),
   setIsLoading: (isLoading) => set({ isLoading }),

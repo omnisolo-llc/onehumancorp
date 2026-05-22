@@ -9,6 +9,7 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
+    businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
     isLoading, setIsLoading,
@@ -18,11 +19,15 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const handleNext = () => {
-    if (step === 1 && !businessName.trim()) {
+    if (step === 1 && !businessType.trim()) {
+      setError("Please describe what you sell.");
+      return;
+    }
+    if (step === 2 && !businessName.trim()) {
       setError("Please enter your business name.");
       return;
     }
-    if (step === 2 && !businessCategory.trim()) {
+    if (step === 3 && !businessCategory.trim()) {
       setError("Please describe your niche.");
       return;
     }
@@ -39,7 +44,7 @@ export default function OnboardingWizard() {
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -54,7 +59,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setIntakeData(data);
-      setStep(3); // Go to review step
+      setStep(4); // Go to review step
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -68,7 +73,7 @@ export default function OnboardingWizard() {
 
     try {
       const startRequest = {
-        business_type: intakeData.business_type || "Retail",
+        business_type: intakeData.business_type || businessType || "Retail",
         company_name: intakeData.business_name || businessName,
         company_description: "", // Removed preferredStyle
         selling_categories: intakeData.categories || [],
@@ -93,7 +98,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(4); // Go to live step
+      setStep(5); // Go to live step
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -132,7 +137,7 @@ export default function OnboardingWizard() {
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
            <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 3)} of 3
+             Step {Math.min(step, 4)} of 4
            </div>
         </div>
 
@@ -146,13 +151,13 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
+              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
               <input
                 type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Maya's Cakes"
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
@@ -167,6 +172,35 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
+              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <input
+                type="text"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Maya's Cakes"
+                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
               <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
               <input
@@ -179,7 +213,7 @@ export default function OnboardingWizard() {
               />
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep(1)}
+                  onClick={() => setStep(2)}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
@@ -199,7 +233,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 3 && intakeData && (
+          {step === 4 && intakeData && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto">
                 <span className="text-3xl text-[#0066FF]">✨</span>
@@ -228,7 +262,7 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(3)}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
@@ -249,7 +283,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 4 && startResult && (
+          {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
