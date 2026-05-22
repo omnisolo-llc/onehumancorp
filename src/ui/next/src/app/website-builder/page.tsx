@@ -63,6 +63,16 @@ export default function WebsiteBuilderPage() {
               b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
         props: b.content
       }));
+      // Add the Business Analytics Widget to the generated blocks
+      blocks.push({
+        type: 'Analytics',
+        props: {
+          todaySales: "$1,040.00",
+          activeOrders: "24",
+          totalCustomers: "100",
+          url: "https://ohc.store"
+        }
+      });
       setBlocks(blocks);
       localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
       updateStatus("draft");
@@ -78,7 +88,8 @@ export default function WebsiteBuilderPage() {
         block_type: b.type === 'Hero' ? 'HeroBlock' :
                     b.type === 'Catalog' ? 'ProductGridBlock' :
                     b.type === 'Booking' ? 'ServiceBookingBlock' :
-                    b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+                    b.type === 'Testimonials' ? 'TestimonialBlock' :
+                    b.type === 'Analytics' ? 'AnalyticsBlock' : b.type,
         content: b.props,
         sort_order: i
       }));

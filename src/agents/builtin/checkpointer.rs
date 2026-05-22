@@ -90,7 +90,7 @@ impl GitCheckpointer {
             .output()
             .expect("Failed to execute git config user.email");
         if !email_out.status.success() {
-            tracing::warn!("git config user.email failed: {}", String::from_utf8_lossy(&email_out.stderr));
+            tracing::warn!("git config fallback failed: {}", String::from_utf8_lossy(&email_out.stderr));
         }
 
         GitCheckpointer { repo_path }

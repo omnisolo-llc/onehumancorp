@@ -11,6 +11,8 @@ export default function OnboardingWizard() {
     step, setStep,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
+    isInstantBuild, setIsInstantBuild,
+    businessDescription, setBusinessDescription,
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
@@ -18,9 +20,11 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const handleNext = () => {
-    if (step === 1 && !businessName.trim()) {
-      setError("Please enter your business name.");
-      return;
+    if (step === 1) {
+      if (!businessName.trim()) {
+        setError("Please enter your business name.");
+        return;
+      }
     }
     if (step === 2 && !businessCategory.trim()) {
       setError("Please describe your niche.");
@@ -28,6 +32,36 @@ export default function OnboardingWizard() {
     }
     setError("");
     setStep(step + 1);
+  };
+
+  const handleInstantSubmit = async () => {
+    if (!businessDescription.trim()) {
+      setError("Please describe your business.");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: businessDescription }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate draft. Please try again.');
+      }
+
+      const data = await response.json();
+      setIntakeData(data);
+      setStep(3);
+    } catch (err: any) {
+      setError(err.message || 'An error occurred during generation.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleIntakeSubmit = async () => {
@@ -146,22 +180,69 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
-              <input
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
-              <button
-                onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-gray-700">Instant Build with AI</span>
+                <button
+                  type="button"
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#0066FF] focus:ring-offset-2 ${
+                    isInstantBuild ? 'bg-[#0066FF]' : 'bg-gray-200'
+                  }`}
+                  role="switch"
+                  aria-checked={isInstantBuild}
+                  onClick={() => setIsInstantBuild(!isInstantBuild)}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      isInstantBuild ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {!isInstantBuild ? (
+                <>
+                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
+                  <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g. Maya's Cakes"
+                    className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleNext}
+                    className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                  >
+                    Next
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 text-sm mb-6">Describe your business in a sentence or two, and we'll build it instantly.</p>
+                  <textarea
+                    value={businessDescription}
+                    onChange={(e) => setBusinessDescription(e.target.value)}
+                    placeholder="e.g. I bake custom wedding cakes in Brooklyn. My bestseller is the 3-tier vanilla cake for $300."
+                    className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80 resize-none min-h-[120px]"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleInstantSubmit}
+                    disabled={isLoading}
+                    className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  >
+                    {isLoading ? (
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      "Generate Draft"
+                    )}
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -228,7 +309,7 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(isInstantBuild ? 1 : 2)}
                   className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
