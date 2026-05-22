@@ -271,12 +271,12 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build Tauri installer
-        run: bazelisk build //src/ui/tauri:tauri_desktop_installers
+        run: bazelisk build //src/ui/tauri:tauri_desktop_installers --//src/ui/tauri:build_tauri=true
 
       - name: Collect desktop installer artifacts
         run: |
           mkdir -p dist
-          bazelisk cquery --output=files //src/ui/tauri:tauri_desktop_installers > desktop-installer-files.txt
+          bazelisk cquery --output=files //src/ui/tauri:tauri_desktop_installers --//src/ui/tauri:build_tauri=true > desktop-installer-files.txt
           for pattern in ${{ matrix.patterns }}; do
             while IFS= read -r artifact; do
               [[ -f "$artifact" ]] || continue
