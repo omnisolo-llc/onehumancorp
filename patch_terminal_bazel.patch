@@ -1,0 +1,11 @@
+--- src/server/agents/terminal/BUILD.bazel
++++ src/server/agents/terminal/BUILD.bazel
+@@ -7,8 +7,8 @@
+     deps = [
+         "@io_opentelemetry_go_otel//:otel",
+         "@io_opentelemetry_go_otel//attribute",
+-        "@io_opentelemetry_go_otel//trace",
++        "@io_opentelemetry_go_otel_trace//:trace",
+         "@cc_mvdan_sh_v3//syntax:go_default_library",
+     ],
+ )
