@@ -65,6 +65,7 @@ rust_library(
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",
+        "tencent_expert_team.rs",
         "registry.rs",
         "service.rs",
         "consolidation_worker.rs",
