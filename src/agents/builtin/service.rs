@@ -528,11 +528,12 @@ impl AgentServiceImpl {
             }
         }
 
-        let max_tokens = if req.max_tokens == 0 {
+        let raw_max_tokens = if req.max_tokens == 0 {
             if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
         } else {
             req.max_tokens
         };
+        let max_tokens = if raw_max_tokens > 4096 { 4096 } else { raw_max_tokens };
 
         let max_iterations = if req.max_context_messages == 0 {
             self.cfg.max_iterations
@@ -967,7 +968,7 @@ impl AgentService for AgentServiceImpl {
                     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
                     load_cascading_agents_md(&current_dir, if sub_req.working_dir.is_empty() { None } else { Some(&sub_req.working_dir) }).await
                 },
-                max_tokens: if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens },
+                max_tokens: if self.cfg.max_tokens == 0 { 2048 } else if self.cfg.max_tokens > 4096 { 4096 } else { self.cfg.max_tokens },
                 temperature: self.cfg.temperature,
                 max_iterations: 100,
                 max_task_tokens: 100_000,
