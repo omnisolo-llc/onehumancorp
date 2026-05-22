@@ -194,7 +194,6 @@ rust_binary(
         "guardrails",
         "harness",
         "memory_store",
-        "consolidation_worker",
         "output_parser",
         "pubsub",
         "registry",

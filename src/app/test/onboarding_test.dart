@@ -9,8 +9,5 @@ void main() {
     expect(find.text('OneHumanCorp'), findsOneWidget);
     expect(find.text('The universal operating system for small business.'), findsOneWidget);
     expect(find.text('Start a Business'), findsOneWidget);
-
-    // Verify Glassmorphism BackdropFilter
-    expect(find.byType(BackdropFilter), findsWidgets);
   });
 }

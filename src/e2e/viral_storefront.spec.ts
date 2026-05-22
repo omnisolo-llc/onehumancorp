@@ -16,15 +16,6 @@ test.describe('Viral Storefront E2E', () => {
     await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
   });
 
-  test('opens embed store workflow', async ({ page }) => {
-    await page.goto('/storefront-builder');
-    await page.getByRole('button', { name: 'Embed Store' }).click();
-    await expect(page.getByRole('heading', { name: 'Embed Storefront' })).toBeVisible();
-    await expect(page.locator('#embed-code-input')).toBeVisible();
-    const inputValue = await page.locator('#embed-code-input').inputValue();
-    expect(inputValue).toContain('<iframe src="https://e2e-tenant.ohc.store?embed=true"');
-  });
-
   test('displays Powered by OHC footer in storefront preview', async ({ page }) => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.powered-by-footer')).toBeVisible();

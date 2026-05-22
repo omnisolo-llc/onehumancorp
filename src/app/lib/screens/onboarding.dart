@@ -228,9 +228,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             TextFormField(
               key: Key('bio-input'), // for testing or just semantics
               maxLines: 4,
-              textInputAction: TextInputAction.done,
-              keyboardType: TextInputType.multiline,
-              textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
                 hintText:

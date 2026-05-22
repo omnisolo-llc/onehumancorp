@@ -109,19 +109,7 @@ pub async fn cost_dashboard_handler(
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-    let payment_fees_f64 = if total_revenue_f64 > 0.0 {
-        let card_fee = (total_revenue_f64 * crate::integrations::stripe::routing::PaymentRouter::CARD_FEE_PERCENTAGE) + crate::integrations::stripe::routing::PaymentRouter::CARD_FEE_FIXED;
-        let ach_fee = (total_revenue_f64 * crate::integrations::stripe::routing::PaymentRouter::ACH_FEE_PERCENTAGE).min(crate::integrations::stripe::routing::PaymentRouter::ACH_FEE_CAP);
-
-        if crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(total_revenue_f64) == crate::integrations::stripe::routing::PaymentMethod::Ach {
-            ach_fee
-        } else {
-            card_fee
-        }
-    } else {
-        0.0
-    };
-
+    let payment_fees_f64 = total_revenue_f64 * 0.029;
     let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
     Json(CostDashboardResponse {

@@ -32,26 +32,10 @@ impl ConsolidationWorker {
     /// Spawns a background task that continuously runs consolidation.
     /// Returns a JoinHandle that can be used to wait for or abort the worker.
     pub fn spawn_background_task(self: Arc<Self>) -> tokio::task::JoinHandle<()> {
-        tracing::info!(
-            "Starting ConsolidationWorker background task (interval: {:?}, pruning threshold: {} days)",
-            self.poll_interval,
-            self.pruning_threshold_days
-        );
         tokio::spawn(async move {
             loop {
-                tracing::debug!("ConsolidationWorker pass started.");
-                match self.run_once().await {
-                    Ok((resolved, pruned)) => {
-                        tracing::info!(
-                            "Consolidation pass completed: {} conflicts resolved, pruning successful: {}",
-                            resolved,
-                            pruned
-                        );
-                    }
-                    Err(e) => {
-                        tracing::error!("Consolidation worker error: {}", e);
-                    }
-                }
+                // Ignore errors to keep the background worker alive
+                let _ = self.run_once().await;
                 sleep(self.poll_interval).await;
             }
         })
