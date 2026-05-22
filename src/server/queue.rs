@@ -667,6 +667,9 @@ pub struct SharedTaskModel {
     pub dependencies: serde_json::Value,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub action_risk: Option<String>,
+    pub approval_status: Option<String>,
+    pub proposed_content: Option<String>,
 }
 
 pub struct TaskQueueService {
@@ -684,7 +687,7 @@ impl TaskQueueService {
         
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, &task.tenant_id).await?;
-        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, tenant_id, dependencies) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)")
+        sqlx::query("INSERT INTO shared_tasks (id, parent_id, epic_id, title, status, assigned_agent, payload, tenant_id, dependencies, action_risk, approval_status, proposed_content) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)")
             .bind(task.id)
             .bind(task.parent_id)
             .bind(task.epic_id)
@@ -694,6 +697,9 @@ impl TaskQueueService {
             .bind(payload_str)
             .bind(task.tenant_id)
             .bind(deps_str)
+            .bind(task.action_risk)
+            .bind(task.approval_status)
+            .bind(task.proposed_content)
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
@@ -703,7 +709,7 @@ impl TaskQueueService {
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at")
+        let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
             .bind(agent_id)
             .fetch_optional(&mut *tx)
             .await?;
@@ -727,6 +733,9 @@ impl TaskQueueService {
                 dependencies,
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
+                action_risk: row.try_get("action_risk").ok(),
+                approval_status: row.try_get("approval_status").ok(),
+                proposed_content: row.try_get("proposed_content").ok(),
             }))
         } else {
             Ok(None)
@@ -762,7 +771,7 @@ impl TaskQueueService {
 
 
     pub async fn get_completed_tasks(&self, limit: i64) -> Result<Vec<SharedTaskModel>, sqlx::Error> {
-        let rows = sqlx::query("SELECT id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
+        let rows = sqlx::query("SELECT id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content FROM shared_tasks WHERE status = 'COMPLETED' LIMIT $1")
             .bind(limit)
             .fetch_all(&self.pool)
             .await?;
@@ -786,6 +795,9 @@ impl TaskQueueService {
                 dependencies,
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
+                action_risk: row.try_get("action_risk").ok(),
+                approval_status: row.try_get("approval_status").ok(),
+                proposed_content: row.try_get("proposed_content").ok(),
             });
         }
         
@@ -1176,6 +1188,9 @@ mod tests {
                 dependencies: serde_json::json!([]),
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
             };
 
             // Push
@@ -1308,6 +1323,9 @@ mod tests {
                 dependencies: serde_json::json!([]),
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
             };
 
             service.push_task(task).await.unwrap();
@@ -1360,6 +1378,9 @@ mod tests {
                 dependencies: serde_json::json!([]),
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
             };
 
             let child_task = SharedTaskModel {
@@ -1374,6 +1395,9 @@ mod tests {
                 dependencies: serde_json::json!([task_id_parent]),
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
             };
 
             service.push_task(parent_task).await.unwrap();
