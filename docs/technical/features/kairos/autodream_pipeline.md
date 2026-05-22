@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_
 ## 4. Implementation Details
 
 - **Batch Processing:** The `AutoDreamWorker` daemon processes data in batches (e.g., `LIMIT 500`) to prevent unbound queue growth and ensure stable memory utilization.
-- **LLM Integration:** Utilizes existing LLM clients (`src/server/agents/local/llm.go`) to generate embeddings for the consolidated memory chunks.
+- **LLM Integration:** Utilizes existing LLM clients (`src/agents/builtin/llm/`) to generate embeddings for the consolidated memory chunks.
 - **Graceful Degradation:** Conditional logic (`dbWrapper.Provider().IsSQLite()`) disables PostgreSQL-specific locks or exact-neighbor queries when operating in Standalone mode.
 
 </div>

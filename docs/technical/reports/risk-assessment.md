@@ -8,13 +8,13 @@
 
 | Subsystem / PR Topic | Risk Level | Rationale |
 |----------------------|------------|-----------|
-| **Local SQLite SIPDB vs PostgreSQL Parity** | **High** | Standalone mode relies on `.ohc/runtime/` storage conventions and `sync_daemon.go`. Any discrepancy in database locking or task execution directly compromises the local-to-cloud resilience. |
+| **Local SQLite SIPDB vs PostgreSQL Parity** | **High** | Standalone mode relies on `.ohc/runtime/` storage conventions and `hybrid_sync daemon`. Any discrepancy in database locking or task execution directly compromises the local-to-cloud resilience. |
 | **Team Mesh (Pub/Sub) Migration** | **Medium** | Redis is optional for Standalone, but fallback runtime directories such as `.ohc/runtime/mailbox/` could introduce deadlocks if not gracefully handled during file lock contention (`.agent-lock/`). |
 | **Telemetry & Observability Heartbeats** | **Low** | Agents write to `.ohc/runtime/status/`. If this directory is read-only, it fails safe without crashing core logic, but breaks observability. |
 
 ## Phase 3: Parity Audit (ML-Resilience)
 * **Goal:** Ensure "ML-Resilience" rules apply equally to Cloud-native and Standalone environments.
-* **Audit Finding:** The `sync_daemon.go` offline-to-cloud payload synchronization and `sip.go` mission updates have been verified. Fallback mechanisms in database retries (e.g. `withRetry` logic) guarantee that Standalone throttling matches Cloud Pod transaction isolation. The system gracefully degrades.
+* **Audit Finding:** The `hybrid_sync daemon` offline-to-cloud payload synchronization and `sip.rs` mission updates have been verified. Fallback mechanisms in database retries (e.g. `withRetry` logic) guarantee that Standalone throttling matches Cloud Pod transaction isolation. The system gracefully degrades.
 
 *Status: 100% Green under Chaos Load.*
 

@@ -112,8 +112,8 @@ graph LR
 - **Title**: 10-Minute Setup Wizard
 - **Problem Statement**: 73% of SMBs cite setup complexity and technical jargon as their primary barrier to launching online.
 - **Research Report**: Based on the Top 10 SMB User Pain Points, users abandon platforms like Shopify due to the technical jargon. Durable offers a 30-second site generation, but it lacks operational depth. We can provide a conversational setup flow that synthesizes website structure, copy, and product catalogs in under a minute without jargon.
-- **Design Doc**: A conversational, jargon-free UI flow (Slint) optimized for 375px screens. The user answers simple questions, and the `autodream` agent framework synthesizes the website structure, copy, and initial product catalog in under a minute (targeting the Durable 30-second benchmark).
-- **Implementation Prompt**: Implement a step-by-step Setup Wizard using Riverpod/Slint. The Critical User Journey goes from "Launch App" -> "Answer 3 plain-language questions" -> "View generated site". Ensure all interactions use large touch targets.
+- **Design Doc**: A conversational, jargon-free UI flow (Tauri) optimized for 375px screens. The user answers simple questions, and the `autodream` agent framework synthesizes the website structure, copy, and initial product catalog in under a minute (targeting the Durable 30-second benchmark).
+- **Implementation Prompt**: Implement a step-by-step Setup Wizard using Tauri/React. The Critical User Journey goes from "Launch App" -> "Answer 3 plain-language questions" -> "View generated site". Ensure all interactions use large touch targets.
 - **Priority**: P0
 - **Estimated Scope**: Large
 
