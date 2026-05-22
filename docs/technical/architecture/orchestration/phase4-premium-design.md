@@ -8,7 +8,7 @@ The Phase 4 Sub-Agent Orchestration Queue is a critical background worker system
 ## 2. Architecture & Hybrid Strategy
 The queue utilizes a state-machine driven backend to coordinate jobs.
 
-- **Queue Manager (`src/server/orchestration/queue/queue.rs`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
+- **Queue Manager (`src/server/orchestration/queue/queue.go`)**: Manages the ingestion, polling, and dispatch of sub-agent jobs.
 - **Worker Nodes**: Isolated sub-agents spawned to execute specific payloads.
 
 ### Hybrid Strategy

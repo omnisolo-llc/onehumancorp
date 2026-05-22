@@ -72,7 +72,7 @@ sequenceDiagram
 The Teammate Mesh provides sub-millisecond Pub/Sub capabilities to orchestrate agents actively working on the Shared Task List, backed by a robust background queue.
 
 ### 3.1 Architecture
-*   **Realtime Transport (`src/server/hub.rs`)**: Implement generic `MeshTransport` interface with `RedisMeshTransport` (Cloud, mapping to production Redis Pub/Sub channels like `mesh:tasks`, `mesh:coordination`) and `MemoryMeshTransport` (Standalone).
+*   **Realtime Transport (`src/server/orchestration/hub.go`)**: Implement generic `MeshTransport` interface with `RedisMeshTransport` (Cloud, mapping to production Redis Pub/Sub channels like `mesh:tasks`, `mesh:coordination`) and `MemoryMeshTransport` (Standalone).
 *   **Sub-Agent Queue (`src/server/orchestration/queue`)**: A Celery/BullMQ-style background worker system. Enqueues jobs via `RedisTaskQueue` (lists/sorted sets) or `SQLiteTaskQueue` (`sub_agent_jobs` table).
 *   **Delivery**: Up to 10k msgs/sec multiplexed down to the CEO dashboard via Centrifuge WebSockets and Agent-to-Agent via gRPC.
 *   **Security**: Uses SPIFFE/SPIRE for Agent SVID issuance. All internal mesh API routes explicitly demand mTLS interceptor checks.
@@ -88,7 +88,7 @@ Agents lack long-term coherence. AutoDream runs passively to translate ephemeral
 
 ### 4.1 Data Pipeline Architecture
 *   **Data Sources**: Ephemeral context streams into `agent_session_data` and optional runtime memory files under `OHC_MEMORY_DIR`.
-*   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via a Minimax/LLM summarization call (using `src/agents/builtin/llm/`).
+*   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via a Minimax/LLM summarization call (using `src/server/agents/local/llm.go`).
 *   **Vector Storage Schema (pgvector)**:
     ```sql
     CREATE TABLE IF NOT EXISTS consolidated_memory (

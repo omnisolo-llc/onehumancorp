@@ -59,7 +59,7 @@ graph TD
 **OHC Hybrid Harness Architecture (`ohc-harness`):**
 1. **Tree-sitter Bash Parsing Engine**: To replicate the level of accuracy seen in Claude, OHC will use a backend wrapper around Tree-sitter for analyzing bash commands before they run locally in desktop mode or remotely in Cloud mode.
 2. **Deterministic Sandboxing Flag**: Provide `shouldUseSandbox` evaluations natively through the `SandboxManager`, dynamically toggled via the Central Database (`OHC-SIP`).
-3. **Deep Validation Pipeline**: Instead of a simple regex match, OHC will pass every command execution through a sequence of validators (IFS injection check, Zsh equals expansion, command substitution blocking) defined in `ohc_harness/bash_security.rs`.
+3. **Deep Validation Pipeline**: Instead of a simple regex match, OHC will pass every command execution through a sequence of validators (IFS injection check, Zsh equals expansion, command substitution blocking) defined in `ohc_harness/bash_security.rs` (or equivalent Slint implementation if native).
 4. **Heredoc and Quoted Strings Processor**: Safely extract heredocs prior to AST inspection, matching `extractHeredocs(command, { quotedOnly: true })` from Claude Code.
 
 ## Implementation Prompt

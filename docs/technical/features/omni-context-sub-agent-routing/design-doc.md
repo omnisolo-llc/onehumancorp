@@ -14,7 +14,7 @@ Currently, sub-agents spawned by orchestrating agents must proactively discover 
 
 ## 3. Architecture
 
-The feature hooks into the `DelegateMission` function of the orchestration layer (`src/server/sip.rs`).
+The feature hooks into the `DelegateMission` function of the orchestration layer (`src/server/orchestration/sip.go`).
 
 When an orchestrating agent identifies the need for a sub-agent and delegates a task:
 1.  **Context Interception:** The `DelegateMission` routine checks if a `ContextRoot` is configured.
@@ -39,7 +39,7 @@ graph TD
 ```
 
 ## 4. Technical Implementation Details
-*   **SIPDB Modification:** The `SIPDB` struct in `src/server/sip.rs` requires a `ContextRoot` string field to identify where to search for grounding files.
+*   **SIPDB Modification:** The `SIPDB` struct in `src/server/orchestration/sip.go` requires a `ContextRoot` string field to identify where to search for grounding files.
 *   **Injection Logic:** Inside `DelegateMission`, implement a fallback check for `AGENTS.md`, then `CLAUDE.md`. If either is found, append its content.
 *   **Database Schema:** No schema changes are required to the `agent_missions` table, as the payload modification occurs prior to JSON serialization.
 

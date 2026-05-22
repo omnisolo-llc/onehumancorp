@@ -18,10 +18,10 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 ### 3.1 Unit Tests
 | Test ID | Component | Description | Expected Result | Status |
 |---------|-----------|-------------|-----------------|--------|
-| UT-01 | `src/agents/builtin/autogen.rs` | Translates AutoGen conversational payload to OHC event | Proper `AgentMessage` generated | Pending |
-| UT-02 | `src/agents/builtin/crewai.rs` | Maps CrewAI task result to LangGraph state checkpoint | JSON state schema successfully validated | Pending |
-| UT-03 | OpenClaw adapter | Triggers K8s CRD update upon state change | `patch` payload generated correctly | Pending |
-| UT-04 | Semantic Kernel adapter | Maps SK function call request to MCP JSON-RPC format | Correct JSON-RPC schema returned | Pending |
+| UT-01 | `autogen_adapter.go` | Translates AutoGen conversational payload to OHC event | Proper `AgentMessage` generated | Pending |
+| UT-02 | `crewai_adapter.go` | Maps CrewAI task result to LangGraph state checkpoint | JSON state schema successfully validated | Pending |
+| UT-03 | `openclaw_adapter.go` | Triggers K8s CRD update upon state change | `patch` payload generated correctly | Pending |
+| UT-04 | `semantickernel_adapter.go` | Maps SK function call request to MCP JSON-RPC format | Correct JSON-RPC schema returned | Pending |
 
 ### 3.2 Integration Tests
 | Test ID | Components | Description | Expected Result | Status |
@@ -37,7 +37,7 @@ A high-level summary of the testing strategy for the Ecosystem Interoperability 
 | E2E-02 | Adapter Failure | Simulate framework adapter crash mid-task | Hub correctly suspends thread and recovers | Pending |
 
 ## 4. Edge Cases & Error Handling
-- **Context Limit Breaches**: Ensure the AutoGen adapter automatically forces semantic distillation if payloads exceed token boundaries.
+- **Context Limit Breaches**: Ensure `autogen_adapter.go` automatically forces semantic distillation if payloads exceed token boundaries.
 - **Malformed Payloads**: Ensure invalid JSON responses from the third-party frameworks do not crash the OHC Hub (fail gracefully).
 - **Unauthorized MCP Access**: Test that an agent adapter lacking specific MCP privileges correctly fails closed at the Switchboard.
 
