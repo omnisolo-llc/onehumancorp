@@ -1,5 +1,4 @@
 bazel/rules/flutter
-bazel/rules/rules_playwright
 src/frontend/node_modules
 bazel/rules/flutter/e2e
 bazel/rules/flutter/bazel-bin

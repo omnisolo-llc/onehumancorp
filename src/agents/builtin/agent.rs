@@ -1906,7 +1906,9 @@ impl Agent {
                         }
                     }
                     let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
-                    match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
+                    let parser = crate::output_parser::RetryWithErrorOutputParser::<JudgeEvaluation>::new(parser_client, 3);
+                    use crate::output_parser::OutputParser;
+                    match parser.parse(judge_req).await {
                         Ok(eval) => {
                             if eval.status.to_uppercase() == "REJECT" {
                                 let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
