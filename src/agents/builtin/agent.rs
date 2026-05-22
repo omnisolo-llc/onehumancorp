@@ -702,6 +702,10 @@ impl Agent {
                         }
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
+                            if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                return (id, final_res);
+                            }
                             let mut retry_count = 0;
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
@@ -822,6 +826,21 @@ impl Agent {
                     }
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
+                        if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let tool_name = name.to_string();
+                            let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
+                            error_counts.insert(tool_name.clone(), serde_json::json!(count));
+                            if count > std::cmp::min(cfg_max_retries, 2) as u64 {
+                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
+                            }
+                            tool_results_json[idx] = serde_json::json!({
+                                "tool_call_id": id,
+                                "content": "",
+                                "error": format!("Schema validation failed: {}. Please correct your tool arguments.", e)
+                            });
+                            continue;
+                        }
                         let mut retry_count = 0;
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
@@ -2840,7 +2859,7 @@ mod tests {
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("missing required parameter: 'str_param'"));
+                assert!(msg.contains("Missing required field: str_param") || msg.contains("missing required parameter: \"str_param\"") || msg.contains("missing required parameter: 'str_param'"));
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
@@ -2855,7 +2874,7 @@ mod tests {
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("parameter 'str_param' has invalid type: expected string"));
+                assert!(msg.contains("Expected string, got") || msg.contains("parameter \"str_param\" has invalid type: expected string") || msg.contains("parameter 'str_param' has invalid type: expected string"));
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
