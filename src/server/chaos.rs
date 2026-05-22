@@ -482,12 +482,12 @@ mod tests {
     #[tokio::test]
     async fn test_ml_resilience_60s_timeout_rule() {
         // Enforce the ML-Resilience 60s timeout under chaos testing (mocked here as 60ms)
-        let timeout_duration = Duration::from_millis(60);
+        let timeout_duration = Duration::from_millis(15);
         let start = std::time::Instant::now();
 
         let result = tokio::time::timeout(timeout_duration, async {
             // Simulate a stalled chaos operation (e.g., dropped packets on agent connection)
-            tokio::time::sleep(Duration::from_millis(150)).await;
+            tokio::time::sleep(Duration::from_millis(20)).await;
             Ok::<(), String>(())
         }).await;
 
