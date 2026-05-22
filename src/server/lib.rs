@@ -3442,24 +3442,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            <h1>Your business, live in minutes.</h1>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">
+                        <h1 style="margin-bottom: 24px; font-family: 'Outfit', sans-serif;">OneHuman</h1>
+                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">
+                            <h1 style="font-family: 'Outfit', sans-serif;">Your business, live in minutes.</h1>
+                            <p style="font-family: 'Inter', sans-serif;">Zero tech skills needed. We do the heavy lifting.</p>
+                            <button onclick="nextStep(2)" style="border-radius: 8px; background-color: #0071E3; color: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                        <div id="step-2" class="hidden" class="hidden" style="display: none; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">
+                            <h1 style="font-family: 'Outfit', sans-serif;">What kind of business are you building?</h1>
+                            <input type="text" placeholder="Business type" style="border-radius: 8px; font-family: 'Inter', sans-serif;" />
+                            <button onclick="nextStep(3)" style="border-radius: 8px; background-color: #0071E3; color: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
@@ -3645,45 +3645,50 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         // Server-Side State Management for Cross-Device Resumes
                         let saveWizardStateTimeout = null;
 
+                        function getWizardStatePayload(stepOverride) {
+                            const inputs = document.querySelectorAll('#setup-screen input');
+                            const state = { step: stepOverride || currentStep };
+                            inputs.forEach((input, index) => {
+                                if (input.placeholder) {
+                                    if (input.type === 'checkbox') {
+                                        state[input.placeholder] = input.checked;
+                                    } else {
+                                        state[input.placeholder] = input.value;
+                                    }
+                                } else {
+                                    // fallback for inputs without placeholder
+                                    if (input.type === 'checkbox') {
+                                        state['checkbox_' + index] = input.checked;
+                                    } else {
+                                        state['input_' + index] = input.value;
+                                    }
+                                }
+                            });
+                            return state;
+                        }
+
+                        async function saveWizardStateImmediate() {
+                            const state = getWizardStatePayload();
+                            localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
+
+                            try {
+                                await fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
+                                        'X-User-ID': localStorage.getItem('user_id') || 'test-user'
+                                    },
+                                    body: JSON.stringify(state)
+                                });
+                            } catch (e) {
+                                console.error('Failed to save state to server', e);
+                            }
+                        }
+
                         function saveWizardState() {
                             clearTimeout(saveWizardStateTimeout);
-                            saveWizardStateTimeout = setTimeout(async () => {
-                                const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
-                                inputs.forEach((input, index) => {
-                                    if (input.placeholder) {
-                                        if (input.type === 'checkbox') {
-                                            state[input.placeholder] = input.checked;
-                                        } else {
-                                            state[input.placeholder] = input.value;
-                                        }
-                                    } else {
-                                        // fallback for inputs without placeholder
-                                        if (input.type === 'checkbox') {
-                                            state['checkbox_' + index] = input.checked;
-                                        } else {
-                                            state['input_' + index] = input.value;
-                                        }
-                                    }
-                                });
-
-                                // Ensure local storage is always up to date
-                                localStorage.setItem('ohc_wizard_state', JSON.stringify(state));
-
-                                try {
-                                    await fetch('/api/onboarding/state', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-Tenant-ID': localStorage.getItem('tenant_id') || 'test-tenant',
-                                            'X-User-ID': localStorage.getItem('user_id') || 'test-user'
-                                        },
-                                        body: JSON.stringify(state)
-                                    });
-                                } catch (e) {
-                                    console.error('Failed to save state to server', e);
-                                }
-                            }, 500); // Debounce
+                            saveWizardStateTimeout = setTimeout(saveWizardStateImmediate, 500); // Debounce
                         }
 
                         async function loadWizardState() {
@@ -3733,7 +3738,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 // Restore step if needed
                                 if (state.step && state.step > 1) {
-                                    nextStep(state.step);
+                                    nextStep(state.step, true);
                                 }
                             }
                         }
@@ -4243,17 +4248,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
 
-                        async function nextStep(stepId) {
+                        async function nextStep(stepId, skipSave = false) {
                             const prevStep = currentStep;
 
-                            if (stepId !== "generating" && typeof stepId !== "undefined") {
+                            if (!skipSave && stepId !== "generating" && typeof stepId !== "undefined") {
                                 try {
-                                    const stateData = { step: stepId };
-                                    document.querySelectorAll('input').forEach(input => {
-                                        if (input.placeholder && input.value) {
-                                            stateData[input.placeholder] = input.value;
-                                        }
-                                    });
+                                    const stateData = getWizardStatePayload(stepId);
                                     localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
 
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
@@ -4269,7 +4269,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }).catch(console.error);
                                 } catch (e) {}
                             }
-                            if (!validateInputs(parseInt(stepId) || stepId)) return;
+                            if (!skipSave && !validateInputs(parseInt(stepId) || stepId)) return;
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
