@@ -1,0 +1,94 @@
+{
+  "title": "Tenant Cost Efficiency",
+  "uid": "tenant-cost-efficiency",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "Cost",
+    "OHC",
+    "Analytics"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "title": "Agent Token Cost",
+      "type": "barchart",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "sum(increase(ohc_agent_cost[1h])) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "API Call Cost",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Storage Usage",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "sum(ohc_storage_bytes_total) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "fieldConfig": {
+        "defaults": {
+          "unit": "decbytes"
+        }
+      }
+    }
+  ]
+}

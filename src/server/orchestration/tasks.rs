@@ -205,6 +205,11 @@ impl TaskDecompositionService {
 
                 tx.commit().await.map_err(|e| e.to_string())?;
 
+                let now_ms = now.timestamp_millis();
+                let created_ms = task.created_at.timestamp_millis();
+                let latency = ((now_ms - created_ms).max(0) as f64) / 1000.0;
+                ::server_telemetry::record_mission_time_in_queue(&task.organization_id, ::server_telemetry::get_deployment_mode(), latency);
+
                 let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
                 claimed_counter.add(1, &[]);
@@ -274,6 +279,12 @@ impl TaskDecompositionService {
                 let task = self.get_task_sqlite(&mut tx, &id).await?;
 
                 tx.commit().await.map_err(|e| e.to_string())?;
+
+                let now_ms = now.timestamp_millis();
+                let created_ms = task.created_at.timestamp_millis();
+                let latency = ((now_ms - created_ms).max(0) as f64) / 1000.0;
+                ::server_telemetry::record_mission_time_in_queue(&task.organization_id, ::server_telemetry::get_deployment_mode(), latency);
+
 
                 let meter = opentelemetry::global::meter("ohc.orchestration.tasks");
                 let claimed_counter = meter.u64_counter("tasks.claimed").build();
@@ -484,6 +495,10 @@ impl TaskDecompositionService {
 
 
     pub async fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
+        if let Ok(task) = self.get_task(task_id).await {
+            ::server_telemetry::record_mission_failure(&task.organization_id, ::server_telemetry::get_deployment_mode());
+        }
+
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -593,6 +608,14 @@ impl TaskDecompositionService {
 
     pub async fn update_status(&self, id: &str, new_status: &str, agent_id: &str) -> Result<(), String> {
         let now = Utc::now();
+        if new_status == "COMPLETED" {
+            if let Ok(task) = self.get_task(id).await {
+                let now_ms = now.timestamp_millis();
+                let updated_ms = task.updated_at.timestamp_millis();
+                let latency = ((now_ms - updated_ms).max(0) as f64) / 1000.0;
+                ::server_telemetry::record_mission_execution_latency(&task.organization_id, ::server_telemetry::get_deployment_mode(), latency);
+            }
+        }
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -728,6 +751,108 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_mission_telemetry_metrics() {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        let db = Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = Arc::new(DummyMesh);
+        let service = TaskDecompositionService::new(db, mesh);
+
+        let task_id = "test-mission-123";
+        let task = crate::tasks::SharedTask {
+            id: task_id.to_string(),
+            organization_id: "org-123".to_string(),
+            mission_id: "mission-123".to_string(),
+            parent_plan_id: "plan-123".to_string(),
+            dependencies: vec![],
+            title: "Test Task".to_string(),
+            description: Some("Test".to_string()),
+            assigned_agent_id: None,
+            status: "PENDING".to_string(),
+            priority: "HIGH".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(0),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+
+        service.create_task(task).await.unwrap();
+
+        // Simulate some time in queue
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let claimed_opt = service.claim_task("agent-1").await.unwrap();
+        assert!(claimed_opt.is_some());
+
+        // Simulate execution time
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        service.update_status(task_id, "COMPLETED", "agent-1").await.unwrap();
+
+        // Simulate failure
+        let fail_task_id = "test-fail-123";
+        let fail_task = crate::tasks::SharedTask {
+            id: fail_task_id.to_string(),
+            organization_id: "org-123".to_string(),
+            mission_id: "mission-456".to_string(),
+            parent_plan_id: "plan-456".to_string(),
+            dependencies: vec![],
+            title: "Fail Task".to_string(),
+            description: Some("Test".to_string()),
+            assigned_agent_id: None,
+            status: "PENDING".to_string(),
+            priority: "HIGH".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(0),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+        service.create_task(fail_task).await.unwrap();
+        service.fail_task(fail_task_id, "agent-1", "intentional failure").await.unwrap();
+
+        // This confirms that record_* does not panic and works smoothly with the process.
+    }
+
+    #[tokio::test]
     async fn test_tasks_dual_deployment() {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
@@ -825,9 +950,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
         let mesh = std::sync::Arc::new(ChaosMesh);
         let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));
@@ -894,9 +1017,7 @@ mod chaos_tests {
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
-        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
-            .unwrap();
+        let _dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: _dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
         let mesh = std::sync::Arc::new(ChaosMesh);
         let service = std::sync::Arc::new(TaskDecompositionService::new(db, mesh));

@@ -1,0 +1,127 @@
+{
+  "title": "Hybrid Swarm Health",
+  "uid": "hybrid-swarm-health",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "Health",
+    "OHC",
+    "Analytics"
+  ],
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "title": "Mission Time in Queue",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(MissionTimeInQueue_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Mission Execution Latency",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(MissionExecutionLatency_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Mission Failure Rate",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "rate(MissionFailureRate_total[5m])",
+          "legendFormat": "{{deployment_mode}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Business Event Count",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(BusinessEventCount_total[5m])) by (event_type)",
+          "legendFormat": "{{event_type}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "title": "Contention Heatmap",
+      "type": "heatmap",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "targets": [
+        {
+          "expr": "sum by(operation) (rate(ohc_sqlite_lock_contention_total[5m]))",
+          "legendFormat": "{{operation}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    }
+  ]
+}
