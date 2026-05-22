@@ -2781,26 +2781,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <div class="card glass">
-                            <h3>Agent Activity</h3>
-                            <div id="agent-activity-feed">
-                                <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="font-size: 20px;">📦</div>
-                                    <div>
-                                        <p style="margin: 0; font-weight: 500;">Ops Helper</p>
-                                        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Updated inventory for 3 vegan cakes.</p>
-                                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">2 mins ago</p>
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 12px; align-items: start; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="font-size: 20px;">🗓️</div>
-                                    <div>
-                                        <p style="margin: 0; font-weight: 500;">Ops Helper</p>
-                                        <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Approved booking for Carlos at 2:00 PM.</p>
-                                        <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-tertiary);">15 mins ago</p>
-                                    </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
+                                <div style="display: flex; align-items: center; gap: 8px; background: rgba(52, 199, 89, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(52, 199, 89, 0.2);">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background-color: #34C759; box-shadow: 0 0 8px #34C759;"></div>
+                                    <span style="font-size: 12px; font-weight: 600; color: #1f853b;">Swarm Online</span>
                                 </div>
                             </div>
-                            <button onclick="simulateOrder()">Simulate Order</button>
+                            <div id="agent-activity-feed" style="background: rgba(255, 255, 255, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); overflow: hidden;">
+                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">📦</div>
+                                    <div style="flex: 1;">
+                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
+                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Updated inventory for 3 vegan cakes.</p>
+                                    </div>
+                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">2m</span>
+                                </div>
+                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">🗓️</div>
+                                    <div style="flex: 1;">
+                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
+                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Approved booking for Carlos at 2:00 PM.</p>
+                                    </div>
+                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">15m</span>
+                                </div>
+                            </div>
+                            <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="simulateOrder()">Simulate Activity</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
