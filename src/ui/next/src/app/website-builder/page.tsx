@@ -167,7 +167,7 @@ export default function WebsiteBuilderPage() {
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Welcome to OHC Smart Builder</h1>
               <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                Review and add any extra details to help our AI generate the perfect store.
+                Zero tech skills needed. We do the heavy lifting.
               </p>
 
               <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>

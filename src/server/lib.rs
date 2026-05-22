@@ -2629,7 +2629,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')">Dashboard</a>
-                        <a onclick="showScreen('team-screen')">Your Team</a>
+                        <a onclick="showScreen('team-screen')">Agents</a>
                         <a onclick="showScreen('setup-screen')">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
                     </nav>
@@ -2690,7 +2690,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Your AI assistants are working on your behalf.</p>
                             <p>My Business: <strong>Active</strong></p>
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
-                            <button onclick="showScreen('team-screen')">Your Team</button>
+                            <button onclick="showScreen('team-screen')">Agents</button>
                         </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
@@ -2721,7 +2721,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
+                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2997,9 +2997,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <!-- Agents Page (Your Team) -->
+                    <!-- Agents Page (Agents) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
+                        <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
