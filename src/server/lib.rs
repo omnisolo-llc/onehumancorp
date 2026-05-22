@@ -2707,6 +2707,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
                                 <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
                             </div>
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 16px; position: relative; z-index: 1; max-width: 100%; box-sizing: border-box;">
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; max-width: 100%; word-wrap: break-word;" onclick="document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => { document.getElementById('invite-copied-msg').style.display='none'; }, 3000);">Copy Invite Message</button>
+                                <div id="invite-copied-msg" style="display: none; color: white; font-weight: bold; background: rgba(0,0,0,0.5); padding: 4px 12px; border-radius: 4px;">Invite message copied!</div>
+                            </div>
                         </div>
 
                         <!-- Progress Section -->
@@ -2750,7 +2754,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
                                 </div>
-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
+                                    <button class="secondary" style="margin: 0;" onclick="alert('Exporting data...')">Export Data</button>
+                                </div>
                             </div>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
