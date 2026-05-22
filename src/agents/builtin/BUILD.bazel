@@ -52,6 +52,7 @@ rust_library(
         "harness.rs",
         "langgraph.rs",
         "autogen.rs",
+        "expert_team.rs",
         "lib.rs",
         "local_provider.rs",
         "json_store.rs",
@@ -198,6 +199,7 @@ rust_binary(
         "pubsub",
         "registry",
         "local_provider",
+        "expert_team",
     ]
 ]
 
