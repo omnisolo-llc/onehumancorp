@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
@@ -342,12 +344,20 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-indigo-600">Active</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
-                >
-                    <span>🎁 Invite a Business & Earn $50</span>
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <button
+                        onClick={() => router.push('/referrals')}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-all font-inter text-sm"
+                    >
+                        Referrals
+                    </button>
+                    <button
+                        onClick={() => setShowReferralModal(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
+                    >
+                        <span>🎁 Invite a Business & Earn $50</span>
+                    </button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
