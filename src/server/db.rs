@@ -155,11 +155,11 @@ impl DB {
             Ok(DB { pool: dummy_pool, store: DbStore::Sqlite(sqlite_pool) })
         } else {
             let mut pg_url = database_url.clone();
-            if !pg_url.contains("statement_cache_capacity=0") {
+            if !pg_url.contains("statement-cache-capacity=0") {
                 if pg_url.contains('?') {
-                    pg_url.push_str("&statement_cache_capacity=0");
+                    pg_url.push_str("&statement-cache-capacity=0");
                 } else {
-                    pg_url.push_str("?statement_cache_capacity=0");
+                    pg_url.push_str("?statement-cache-capacity=0");
                 }
             }
 
