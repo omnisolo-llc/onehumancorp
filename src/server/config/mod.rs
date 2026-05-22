@@ -81,6 +81,12 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 
     let mut cfg: AppConfig = s.try_deserialize()?;
 
+    if cfg.max_tokens == 0 {
+        cfg.max_tokens = 2048;
+    } else if cfg.max_tokens > 4096 {
+        cfg.max_tokens = 4096;
+    }
+
     // Standalone enforcement
     cfg = StandaloneModeEnforcer.enforce(cfg);
 
@@ -144,7 +150,17 @@ impl ModeEnforcer for StandaloneModeEnforcer {
             let db_path = sqlite_url.strip_prefix("sqlite://").unwrap_or(sqlite_url.as_str()).split('?').next().unwrap_or("ohc-standalone.db");
             if let Some(parent) = std::path::Path::new(db_path).parent() {
                 if !parent.as_os_str().is_empty() {
-                    let _ = std::fs::create_dir_all(parent);
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::DirBuilderExt;
+                        let mut builder = std::fs::DirBuilder::new();
+                        builder.recursive(true).mode(0o700);
+                        let _ = builder.create(parent);
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::create_dir_all(parent);
+                    }
                 }
             }
             match OpenOptions::new()
