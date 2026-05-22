@@ -289,7 +289,11 @@ bazel_dep(name = "toolchains_llvm", version = "1.7.0")
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
     name = "llvm_toolchain",
-    llvm_version = "21.1.8",
+    llvm_versions = {
+        "": "21.1.8",
+        # toolchains_llvm 1.7.0 has no 21.1.8 x86_64 macOS archive.
+        "darwin-x86_64": "15.0.7",
+    },
 )
 use_repo(llvm, "llvm_toolchain")
 
