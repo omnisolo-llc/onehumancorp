@@ -64,23 +64,34 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 		}
 
 		if len(callExpr.Args) > 0 {
-			cmdName := ""
-			if len(callExpr.Args[0].Parts) == 1 {
-				switch part := callExpr.Args[0].Parts[0].(type) {
+			var cmdParts []string
+			for _, part := range callExpr.Args[0].Parts {
+				switch p := part.(type) {
 				case *syntax.Lit:
-					cmdName = part.Value
+					cmdParts = append(cmdParts, p.Value)
 				case *syntax.SglQuoted:
-					cmdName = part.Value
+					cmdParts = append(cmdParts, p.Value)
 				case *syntax.DblQuoted:
-					if len(part.Parts) == 1 {
-						if lit, ok := part.Parts[0].(*syntax.Lit); ok {
-							cmdName = lit.Value
+					var dblParts []string
+					for _, dp := range p.Parts {
+						if dplit, ok := dp.(*syntax.Lit); ok {
+							dblParts = append(dblParts, dplit.Value)
 						}
 					}
+					cmdParts = append(cmdParts, strings.Join(dblParts, ""))
+				}
+			}
+			cmdName := strings.Join(cmdParts, "")
+
+			// Fallback
+			if cmdName == "" && len(callExpr.Args[0].Parts) == 1 {
+				if lit, ok := callExpr.Args[0].Parts[0].(*syntax.Lit); ok {
+					cmdName = lit.Value
 				}
 			}
 
 			cmdName = strings.ReplaceAll(cmdName, "\\", "")
+			cmdName = strings.ReplaceAll(cmdName, "\"", "")
 
 			// Check blocked commands
 			for _, blocked := range v.config.BlockedCommands {
@@ -96,22 +107,32 @@ func (v *ASTValidator) Validate(ctx context.Context, command string) error {
 				hasRecursive := false
 				hasForce := false
 				for i := 1; i < len(callExpr.Args); i++ {
-					argStr := ""
-					if len(callExpr.Args[i].Parts) == 1 {
-						switch part := callExpr.Args[i].Parts[0].(type) {
+					var argParts []string
+					for _, part := range callExpr.Args[i].Parts {
+						switch p := part.(type) {
 						case *syntax.Lit:
-							argStr = part.Value
+							argParts = append(argParts, p.Value)
 						case *syntax.SglQuoted:
-							argStr = part.Value
+							argParts = append(argParts, p.Value)
 						case *syntax.DblQuoted:
-							if len(part.Parts) == 1 {
-								if lit, ok := part.Parts[0].(*syntax.Lit); ok {
-									argStr = lit.Value
+							var dblParts []string
+							for _, dp := range p.Parts {
+								if dplit, ok := dp.(*syntax.Lit); ok {
+									dblParts = append(dblParts, dplit.Value)
 								}
 							}
+							argParts = append(argParts, strings.Join(dblParts, ""))
+						}
+					}
+					argStr := strings.Join(argParts, "")
+					if argStr == "" && len(callExpr.Args[i].Parts) == 1 {
+						if lit, ok := callExpr.Args[i].Parts[0].(*syntax.Lit); ok {
+							argStr = lit.Value
 						}
 					}
 					argStr = strings.ReplaceAll(argStr, "\\", "")
+					argStr = strings.ReplaceAll(argStr, "\"", "")
+					argStr = strings.ReplaceAll(argStr, "'", "")
 
 					if argStr == "-r" || argStr == "-R" {
 						hasRecursive = true
