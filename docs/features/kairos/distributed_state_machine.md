@@ -19,7 +19,4 @@ stateDiagram-v2
 - Utilizes `FOR UPDATE SKIP LOCKED` on PostgreSQL.
 - Falls back to application mutexes on SQLite.
 
-## References
-- [KAIROS Master API Guide](../../technical/api/kairos-master-api-guide.md)
-
 </div>

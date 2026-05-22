@@ -22,7 +22,4 @@ sequenceDiagram
 ## Integrations
 Seamlessly syncs with KAIROS orchestration components.
 
-## References
-- [KAIROS Master API Guide](../../technical/api/kairos-master-api-guide.md)
-
 </div>
