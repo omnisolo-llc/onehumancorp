@@ -61,16 +61,34 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
+
     const connectSwarmMesh = () => {
         try {
-            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
+            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/connect?channel=system`);
 
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
-                    const payload = JSON.parse(event.data);
+                    const binaryString = atob(event.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    let payload: any = {};
+                    try {
+                       payload = JSON.parse(new TextDecoder().decode(bytes));
+                    } catch(e) {
+                       // Since we don't have protobufjs in the legacy Next.js app, perform basic string extraction
+                       const str = new TextDecoder("utf-8").decode(bytes);
+                       // Standard protobuf strings usually have length prefixes, finding plain text action descriptions
+                       // Example actions are standard sentences like "Draft email for review"
+                       const stringMatches = str.match(/[a-zA-Z0-9\s_\-\.\:\,]{8,}/g);
+                       if (stringMatches && stringMatches.length > 0) {
+                           // Filter out base64 padding or noise
+                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing mesh task..." };
+                       } else {
+                           return; // Unprocessable binary
+                       }
+                    }
                     setSwarmActivity(prev => [{
                         id: Math.random().toString(),
                         agent: payload.agent_id || "Swarm Agent",
