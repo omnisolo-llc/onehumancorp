@@ -20,11 +20,6 @@ static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
-static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
-static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-static MISSION_FAILURE_RATE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-static BUSINESS_EVENT_COUNT: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-
 
 pub fn get_deployment_mode() -> &'static str {
     static DEPLOYMENT_MODE: OnceLock<String> = OnceLock::new();
@@ -79,75 +74,6 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
             .with_description("Tracks the number of failed task claim attempts or retries due to lock contention")
             .build()
     })
-}
-
-pub fn get_mission_time_in_queue_histogram() -> &'static Histogram<f64> {
-    MISSION_TIME_IN_QUEUE.get_or_init(|| {
-        let meter = global::meter("ohc.orchestration");
-        meter.f64_histogram("MissionTimeInQueue")
-            .with_description("Time a mission spends in the queue before being claimed")
-            .build()
-    })
-}
-
-pub fn get_mission_execution_latency_histogram() -> &'static Histogram<f64> {
-    MISSION_EXECUTION_LATENCY.get_or_init(|| {
-        let meter = global::meter("ohc.orchestration");
-        meter.f64_histogram("MissionExecutionLatency")
-            .with_description("Time a mission takes to execute")
-            .build()
-    })
-}
-
-pub fn get_mission_failure_rate_total() -> &'static UpDownCounter<i64> {
-    MISSION_FAILURE_RATE.get_or_init(|| {
-        let meter = global::meter("ohc.orchestration");
-        meter.i64_up_down_counter("MissionFailureRate")
-            .with_description("Total number of failed missions")
-            .build()
-    })
-}
-
-pub fn get_business_event_count_total() -> &'static UpDownCounter<i64> {
-    BUSINESS_EVENT_COUNT.get_or_init(|| {
-        let meter = global::meter("ohc.orchestration");
-        meter.i64_up_down_counter("BusinessEventCount")
-            .with_description("Total number of business events")
-            .build()
-    })
-}
-
-pub fn record_mission_time_in_queue(tenant_id: &str, deployment_mode: &str, latency: f64) {
-    let histogram = get_mission_time_in_queue_histogram();
-    histogram.record(latency, &[
-        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-    ]);
-}
-
-pub fn record_mission_execution_latency(tenant_id: &str, deployment_mode: &str, latency: f64) {
-    let histogram = get_mission_execution_latency_histogram();
-    histogram.record(latency, &[
-        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-    ]);
-}
-
-pub fn record_mission_failure(tenant_id: &str, deployment_mode: &str) {
-    let counter = get_mission_failure_rate_total();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-    ]);
-}
-
-pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type: &str) {
-    let counter = get_business_event_count_total();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-        opentelemetry::KeyValue::new("event_type", event_type.to_string()),
-    ]);
 }
 
 pub fn record_sub_agent_queue_delay(delay: f64) {

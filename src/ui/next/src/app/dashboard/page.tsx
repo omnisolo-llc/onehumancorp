@@ -291,48 +291,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Embeddable Storefront Widget */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Embed Your Store</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
-                        <pre className="text-xs text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap">
-{`<div id="ohc-embed-root"></div>
-<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>
-<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
-</div>`}
-                        </pre>
-                        <button
-                            onClick={() => {
-                                const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
-                                navigator.clipboard.writeText(code);
-                                alert('Copied embed code to clipboard!');
-                            }}
-                            className="absolute top-2 right-2 bg-white text-gray-700 border border-gray-200 px-3 py-1 rounded-md text-xs font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                            Copy Code
-                        </button>
-                    </div>
-                </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
-                    <div className="text-4xl mb-3">💻</div>
-                    <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
-                </div>
-            </div>
-         </section>
-
-
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">

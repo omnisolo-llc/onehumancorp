@@ -101,7 +101,7 @@ impl TaskWorker {
             if a.status == "ACTIVE" || a.status == "WAITING_FOR_TOOLS" {
                 let payload = serde_json::json!({
                     "issue_id":   issue.id,
-                    "issue_name": ::server_pricing::compression::reduce_tokens(&issue.name),
+                    "issue_name": issue.name,
                     "directive":  "Please resolve the attached issue descriptor.",
                 });
                 

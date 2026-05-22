@@ -19,7 +19,7 @@ async function loginAs(page: Page, user: E2EUser) {
   await page.getByPlaceholder('Email or Username').first().fill(user.email);
   await page.locator('input[type="password"]').first().fill(user.password);
   await page.locator('button:has-text("Login")').first().click();
-  await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+  await page.getByRole('heading', { name: 'Dashboard' }).waitFor({ state: 'visible', timeout: 15000 });
 }
 
 function rejectNetworkStubbing(context: BrowserContext, page?: Page) {

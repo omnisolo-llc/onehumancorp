@@ -155,7 +155,6 @@ rust_binary(
     for module in [
         "analytics",
         "benchmarks",
-        "chaos",
         "db",
         "msgbus",
         "pipeline",
@@ -325,10 +324,6 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "@crates//:tokio",
         "@crates//:serde_json",

@@ -22,7 +22,7 @@ async function waitForApp(baseURL: string) {
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  return;
+  throw new Error(`App at ${baseURL} did not become ready in time`);
 }
 
 function seedDatabase() {
@@ -78,9 +78,9 @@ async function loginThroughUi(baseURL: string, user: (typeof USERS)[number]) {
 }
 
 export default async function globalSetup(config: FullConfig) {
-  const baseURL = config.projects[0]?.use?.baseURL as string | undefined;
+  const { baseURL } = config.projects[0].use;
   if (!baseURL) {
-    throw new Error('Playwright baseURL is required for e2e global setup.');
+    throw new Error('baseURL is required');
   }
 
   await waitForApp(baseURL);

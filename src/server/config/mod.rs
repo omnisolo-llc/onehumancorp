@@ -81,12 +81,6 @@ pub fn load() -> Result<AppConfig, ::config::ConfigError> {
 
     let mut cfg: AppConfig = s.try_deserialize()?;
 
-    if cfg.max_tokens == 0 {
-        cfg.max_tokens = 2048;
-    } else if cfg.max_tokens > 4096 {
-        cfg.max_tokens = 4096;
-    }
-
     // Standalone enforcement
     cfg = StandaloneModeEnforcer.enforce(cfg);
 
