@@ -123,7 +123,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
-             style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(40px) saturate(250%)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
@@ -139,7 +139,7 @@ export default function WebsiteBuilderPage() {
                   enterKeyHint="done"
                   autoCapitalize="sentences"
                   className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
-                  style={{ borderRadius: '12px' }}
+                  style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
@@ -156,7 +156,7 @@ export default function WebsiteBuilderPage() {
                         ? "text-white shadow-md active:scale-[0.98]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '12px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                     onClick={handleGenerate}
                     disabled={bio.trim().length <= 5}
                   >
@@ -175,7 +175,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 justify-center items-center"
-             style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(40px) saturate(250%)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
             <p className="text-gray-500 font-medium">Agents are building your store...</p>
         </div>
@@ -187,7 +187,7 @@ export default function WebsiteBuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden text-center p-8 justify-center"
-             style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(40px) saturate(250%)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
+             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
@@ -201,7 +201,7 @@ export default function WebsiteBuilderPage() {
 
           <button
             className="w-full bg-gray-100 text-gray-800 font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
-            style={{ borderRadius: '12px' }}
+            style={{ borderRadius: '8px' }}
             onClick={() => updateStatus("idle")}
           >
             Go to Dashboard
@@ -214,7 +214,7 @@ export default function WebsiteBuilderPage() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
       <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden"
-           style={{ background: 'rgba(255, 255, 255, 0.45)', backdropFilter: 'blur(40px) saturate(250%)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '24px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
+           style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.07)' }}>
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
@@ -232,7 +232,7 @@ export default function WebsiteBuilderPage() {
             <button
               id="launch-btn"
               className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '12px' }}
+              style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>

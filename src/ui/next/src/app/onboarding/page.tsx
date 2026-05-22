@@ -127,7 +127,7 @@ export default function OnboardingWizard() {
           }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-2xl overflow-hidden glass-container">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
@@ -139,7 +139,7 @@ export default function OnboardingWizard() {
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
               {error}
             </div>
           )}
@@ -153,12 +153,12 @@ export default function OnboardingWizard() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <button
                 onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-lg font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
               >
                 Next
               </button>
@@ -174,20 +174,20 @@ export default function OnboardingWizard() {
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-lg border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleIntakeSubmit}
                   disabled={isLoading}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-lg font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -207,7 +207,7 @@ export default function OnboardingWizard() {
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
               <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
 
-              <div className="bg-white/80 p-5 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
+              <div className="bg-white/80 p-5 rounded-lg border border-gray-100 shadow-sm mb-6 space-y-3">
                 <div>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Business Name</span>
                   <div className="font-medium text-gray-900">{intakeData.business_name}</div>
@@ -229,7 +229,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  className="px-6 py-4 rounded-lg font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -237,7 +237,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="flex-1 bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-lg font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -264,13 +264,13 @@ export default function OnboardingWizard() {
               <div className="w-full space-y-3 mt-auto">
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-lg font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-xl font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-lg font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>

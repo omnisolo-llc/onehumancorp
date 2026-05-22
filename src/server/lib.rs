@@ -3605,7 +3605,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function saveWizardState() {
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
-                                const inputs = document.querySelectorAll('#setup-screen input');
+                                const inputs = document.querySelectorAll('#setup-screen input, #setup-screen select, #setup-screen textarea');
                                 const state = { step: currentStep };
                                 inputs.forEach((input, index) => {
                                     if (input.placeholder) {
@@ -3644,7 +3644,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function loadWizardState() {
-                            const inputs = document.querySelectorAll('#setup-screen input');
+                            const inputs = document.querySelectorAll('#setup-screen input, #setup-screen select, #setup-screen textarea');
                             // add listener for auto-save
                             inputs.forEach((input) => {
                                 input.addEventListener('change', saveWizardState);
