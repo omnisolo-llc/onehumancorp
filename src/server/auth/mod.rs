@@ -431,24 +431,27 @@ impl Store {
     }
 
     pub fn issue_token(&self, _user: &User) -> Result<String, String> {
-            let now = chrono::Utc::now();
-            let claims = Claims {
-                sub: _user.id.clone(),
-                username: _user.username.clone(),
-                email: _user.email.clone(),
-                roles: _user.roles.clone(),
-                organization_id: _user.organization_id.clone(),
-                session_id: None,
-                iat: now.timestamp(),
-                exp: (now + chrono::Duration::hours(24)).timestamp(),
-                jti: hex::encode(random_bytes(8)),
-            };
+        if ::server_config::get().multitenant && _user.organization_id.as_deref().unwrap_or_default().trim().is_empty() {
+            return Err("organization_id is required for token issuance in cloud mode".to_string());
+        }
+        let now = chrono::Utc::now();
+        let claims = Claims {
+            sub: _user.id.clone(),
+            username: _user.username.clone(),
+            email: _user.email.clone(),
+            roles: _user.roles.clone(),
+            organization_id: _user.organization_id.clone(),
+            session_id: None,
+            iat: now.timestamp(),
+            exp: (now + chrono::Duration::hours(24)).timestamp(),
+            jti: hex::encode(random_bytes(8)),
+        };
 
-            let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
-            let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
-                .map_err(|e| e.to_string())?;
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256);
+        let token = jsonwebtoken::encode(&header, &claims, &jsonwebtoken::EncodingKey::from_secret(&self.secret))
+            .map_err(|e| e.to_string())?;
 
-            Ok(token)
+        Ok(token)
     }
 
     pub async fn validate_token(&self, _token: &str) -> Result<Claims, String> {
@@ -461,7 +464,11 @@ impl Store {
                     enabled: oidc_cfg_internal.enabled,
                 };
                 if oidc_cfg.enabled {
-                    return crate::oidc::validate_oidc_token(_token, &oidc_cfg).await;
+                    let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
+                    if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                        return Err("token revoked".to_string());
+                    }
+                    return Ok(claims);
                 }
             }
         }
@@ -499,6 +506,9 @@ impl Store {
                         }
                     };
                     if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
+                            return Err("token revoked".to_string());
+                        }
                         return Ok(claims);
                     }
                     Err("Invalid token".to_string())

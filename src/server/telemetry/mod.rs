@@ -10,7 +10,7 @@ use opentelemetry::global;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::UpDownCounter;
+use opentelemetry::metrics::{UpDownCounter, Counter};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -20,6 +20,13 @@ static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
+static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
+static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static MISSION_FAILURE_RATE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static BUSINESS_EVENT_COUNT: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 
 
 pub fn get_deployment_mode() -> &'static str {
@@ -41,6 +48,24 @@ pub fn get_queue_length_gauge() -> &'static UpDownCounter<i64> {
     })
 }
 
+pub fn get_sync_daemon_batch_size_histogram() -> &'static Histogram<f64> {
+    SYNC_DAEMON_BATCH_SIZE_HISTOGRAM.get_or_init(|| {
+        let meter = global::meter("ohc.daemon");
+        meter.f64_histogram("ohc_sync_daemon_batch_size")
+            .with_description("Batch size for sync daemon")
+            .build()
+    })
+}
+
+pub fn get_agent_execution_traces_total() -> &'static Counter<u64> {
+    AGENT_EXECUTION_TRACES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.agent");
+        meter.u64_counter("ohc_agent_execution_traces_total")
+            .with_description("Total number of agent execution traces")
+            .build()
+    })
+}
+
 pub fn get_sub_agent_queue_delay_histogram() -> &'static Histogram<f64> {
     SUB_AGENT_QUEUE_DELAY_HISTOGRAM.get_or_init(|| {
         let meter = global::meter("ohc.sub_agent");
@@ -57,6 +82,75 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
             .with_description("Tracks the number of failed task claim attempts or retries due to lock contention")
             .build()
     })
+}
+
+pub fn get_mission_time_in_queue_histogram() -> &'static Histogram<f64> {
+    MISSION_TIME_IN_QUEUE.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter.f64_histogram("MissionTimeInQueue")
+            .with_description("Time a mission spends in the queue before being claimed")
+            .build()
+    })
+}
+
+pub fn get_mission_execution_latency_histogram() -> &'static Histogram<f64> {
+    MISSION_EXECUTION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter.f64_histogram("MissionExecutionLatency")
+            .with_description("Time a mission takes to execute")
+            .build()
+    })
+}
+
+pub fn get_mission_failure_rate_total() -> &'static UpDownCounter<i64> {
+    MISSION_FAILURE_RATE.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter.i64_up_down_counter("MissionFailureRate")
+            .with_description("Total number of failed missions")
+            .build()
+    })
+}
+
+pub fn get_business_event_count_total() -> &'static UpDownCounter<i64> {
+    BUSINESS_EVENT_COUNT.get_or_init(|| {
+        let meter = global::meter("ohc.orchestration");
+        meter.i64_up_down_counter("BusinessEventCount")
+            .with_description("Total number of business events")
+            .build()
+    })
+}
+
+pub fn record_mission_time_in_queue(tenant_id: &str, deployment_mode: &str, latency: f64) {
+    let histogram = get_mission_time_in_queue_histogram();
+    histogram.record(latency, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+}
+
+pub fn record_mission_execution_latency(tenant_id: &str, deployment_mode: &str, latency: f64) {
+    let histogram = get_mission_execution_latency_histogram();
+    histogram.record(latency, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+}
+
+pub fn record_mission_failure(tenant_id: &str, deployment_mode: &str) {
+    let counter = get_mission_failure_rate_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
+}
+
+pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type: &str) {
+    let counter = get_business_event_count_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+        opentelemetry::KeyValue::new("event_type", event_type.to_string()),
+    ]);
 }
 
 pub fn record_sub_agent_queue_delay(delay: f64) {
@@ -94,7 +188,18 @@ pub async fn record_sync_escalation(pool: &PgPool, count: f32, mode: &str) -> Re
 }
 
 pub async fn record_sync_daemon_batch_size(pool: &PgPool, count: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let histogram = get_sync_daemon_batch_size_histogram();
+    histogram.record(count as f64, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+
     buffer_metric(pool, "sync_daemon_batch_size", "gauge", count, serde_json::json!({ "mode": mode })).await
+}
+
+pub fn record_agent_execution_trace(agent_id: &str, trace_type: &str) {
+    let counter = get_agent_execution_traces_total();
+    counter.add(1, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+        opentelemetry::KeyValue::new("trace_type", trace_type.to_string()),
+    ]);
 }
 
 pub async fn record_sync_latency(pool: &PgPool, latency_ms: f32, mode: &str) -> Result<(), Box<dyn std::error::Error>> {
