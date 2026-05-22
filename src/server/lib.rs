@@ -4495,40 +4495,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (id === 'dashboard-screen') {
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
-                                fetch('/api/v1/dashboard/sales', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
+                                Promise.all([
+                                    fetch('/api/v1/dashboard/sales', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json()),
+                                    fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                        body: JSON.stringify({ tenant_id: tenant })
+                                    }).then(res => res.json())
+                                ])
+                                .then(([salesData, metricsData]) => {
                                     const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + data.total_sales.toFixed(2);
-                                })
-                                .catch(err => console.error('Error fetching sales:', err));
+                                    if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
 
-                                fetch('/api/v1/dashboard/metrics', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                    body: JSON.stringify({ tenant_id: tenant })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
                                     const banner = document.getElementById('milestone-share-banner');
                                     const countEl = document.getElementById('milestone-customers-count');
                                     const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
                                     if (banner && countEl && !dismissed) {
-                                        if (data.active_customers > 0) {
+                                        if (metricsData.active_customers > 0) {
                                             banner.style.display = 'flex';
                                             banner.classList.remove('hidden');
-                                            countEl.textContent = data.active_customers;
+                                            countEl.textContent = metricsData.active_customers;
                                         } else {
                                             banner.style.display = 'none';
                                             banner.classList.add('hidden');
                                         }
                                     }
                                 })
-                                .catch(err => console.error('Error fetching metrics:', err));
+                                .catch(err => console.error('Error fetching dashboard data:', err));
                             }
 
                             if (id === 'my-plan-screen') {
