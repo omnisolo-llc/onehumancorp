@@ -36,21 +36,6 @@ async fn handle_webhook(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Json(payload): Json<WebhookPayload>,
 ) -> impl IntoResponse {
-    // For incoming Stripe webhooks for new orders, route to Operations to process the order
-    if payload.source == "stripe" && payload.message == "order_placed" {
-        let event = crate::orchestration::departments::types::DepartmentEvent {
-            id: uuid::Uuid::new_v4().to_string(),
-            tenant_id: payload.tenant_id.clone(),
-            event_type: "tenant.quote.accepted".to_string(),
-            payload: serde_json::json!({"source": payload.source, "message": payload.message}),
-        };
-
-        match orchestrator.dispatch_event(event).await {
-            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
-            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
-        }
-    }
-
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
     // We route external messages (like DMs) to the Customer Success department

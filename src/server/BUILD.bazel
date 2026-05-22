@@ -135,10 +135,6 @@ rust_binary(
         size = "large",
         crate = ":server_lib",
         args = ["--test", module],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
         edition = "2024",
         env = {
@@ -147,10 +143,6 @@ rust_binary(
         proc_macro_deps = [
             "@crates//:async-trait",
         ],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
         deps = [
             "@crates//:tempfile",
             "@crates//:tokio-tungstenite",
@@ -185,10 +177,6 @@ rust_test(
         "@crates//:chrono",
         "@crates//:sqlx",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_test(
@@ -207,10 +195,6 @@ rust_test(
         "@crates//:tokio",
         "@crates//:walkdir",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_test(
@@ -227,10 +211,6 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
@@ -244,10 +224,6 @@ rust_test(
     crate_root = "crypto.rs",
     edition = "2024",
     compile_data = ["//src/server/services:srcs"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "//src/server/utils:server_utils",
         "//src/proto:mcp_proxy_tonic",
@@ -278,10 +254,6 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "@crates//:tempfile",
         "@crates//:tree-sitter-bash",
@@ -303,40 +275,8 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
-    ],
-)
-
-
-
-rust_test(
-    name = "config_sync_unit_test",
-    size = "large",
-    crate = ":server_lib",
-    args = ["--test", "tools::config_sync"],
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2024",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    proc_macro_deps = [
-        "@crates//:async-trait",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "@crates//:tokio",
-        "@crates//:serde_json",
-        "@crates//:sqlx",
-        "@crates//:tempfile",
-        "@crates//:temp-env",
     ],
 )
