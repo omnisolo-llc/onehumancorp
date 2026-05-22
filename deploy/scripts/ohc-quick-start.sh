@@ -42,7 +42,7 @@ echo -e "${DIM}[4/4] Running Diagnostics...${RESET}"
 yes | bash deploy/scripts/ohc-diagnostics.sh || true
 
 echo -e "${BOLD}Next steps:${RESET}"
-echo -e "  Use ${CYAN}./deploy/scripts/ohc_hybrid_cli.sh${RESET} to manage the OS, switch to Cloud Mode, or seed mock data."
+echo -e "  Use ${CYAN}./ohc_hybrid_cli.sh${RESET} to manage the OS, switch to Cloud Mode, or seed mock data."
 
 function cleanup {
   echo -e "\n${DIM}[Shutting down...]${RESET}"

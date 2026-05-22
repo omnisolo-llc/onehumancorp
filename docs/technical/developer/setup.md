@@ -8,7 +8,7 @@ This guide walks you through setting up a development environment capable of wor
 For developers, the unified entry point for environment operations is the OHC Hybrid CLI. This interactive menu allows you to navigate onboarding scripts interactively.
 
 ```bash
-bash deploy/scripts/ohc_hybrid_cli.sh
+bash ohc_hybrid_cli.sh
 ```
 
 ## The Problem

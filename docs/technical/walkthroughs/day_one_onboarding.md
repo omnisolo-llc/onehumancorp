@@ -58,7 +58,7 @@ Once your environment is configured, use the Quick Start script to launch the lo
 For day-to-day operations, the OHC Hybrid CLI provides an interactive master menu. You can use it to switch contexts, run diagnostics, or provision new agents:
 
 ```bash
-./deploy/scripts/ohc_hybrid_cli.sh
+./ohc_hybrid_cli.sh
 ```
 
 **Available Options:**

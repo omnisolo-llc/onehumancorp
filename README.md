@@ -10,7 +10,7 @@ To begin your onboarding journey, we provide a **unified Master CLI** that handl
 From the root of the repository, you must explicitly run the onboarding CLI:
 
 ```bash
-./deploy/scripts/ohc_hybrid_cli.sh
+./ohc_hybrid_cli.sh
 ```
 
 **What this does:**
@@ -235,7 +235,7 @@ Kubernetes secrets are used to inject credentials at runtime without committing 
 
 ### Setup and Mode Switching (Manual)
 
-We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets. For day one setup, we recommend using the unified Master CLI (`./deploy/scripts/ohc_hybrid_cli.sh`) from the repository root instead.
+We provide helper scripts in `deploy/scripts/` to smooth the friction of developing against multiple hybrid targets. For day one setup, we recommend using the unified Master CLI (`./ohc_hybrid_cli.sh`) from the repository root instead.
 
 - **Initial Setup:** `./deploy/scripts/ohc-setup.sh` (Generates `.env`, verifies builds, and provisions the workspace)
 - **Mode Switching:** `source deploy/scripts/ohc-mode.sh [cloud|standalone|headless]` (Configures environment variables for the current terminal session)
