@@ -17,6 +17,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-core
@@ -24,6 +25,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
@@ -35,6 +37,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -63,6 +66,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ .Values.cnpg.clusterName }}-rw
@@ -75,6 +79,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-redis-master
@@ -114,6 +119,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
@@ -125,6 +131,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -169,6 +176,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ .Release.Name }}-backend
@@ -180,6 +188,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
     - to:
         - namespaceSelector:
             matchLabels:
@@ -279,6 +288,7 @@ spec:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: {{ .Release.Namespace }}
+              tenant: {{ .Values.tenantId | default "default" }}
           podSelector:
             matchLabels:
               app: {{ include "ohc.fullname" . }}-backend

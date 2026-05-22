@@ -108,6 +108,16 @@ impl DB {
                             }
                         }
                     }
+                    if let Ok(metadata) = std::fs::metadata(&db_path) {
+                        let mut perms = metadata.permissions();
+                        if perms.mode() & 0o777 != 0o600 {
+                            perms.set_mode(0o600);
+                            if let Err(e) = std::fs::set_permissions(&db_path, perms) {
+                                tracing::error!("Failed to securely update existing standalone database file permissions: {}", e);
+                                return Err(e.into());
+                            }
+                        }
+                    }
                 }
                 #[cfg(not(unix))]
                 {

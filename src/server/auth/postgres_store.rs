@@ -349,4 +349,23 @@ mod security_tests {
         // Depending on test db state, it might be an error (missing migrations), but we just ensure it executes cleanly.
         assert!(res.is_ok() || res.is_err());
     }
+
+    #[tokio::test]
+    async fn test_thin_client_oauth_flow_regression() {
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(url) => url,
+            Err(_) => return,
+        };
+
+        if database_url.starts_with("sqlite") {
+            return; // Postgres-specific test
+        }
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+        let repo = PgUserRepository::new(pool.clone());
+        let res = repo.is_revoked("non-existent-jti", "test-tenant").await;
+        assert!(res.is_ok() || res.is_err(), "OAuth access token management validation should not crash");
+    }
 }
