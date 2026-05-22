@@ -10,7 +10,7 @@ The KAIROS UltraPlan system enables parallel deliberation between agents for com
 3. **Approval Velocity**: The ratio of successfully approved plans versus those that expire or are abandoned in revision loops.
 
 ## Research Report
-An audit of `src/server/orchestration/ultraplan.rs` shows that the `UltraPlanManager` handles state transitions but only emits a generic `RecordDeliberationPhaseDuration` metric.
+An audit of `src/server/orchestration/ultraplan.go` shows that the `UltraPlanManager` handles state transitions but only emits a generic `RecordDeliberationPhaseDuration` metric.
 - The `critiques` list in the `StateMachine` is a JSON array, making it hard to query via Prometheus without explicit instrumentation.
 - There is no counter for the total number of revision loops.
 - Agent contribution is stored in the DB but not exposed as real-time observability.
@@ -24,10 +24,10 @@ This gap prevents OHC from identifying "infinite loops" in agent deliberation an
    - `ohc_ultraplan_abandonments_total` (Counter): Labels: `mode`. Incremented if a plan is deleted or failed during deliberation.
 
 2. **Code Changes**:
-   - Update `src/server/orchestration/ultraplan.rs`:
+   - Update `src/server/orchestration/ultraplan.go`:
      - Inside `SubmitCritique`, call `telemetry.RecordUltraPlanCritique(ctx, planID, agentID)`.
      - Inside `modifyStateMachine` or `UpdatePlanStatus`, detect the `REVISION_REQUIRED` -> `DELIBERATING` transition and call `telemetry.RecordUltraPlanRevision(ctx, planID)`.
-   - Update `src/server/telemetry/telemetry/mod.rs` to include these new metrics and record functions.
+   - Update `src/server/telemetry/telemetry.go` to include these new metrics and record functions.
 
 3. **Grafana Updates**:
    - Add a "Deliberation Efficiency" row to `kairos_hybrid_metrics.json`.
@@ -36,12 +36,12 @@ This gap prevents OHC from identifying "infinite loops" in agent deliberation an
 
 ## Implementation Prompt
 You are an Implementer. Implement UltraPlan efficiency metrics as follows:
-1. Modify `src/server/telemetry/telemetry/mod.rs` to add:
+1. Modify `src/server/telemetry/telemetry.go` to add:
    - `UltraPlanCritiquesTotal` (Int64Counter) with labels `agent_id`, `plan_id`, `mode`.
    - `UltraPlanRevisionCyclesTotal` (Int64Counter) with labels `plan_id`, `mode`.
    - `UltraPlanApprovalsTotal` (Int64Counter) with label `mode`.
    - Export helper functions: `RecordUltraPlanCritique(ctx, planID, agentID)`, `RecordUltraPlanRevision(ctx, planID)`, and `RecordUltraPlanApproval(ctx)`. Use `kairos.GetMode()` for the mode label.
-2. In `src/server/orchestration/ultraplan.rs`:
+2. In `src/server/orchestration/ultraplan.go`:
    - In `SubmitCritique`, call `RecordUltraPlanCritique`.
    - In `modifyStateMachine`, detect if `newPhase == "APPROVED"` and `oldPhase != "APPROVED"`, then call `RecordUltraPlanApproval`.
    - Detect if the plan is transitioning from `REVISION_REQUIRED` back to a state where work resumes (e.g., `DELIBERATING`), and call `RecordUltraPlanRevision`.

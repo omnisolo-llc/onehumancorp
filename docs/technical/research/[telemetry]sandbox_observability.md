@@ -13,8 +13,8 @@ We have limited visibility into what happens *inside* the sandbox. We need high-
 - **Syscall Audit**: Log blocked syscalls to a dedicated security event stream in AutoDream.
 
 ## Implementation Prompt
-1. Enhance `src/server/telemetry/telemetry/mod.rs` with new OTel instruments for sandbox resource tracking.
-2. Update `src/server/harness/sandbox/manager.rs` to collect metrics during execution (using `syscall.Rusage`).
+1. Enhance `src/server/telemetry/telemetry.go` with new OTel instruments for sandbox resource tracking.
+2. Update `src/server/bash_sandbox/sandbox.go` to collect metrics during execution (using `syscall.Rusage`).
 3. Implement a background poller that aggregates these metrics every 5 seconds for long-running agent tasks.
 4. Ensure all metrics are tagged with `agent_id`, `organization_id`, and `task_id`.
 5. Create a Grafana dashboard JSON in `monitoring/grafana/dashboards/sandbox_observability.json` visualizing these metrics.

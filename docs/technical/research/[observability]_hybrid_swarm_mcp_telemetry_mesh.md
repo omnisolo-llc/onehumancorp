@@ -48,7 +48,7 @@ graph TD
 To implement the Hybrid Swarm-Aware MCP Telemetry Mesh, we need to enhance the local metric buffering and cloud synchronization systems.
 
 1.  **SQLite Buffer Implementation**: Introduce a `telemetry_buffer` table in the local SQLite SIPDB to persistently store OpenTelemetry events and metrics when offline.
-2.  **MCP Sync Worker**: Develop a Rust worker (`src/server/telemetry/mcp_sync_worker.rs`) that periodically flushes the SQLite buffer to the Cloud API Gateway.
+2.  **MCP Sync Worker**: Develop a Go worker (`src/server/telemetry/mcp_sync_worker.go`) that periodically flushes the SQLite buffer to the Cloud API Gateway.
 3.  **SPIFFE/SPIRE Integration**: Ensure the sync worker uses the SPIFFE Workload API to acquire an X.509 SVID for mTLS authentication with the Cloud Gateway.
 4.  **Database Schema Changes**: Create the necessary migrations for `telemetry_buffer` (SQLite) and enhance `cloud_metrics_logs` (Postgres) to handle bulk imports with deduping.
 
@@ -56,8 +56,8 @@ To implement the Hybrid Swarm-Aware MCP Telemetry Mesh, we need to enhance the l
 **Objective:** Implement the local SQLite `telemetry_buffer` and the `McpSyncWorker` to securely transmit buffered metrics to the cloud.
 
 1.  **Migration**: Create `src/server/db/migrations/032_telemetry_mesh.sql` to add the `telemetry_buffer` table with columns: `id`, `metric_name`, `value`, `labels_json`, `timestamp`, `sync_status`. Ensure it is SQLite compatible.
-2.  **Rust worker**: Create `src/server/telemetry/mcp_sync_worker.rs`. Implement a struct `McpSyncWorker` that implements a `Start(ctx async context)` method. It should query `db.Provider` for pending metrics and simulate an MCP upload (stub the actual HTTP call but log it).
-3.  **Tests**: Write unit tests in `mcp_sync_worker_test.rs` using `db.NewTestProvider(t)` to verify that successfully synced metrics are marked as 'synced' in the buffer.
+2.  **Go Worker**: Create `src/server/telemetry/mcp_sync_worker.go`. Implement a struct `McpSyncWorker` that implements a `Start(ctx context.Context)` method. It should query `db.Provider` for pending metrics and simulate an MCP upload (stub the actual HTTP call but log it).
+3.  **Tests**: Write unit tests in `mcp_sync_worker_test.go` using `db.NewTestProvider(t)` to verify that successfully synced metrics are marked as 'synced' in the buffer.
 
 ## Priority
 P0

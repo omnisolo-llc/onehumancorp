@@ -17,19 +17,19 @@ Most existing agentic frameworks configure task scheduling statically or rely st
 - **Standalone Mode:** Implement an in-memory or SQLite-backed task queue.
 
 **API Contracts:**
-- `EnqueueTask(ctx async context, queueName string, payload []byte, delay time.Duration) (string, error)`
-- `GetTaskStatus(ctx async context, taskId string) (TaskStatus, error)`
+- `EnqueueTask(ctx context.Context, queueName string, payload []byte, delay time.Duration) (string, error)`
+- `GetTaskStatus(ctx context.Context, taskId string) (TaskStatus, error)`
 
 **Security:**
 - Ensure `organization_id` prefixes are rigorously applied to queue names and task metadata in Cloud mode to enforce cross-tenant isolation.
 
 ## Implementation Prompt
 "Implement the Hybrid Task Scheduler MCP tool in `src/server/integrations/task_scheduler/`.
-1. Create `task_scheduler.rs` defining the `TaskSchedulerManager` and its MCP capabilities (`EnqueueTask`, `GetTaskStatus`).
+1. Create `task_scheduler.go` defining the `TaskSchedulerManager` and its MCP capabilities (`EnqueueTask`, `GetTaskStatus`).
 2. Implement environment-agnostic logic. To determine if the connection is Cloud, check: `os.Getenv(\"OHC_MULTITENANT\") == \"true\"`.
 3. For Cloud mode, implement a Redis-backed queue ensuring `organization_id` is used to enforce isolation.
 4. For Standalone mode, implement a robust in-memory or SQLite task queue.
-5. Create comprehensive tests in `task_scheduler_test.rs`, mocking the Cloud queue and validating the Standalone local fallback. Ensure 100% test coverage.
+5. Create comprehensive tests in `task_scheduler_test.go`, mocking the Cloud queue and validating the Standalone local fallback. Ensure 100% test coverage.
 6. Create at least one comprehensive E2E test starting from UI interaction to verify the scheduling capability.
 7. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
