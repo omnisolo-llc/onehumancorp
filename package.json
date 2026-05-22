@@ -1,15 +1,16 @@
 {
   "name": "mono",
-  "version": "0.4.43",
+  "version": "0.4.44",
   "dependencies": {
     "@bufbuild/protobuf": "^2.11.0",
     "@bufbuild/protoc-gen-es": "^2.11.0",
     "@bufbuild/protoplugin": "^2.11.0",
     "@modelcontextprotocol/server-github": "^0.6.2",
     "google-protobuf": "^3.21.4",
-    "playwright": "1.50.1",
+    "playwright": "1.60.0",
     "ts-proto": "^2.11.6",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@bazel/bazelisk": "^1.28.1",
