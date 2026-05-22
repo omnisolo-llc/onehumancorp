@@ -225,7 +225,7 @@ impl McpService for MyMcpService {
                 }
             }
             _ => {
-                Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
+                Ok(Response::new(McpInvokeResponse { payload: serde_json::to_string(&serde_json::json!({"status": "error", "message": format!("tool {} not implemented in stub", req.tool_id)})).unwrap() }))
             }
         }
     }

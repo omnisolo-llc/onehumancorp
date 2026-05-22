@@ -43,7 +43,7 @@ impl LocalProxyServer {
                 .instrument(tracing::info_span!("local_stateful_proxy"))
                 .await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Ok(McpInvokeResponse { payload: serde_json::to_string(&serde_json::json!({"status": "error", "message": format!("tool {} not implemented", req.tool_id)})).unwrap() }),
         }
     }
 }

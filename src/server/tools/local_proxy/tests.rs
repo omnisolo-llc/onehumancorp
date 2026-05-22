@@ -57,7 +57,7 @@ async fn test_local_proxy_server_invoke_missing_context_id() {
 }
 
 #[tokio::test]
-async fn test_local_proxy_server_invoke_unimplemented() {
+async fn test_local_proxy_server_invoke_unknown() {
     let server = LocalProxyServer::new();
     let req = McpInvokeRequest {
         tool_id: "unknown_tool".to_string(),
@@ -66,7 +66,8 @@ async fn test_local_proxy_server_invoke_unimplemented() {
         params: r#"{"command":"ls -la","context_id":"test-context"}"#.to_string(),
         spiffe_id: "".to_string(),
     };
-    let err = server.invoke_tool(&req).await.unwrap_err();
-    assert_eq!(err.code(), tonic::Code::Unimplemented);
+    let resp = server.invoke_tool(&req).await.unwrap();
+    let json: serde_json::Value = serde_json::from_str(&resp.payload).unwrap();
+    assert_eq!(json["status"], "error");
 }
 pub fn pad_test() {}

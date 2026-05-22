@@ -146,7 +146,7 @@ impl HybridFSMcpServer {
                 .instrument(tracing::info_span!("fs_hybrid_sync"))
                 .await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Ok(McpInvokeResponse { payload: serde_json::to_string(&serde_json::json!({"status": "error", "message": format!("tool {} not implemented", req.tool_id)})).unwrap() }),
         }
     }
 }

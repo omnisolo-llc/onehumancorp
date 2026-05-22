@@ -133,8 +133,6 @@ message PipelinePromoteRequest {
 
 service DashboardService {
   rpc GetDashboard(GetDashboardRequest) returns (DashboardSnapshot);
-  rpc PostMessage(PostMessageRequest) returns (PostMessageResponse);
-  rpc SeedDashboard(SeedDashboardRequest) returns (SeedDashboardResponse);
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
