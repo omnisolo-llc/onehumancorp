@@ -243,7 +243,19 @@ jobs:
         run: |
           bazelisk build @crates//:tauri-cli__cargo-tauri
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
-          echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
+          shim_dir="$RUNNER_TEMP/tauri-cli-bin"
+          path_entry="$shim_dir"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            shim_dir="$(cygpath -u "$RUNNER_TEMP")/tauri-cli-bin"
+            path_entry="$(cygpath -w "$shim_dir")"
+          fi
+          mkdir -p "$shim_dir"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp "$tauri_cli" "$shim_dir/cargo-tauri.exe"
+          else
+            ln -sf "$(pwd)/$tauri_cli" "$shim_dir/cargo-tauri"
+          fi
+          echo "$path_entry" >> "$GITHUB_PATH"
 
       - name: Install macOS signing assets
         if: runner.os == 'macOS'

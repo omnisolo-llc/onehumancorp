@@ -23,8 +23,6 @@ build --remote_download_toplevel
 build --action_env=CGO_ENABLED=1
 
 # ── Sandboxing ────────────────────────────────────────────────────────────────
-build --spawn_strategy=sandboxed,local
-build --sandbox_add_mount_pair=/var/run/docker.sock
 build --incompatible_strict_action_env
 build --announce_rc
 build --features=-supports_start_end_lib
@@ -130,6 +128,8 @@ build:local --spawn_strategy=sandboxed,local
 test:local --test_output=streamed
 
 # ── Platform configs ───────────────────────────────────────────────────────────
+build:linux --spawn_strategy=sandboxed,local
+build:linux --sandbox_add_mount_pair=/var/run/docker.sock
 build:linux --linkopt=-fuse-ld=bfd
 build:linux --host_linkopt=-fuse-ld=bfd
 build:linux_x86_64 --platforms=//bazel/platforms:linux_x86_64

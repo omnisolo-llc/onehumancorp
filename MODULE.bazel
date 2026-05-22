@@ -288,7 +288,15 @@ bazel_dep(name = "toolchains_llvm", version = "1.7.0")
 llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
 llvm.toolchain(
     name = "llvm_toolchain",
-    llvm_version = "21.1.8",
+    llvm_versions = {
+        # LLVM 21.1.8 does not publish archives for these hosts in toolchains_llvm
+        # 1.7.0. Keep the default on 21.1.8 for Linux and macOS ARM64, and pin
+        # the release builders that still need host archives.
+        "": "21.1.8",
+        "darwin-x86_64": "20.1.7",
+        "windows-aarch64": "21.1.7",
+        "windows-x86_64": "21.1.7",
+    },
 )
 use_repo(llvm, "llvm_toolchain")
 
