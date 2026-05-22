@@ -2,7 +2,7 @@
 
 build --color=yes
 build --config=remote
-build:remote --config=buildbuddy
+# build:remote --config=buildbuddy
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
 build --jobs=8
