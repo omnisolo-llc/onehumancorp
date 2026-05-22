@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'agent_dashboard.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
@@ -20,20 +21,63 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String bio = '';
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
+  late final TextEditingController _bioController;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
+    _bioController = TextEditingController();
+    _loadBio();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadBio() async {
+    try {
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['bio'] != null) {
+          setState(() {
+            bio = data['bio'];
+            _bioController.text = bio;
+          });
+        }
+      }
+    } catch (e) {
+      print('Failed to load draft: $e');
+    }
+  }
+
+  Future<void> _saveDraft(String text) async {
+    try {
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      await _client.post(
+        Uri.parse('$baseUrl/api/onboarding/draft'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'bio': text}),
+      );
+    } catch (e) {
+      print('Failed to save draft: $e');
+    }
   }
 
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      await _saveDraft(bio);
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
+        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
         final response = await _client.post(
           Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
@@ -69,8 +113,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> launchStore() async {
     try {
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
       final response = await _client.post(
-        Uri.parse('http://localhost:8080/api/onboarding/launch'),
+        Uri.parse('$baseUrl/api/onboarding/launch'),
       );
       if (response.statusCode == 200) {
         setState(() => _state = OnboardingState.live);
@@ -227,6 +272,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             SizedBox(height: 32),
             TextFormField(
               key: Key('bio-input'), // for testing or just semantics
+              controller: _bioController,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.text,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
@@ -241,6 +289,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              onChanged: (value) {
+                bio = value;
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                _debounce = Timer(const Duration(milliseconds: 500), () {
+                  _saveDraft(value);
+                });
+              },
               validator: (value) =>
                   value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => bio = value!,
