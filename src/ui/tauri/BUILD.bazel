@@ -4,7 +4,6 @@
 
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library")
-load("//bazel/rules:tauri_desktop.bzl", "tauri_desktop_package")
 load("//bazel/rules:tauri_mobile.bzl", "tauri_mobile_package")
 
 bool_flag(
@@ -34,6 +33,10 @@ genrule(
         "tauri-build-context.rs",
         "tauri_config.json",
     ],
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     cmd = """
 mkdir -p $(@D)/tauri_out $(@D)/context
 cp $(location capabilities/default.json) $(@D)/tauri_out/capabilities.json
@@ -113,19 +116,22 @@ impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
 }
 CTX_EOF
 """,
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_library(
     name = "app_lib",
     srcs = ["src/lib.rs"],
+    edition = "2024",
     compile_data = [
         ":tauri_context",
     ],
-    edition = "2024",
+    deps = [
+        "@crates//:tauri",
+        "@crates//:tauri-plugin-shell",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
     rustc_env = {
         "TAURI_ENV_TARGET_TRIPLE": "x86_64-unknown-linux-gnu",
         "OUT_DIR": "bazel-out/k8-fastbuild/bin/src/ui/tauri",
@@ -138,27 +144,20 @@ rust_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
-    deps = [
-        "@crates//:reqwest",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:tauri",
-        "@crates//:tauri-plugin-shell",
-    ],
 )
 
 rust_binary(
     name = "app",
     srcs = ["src/main.rs"],
     edition = "2024",
+    deps = [
+        ":app_lib",
+    ],
     target_compatible_with = select({
         ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
-    deps = [
-        ":app_lib",
-    ],
 )
 
 TAURI_MOBILE_SRCS = glob([
@@ -173,122 +172,13 @@ TAURI_MOBILE_SRCS = glob([
     "tauri.conf.json",
 ]
 
-TAURI_DESKTOP_SRCS = glob(
-    [
-        "src/**/*.rs",
-        "capabilities/**",
-        "next_out/**",
-        "icons/**",
-    ],
-    allow_empty = True,
-) + [
-    "//:Cargo.lock",
-    "//:Cargo.toml",
-    "Cargo.toml",
-    "build.rs",
-    "tauri.conf.json",
-]
-
-tauri_desktop_package(
-    name = "tauri_linux_deb",
-    srcs = TAURI_DESKTOP_SRCS,
-    out = "ohc-desktop.deb",
-    package_type = "deb",
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }) + select({
-        "//:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-tauri_desktop_package(
-    name = "tauri_linux_rpm",
-    srcs = TAURI_DESKTOP_SRCS,
-    out = "ohc-desktop.rpm",
-    package_type = "rpm",
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }) + select({
-        "//:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-tauri_desktop_package(
-    name = "tauri_macos_dmg",
-    srcs = TAURI_DESKTOP_SRCS,
-    out = "ohc-desktop.dmg",
-    package_type = "dmg",
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }) + select({
-        "//:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-tauri_desktop_package(
-    name = "tauri_windows_msi",
-    srcs = TAURI_DESKTOP_SRCS,
-    out = "ohc-desktop.msi",
-    package_type = "msi",
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }) + select({
-        "//:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-tauri_desktop_package(
-    name = "tauri_windows_nsis",
-    srcs = TAURI_DESKTOP_SRCS,
-    out = "ohc-desktop.exe",
-    package_type = "nsis",
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }) + select({
-        "//:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
-filegroup(
-    name = "tauri_desktop_installers",
-    srcs = select({
-        "//:linux": [
-            ":tauri_linux_deb",
-            ":tauri_linux_rpm",
-        ],
-        "//:macos": [
-            ":tauri_macos_dmg",
-        ],
-        "//:windows": [
-            ":tauri_windows_msi",
-            ":tauri_windows_nsis",
-        ],
-        "//conditions:default": [],
-    }),
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    visibility = ["//visibility:public"],
-)
-
 tauri_mobile_package(
     name = "tauri_android_apk",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.apk",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    out = "ohc-android-aarch64.apk",
     package_type = "apk",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -298,11 +188,11 @@ tauri_mobile_package(
 
 tauri_mobile_package(
     name = "tauri_android_aab",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.aab",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    out = "ohc-android-aarch64.aab",
     package_type = "aab",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -312,10 +202,10 @@ tauri_mobile_package(
 
 tauri_mobile_package(
     name = "tauri_ios_ipa",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-ios-aarch64.ipa",
     ios_export_method = "app-store-connect",
+    out = "ohc-ios-aarch64.ipa",
     package_type = "ipa",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],
