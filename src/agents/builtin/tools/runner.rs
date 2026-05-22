@@ -165,6 +165,22 @@ impl CommandRunner for SandboxedCommandRunner {
         });
 
         if is_bwrap_available && self.sandbox_dir.is_some() {
+            // Pre-command Git artifact scrubbing inside sandbox dir
+            let sandbox_root = self.sandbox_dir.as_ref().unwrap();
+            let git_artifacts = ["HEAD", "objects", "refs", "hooks", "config", ".git"];
+            let mut scrub_paths = Vec::new();
+
+            for artifact in &git_artifacts {
+                let path = sandbox_root.join(artifact);
+                // We check if it does NOT exist before execution
+                // using metadata to avoid symlink trickery.
+                if std::fs::symlink_metadata(&path).is_err() {
+                    scrub_paths.push(path);
+                }
+            }
+
+            // ---------------------------------
+
             let sandbox_dir_str = self.sandbox_dir.as_ref().unwrap().to_string_lossy().to_string();
 
             let mut bwrap_args = vec![
@@ -196,7 +212,17 @@ impl CommandRunner for SandboxedCommandRunner {
             for (k, v) in envs {
                 bwrap_cmd.env(k, v);
             }
-            return bwrap_cmd.output().await;
+
+            let output_result = bwrap_cmd.output().await;
+
+            // Post-command Git artifact scrubbing
+            for path in &scrub_paths {
+                // ignore errors during cleanup, just forcefully remove if it was planted
+                let _ = std::fs::remove_dir_all(path);
+                let _ = std::fs::remove_file(path);
+            }
+
+            return output_result;
         }
 
         let mut cmd = Command::new(program);
