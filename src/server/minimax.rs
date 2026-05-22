@@ -103,8 +103,7 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+        if let (Some(cached), _cost) = self.cache.get_with_cost_cents(prompt) {
             return Ok(cached.text);
         }
 
@@ -191,8 +190,7 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
-            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+        if let (Some(cached), _cost) = self.cache.get_with_cost_cents(prompt) {
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
