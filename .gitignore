@@ -102,13 +102,14 @@ Chart.lock
 
 # Golang is not allowed in this project
 *.go
-!/src/server/agents/sandbox/
-!/src/server/agents/sandbox/*.go
-!/src/server/agents/terminal/
-!/src/server/agents/terminal/*.go
-!/src/server/agents/
-!/src/server/
-!/src/
+!src/server/agents/sandbox/sandbox.go
+!src/server/agents/sandbox/sandbox_test.go
+!src/server/agents/terminal/validator.go
+!src/server/agents/terminal/validator_test.go
+!/src/server/agents/sandbox/sandbox.go
+!/src/server/agents/sandbox/sandbox_test.go
+!/src/server/agents/terminal/validator.go
+!/src/server/agents/terminal/validator_test.go
 
 # Rust build artifacts
 /target/
