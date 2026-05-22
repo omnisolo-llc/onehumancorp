@@ -71,15 +71,11 @@ impl InviteRepository {
     }
 
     pub async fn accept_invite(&self, invite_id: &str) -> Result<(), String> {
-        let result = sqlx::query("UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        sqlx::query("UPDATE team_invites SET status = 'ACCEPTED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(invite_id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        if result.rows_affected() == 0 {
-            return Err("not found".to_string());
-        }
 
         Ok(())
     }

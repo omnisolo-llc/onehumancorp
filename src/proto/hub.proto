@@ -1564,10 +1564,6 @@ service IntegrationService {
   rpc CreateIssue(CreateIssueRequest) returns (Issue);
   rpc UpdateIssueStatus(IssueStatusRequest) returns (Issue);
   rpc AssignIssue(IssueAssignRequest) returns (Issue);
-
-  rpc GetFreeBusy(GetFreeBusyRequest) returns (GetFreeBusyResponse);
-  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
-  rpc GetBookingLink(GetBookingLinkRequest) returns (GetBookingLinkResponse);
 }
 
 message McpToolProto {
@@ -1673,34 +1669,4 @@ message DownloadInvoiceRequest {
 
 message DownloadInvoiceResponse {
   string pdf_url = 1;
-}
-
-message GetFreeBusyRequest {
-  string integration_id = 1;
-  string time_min = 2;
-  string time_max = 3;
-}
-
-message GetFreeBusyResponse {
-  string free_busy_data = 1;
-}
-
-message CreateEventRequest {
-  string integration_id = 1;
-  string summary = 2;
-  string start_time = 3;
-  string end_time = 4;
-}
-
-message CreateEventResponse {
-  string event_id = 1;
-}
-
-message GetBookingLinkRequest {
-  string integration_id = 1;
-  string event_type = 2;
-}
-
-message GetBookingLinkResponse {
-  string link = 1;
 }

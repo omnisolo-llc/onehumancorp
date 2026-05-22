@@ -72,17 +72,5 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mailchimp_provider = crate::integrations::mailchimp::provider::MailchimpProvider::new("dummy_token".to_string());
     catalog.push(mailchimp_provider.to_integration_provider());
 
-    let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
-    catalog.push(ayrshare_provider.to_integration_provider());
-
-    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
-    catalog.push(listmonk_provider.to_integration_provider());
-
-    let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
-    catalog.push(easypost_provider.to_integration_provider());
-
-    let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
-    catalog.push(jitsi_provider.to_integration_provider());
-
     catalog
 }

@@ -338,16 +338,8 @@ struct MinimaxEmbeddingRequest<'a> {
     texts: [&'a str; 1],
 }
 
-#[derive(Deserialize, Debug)]
-pub struct MinimaxBaseResp {
-    pub status_code: i32,
-    pub status_msg: String,
-}
-
 #[derive(Deserialize)]
 struct OpenAIEmbeddingResponse {
-    #[serde(default)]
-    base_resp: Option<MinimaxBaseResp>,
     #[serde(default)]
     data: Vec<OpenAIEmbeddingData>,
     #[serde(default)]
@@ -599,19 +591,6 @@ impl LlmClient for OpenAIClient {
         }
 
         let result: OpenAIEmbeddingResponse = resp.json().await?;
-
-        // Handle Minimax base_resp wrapper which always returns HTTP 200 OK
-        if let Some(base_resp) = result.base_resp {
-            if base_resp.status_code != 0 && base_resp.status_code != 1000 {
-                cb.record_failure();
-                return Err(format!(
-                    "minimax embeddings error (status {}): {}",
-                    base_resp.status_code, base_resp.status_msg
-                )
-                .into());
-            }
-        }
-
         cb.record_success();
 
         if let Some(item) = result.data.into_iter().next() {

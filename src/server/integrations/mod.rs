@@ -22,7 +22,3 @@ pub mod zoom;
 pub mod manychat;
 pub mod calendly;
 pub mod mailchimp;
-pub mod ayrshare;
-pub mod listmonk;
-pub mod easypost;
-pub mod jitsi;

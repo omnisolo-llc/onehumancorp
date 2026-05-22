@@ -1,0 +1,33 @@
+--- src/ui/next/src/app/dashboard/page.tsx
++++ src/ui/next/src/app/dashboard/page.tsx
+@@ -107,15 +107,15 @@
+             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                 {/* Metric Card */}
+-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
++                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>$0.00</div>
+                 </div>
+
+-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
++                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>12</div>
+                 </div>
+
+-                <div className="p-5 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
++                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>3</div>
+                 </div>
+@@ -131,7 +131,7 @@
+                 </div>
+             </div>
+
+-            <div className="shadow-sm overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
++            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+                 {swarmActivity.length === 0 ? (
+                     <div className="p-8 text-center">
+                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
