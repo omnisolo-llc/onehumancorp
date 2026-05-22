@@ -39,6 +39,9 @@ export default function ChangelogPage() {
                   return <p key={lidx} className="text-gray-600">{line}</p>;
                 })}
               </div>
+              {idx === 0 && (
+                <img src="/dashboard_with_charts.png" alt="Screenshot" className="rounded-xl mt-4 max-w-full" />
+              )}
             </div>
           ))}
         </div>
