@@ -12,3 +12,7 @@ Technical reports and audits.
 - [Harness Git Protection Report](./harness-git-protection-report.md)
 - [CPP Migration Evaluation](./cpp-migration-evaluation.md)
 - [MCP Bridge README](./mcp-bridge-readme.md)
+
+## Tool Evaluation Reports
+
+- [Comprehensive Tool Evaluation Report Q3: The Small Business Perspective](../../reports/comprehensive_tool_evaluation_report_q3_small_business.md)
