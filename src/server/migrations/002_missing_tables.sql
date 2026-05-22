@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
     memory_id TEXT PRIMARY KEY,
     context TEXT NOT NULL,
     embedding VECTOR(1536),
-    source_mission_id TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     _sync_status TEXT DEFAULT 'pending',
@@ -257,7 +256,6 @@ CREATE TABLE IF NOT EXISTS memories (
     tenant_id TEXT NOT NULL,
     customer_id TEXT NOT NULL,
     embedding VECTOR(1536),
-    source_mission_id TEXT,
     context TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -269,7 +267,6 @@ CREATE TABLE IF NOT EXISTS consolidated_memory (
     agent_id TEXT,
     content TEXT NOT NULL,
     embedding VECTOR(1536),
-    source_mission_id TEXT,
     source_type TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
