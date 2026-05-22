@@ -11,7 +11,7 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
@@ -26,7 +26,7 @@ services:
       timeout: 3s
       retries: 30
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${E2E_POSTGRES_PORT:-5432}:5432"
     deploy:
       resources:
         limits:
@@ -41,7 +41,7 @@ services:
       timeout: 3s
       retries: 30
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${E2E_REDIS_PORT:-6379}:6379"
     deploy:
       resources:
         limits:
