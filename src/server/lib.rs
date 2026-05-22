@@ -2148,6 +2148,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
+                    <meta property="og:title" content="OneHuman Corp">
+                    <meta property="og:description" content="The world's first Hybrid Agentic OS. Launch and grow your business with autonomous AI agents.">
+                    <meta property="og:image" content="https://onehumancorp.io/og-image.png">
+                    <meta property="og:url" content="https://onehumancorp.io">
+                    <meta property="og:type" content="website">
+                    <meta name="twitter:card" content="summary_large_image">
+                    <meta name="twitter:title" content="OneHuman Corp">
+                    <meta name="twitter:description" content="The world's first Hybrid Agentic OS. Launch and grow your business with autonomous AI agents.">
+                    <meta name="twitter:image" content="https://onehumancorp.io/og-image.png">
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
