@@ -291,6 +291,39 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* SaaS Conversion: High-converting Upgrade CTA */}
+         <section className="mb-10">
+            <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6" style={{ background: 'linear-gradient(135deg, #1E1E24 0%, #15151A 100%)', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <span className="text-2xl">⚡</span>
+                        <h3 className="text-xl font-bold font-outfit text-white">Unlock Your Full AI Workforce</h3>
+                    </div>
+                    <p className="text-sm text-gray-300 mb-4 max-w-lg">
+                        You're currently using <strong className="text-white">1/1</strong> included AI agents on the Free plan. Upgrade to Starter to unlock 3 specialized agents, 10x more AI actions, and grow your sales on autopilot.
+                    </p>
+                    <div className="flex gap-4">
+                        <a href="/pricing" className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl shadow-md hover:bg-indigo-700 active:scale-[0.98] transition-all font-inter text-sm flex items-center gap-2">
+                            <span>Upgrade to Starter</span>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                        </a>
+                        <button
+                            onClick={() => setShowReferralModal(true)}
+                            className="px-5 py-2.5 bg-transparent border border-gray-600 text-gray-300 font-semibold rounded-xl hover:bg-gray-800 hover:text-white active:scale-[0.98] transition-all font-inter text-sm"
+                        >
+                            Or Invite a Friend to Unlock
+                        </button>
+                    </div>
+                </div>
+                <div className="hidden md:flex flex-col gap-2">
+                    <div className="w-32 h-2 bg-gray-800 rounded-full overflow-hidden">
+                        <div className="w-full h-full bg-red-500 rounded-full"></div>
+                    </div>
+                    <div className="text-xs text-gray-400 font-medium text-right mt-1">100% Capacity</div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">

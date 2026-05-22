@@ -101,17 +101,22 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
     return (
-      <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
-        <a
-          href={`ohc://join?ref=${tenantId}`}
-          className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-        >
-          <span className="font-inter">Powered by</span>
-          <span className="font-outfit font-bold tracking-tight">OHC</span>
-          <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-          </svg>
-        </a>
+      <div className="py-8 bg-gradient-to-b from-transparent to-gray-50 flex flex-col items-center justify-center border-t border-gray-100 mt-12 relative overflow-hidden">
+        <div className="absolute inset-0 bg-white/40 backdrop-blur-xl -z-10"></div>
+        <div className="bg-white/60 backdrop-blur-2xl border border-white/50 p-6 rounded-2xl shadow-xl max-w-sm w-full text-center hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+          </div>
+          <h3 className="font-outfit font-bold text-xl text-gray-900 mb-2 tracking-tight">Create your own store</h3>
+          <p className="font-inter text-sm text-gray-600 mb-4">Built in 60 seconds with OHC AI. Launch yours today and get $50 credit.</p>
+          <a
+            href={`https://ohc.store/join?ref=${tenantId}`}
+            className="inline-block w-full bg-gray-900 text-white font-inter font-semibold text-sm py-3 px-6 rounded-xl hover:bg-black active:scale-[0.98] transition-all shadow-md"
+          >
+            Start Free Trial
+          </a>
+          <p className="mt-3 text-xs text-gray-400 font-inter">Powered by <span className="font-outfit font-bold text-gray-500">OHC</span></p>
+        </div>
       </div>
     );
   }
