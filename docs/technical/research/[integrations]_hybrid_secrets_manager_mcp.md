@@ -17,8 +17,8 @@ Existing MCP implementations generally rely on static environment variables (`.e
   - `Cloud`: SPIFFE-authenticated tenant secret store.
 
 **API Contracts:**
-- `GetSecret(ctx async context, key string) (string, error)`
-- `ListSecretKeys(ctx async context) ([]string, error)` (Returns metadata only, never values)
+- `GetSecret(ctx context.Context, key string) (string, error)`
+- `ListSecretKeys(ctx context.Context) ([]string, error)` (Returns metadata only, never values)
 
 **DB Schema Changes:**
 - None required.
@@ -29,11 +29,11 @@ Existing MCP implementations generally rely on static environment variables (`.e
 
 ## Implementation Prompt
 "Implement the Hybrid Secrets Manager MCP tool in `src/server/lib/integrations/hybrid_secrets/`.
-1. Create `secrets.rs` defining the `SecretsManager` and its MCP capabilities (`GetSecret`, `ListSecretKeys`).
+1. Create `secrets.go` defining the `SecretsManager` and its MCP capabilities (`GetSecret`, `ListSecretKeys`).
 2. Implement environment-agnostic logic. Check `OHC_MULTITENANT` to determine the driver.
 3. For Standalone mode, implement a basic local driver (e.g., reading from an encrypted local path or OS mechanism).
 4. For Cloud mode, implement a mockable tenant-aware secret resolver. Ensure tenant isolation using `organization_id`.
-5. Create tests in `secrets_test.rs`. Use `tempfile::tempdir()` for isolated local testing and mock the cloud driver. Ensure 100% test coverage.
+5. Create tests in `secrets_test.go`. Use `t.TempDir()` for isolated local testing and mock the cloud driver. Ensure 100% test coverage.
 6. Update or create the adjacent `BUILD.bazel` file, ensuring the `srcs` array accurately reflects the new files and dependencies."
 
 ## Priority

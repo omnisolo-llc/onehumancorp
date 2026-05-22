@@ -43,14 +43,13 @@ graph LR
 
 ## 3. Data Model Extensions
 
-### 3.1 Federated Agent Registry (`src/server/domain/federation.rs`)
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct FederatedAgent {
-    agent_id: String,
-    home_cluster: String,
-    status: String, // GLOBAL_IDLE, BUSY
-    latency_score: i32,
+### 3.1 Federated Agent Registry (`src/domain/federation.go`)
+```go
+type FederatedAgent struct {
+    AgentID      string `json:"id"`
+    HomeCluster  string `json:"home_cluster"`
+    Status       string `json:"status"` // GLOBAL_IDLE, BUSY
+    LatencyScore int    `json:"latency_ms"`
 }
 ```
 

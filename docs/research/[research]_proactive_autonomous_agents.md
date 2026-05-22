@@ -33,7 +33,7 @@ sequenceDiagram
 - **UI:** An "Agent Activity Feed" on the Dashboard (375px mobile first) showing "What we did for you today."
 
 ### Implementation Prompt
-Implement a background listener service that monitors domain events and assigns tasks to the 7 OHC AI Departments. Ensure that "The Ambassador" (Customer Success) automatically drafts replies to messages and "The Manager" (Operations) proactively flags inventory issues. Connect these to the existing Tauri dashboard's "Action Required" flow.
+Implement a background listener service that monitors domain events and assigns tasks to the 7 OHC AI Departments. Ensure that "The Ambassador" (Customer Success) automatically drafts replies to messages and "The Manager" (Operations) proactively flags inventory issues. Connect these to the existing Slint Dashboard's "Action Required" flow.
 
 ## Priority
 P0

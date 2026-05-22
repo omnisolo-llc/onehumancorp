@@ -8,41 +8,37 @@ Welcome to the One Human Corp (OHC) interactive developer tutorial. This guide w
 
 First, define your new persona in the agent registry. This involves updating the provider configurations.
 
-Create a new Rust module under `src/agents/builtin/` or modify the existing built-in provider registry to include your agent's profile:
+Create a new file in `src/server/agents/` or modify an existing registry file to include your agent's profile:
 
-```rust
-pub struct AgentProfile {
-    pub name: &'static str,
-    pub role: &'static str,
-    pub priority: u8,
-    pub capabilities: &'static [&'static str],
-}
+```go
+package agents
 
-pub const QUALITY_ASSURANCE_PERSONA: AgentProfile = AgentProfile {
-    name: "Sentinel",
-    role: "qa_engineer",
-    priority: 1,
-    capabilities: &[
+import "github.com/onehumancorp/ohc/src/server/agents/types"
+
+var QualityAssurancePersona = types.AgentProfile{
+    Name:     "Sentinel",
+    Role:     "qa_engineer",
+    Priority: 1, // P1 Priority
+    Capabilities: []string{
         "browser_verification",
         "playwright_execution",
-    ],
-};
+    },
+}
 ```
 
 ## Step 2: Implement the Action Loop
 
 Every agent requires a main loop to execute its "Think → Act → Observe → Decide" methodology.
 
-```rust
-impl SentinelAgent {
-    pub async fn run(&mut self, mut shutdown: tokio::sync::watch::Receiver<bool>) -> anyhow::Result<()> {
-        loop {
-            tokio::select! {
-                _ = shutdown.changed() => break,
-                Some(task) = self.mailbox.recv() => self.process_task(task).await?,
-            }
+```go
+func (a *SentinelAgent) Run(ctx context.Context) error {
+    for {
+        select {
+        case <-ctx.Done():
+            return ctx.Err()
+        case task := <-a.mailbox:
+            a.processTask(ctx, task)
         }
-        Ok(())
     }
 }
 ```
@@ -51,16 +47,13 @@ impl SentinelAgent {
 
 Your agent must be able to persist its state regardless of the runtime mode (Cloud vs. Standalone).
 
-Use the injected repository or `sqlx` pool to execute queries:
+Use the injected `db.Provider` interface to execute queries:
 
-```rust
+```go
 // Example SQLite / PostgreSQL fallback execution
-sqlx::query("INSERT INTO agent_missions (id, agent_id, status) VALUES ($1, $2, $3)")
-    .bind(&task.id)
-    .bind(&self.id)
-    .bind("IN_PROGRESS")
-    .execute(&self.pool)
-    .await?;
+query := `INSERT INTO agent_missions (id, agent_id, status) VALUES ($1, $2, $3)`
+// Note: Ensure the db package translates $1 to ? for SQLite automatically!
+err := a.db.Exec(ctx, query, task.ID, a.id, "IN_PROGRESS")
 ```
 
 ## Step 4: Ensure Visual Excellence (Docs/UI)
@@ -79,8 +72,11 @@ If your agent generates documentation or UI templates, it **must** inject the OH
 Before you commit the new agent, ensure it builds hermetically inside the Bazel sandbox.
 
 ```bash
+# Update Go dependencies
+bazelisk run //:gazelle
+
 # Run the test suite
-bazelisk test //src/agents/...
+bazelisk test //src/server/agents/...
 ```
 
 <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #007BFF; background: rgba(0, 123, 255, 0.1);">

@@ -41,4 +41,4 @@ The Teammate Mesh exposes APIs for mailbox interaction, primarily located in `sr
 Background pipelines convert ephemeral memory into long-term semantic state.
 
 ### Data Pipeline Flow
-The memory vector is upserted into PostgreSQL using the `pgvector` extension in the `autodream_memories` table, specifically linking the `source_mission_id`. In Standalone mode, SQLite VSS is utilized as the fallback. Data pipeline updates should target the Rust mesh and AutoDream modules.
+The memory vector is upserted into PostgreSQL using the `pgvector` extension in the `autodream_memories` table, specifically linking the `source_mission_id`. In Standalone mode, SQLite VSS is utilized as the fallback. Updates the data pipelines in `api/mesh/mesh.go`.

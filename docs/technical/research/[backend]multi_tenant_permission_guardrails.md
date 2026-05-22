@@ -14,9 +14,9 @@ OHC agents currently execute commands without interactive user approval. For hig
 - **Real-time Notify**: Use Teammate Mesh (Redis Pub/Sub) to notify the UI of pending approvals.
 
 ## Implementation Prompt
-1. Create a `PermissionManager` in `src/server/auth/permissions.rs`.
+1. Create a `PermissionManager` in `src/server/auth/permissions.go`.
 2. Define `PermissionRule` struct: `ToolName`, `Pattern`, `Action` (Allow, Deny, Ask).
-3. Update `src/server/orchestration/statemachine/machine.rs` to handle the `PENDING_APPROVAL` state.
+3. Update `src/server/orchestration/statemachine/machine.go` to handle the `PENDING_APPROVAL` state.
 4. Implement a gRPC endpoint `RequestPermission(ctx, req)` that triggers the UI notification.
 5. Write tests verifying that an agent task pauses when a "Sensitive" tool is called and resumes only after a "user" approves it via a mocked UI call.
 

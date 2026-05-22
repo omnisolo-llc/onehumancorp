@@ -32,13 +32,13 @@ The advanced Bash Sandbox will consist of three primary layers:
 4. **Sandbox Execution Adapter**: Wraps `exec` calls in a configurable runtime that restricts filesystem and network access based on the resolved parsed intent.
 
 ### Implementation Protocol
-1.  **Parser Integration**: Create `src/server/orchestration/harness/parser.rs` utilizing a robust Rust-based shell parser (like `tree-sitter-bash`) to replace raw regex validation.
-2.  **Validator Functions**: Implement `src/server/orchestration/harness/validators.rs` with functions like:
+1.  **Parser Integration**: Create `src/server/orchestration/harness/parser.go` utilizing a robust Go-based shell parser (like `mvdan.cc/sh/v3`) to replace raw regex validation.
+2.  **Validator Functions**: Implement `src/server/orchestration/harness/validators.go` with functions like:
     - `ValidateQuotedNewline(ast)`
     - `ValidateCarriageReturn(ast)`
     - `ValidateRedirections(ast)`
     - `ValidateUNCPaths(rawCommand)`
-3.  **Command Registry**: Create `src/server/orchestration/harness/registry.rs` with strict flag definitions for read-only commands.
+3.  **Command Registry**: Create `src/server/orchestration/harness/registry.go` with strict flag definitions for read-only commands.
 4.  **Sandbox Runtime**: Extend the existing task orchestrator to use these validation steps before allowing terminal execution.
 
 ## Visual Context
@@ -59,11 +59,11 @@ The advanced Bash Sandbox will consist of three primary layers:
 
 ## Implementation Prompt
 Implement the Advanced Bash Sandboxing module.
-1. Create `src/server/orchestration/harness/parser.rs` using `tree-sitter-bash/syntax` to parse raw string commands into ASTs.
-2. Create `src/server/orchestration/harness/validators.rs` containing security checks: `ValidateQuotedNewline`, `ValidateRedirections`, `ValidateUNCPaths`. Ensure these functions traverse the AST and return boolean success metrics.
-3. Create `src/server/orchestration/harness/registry.rs` defining a map of safe commands and their allowed flags (e.g., `ls` allows `-l`, `-a`, `-h`).
-4. Integrate the pipeline in `src/server/orchestration/task_orchestrator.rs` to intercept shell commands, run them through the parser and validators, and reject them if they fail.
-5. Provide 100% test coverage in `src/server/orchestration/harness/validators_test.rs` and `parser_test.rs`. Ensure a test specifically tries to bypass the filter using `ls -la && cat /etc/passwd`.
+1. Create `src/server/orchestration/harness/parser.go` using `mvdan.cc/sh/v3/syntax` to parse raw string commands into ASTs.
+2. Create `src/server/orchestration/harness/validators.go` containing security checks: `ValidateQuotedNewline`, `ValidateRedirections`, `ValidateUNCPaths`. Ensure these functions traverse the AST and return boolean success metrics.
+3. Create `src/server/orchestration/harness/registry.go` defining a map of safe commands and their allowed flags (e.g., `ls` allows `-l`, `-a`, `-h`).
+4. Integrate the pipeline in `src/server/orchestration/task_orchestrator.go` to intercept shell commands, run them through the parser and validators, and reject them if they fail.
+5. Provide 100% test coverage in `src/server/orchestration/harness/validators_test.go` and `parser_test.go`. Ensure a test specifically tries to bypass the filter using `ls -la && cat /etc/passwd`.
 
 ## Priority
 P0
