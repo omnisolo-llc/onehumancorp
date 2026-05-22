@@ -11,6 +11,7 @@ pub struct AutoDreamSyncRecord {
     pub content: String,
     pub embedding: Option<String>,
     pub source_type: Option<String>,
+    pub source_mission_id: Option<String>,
     pub topic: Option<String>,
     pub sync_status: Option<String>,
     pub last_sync_at: Option<DateTime<Utc>>,
@@ -46,6 +47,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
                 content,
                 embedding::text as embedding,
                 source_type,
+                source_mission_id,
                 topic,
                 sync_status,
                 last_sync_at
@@ -68,6 +70,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
                 content: row.try_get("content").unwrap_or_default(),
                 embedding: row.try_get("embedding").unwrap_or_default(),
                 source_type: row.try_get("source_type").unwrap_or_default(),
+                source_mission_id: row.try_get("source_mission_id").unwrap_or_default(),
                 topic: row.try_get("topic").unwrap_or_default(),
                 sync_status: row.try_get("sync_status").unwrap_or_default(),
                 last_sync_at: row.try_get("last_sync_at").unwrap_or_default(),
@@ -86,8 +89,8 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             sqlx::query(
                 r#"
                 INSERT INTO autodream_memories
-                (id, organization_id, agent_id, task_id, content, embedding, source_type, topic, sync_status, last_sync_at)
-                VALUES ($1::uuid, $2, $3, $4, $5, $6::vector, $7, $8, 'synced', $9)
+                (id, organization_id, agent_id, task_id, content, embedding, source_type, source_mission_id, topic, sync_status, last_sync_at)
+                VALUES ($1::uuid, $2, $3, $4, $5, $6::vector, $7, $8, $9, 'synced', $10)
                 ON CONFLICT (id) DO UPDATE SET
                     organization_id = EXCLUDED.organization_id,
                     agent_id = EXCLUDED.agent_id,
@@ -95,6 +98,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
                     content = EXCLUDED.content,
                     embedding = EXCLUDED.embedding,
                     source_type = EXCLUDED.source_type,
+                    source_mission_id = EXCLUDED.source_mission_id,
                     topic = EXCLUDED.topic,
                     sync_status = 'synced',
                     last_sync_at = EXCLUDED.last_sync_at
@@ -107,6 +111,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
             .bind(record.content)
             .bind(record.embedding.unwrap_or_else(|| "[0]".to_string()))
             .bind(record.source_type)
+            .bind(record.source_mission_id)
             .bind(record.topic.unwrap_or_default())
             .bind(record.last_sync_at.unwrap_or_else(Utc::now))
             .execute(&mut *tx)
@@ -173,6 +178,7 @@ mod tests {
             content: "test content".to_string(),
             embedding: Some("[0.1, 0.2]".to_string()),
             source_type: Some("test_source".to_string()),
+            source_mission_id: Some("test_mission".to_string()),
             topic: Some("test_topic".to_string()),
             sync_status: Some("pending".to_string()),
             last_sync_at: Some(Utc::now()),

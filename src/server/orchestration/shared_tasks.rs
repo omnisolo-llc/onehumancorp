@@ -159,38 +159,29 @@ impl SharedTaskOrchestrator {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT st.* FROM shared_tasks_v4 st
-                    WHERE st.status = 'PENDING' AND st.organization_id = ?
-                    AND NOT EXISTS (
-                        SELECT 1 FROM json_each(st.dependencies) AS dep_id
-                        JOIN shared_tasks_v4 parent ON parent.id = dep_id.value
-                        WHERE parent.status != 'COMPLETED'
+                    UPDATE shared_tasks_v4
+                    SET status = 'ASSIGNED', agent_id = ?, updated_at = ?
+                    WHERE id = (
+                        SELECT st.id FROM shared_tasks_v4 st
+                        WHERE st.status = 'PENDING' AND st.organization_id = ?
+                        AND NOT EXISTS (
+                            SELECT 1 FROM json_each(st.dependencies) AS dep_id
+                            JOIN shared_tasks_v4 parent ON parent.id = dep_id.value
+                            WHERE parent.status != 'COMPLETED'
+                        )
+                        LIMIT 1
                     )
-                    LIMIT 1
+                    RETURNING *
                     "#
                 )
+                .bind(agent_id)
+                .bind(Utc::now().to_rfc3339())
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if let Some(row) = row {
-                    let task_id: String = row.get("id");
-
-                    sqlx::query(
-                        r#"
-                        UPDATE shared_tasks_v4
-                        SET status = 'ASSIGNED', agent_id = ?, updated_at = ?
-                        WHERE id = ?
-                        "#
-                    )
-                    .bind(agent_id)
-                    .bind(Utc::now().to_rfc3339())
-                    .bind(&task_id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
                     tx.commit().await.map_err(|e| e.to_string())?;
 
                     let created_str: String = row.get("created_at");
@@ -200,7 +191,7 @@ impl SharedTaskOrchestrator {
                         .unwrap_or_else(|_| chrono::Utc::now());
 
                     Ok(Some(SharedTaskV4 {
-                        id: task_id,
+                        id: row.get("id"),
                         organization_id: row.get("organization_id"),
                         title: row.get("title"),
                         description: row.get("description"),

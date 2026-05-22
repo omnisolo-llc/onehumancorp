@@ -255,6 +255,7 @@ impl DB {
                         task_id TEXT,
                         content TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         source_type TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -265,6 +266,7 @@ impl DB {
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -491,6 +493,7 @@ impl DB {
                         task_id TEXT NOT NULL,
                         raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
+                        source_mission_id TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
@@ -504,6 +507,7 @@ impl DB {
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         source_type TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -539,6 +543,7 @@ impl DB {
                         tenant_id TEXT NOT NULL,
                         customer_id TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         context TEXT NOT NULL,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -549,6 +554,7 @@ impl DB {
                         agent_id TEXT,
                         content TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         source_type TEXT NOT NULL,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         last_referenced_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -630,6 +636,7 @@ impl DB {
                         channel TEXT NOT NULL,
                         content TEXT NOT NULL,
                         embedding BLOB,
+                        source_mission_id TEXT,
                         metadata TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -785,10 +792,11 @@ pub async fn insert_autodream_memory(
         content: &str,
         embedding: &str,
         source_type: &str,
+        source_mission_id: Option<&str>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type, source_mission_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -796,11 +804,12 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(sqlite_pool)
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type, source_mission_id) VALUES ($1, $2, $3, $4, $5, $6::vector, $7, $8)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -808,6 +817,7 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(&self.pool)
                     .await?;
             }
@@ -835,6 +845,7 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(sqlite_pool)
                     .await?;
             }
@@ -847,6 +858,7 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .bind(source_mission_id)
                     .execute(&self.pool)
                     .await?;
             }

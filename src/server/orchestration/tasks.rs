@@ -227,6 +227,8 @@ impl TaskDecompositionService {
 
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
+                // SQLite doesn't support FOR UPDATE SKIP LOCKED
+                // We perform an atomic UPDATE ... RETURNING to claim safely in SQLite without lock upgrades
                 let row_opt = sqlx::query(
                     r#"
                     UPDATE shared_tasks_decomposition
@@ -246,7 +248,7 @@ impl TaskDecompositionService {
                     "#
                 )
                 .bind(agent_id)
-                .bind(now)
+                .bind(now.to_rfc3339())
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;

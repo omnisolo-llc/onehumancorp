@@ -61,7 +61,7 @@ impl AutoDreamPipeline {
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Find tasks that are COMPLETED but not yet in autodream_memories
         let query = "
-            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
+            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log, t.mission_id
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
@@ -80,6 +80,7 @@ impl AutoDreamPipeline {
 
             let payload: String = row.try_get("payload").unwrap_or_default();
             let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+            let mission_id: Option<String> = row.try_get("mission_id").unwrap_or(None);
 
             let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
 
@@ -119,7 +120,8 @@ impl AutoDreamPipeline {
                             &task_id,
                             &chunk,
                             &emb_str,
-                            "TASK_SUMMARY"
+                            "TASK_SUMMARY",
+                            mission_id.as_deref()
                         ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
                         if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
