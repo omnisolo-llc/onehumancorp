@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'agent_dashboard.dart';
 
-enum OnboardingState { welcome, input, generating, dashboard, draft, live }
+enum OnboardingState { step1, step2, step3, generating, dashboard, draft, live }
 
 class OnboardingScreen extends StatefulWidget {
   final http.Client? httpClient;
@@ -19,23 +19,29 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
-  OnboardingState _state = OnboardingState.welcome;
+  OnboardingState _state = OnboardingState.step1;
   late final http.Client _client;
-  late final TextEditingController _bioController;
+  late final TextEditingController _typeController;
+  late final TextEditingController _nameController;
+  late final TextEditingController _nicheController;
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
-    _bioController = TextEditingController();
+    _typeController = TextEditingController();
+    _nameController = TextEditingController();
+    _nicheController = TextEditingController();
     _loadBio();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _bioController.dispose();
+    _typeController.dispose();
+    _nameController.dispose();
+    _nicheController.dispose();
     super.dispose();
   }
 
@@ -45,11 +51,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['bio'] != null) {
-          setState(() {
-            bio = data['bio'];
-            _bioController.text = bio;
-          });
+        if (data['bio'] != null && data['bio'].toString().isNotEmpty) {
+          try {
+            final parsedBio = jsonDecode(data['bio']);
+            setState(() {
+              _typeController.text = parsedBio['type'] ?? '';
+              _nameController.text = parsedBio['name'] ?? '';
+              _nicheController.text = parsedBio['niche'] ?? '';
+
+              int savedStep = parsedBio['step'] ?? 0;
+              if (savedStep == 1) _state = OnboardingState.step2;
+              else if (savedStep == 2) _state = OnboardingState.step3;
+              else _state = OnboardingState.step1;
+            });
+          } catch(e) {
+            // It might be an old string format
+            _nicheController.text = data['bio'];
+            _state = OnboardingState.step1;
+          }
         }
       }
     } catch (e) {
@@ -73,6 +92,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      bio = "${_typeController.text}. ${_nameController.text}. ${_nicheController.text}";
       await _saveDraft(bio);
       setState(() => _state = OnboardingState.generating);
 
@@ -102,11 +122,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-          setState(() => _state = OnboardingState.input);
+          setState(() => _state = OnboardingState.step1);
         }
       } catch (e) {
         print('Error: \$e');
-        setState(() => _state = OnboardingState.input);
+        setState(() => _state = OnboardingState.step1);
       }
     }
   }
@@ -166,10 +186,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Widget _buildContent() {
     switch (_state) {
-      case OnboardingState.welcome:
-        return _buildWelcomeState();
-      case OnboardingState.input:
-        return _buildInputState();
+      case OnboardingState.step1:
+        return _buildStep1();
+      case OnboardingState.step2:
+        return _buildStep2();
+      case OnboardingState.step3:
+        return _buildStep3();
       case OnboardingState.generating:
         return _buildGeneratingState();
       case OnboardingState.dashboard:
@@ -181,65 +203,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Widget _buildWelcomeState() {
-    return Padding(
-      padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
-          SizedBox(height: 32),
-          Text(
-            'OneHumanCorp',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D1D1F),
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'The universal operating system for small business.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 48),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _state = OnboardingState.input);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Start a Business',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputState() {
+  Widget _buildStep1() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Form(
@@ -249,7 +213,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Welcome to OHC Smart Builder',
+              'What do you do?',
               style: TextStyle(
                 fontFamily: 'Outfit',
                 fontSize: 32,
@@ -259,27 +223,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 16),
-            Text(
-              'Tell us about your business, and AI will build it.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
             SizedBox(height: 32),
             TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
-              controller: _bioController,
-              textInputAction: TextInputAction.done,
-              keyboardType: TextInputType.text,
-              maxLines: 4,
+              controller: _typeController,
+              textInputAction: TextInputAction.next,
               decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText:
-                    'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                hintText: 'e.g. Sell cakes, plumbing',
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -288,38 +237,140 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 contentPadding: EdgeInsets.all(20),
               ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                bio = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
-                });
-              },
-              validator: (value) =>
-                  value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
             ),
             SizedBox(height: 32),
             ElevatedButton(
-              onPressed: submit,
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _saveDraft(jsonEncode({'type': _typeController.text, 'name': _nameController.text, 'niche': _nicheController.text, 'step': 1}));
+                  setState(() => _state = OnboardingState.step2);
+                }
+              },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                backgroundColor: Color(0xFF0066FF),
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(vertical: 18),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 0,
               ),
-              child: Text(
-                'Build My Storefront',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              child: Text('Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep2() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'What\'s the name of your business?',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            TextFormField(
+              controller: _nameController,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                hintText: 'e.g. Maya\'s Cakes',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _saveDraft(jsonEncode({'type': _typeController.text, 'name': _nameController.text, 'niche': _nicheController.text, 'step': 2}));
+                  setState(() => _state = OnboardingState.step3);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
                 ),
               ),
+              child: Text('Next'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep3() {
+    return Padding(
+      padding: EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'What\'s your niche?',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            TextFormField(
+              controller: _nicheController,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                hintText: 'e.g. I bake custom wedding cakes',
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: Text('Generate Draft'),
             ),
           ],
         ),
@@ -510,7 +561,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 Icon(Icons.storefront, size: 80, color: Colors.grey[300]),
                 SizedBox(height: 16),
                 Text(
-                  'Your Beautiful Store',
+                  'Looks Great!',
                   style: TextStyle(
                     fontFamily: 'Outfit',
                     fontSize: 24,
@@ -558,7 +609,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '1-Tap Launch',
+                  'Publish Now',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
@@ -639,13 +690,13 @@ class StoreLiveScreen extends StatelessWidget {
                       SizedBox(height: 48),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: ElevatedButton(
+                        child: TextButton(
                           onPressed: () {
                             Navigator.of(context).pushReplacement(
                               MaterialPageRoute(builder: (_) => AgentDashboard()),
                             );
                           },
-                          style: ElevatedButton.styleFrom(
+                          style: TextButton.styleFrom(
                             backgroundColor: Colors.grey[100],
                             foregroundColor: Color(0xFF1D1D1F),
                             padding: EdgeInsets.symmetric(vertical: 18),
@@ -653,7 +704,6 @@ class StoreLiveScreen extends StatelessWidget {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            elevation: 0,
                           ),
                           child: Text(
                             'Go to Dashboard',
