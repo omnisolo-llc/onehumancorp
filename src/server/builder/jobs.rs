@@ -39,7 +39,7 @@ async fn execute_publish_site_job(
 
     // 2. Mock Site Compilation & Edge Delivery
     info!("Compiling site {} to static PWA/SSR...", site_id);
-    info!("Pushing structural payload to Edge delivery network for site {}...", site_id);
+    info!("Deploying static assets to delivery network...");
 
     // 3. Mock SEO Metadata Generation (via Marketing AI Agent)
     info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);

@@ -2081,7 +2081,7 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
             tokio::select! {
                 _ = prune_interval.tick() => {
                     let sip_db = crate::sip::SipDB::new(hub_for_sched.pool.clone(), "system".to_string());
-                    if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::days(7)).await {
+                    if let Err(e) = sip_db.prune_stale_missions(chrono::Duration::minutes(5)).await {
                         tracing::error!("failed to prune stale missions: {}", e);
                     }
                 }
