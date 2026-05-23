@@ -328,6 +328,25 @@ impl HarnessBackend for DockerBackend {
     }
 }
 
+pub struct ModalBackend;
+
+impl ModalBackend {
+    pub fn new() -> Self {
+        ModalBackend
+    }
+}
+
+#[async_trait]
+impl HarnessBackend for ModalBackend {
+    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
+        Ok(ResultModel {
+            stdout: format!("Mock Modal Execution: {}", command),
+            stderr: "".to_string(),
+            exit_code: 0,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResultModel {
     pub stdout: String,
@@ -339,6 +358,7 @@ pub struct ResultModel {
 pub enum BackendType {
     Local,
     Docker,
+    Modal,
 }
 
 pub struct Manager {
@@ -346,6 +366,7 @@ pub struct Manager {
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
+    modal_backend: Arc<dyn HarnessBackend>,
 }
 
 impl Manager {
@@ -353,11 +374,13 @@ impl Manager {
         let validator = Arc::new(ASTValidator::new());
         let local_backend = Arc::new(LocalBackend::new(validator.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
+        let modal_backend = Arc::new(ModalBackend::new());
         Manager {
             config,
             validator,
             local_backend,
             docker_backend,
+            modal_backend,
         }
     }
 
@@ -366,6 +389,7 @@ impl Manager {
         match backend_type {
             BackendType::Local => self.local_backend.execute(command, policy).await,
             BackendType::Docker => self.docker_backend.execute(command, policy).await,
+            BackendType::Modal => self.modal_backend.execute(command, policy).await,
         }
     }
 }
@@ -515,5 +539,9 @@ mod tests {
         let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
         assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
         assert_eq!(docker_res.exit_code, 0);
+
+        let modal_res = manager.execute_with_policy(command, None, BackendType::Modal).await.unwrap();
+        assert_eq!(modal_res.stdout, format!("Mock Modal Execution: {}", command));
+        assert_eq!(modal_res.exit_code, 0);
     }
 }
