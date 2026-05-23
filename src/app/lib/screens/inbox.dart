@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'agent_audit_dashboard.dart';
 
 class InboxMessage {
   final String id;
@@ -104,6 +105,18 @@ class _InboxScreenState extends State<InboxScreen> {
             color: Color(0xFF1D1D1F),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.admin_panel_settings, color: Colors.black87),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AgentAuditDashboard()),
+              );
+            },
+            tooltip: 'Agent Audit Dashboard',
+          )
+        ],
         backgroundColor: Colors.white.withOpacity(0.65),
         elevation: 0,
         flexibleSpace: ClipRect(
