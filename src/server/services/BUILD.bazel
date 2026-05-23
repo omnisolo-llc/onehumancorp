@@ -22,3 +22,24 @@ filegroup(
     ],
     visibility = ["//src/server:__pkg__"]
 )
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "services_go",
+    srcs = ["task_store.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/services",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_google_uuid//:uuid",
+    ],
+)
+
+go_test(
+    name = "services_go_test",
+    srcs = ["task_store_test.go"],
+    embed = [":services_go"],
+    deps = [
+        "@com_github_mattn_go_sqlite3//:go_sqlite3",
+    ],
+)

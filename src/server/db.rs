@@ -291,6 +291,7 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
+                        organization_id TEXT,
                         title TEXT NOT NULL,
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
@@ -306,6 +307,14 @@ impl DB {
                         assigned_agent_id TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS shared_task_dependencies (
+                        task_id TEXT NOT NULL,
+                        depends_on_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (task_id, depends_on_id)
                     );
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
@@ -546,6 +555,7 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS consolidated_memory (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
+                        organization_id TEXT,
                         agent_id TEXT,
                         content TEXT NOT NULL,
                         embedding BLOB,

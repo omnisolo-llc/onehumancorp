@@ -211,9 +211,36 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+
+            // KAIROS Orchestration Phase: Write to consolidated_memory for long-term durable access
+            let embedding_vec: Vec<f32> = serde_json::from_str(&embedding).unwrap_or_else(|_| vec![0.0; 1536]);
+            let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
+                id: mem_id.clone(),
+                tenant_id: org_id.clone(),
+                agent_id: "system_agent".to_string(),
+                content: summary.clone(),
+                embedding: embedding_vec,
+                source_type: "ARCHITECTURAL_FINDING".to_string(),
+                created_at: chrono::Utc::now(),
+                last_referenced_at: chrono::Utc::now(),
+                reference_count: 0,
+                reliability_score: 100, // Architectural findings are high reliability
+                owner_override: true,   // Protect architectural findings from aggressive pruning
+                metadata: Some(serde_json::json!({"original_task_id": id, "table": table}).to_string()),
+            };
+
+            let repository = match &db.store {
+                crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+            };
+
+            if let Err(e) = repository.upsert(&record).await {
+                debug!("AutoDream: failed to upsert to consolidated_memory: {}", e);
+            }
+
             db.mark_task_auto_dreamed(&id, &table).await?;
 
-            debug!("AutoDream: ingested completed task {} from {}", id, table);
+            debug!("AutoDream: ingested and consolidated completed task {} from {}", id, table);
         }
         
         Ok(())

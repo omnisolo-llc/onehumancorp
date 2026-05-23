@@ -15,3 +15,25 @@ rust_library(
         "@crates//:opentelemetry",
     ],
 )
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "telemetry_go",
+    srcs = ["mesh.go"],
+    importpath = "github.com/onehumancorp/mono/src/server/telemetry",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_redis_go_redis_v9//:go-redis",
+        "@org_golang_google_protobuf//proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "telemetry_go_test",
+    srcs = ["mesh_test.go"],
+    embed = [":telemetry_go"],
+    deps = [
+        "@org_golang_google_protobuf//types/known/anypb:go_default_library",
+    ],
+)
