@@ -31,7 +31,6 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
-    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -69,7 +68,6 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -269,10 +267,6 @@ impl IntegrationsRegistry {
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "resend" {
-            let mut clients = self.resend_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)
@@ -524,36 +518,6 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_booking_link(event_type).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn manychat_send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "manychat" {
-                let clients = self.manychat_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.send_message(platform, to, body).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn resend_send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "resend" {
-                let clients = self.resend_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.send_email(to, subject, body).await;
         }
         Err("integration not found or not supported".to_string())
     }

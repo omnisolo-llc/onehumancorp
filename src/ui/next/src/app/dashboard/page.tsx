@@ -18,19 +18,6 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
-  const [referralLink, setReferralLink] = useState<string>("https://ohc.store/join?ref=acme-corp");
-
-  const handleGenerateReferral = async () => {
-    try {
-      const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
-      const data = await res.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
-      }
-    } catch (e) {
-      console.error('Failed to generate referral link', e);
-    }
-  };
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
@@ -63,7 +50,6 @@ export default function Dashboard() {
         if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
-            await handleGenerateReferral();
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
             localStorage.setItem('10th_order_milestone_shown', 'true');
@@ -143,31 +129,34 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const salesRes = await fetch('/api/v1/dashboard/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
+            const [salesRes, metricsRes, invitesRes] = await Promise.all([
+                fetch('/api/v1/dashboard/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch('/api/v1/dashboard/metrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
             if (salesRes.ok) {
                 const salesData = await salesRes.json();
                 setTodaysSales(salesData.total_sales);
             }
 
-            const metricsRes = await fetch('/api/v1/dashboard/metrics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
 
-            const invitesRes = await fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
@@ -288,7 +277,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2 shrink-0">
                                         <button
                                             onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -333,7 +322,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -550,10 +539,7 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
-                    onClick={async () => {
-                        await handleGenerateReferral();
-                        setShowReferralModal(true);
-                    }}
+                    onClick={() => setShowReferralModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
                 >
                     <span>🎁 Invite a Business & Earn $50</span>
@@ -595,7 +581,7 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel mac-glass-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
@@ -662,7 +648,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -671,7 +657,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -787,12 +773,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value={referralLink}
+                    value="https://ohc.store/join?ref=acme-corp"
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(referralLink);
+                      navigator.clipboard.writeText("https://ohc.store/join?ref=acme-corp");
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
@@ -811,7 +797,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -820,7 +806,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -838,19 +824,6 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .mac-glass-panel {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-        }
-        @media (prefers-color-scheme: dark) {
-            .mac-glass-panel {
-                background: rgba(22, 22, 26, 0.7);
-                backdrop-filter: blur(30px) saturate(210%);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-        }
       `}} />
     </div>
   );
