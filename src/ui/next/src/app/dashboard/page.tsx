@@ -13,9 +13,11 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [productCount, setProductCount] = useState<number>(10);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
+  const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
@@ -478,6 +480,30 @@ export default function Dashboard() {
 
 
 
+         {/* Products & Monetization Snapshot */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
+                    </div>
+                </div>
+                <button
+                    onClick={() => {
+                        if (productCount >= 10) {
+                            setShowPaywallModal(true);
+                        } else {
+                            setProductCount(prev => prev + 1);
+                        }
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                >
+                    <span>+ Add Product</span>
+                </button>
+            </div>
+         </section>
+
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -616,6 +642,48 @@ export default function Dashboard() {
                   X (Twitter)
                 </a>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Paywall Modal */}
+      {showPaywallModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-orange-600">
+                ⭐
+              </div>
+              <button
+                onClick={() => setShowPaywallModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You've hit your limit!</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              You have reached the <strong className="text-gray-900">10 Products Limit</strong> on the Free plan. Upgrade to the Starter plan to add more products and unlock unlimited potential.
+            </p>
+
+            <div className="space-y-3">
+              <Link
+                href="/pricing"
+                className="block w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              >
+                Upgrade to Starter
+              </Link>
+              <button
+                onClick={() => setShowPaywallModal(false)}
+                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Maybe later
+              </button>
             </div>
           </div>
         </div>
