@@ -11,6 +11,7 @@ void main() {
     expect(find.text('OneHumanCorp'), findsOneWidget);
     expect(find.text('The universal operating system for small business.'), findsOneWidget);
     expect(find.text('Start a Business'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {
@@ -101,7 +102,7 @@ void main() {
     expect(find.text('AI is building your storefront...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    await tester.pumpAndSettle();
+    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
   testWidgets('Onboarding Screen - Loads existing draft bio on init', (WidgetTester tester) async {
@@ -121,5 +122,6 @@ void main() {
 
     // Verify the text field has the loaded bio
     expect(find.text('Existing loaded bio'), findsOneWidget);
+    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 }
