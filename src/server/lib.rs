@@ -2690,6 +2690,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
 
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; text-align: center;">
+                            <button class="card glass" style="padding: 12px;" onclick="showScreen('marketing-screen')">Marketing</button>
+                            <button class="card glass" style="padding: 12px;" onclick="showScreen('operations-screen')">Operations</button>
+                            <button class="card glass" style="padding: 12px;" onclick="showScreen('finance-screen')">Finance</button>
+                            <button class="card glass" style="padding: 12px;" onclick="showScreen('api-screen')">Connect Tools</button>
+                        </div>
+
+
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
                             <div class="flex items-center gap-4">
@@ -2716,6 +2724,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px; cursor: pointer;" onclick="showScreen('order-details-screen')">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">New Order #1042</h3>
+                                    <p style="font-size: 14px; margin: 4px 0 0 0; color: var(--text-secondary);">Needs shipping fulfillment</p>
+                                </div>
+                                <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
+                            </div>
+                        </div>
+
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>Your AI assistants are working on your behalf.</p>
@@ -2990,6 +3009,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
                             <p>Team Sync - 14:00</p>
                             <p style="color: #FF9500; font-weight: 500;">In 10 mins</p>
+
+                            <div style="margin-top: 12px; padding: 12px; background: rgba(0, 113, 227, 0.1); border: 1px solid rgba(0, 113, 227, 0.4); border-radius: 8px;">
+                                <p style="margin: 0; font-size: 14px; font-weight: bold; color: #0071E3;">Online Meeting Link</p>
+                                <a href="#" style="color: #0071E3; text-decoration: underline; font-size: 14px;">meet.ohc.com/leo-guitar-session</a>
+                                <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--text-secondary);">Auto-generated via Jitsi Meet</p>
+                            </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
@@ -3017,6 +3042,117 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Archive')">Archive</button>
                         </div>
                         <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%;" onclick="showScreen('dashboard-screen')">Back</button>
+                    </div>
+
+
+                    <!-- Marketing Screen -->
+                    <div id="marketing-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%; margin-bottom: 24px;" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">Marketing & Advertising</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">Ayrshare Social Media</h3>
+                                <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect Instagram and Facebook to let The Ambassador read messages and The Promoter schedule picture posts across all platforms.</p>
+                            <button id="ayrshare-oauth-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0071E3; color: white; border: none; width: 100%;" onclick="this.innerHTML='Connected to Meta ✓'; this.style.background='#34C759'; document.getElementById('ayrshare-inbox').style.display='block';">Connect Socials via Meta OAuth</button>
+
+                            <div id="ayrshare-inbox" style="display: none; margin-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.4); padding-top: 16px;">
+                                <h4 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Unified Customer Inbox</h4>
+                                <div style="background: rgba(255, 255, 255, 0.5); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                                    <strong>IG: @maya_bakes</strong>: Can you make a 3-tier cake for Saturday?
+                                    <button style="margin-top: 8px; font-size: 12px; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.8); background: transparent;" onclick="this.innerHTML='Draft generated by The Ambassador...'">Draft Reply</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">Listmonk Email Campaigns</h3>
+                                <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">No drag-and-drop builders. Just type what you want to send.</p>
+                            <textarea id="listmonk-prompt" style="width: 100%; border-radius: 8px; padding: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.2); font-family: 'Inter', sans-serif; min-height: 80px;" placeholder="Draft an email about our new summer dresses."></textarea>
+                            <button id="listmonk-send-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0071E3; color: white; border: none; width: 100%; margin-top: 12px;" onclick="document.getElementById('listmonk-status').style.display='block';">Send Email to 'bought-shoes' Segment</button>
+                            <p id="listmonk-status" style="display: none; color: #34C759; margin-top: 12px; font-size: 14px; font-weight: 500;">✓ Email dispatched via Listmonk to 432 customers.</p>
+                        </div>
+
+                    </div>
+
+
+                    <!-- Operations Screen -->
+                    <div id="operations-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%; margin-bottom: 24px;" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">Operations</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">Cal.com Sync</h3>
+                                <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Sync personal calendars to provide a public booking widget that prevents double-booking.</p>
+                            <button id="calcom-oauth-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0071E3; color: white; border: none; width: 100%;" onclick="this.innerHTML='Connected to Google Calendar ✓'; this.style.background='#34C759';">Connect Google/Outlook via Cal.com</button>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">Twilio SMS Notifications</h3>
+                                <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Dispatch SMS order notifications to the business owner and updates to customers without internet.</p>
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px;">
+                                <input type="checkbox" id="twilio-toggle" onchange="document.getElementById('twilio-status').style.display = this.checked ? 'block' : 'none';" />
+                                Enable SMS Notifications via Twilio
+                            </label>
+                            <p id="twilio-status" style="display: none; color: #34C759; margin-top: 12px; font-size: 14px; font-weight: 500;">✓ SMS alerts are now active globally.</p>
+                        </div>
+                    </div>
+
+
+                    <!-- Finance Screen -->
+                    <div id="finance-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%; margin-bottom: 24px;" onclick="showScreen('dashboard-screen')">Back</button>
+
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">Finance & Payments</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Store Region</h3>
+                            <select id="region-selector" style="width: 100%; border-radius: 8px; padding: 12px; border: 1px solid rgba(255,255,255,0.4); background: rgba(255,255,255,0.2); font-family: 'Inter', sans-serif; margin-bottom: 16px;" onchange="if(this.value === 'LATAM') { document.getElementById('mercado-pago-section').style.display='block'; } else { document.getElementById('mercado-pago-section').style.display='none'; }">
+                                <option value="US">United States (Stripe Recommended)</option>
+                                <option value="LATAM">Latin America (Mercado Pago Recommended)</option>
+                                <option value="EU">Europe</option>
+                            </select>
+                        </div>
+
+                        <div id="mercado-pago-section" class="card glass" style="display: none; border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #00C24B;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="font-family: 'Outfit', sans-serif; margin: 0;">Mercado Pago</h3>
+                                <span style="font-size: 12px; background: #00C24B; color: white; padding: 2px 8px; border-radius: 12px; font-weight: bold;">RECOMMENDED</span>
+                            </div>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Accept local payment methods in LATAM via the OHC checkout flow.</p>
+                            <button id="mercadopago-oauth-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0071E3; color: white; border: none; width: 100%;" onclick="this.innerHTML='Connected to Mercado Pago ✓'; this.style.background='#34C759';">Connect Mercado Pago</button>
+                        </div>
+                    </div>
+
+
+                    <!-- Order Details Screen -->
+                    <div id="order-details-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%; margin-bottom: 24px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+
+                        <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">Order #1042 Details</h1>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Fulfillment via EasyPost</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Customer: Priya Sharma<br>Address: 123 Main St, Seattle WA 98101</p>
+
+                            <button id="easypost-label-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0071E3; color: white; border: none; width: 100%;" onclick="document.getElementById('easypost-status').style.display='block'; this.innerHTML='Print Label Again';">Generate & Print Label</button>
+                            <div id="easypost-status" style="display: none; margin-top: 16px; padding: 12px; background: rgba(52, 199, 89, 0.1); border: 1px solid rgba(52, 199, 89, 0.4); border-radius: 8px;">
+                                <p style="color: #34C759; margin: 0; font-size: 14px; font-weight: 500;">✓ Label generated via EasyPost and Tracking emailed to customer.</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Meeting Room Screen -->
@@ -4095,6 +4231,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'setup-screen': '/website-builder',
                             'storefront-builder-screen': '/storefront-builder',
                             'settings-screen': '/settings',
+                            'marketing-screen': '/marketing',
+                            'operations-screen': '/operations',
+                            'finance-screen': '/finance',
+                            'order-details-screen': '/orders/1042',
                             'checkout-screen': '/checkout',
                             'users-screen': '/users',
                             'referral-dashboard-screen': '/referrals',
@@ -4558,7 +4698,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'marketing-screen' || id === 'operations-screen' || id === 'finance-screen' || id === 'order-details-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
