@@ -98,7 +98,7 @@ impl McpService for MyMcpService {
 
         return match req.tool_id.as_str() {
             "telegram-mcp" | "slack-mcp" | "teams-mcp" => {
-                let params: serde_json::Value = serde_json::from_str(&req.params)
+                let params: serde_json::Value = serde_json::from_str(req.params.as_ref().map_or("{}", |s| s.as_str()))
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
                 
                 let channel = params["channel"].as_str().unwrap_or_default();
@@ -113,7 +113,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "git-mcp" => {
-                let params: serde_json::Value = serde_json::from_str(&req.params)
+                let params: serde_json::Value = serde_json::from_str(req.params.as_ref().map_or("{}", |s| s.as_str()))
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
                 
                 let repo = params["repository"].as_str().unwrap_or_default();
@@ -130,7 +130,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "jira-mcp" => {
-                let params: serde_json::Value = serde_json::from_str(&req.params)
+                let params: serde_json::Value = serde_json::from_str(req.params.as_ref().map_or("{}", |s| s.as_str()))
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
                 
                 let project = params["project"].as_str().unwrap_or_default();
@@ -163,7 +163,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "hybrid_sync" => {
-                let params: serde_json::Value = serde_json::from_str(&req.params)
+                let params: serde_json::Value = serde_json::from_str(req.params.as_ref().map_or("{}", |s| s.as_str()))
                     .map_err(|e| Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
                 
                 let action = params["action"].as_str().unwrap_or_default();
@@ -197,7 +197,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "sync_audit_logs_to_cloud" => {
-                if let Ok(payload) = serde_json::from_str::<crate::integrations::mcp_audit_sync::tool::AuditSyncPayload>(req.params.as_deref().unwrap_or("{}")) {
+                if let Ok(payload) = serde_json::from_str::<crate::integrations::mcp_audit_sync::tool::AuditSyncPayload>(req.params.as_ref().map_or("{}", |s| s.as_str())) {
                     crate::integrations::mcp_audit_sync::tool::sync_audit_logs_to_cloud(&self.hub.pool, payload).await.map_err(|e| Status::internal(e.to_string()))?;
                 }
                 let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
