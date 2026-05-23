@@ -2,9 +2,9 @@ package mcp_audit_sync
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"os"
-	"database/sql"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
