@@ -1,5 +1,11 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock fetch globally
+global.fetch = vi.fn().mockResolvedValue({
+  ok: true,
+  json: async () => ({})
+});
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
@@ -14,6 +20,7 @@ describe('useOnboardingStore', () => {
       intakeData: null,
       startResult: null,
     });
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state', () => {
@@ -27,14 +34,29 @@ describe('useOnboardingStore', () => {
     expect(state.startResult).toBeNull();
   });
 
-  it('should update step', () => {
+  it('should update step and sync to server', async () => {
     useOnboardingStore.getState().setStep(2);
     expect(useOnboardingStore.getState().step).toBe(2);
+
+    // Fast-forward debounce
+    await new Promise(r => setTimeout(r, 600));
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"step":2')
+    }));
   });
 
-  it('should update businessName', () => {
+  it('should update businessName and sync to server', async () => {
     useOnboardingStore.getState().setBusinessName('Test Name');
     expect(useOnboardingStore.getState().businessName).toBe('Test Name');
+
+    await new Promise(r => setTimeout(r, 600));
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"businessName":"Test Name"')
+    }));
   });
 
   it('should update businessCategory', () => {
@@ -70,5 +92,22 @@ describe('useOnboardingStore', () => {
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessName).toBe('Persisted Name');
+  });
+
+  it('should load state from server correctly', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        step: 4,
+        businessName: 'Server Name',
+        businessType: 'Server Type'
+      })
+    });
+
+    await useOnboardingStore.getState().loadFromServer();
+
+    expect(useOnboardingStore.getState().step).toBe(4);
+    expect(useOnboardingStore.getState().businessName).toBe('Server Name');
+    expect(useOnboardingStore.getState().businessType).toBe('Server Type');
   });
 });

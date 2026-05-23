@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -9,6 +9,7 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
+    loadFromServer,
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
@@ -17,6 +18,10 @@ export default function OnboardingWizard() {
     intakeData, setIntakeData,
     startResult, setStartResult
   } = useOnboardingStore();
+
+  useEffect(() => {
+    loadFromServer();
+  }, [loadFromServer]);
 
   const handleNext = () => {
     if (step === 1) {
