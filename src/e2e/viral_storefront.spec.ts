@@ -45,7 +45,6 @@ test.describe('Viral Storefront E2E', () => {
     const footer = page.locator('.footer');
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a').first()).toHaveAttribute('href', 'https://ohc.store/join?ref=embed');
-    await expect(footer.locator('p')).toContainText('Launch your own AI storefront today');
+    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
   });
 });

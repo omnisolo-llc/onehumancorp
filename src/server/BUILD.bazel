@@ -172,7 +172,6 @@ rust_binary(
         "orchestration",
         "interop",
         "workers",
-        "services",
     ]
 ]
 

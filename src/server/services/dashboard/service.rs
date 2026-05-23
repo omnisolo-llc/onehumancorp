@@ -340,14 +340,15 @@ impl DashboardService for MyDashboardService {
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        let _filtered_agents_iter = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            });
-
         if !req.mobile_optimized {
+            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .cloned()
+                .collect();
 
             let mut status_map = std::collections::HashMap::new();
             for a in agents.iter() {
@@ -419,33 +420,22 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-            final_agents_payload = _filtered_agents_iter
+            final_agents_payload = _filtered_agents
+                .into_iter()
                 .map(|a| {
                     let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
 
                     ::server_ohc::agent::Agent {
-                        id: a.id.clone(),
+                        id: a.id,
                         name: compressed_name,
                         role: ::server_ohc::common::Role::Unspecified as i32,
                         status: ::server_ohc::common::AgentStatus::Idle as i32,
-                        organization_id: a.organization_id.clone(),
+                        organization_id: a.organization_id,
                     }
                 })
                 .collect::<Vec<_>>();
 
             final_meetings = out_meetings;
-        } else {
-            final_agents_payload = _filtered_agents_iter
-                .map(|a| {
-                    ::server_ohc::agent::Agent {
-                        id: a.id.clone(),
-                        name: String::new(),
-                        role: ::server_ohc::common::Role::Unspecified as i32,
-                        status: ::server_ohc::common::AgentStatus::Idle as i32,
-                        organization_id: a.organization_id.clone(),
-                    }
-                })
-                .collect::<Vec<_>>();
         }
 
         let org = if req.mobile_optimized {
