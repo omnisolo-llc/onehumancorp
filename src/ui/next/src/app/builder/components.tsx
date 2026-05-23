@@ -5,6 +5,85 @@ import React from 'react';
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
 
+export function SkeletonBlock() {
+  return (
+    <div className="w-full p-6 animate-pulse">
+      <div className="h-40 bg-gray-200 rounded-2xl mb-4" />
+      <div className="h-4 w-3/4 bg-gray-200 rounded mb-2" />
+      <div className="h-4 w-1/2 bg-gray-100 rounded" />
+    </div>
+  );
+}
+
+export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  if (!isOpen) return null;
+  return (
+    <div className="absolute inset-0 z-[100] flex flex-col justify-end">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-slide-up relative z-10">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold font-outfit text-gray-900">{title}</h2>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+export function DraggableBlock({ children, onDragStart, onDragOver, onDragEnd, isSelected, onClick }: {
+  children: React.ReactNode;
+  onDragStart: (e: React.TouchEvent) => void;
+  onDragOver: (e: React.TouchEvent) => void;
+  onDragEnd: (e: React.TouchEvent) => void;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className={`relative group transition-all duration-200 ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      onTouchStart={onDragStart}
+      onTouchMove={onDragOver}
+      onTouchEnd={onDragEnd}
+      onClick={onClick}
+    >
+      {isSelected && (
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+          DRAG TO REORDER
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+export function QRCode({ value }: { value: string }) {
+  return (
+    <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 inline-block">
+      <svg className="w-32 h-32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100" height="100" rx="12" fill="white"/>
+        <rect x="10" y="10" width="20" height="20" fill="black"/>
+        <rect x="15" y="15" width="10" height="10" fill="white"/>
+        <rect x="70" y="10" width="20" height="20" fill="black"/>
+        <rect x="75" y="15" width="10" height="10" fill="white"/>
+        <rect x="10" y="70" width="20" height="20" fill="black"/>
+        <rect x="15" y="75" width="10" height="10" fill="white"/>
+        <rect x="40" y="40" width="20" height="20" fill="black"/>
+        <rect x="45" y="45" width="10" height="10" fill="white"/>
+        {/* Random dots to look like QR */}
+        <rect x="40" y="10" width="5" height="5" fill="black"/>
+        <rect x="10" y="40" width="5" height="5" fill="black"/>
+        <rect x="70" y="40" width="5" height="5" fill="black"/>
+        <rect x="40" y="70" width="5" height="5" fill="black"/>
+        <rect x="60" y="60" width="10" height="10" fill="black"/>
+        <rect x="80" y="80" width="10" height="10" fill="black"/>
+      </svg>
+    </div>
+  );
+}
+
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
