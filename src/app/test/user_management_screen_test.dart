@@ -11,7 +11,7 @@ void main() {
 
     // Verify text exists
     expect(find.text('Invite Collaborator'), findsOneWidget);
-    expect(find.text('Bridge your Standalone sovereignty with Cloud-Native team expansion.'), findsOneWidget);
-    expect(find.text('Generate Viral Link'), findsOneWidget);
+    expect(find.text('Invite a partner or employee to help manage your business.'), findsOneWidget);
+    expect(find.text('Get Invite Link'), findsOneWidget);
   });
 }

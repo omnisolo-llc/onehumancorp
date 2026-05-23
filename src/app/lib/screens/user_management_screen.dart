@@ -32,7 +32,7 @@ class GrowthReferralWidget extends StatelessWidget {
               ),
               SizedBox(height: 8),
               Text(
-                'Bridge your Standalone sovereignty with Cloud-Native team expansion.',
+                'Invite a partner or employee to help manage your business.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
@@ -45,7 +45,7 @@ class GrowthReferralWidget extends StatelessWidget {
                   try {
                     final prefs = await SharedPreferences.getInstance();
                     final token = prefs.getString('auth_token') ?? '';
-                    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.ohc.app');
+                    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
 
                     final response = await http.post(
                       Uri.parse('$baseUrl/referrals/generate'),
@@ -74,7 +74,7 @@ class GrowthReferralWidget extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text('Generate Viral Link'),
+                child: Text('Get Invite Link'),
               ),
             ],
           ),
