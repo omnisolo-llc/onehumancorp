@@ -23,6 +23,7 @@
 pub use ohc_builtin_agent_core::*;
 
 pub mod observation_masking;
+pub mod verification_loops;
 pub mod agent;
 pub mod tools_gating;
 pub mod service;
