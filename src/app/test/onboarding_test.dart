@@ -32,6 +32,18 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio');
     await tester.pumpAndSettle();
 
+    // Next to Name step
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Enter name
+    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
+    await tester.pumpAndSettle();
+
+    // Next to Template step
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
@@ -39,8 +51,10 @@ void main() {
     // Expect to see SnackBar
     expect(find.text('Network error. Please try again.'), findsOneWidget);
 
-    // Expect to still be on the input state
-    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
+    // Expect to still be on the template selection state (after going back to input state on error)
+    // Actually the code says setState(() => _state = OnboardingState.input);
+    // So it stays in the Input state but the _currentInputStep will remain what it was (2).
+    expect(find.text('Choose a look'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Debounce triggers draft save', (WidgetTester tester) async {
@@ -92,6 +106,18 @@ void main() {
 
     // Enter text
     await tester.enterText(find.byKey(Key('bio-input')), 'Test generating state');
+    await tester.pumpAndSettle();
+
+    // Next to Name step
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Enter name
+    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
+    await tester.pumpAndSettle();
+
+    // Next to Template step
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Submit form
