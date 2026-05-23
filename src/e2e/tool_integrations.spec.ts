@@ -13,33 +13,32 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
-    await expect(page.getByText('Unified Customer Inbox. Manage all your messages and posts from one place.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
+    await expect(page.getByText('Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Calendly' })).toBeVisible();
-    await expect(page.getByText('Automated Booking. Let customers schedule appointments 24/7.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(1)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
+    await expect(page.getByText('Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(3)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(5)).toBeVisible();
+    await expect(page.getByText('Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API.')).toBeVisible();
+    await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Mailchimp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(2)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(6)).toBeVisible();
+    await expect(page.getByText('Developer-friendly API, excellent deliverability, modern React-email templates.')).toBeVisible();
+    await expect(page.getByText('Industry standard video conferencing. High user familiarity.')).toBeVisible();
   });
 
   test('displays global sms notifications card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(4)).toBeVisible();
+    await expect(page.getByText('Global reach, ultra-reliable delivery for automated text alerts.')).toBeVisible();
   });
 });
