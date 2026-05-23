@@ -2517,45 +2517,6 @@ impl Agent {
 
 
 
-    fn validate_schema(args: &serde_json::Value, schema: &serde_json::Value) -> Result<(), String> {
-        if let Some(req_array) = schema.get("required").and_then(|v| v.as_array()) {
-            if let Some(args_obj) = args.as_object() {
-                for req in req_array {
-                    if let Some(req_str) = req.as_str() {
-                        if !args_obj.contains_key(req_str) {
-                            return Err(format!("missing required parameter: '{}'", req_str));
-                        }
-                    }
-                }
-            } else if !req_array.is_empty() {
-                return Err("arguments must be an object".to_string());
-            }
-        }
-
-        if let Some(props) = schema.get("properties").and_then(|v| v.as_object()) {
-            if let Some(args_obj) = args.as_object() {
-                for (k, v) in args_obj {
-                    if let Some(prop_schema) = props.get(k) {
-                        if let Some(expected_type) = prop_schema.get("type").and_then(|t| t.as_str()) {
-                            let type_matches = match expected_type {
-                                "string" => v.is_string(),
-                                "number" | "integer" => v.is_number(),
-                                "boolean" => v.is_boolean(),
-                                "object" => v.is_object(),
-                                "array" => v.is_array(),
-                                _ => true, // Unknown type, skip validation for now
-                            };
-                            if !type_matches {
-                                return Err(format!("parameter '{}' has invalid type: expected {}", k, expected_type));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
 
     async fn execute_tool(
         &self,
@@ -2567,6 +2528,10 @@ impl Agent {
             .iter()
             .find(|t| t.name == tc.name)
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
+
+        if let Err(e) = crate::tool_schema_validation::validate_schema(&tc.arguments, &tool.parameters) {
+            return Err(ToolError::LlmRecoverable(e));
+        }
 
         let mut args = tc.arguments.clone();
         if tc.name == "spawn_subagent" {
@@ -2582,7 +2547,7 @@ impl Agent {
             }
         }
 
-        if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
+        if let Err(e) = crate::tool_schema_validation::validate_schema(&args, &tool.parameters) {
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
@@ -2840,7 +2805,7 @@ mod tests {
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("missing required parameter: 'str_param'"));
+                assert!(msg.contains("Validation error: Missing required property 'str_param'"));
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
@@ -2855,7 +2820,7 @@ mod tests {
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
-                assert!(msg.contains("parameter 'str_param' has invalid type: expected string"));
+                assert!(msg.contains("Validation error: Property 'str_param' expected type 'string', but got different type"));
             }
             _ => panic!("Expected LlmRecoverable error"),
         }
@@ -5841,4 +5806,66 @@ async fn test_stripe_retry_limit() {
     let lock = client.call_count.lock().await;
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
+}
+
+#[cfg(test)]
+mod test_pydantic_schema_validation {
+    use super::*;
+    use crate::tools::Tool;
+    use crate::tools::ToolExecutor;
+    use serde_json::json;
+    use std::sync::Arc;
+    use async_trait::async_trait;
+
+    struct DummyExecutor;
+    #[async_trait]
+    impl ToolExecutor for DummyExecutor {
+        async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+            Ok("success".to_string())
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tool_schema_validation_failure_returns_recoverable_error() {
+        let dummy_tool = Tool {
+            name: "dummy".to_string(),
+            description: "Dummy".to_string(),
+            is_read_only: false,
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "age": {"type": "number"}
+                },
+                "required": ["age"]
+            }),
+            execute: Arc::new(DummyExecutor),
+        };
+
+        // Initialize agent with dummy llm client
+        struct MockClient;
+        #[async_trait]
+        impl crate::llm::LlmClient for MockClient {
+            async fn chat(&self, _req: ohc_builtin_agent_core::types::ChatRequest) -> Result<ohc_builtin_agent_core::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                unimplemented!()
+            }
+        }
+
+        let agent = Agent::new(Arc::new(MockClient), vec![]);
+
+        // Pass invalid string instead of number
+        let tc = ToolCall {
+            id: "1".to_string(),
+            name: "dummy".to_string(),
+            arguments: json!({"age": "thirty"}),
+        };
+
+        let result = agent.execute_tool(&tc, &[dummy_tool], &[]).await;
+        assert!(result.is_err());
+        match result.unwrap_err() {
+            ToolError::LlmRecoverable(msg) => {
+                assert!(msg.contains("Validation error"), "Should contain validation error message");
+            }
+            _ => panic!("Expected LlmRecoverable error"),
+        }
+    }
 }

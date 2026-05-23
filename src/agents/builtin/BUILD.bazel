@@ -13,6 +13,7 @@ rust_library(
 
         "pubsub.rs",
         "output_parser.rs",
+        "tool_schema_validation.rs",
         "types.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
@@ -58,6 +59,7 @@ rust_library(
         "memory_store.rs",
         "sqlite_memory.rs",
         "output_parser.rs",
+        "tool_schema_validation.rs",
         "memory_exhaustive_tests.rs",
         "mesh/mod.rs",
         "mesh/transport.rs",
@@ -255,3 +257,17 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "tool_schema_validation_tests",
+    srcs = ["tool_schema_validation.rs"],
+    edition = "2024",
+    size = "small",
+    deps = [
+        "@crates//:serde_json",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
