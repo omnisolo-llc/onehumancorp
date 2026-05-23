@@ -4446,42 +4446,6 @@
         "y": 200
       },
       "id": 9992
-    },
-    {
-      "id": 69025,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 200
-      },
-      "type": "heatmap",
-      "title": "Token Efficiency by Agent Role",
-      "targets": [
-        {
-          "expr": "sum(rate(ohc_token_usage_by_outcome[5m])) by (agent_role)",
-          "legendFormat": "{{agent_role}}"
-        }
-      ],
-      "transparent": true
-    },
-    {
-      "id": 69026,
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 200
-      },
-      "type": "stat",
-      "title": "Swarm ROI",
-      "targets": [
-        {
-          "expr": "sum(rate(ohc_token_usage_by_outcome{outcome=\"SUCCESS\"}[5m])) / sum(rate(ohc_agent_cost[5m]))",
-          "legendFormat": "Total Successes / Total USD Cost"
-        }
-      ],
-      "transparent": true
     }
   ],
   "refresh": "",

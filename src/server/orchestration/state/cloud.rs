@@ -142,7 +142,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard).await
         };
 
-        match tokio::time::timeout(std::time::Duration::from_secs(60), transition_future).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -152,7 +152,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
-        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_future).await {
+        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_future).await {
             Ok(Ok(guard)) => guard,
             Ok(Err(e)) => return Err(e),
             Err(_) => {
@@ -171,7 +171,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             WHERE t.status = 'PENDING'
               AND NOT EXISTS (
                   SELECT 1
-                  FROM json_array_elements_text(t.dependencies) as dep_id
+                  FROM jsonb_array_elements_text(t.dependencies) as dep_id
                   JOIN swarm_tasks dep ON dep.id::text = dep_id
                   WHERE dep.status != 'COMPLETED'
               )
@@ -182,7 +182,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         .bind(limit)
         .fetch_all(&mut *tx);
 
-        let rows = match tokio::time::timeout(std::time::Duration::from_secs(60), rows_future).await {
+        let rows = match tokio::time::timeout(std::time::Duration::from_secs(2), rows_future).await {
             Ok(Ok(rows)) => rows,
             Ok(Err(e)) => return Err(e.to_string()),
             Err(_) => {

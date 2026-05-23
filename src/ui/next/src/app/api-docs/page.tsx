@@ -95,33 +95,6 @@ const swaggerSpec = {
         }
       }
     },
-    "/api/videos": {
-      get: {
-        summary: "Get video tutorials",
-        description: "Retrieves a list of video tutorial metadata for the Help Center.",
-        tags: ["Documentation"],
-        responses: {
-          "200": {
-            description: "Success",
-            content: {
-              "application/json": {
-                schema: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      id: { type: "integer" },
-                      title: { type: "string" },
-                      duration: { type: "string" }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/agents/status": {
       get: {
         summary: "Get workforce status",

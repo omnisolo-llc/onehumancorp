@@ -69,10 +69,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_vercel_tool_scoping_metric: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
-    pub enable_agent_curated_memory: bool,
-    pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
-    pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
@@ -122,10 +119,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
-            enable_agent_curated_memory: false,
-            curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
-            enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
@@ -1420,26 +1414,13 @@ impl Agent {
             attempts += 1;
             let result = tokio::time::timeout(timeout_duration, self.run_internal(cfg, initial_message, on_event)).await;
             match result {
-                Ok(Ok(res)) => {
-                    return Ok(res);
-                },
-                Ok(Err(e)) => {
-                    let err_str = e.to_string();
-                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
-                        return Err(e);
-                    }
-                    if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
-                        return Err(e);
-                    }
-                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
+                Ok(res) => {
+                    return res;
                 },
                 Err(_) => {
                     if attempts >= max_attempts {
-                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
-                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
                 }
             }
         }
@@ -1551,24 +1532,6 @@ impl Agent {
         let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
-        // Hermes Agent Serverless Hibernation Mechanic
-        if final_cfg.enable_serverless_hibernation {
-            if let Some(thread_id) = &final_cfg.thread_id {
-                if let Some(dir) = &final_cfg.workspace_path {
-                    let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-                    let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
-                    if hm.is_hibernated(thread_id).await {
-                        tracing::info!("Waking agent session {} from serverless hibernation", thread_id);
-                        if let Ok(state) = hm.wake(thread_id).await {
-                            if let Ok(restored_msgs) = serde_json::from_str::<Vec<Message>>(&state.messages_json) {
-                                messages = restored_msgs;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         if final_cfg.enable_langgraph_mechanic {
             return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
@@ -1661,13 +1624,6 @@ impl Agent {
                 iteration,
                 message_count: messages.len(),
             });
-
-
-            // Hermes Agent Unique Harness Innovations: Agent-curated memory
-            // Periodic nudges, autonomous skill creation after complex tasks.
-            if final_cfg.enable_agent_curated_memory && iteration % final_cfg.curated_memory_nudge_threshold == 0 && iteration > 0 && messages.last().map(|m| m.role == Role::Tool).unwrap_or(false) {
-                messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
-            }
 
             let mut final_messages = messages.clone();
 
@@ -2437,25 +2393,6 @@ impl Agent {
                 previous_response_id: last_response_id.clone(),
             });
 
-            // Hermes Agent Serverless Hibernation Mechanic
-            if final_cfg.enable_serverless_hibernation {
-                if let Some(thread_id) = &final_cfg.thread_id {
-                    if let Some(dir) = &final_cfg.workspace_path {
-                        let hibernation_dir = format!("{}/.ohc_hibernation", dir);
-                        let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
-                        if let Ok(msgs_json) = serde_json::to_string(&messages) {
-                            let state = crate::hibernation::HibernationState {
-                                session_id: thread_id.clone(),
-                                messages_json: msgs_json,
-                                current_step: iteration as usize,
-                                active_tools: vec![],
-                            };
-                            let _ = hm.hibernate(thread_id, &state).await;
-                        }
-                    }
-                }
-            }
-
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
@@ -2869,8 +2806,8 @@ mod tests {
     async fn test_run_structured() {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall {
                         id: "call_123".to_string(),
@@ -2982,7 +2919,7 @@ mod tests {
             async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 self.requests.lock().await.push(req);
                 Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Final response"),
+                    message: Message::assistant("Final response"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
@@ -3052,7 +2989,7 @@ mod tests {
         impl LlmClient for MockLlmClient {
             async fn chat(&self, _req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
                 Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -3148,7 +3085,7 @@ mod tests {
                         }
                     ]);
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant(plan.to_string()),
+                        message: Message::assistant(plan.to_string()),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3156,7 +3093,7 @@ mod tests {
                 } else {
                     // It's the replier phase
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Final plan executed."),
+                        message: Message::assistant("Final plan executed."),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3170,7 +3107,7 @@ mod tests {
             description: "read".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let client = Arc::new(LLMCompilerMockClient {
@@ -3222,8 +3159,8 @@ mod tests {
                 if *count == 1 {
                     // Turn 1: Return a tool call to generate some history
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "I am thinking about calling a tool.".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "call_1".to_string(),
@@ -3241,8 +3178,8 @@ mod tests {
                 } else if *count == 2 {
                     // Turn 2: Another tool call
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "I need more info.".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "call_2".to_string(),
@@ -3276,14 +3213,14 @@ mod tests {
                     assert!(found_acon, "ACON should have stripped older tool results.");
 
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Final answer"),
+                        message: Message::assistant("Final answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Extra answer"),
+                        message: Message::assistant("Extra answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3298,7 +3235,7 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -3340,8 +3277,8 @@ mod tests {
                     assert!(!req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Return a call to LazyLoadTools
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "Loading HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "load_1".to_string(),
@@ -3361,8 +3298,8 @@ mod tests {
                     assert!(req.tools.iter().any(|t| t.name == "HeavyTool"));
                     // Call the HeavyTool
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "Using HeavyTool".to_string(),
                             tool_calls: vec![ToolCall {
                                 id: "heavy_1".to_string(),
@@ -3380,7 +3317,7 @@ mod tests {
                 } else {
                     // Done
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Final Answer"),
+                        message: Message::assistant("Final Answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3465,8 +3402,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
@@ -3482,7 +3419,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: ohc_builtin_agent_core::types::Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3496,21 +3433,21 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "mutating_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -3531,8 +3468,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "unallowed_tool".to_string(), arguments: serde_json::Value::Null },
@@ -3554,7 +3491,7 @@ mod tests {
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -3575,8 +3512,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "3".to_string(), name: "high_risk_tool".to_string(), arguments: serde_json::Value::Null },
@@ -3598,7 +3535,7 @@ mod tests {
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -3633,7 +3570,7 @@ mod tests {
             let mut resps = self.responses.lock().await;
             if resps.is_empty() {
                 return Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3643,7 +3580,7 @@ mod tests {
         }
     }
 
-    pub struct MockToolExecutor;
+    struct MockToolExecutor;
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
@@ -3657,8 +3594,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -3674,8 +3611,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_2".to_string(),
@@ -3698,7 +3635,7 @@ mod tests {
             description: "test".to_string(),
                 is_read_only: false,
             parameters: Value::Null,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         }];
 
         let agent = Agent::new(client, tools);
@@ -3731,8 +3668,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "tool call 1".to_string(),
                         tool_calls: vec![ToolCall { id: "1".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -3744,8 +3681,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "tool call 2".to_string(),
                         tool_calls: vec![ToolCall { id: "2".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -3757,8 +3694,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "tool call 3".to_string(),
                         tool_calls: vec![ToolCall { id: "3".to_string(), name: "test_tool".to_string(), arguments: serde_json::Value::Null }],
                         tool_results: vec![],
@@ -3770,13 +3707,13 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("compacted summary"), // Responds to the compaction request
+                    message: Message::assistant("compacted summary"), // Responds to the compaction request
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("final answer"),
+                    message: Message::assistant("final answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 10, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -3784,7 +3721,7 @@ mod tests {
             ]),
         });
 
-        pub struct MockToolExecutor;
+        struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
@@ -3798,7 +3735,7 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             }
         ];
 
@@ -3831,8 +3768,8 @@ mod tests {
 
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "Yielding to finance...".to_string(),
                     tool_calls: vec![ToolCall {
                         id: "call_handoff".to_string(),
@@ -3883,8 +3820,8 @@ mod tests {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "I will call a tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_transient".to_string(),
@@ -3900,8 +3837,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_llm_recoverable".to_string(),
@@ -3917,8 +3854,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_user_fixable".to_string(),
@@ -3934,8 +3871,8 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "I will call another tool".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_fatal".to_string(),
@@ -4013,8 +3950,8 @@ mod tests {
         // 1. Transient Error (Retries with backoff but fails after max_retries)
         let client_transient = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "1".to_string(), name: "transient_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -4025,7 +3962,7 @@ mod tests {
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
             }, ChatResponse {
-                message: crate::types::Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string())
             }]),
         });
@@ -4056,7 +3993,7 @@ mod tests {
                 if !resps.is_empty() {
                     Ok(resps.remove(0))
                 } else {
-                    Ok(crate::types::ChatResponse { message: crate::types::Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: Some("mock-id".to_string()) })
+                    Ok(crate::types::ChatResponse { message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(), response_id: Some("mock-id".to_string()) })
                 }
             }
         }
@@ -4064,8 +4001,8 @@ mod tests {
         let client_llm = Arc::new(LlmRecoverableMockClient {
             requests: tokio::sync::Mutex::new(vec![]),
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "2".to_string(), name: "llm_recoverable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -4076,7 +4013,7 @@ mod tests {
                 stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
             }, ChatResponse {
-                message: crate::types::Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
+                message: Message::assistant("stop"), usage: Usage::default(), stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string())
             }]),
         });
@@ -4106,8 +4043,8 @@ mod tests {
         // 3. User Fixable
         let client_user = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "3".to_string(), name: "user_fixable_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -4136,8 +4073,8 @@ mod tests {
         // 4. Fatal
         let client_fatal = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "4".to_string(), name: "fatal_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -4166,8 +4103,8 @@ mod tests {
         // 5. Unexpected Error
         let client_unexpected = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "".to_string(),
                     tool_calls: vec![ToolCall { id: "5".to_string(), name: "unexpected_tool".to_string(), arguments: serde_json::Value::Null }],
                     tool_results: vec![],
@@ -4199,8 +4136,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "I am going to use the bad tool now.".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -4216,7 +4153,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("This contains the secret password!"),
+                    message: Message::assistant("This contains the secret password!"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4230,14 +4167,14 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -4261,8 +4198,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -4285,7 +4222,7 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -4300,7 +4237,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Here is the secret data."),
+                    message: Message::assistant("Here is the secret data."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4419,8 +4356,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -4436,7 +4373,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final Answer"),
+                    message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4449,7 +4386,7 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({"type": "object"}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -4468,13 +4405,13 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Draft answer"),
+                    message: Message::assistant("Draft answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
+                    message: Message {
                         role: crate::types::Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![crate::types::ToolCall {
@@ -4491,13 +4428,13 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Better answer"),
+                    message: Message::assistant("Better answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
+                    message: Message {
                         role: crate::types::Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![crate::types::ToolCall {
@@ -4545,7 +4482,7 @@ mod tests {
                 if *count == 1 {
                     // First turn: model provides an output, but we set up the test so the command fails
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Final answer but fails check"),
+                        message: Message::assistant("Final answer but fails check"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-1".to_string()),
@@ -4561,14 +4498,14 @@ mod tests {
                     // but we can just check it ran twice. Actually, the `command_that_fails` will always fail, so it will loop
                     // until max_iterations, but we only need to verify the injection happened.
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Fixed answer"),
+                        message: Message::assistant("Fixed answer"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-2".to_string()),
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("Enough"),
+                        message: Message::assistant("Enough"),
                         usage: Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("mock-id-3".to_string()),
@@ -4601,7 +4538,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Draft answer"),
+                    message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 100, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4630,8 +4567,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "Let's call tools".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "read_tool_1".to_string(), arguments: serde_json::Value::Null },
@@ -4646,7 +4583,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Draft answer"),
+                    message: Message::assistant("Draft answer"),
                     usage: Usage { input_tokens: 150, output_tokens: 20, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id2".to_string()),
@@ -4729,8 +4666,8 @@ mod tests {
         let client1 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![
                             ToolCall { id: "1".to_string(), name: "read_tool".to_string(), arguments: serde_json::Value::Null },
@@ -4744,7 +4681,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4792,7 +4729,7 @@ mod tests {
         let client2 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Resumed answer"),
+                    message: Message::assistant("Resumed answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4831,8 +4768,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_123".to_string(),
@@ -4848,7 +4785,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Task done"),
+                    message: Message::assistant("Task done"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4861,7 +4798,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: serde_json::Value::Null,
             is_read_only: false,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let mut agent = Agent::new(client, vec![mutating_tool]);
@@ -4907,8 +4844,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_mutating".to_string(),
@@ -4924,7 +4861,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -4937,7 +4874,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
             is_read_only: false,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![mutating_tool]);
@@ -4981,7 +4918,7 @@ mod tests {
             let mut lr = self.last_request.lock().await;
             *lr = Some(req);
             Ok(crate::types::ChatResponse {
-                message: crate::types::Message::assistant("Final answer"),
+                message: Message::assistant("Final answer"),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -5054,7 +4991,7 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("I have written some code."),
+                    message: Message::assistant("I have written some code."),
                     usage: Usage { input_tokens: 50, output_tokens: 200, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "length".to_string(), // LLM stopped due to length
                         response_id: Some("mock-id".to_string()),
@@ -5092,13 +5029,13 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("This takes 100 tokens"),
+                    message: Message::assistant("This takes 100 tokens"),
                     usage: Usage { input_tokens: 50, output_tokens: 50, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-1".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("This takes 200 tokens"),
+                    message: Message::assistant("This takes 200 tokens"),
                     usage: Usage { input_tokens: 100, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 },
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id-2".to_string()),
@@ -5111,7 +5048,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -5144,7 +5081,7 @@ mod tests {
         let _client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Initial thought"),
+                    message: Message::assistant("Initial thought"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -5158,15 +5095,15 @@ mod tests {
             description: "mutates".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         // We'll mock it so the LLM calls the tool, then stops
         let client_with_tools = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_1".to_string(),
@@ -5182,7 +5119,7 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer"),
+                    message: Message::assistant("Final answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                         response_id: Some("mock-id".to_string()),
@@ -5245,8 +5182,8 @@ mod tests {
         let client1 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_1".to_string(),
@@ -5262,7 +5199,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer after error"),
+                    message: Message::assistant("Final answer after error"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5291,8 +5228,8 @@ mod tests {
         let client2 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_2".to_string(),
@@ -5322,8 +5259,8 @@ mod tests {
         let client3 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_3".to_string(),
@@ -5339,7 +5276,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final answer after transient"),
+                    message: Message::assistant("Final answer after transient"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5373,8 +5310,8 @@ mod tests {
         let client4 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: String::new(),
                         tool_calls: vec![crate::types::ToolCall {
                             id: "call_4".to_string(),
@@ -5422,19 +5359,19 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("invalid json without array"),
+                    message: Message::assistant("invalid json without array"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id1".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("[{\"tool\": \"test_tool\", \"args\": {}}]"),
+                    message: Message::assistant("[{\"tool\": \"test_tool\", \"args\": {}}]"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id2".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Final Answer"),
+                    message: Message::assistant("Final Answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("id3".to_string()),
@@ -5450,7 +5387,7 @@ mod tests {
             description: "test".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object", "properties": {}}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         }]);
 
         let mut events = vec![];
@@ -5483,8 +5420,8 @@ mod tests {
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
+                    message: Message {
+                        role: Role::Assistant,
                         content: "".to_string(),
                         tool_calls: vec![ToolCall {
                             id: "call_1".to_string(),
@@ -5500,7 +5437,7 @@ mod tests {
                     response_id: Some("1".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("Task done."),
+                    message: Message::assistant("Task done."),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("2".to_string()),
@@ -5551,7 +5488,7 @@ mod stream_tests {
                 Ok(resps.remove(0))
             } else {
                 Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("default stream content"),
+                    message: Message::assistant("default stream content"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5565,7 +5502,7 @@ mod stream_tests {
         let client = Arc::new(StreamMockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
-                    message: crate::types::Message::assistant("Streamed response chunk 1"),
+                    message: Message::assistant("Streamed response chunk 1"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5622,8 +5559,8 @@ mod stream_tests {
                 if *count == 1 {
                     // Turn 1: Normal tool call. This will create the first checkpoint.
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "Initial".to_string(),
                             tool_calls: vec![ToolCall { id: "c1".to_string(), name: "good_tool".to_string(), arguments: serde_json::Value::Null }],
                             tool_results: vec![],
@@ -5637,8 +5574,8 @@ mod stream_tests {
                 } else if *count == 2 {
                     // Turn 2: Call the failing tool.
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "Failing".to_string(),
                             tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
                             tool_results: vec![],
@@ -5655,7 +5592,7 @@ mod stream_tests {
                     let has_rewind_msg = req.messages.iter().any(|m| m.role == Role::System && m.content.contains("TIME-TRAVEL REWIND"));
                     if has_rewind_msg {
                          Ok(crate::types::ChatResponse {
-                            message: crate::types::Message::assistant("Success after rewind"),
+                            message: Message::assistant("Success after rewind"),
                             usage: Usage::default(),
                             stop_reason: "stop".to_string(),
                             response_id: Some("r3".to_string()),
@@ -5663,8 +5600,8 @@ mod stream_tests {
                     } else {
                         // Keep failing until rewind happens
                         Ok(crate::types::ChatResponse {
-                            message: crate::types::Message {
-                                role: crate::types::Role::Assistant,
+                            message: Message {
+                                role: Role::Assistant,
                                 content: "Failing again".to_string(),
                                 tool_calls: vec![ToolCall { id: "c2".to_string(), name: "fail_tool".to_string(), arguments: serde_json::Value::Null }],
                                 tool_results: vec![],
@@ -5821,8 +5758,8 @@ mod stream_tests {
 
                 if *c <= 3 {
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: String::new(),
                             tool_calls: vec![ToolCall {
                                 id: format!("tc-{}", *c),
@@ -5839,8 +5776,8 @@ mod stream_tests {
                     })
                 } else {
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message {
-                            role: crate::types::Role::Assistant,
+                        message: Message {
+                            role: Role::Assistant,
                             content: "Success after lightweight rewind".to_string(),
                             tool_calls: vec![],
                             tool_results: vec![],
@@ -5902,7 +5839,7 @@ mod stream_tests {
                     Ok(resps.remove(0))
                 } else {
                     Ok(crate::types::ChatResponse {
-                        message: crate::types::Message::assistant("done"),
+                        message: Message::assistant("done"),
                         usage: ohc_builtin_agent_core::types::Usage::default(),
                         stop_reason: "stop".to_string(),
                         response_id: Some("id2".to_string()),
@@ -5913,8 +5850,8 @@ mod stream_tests {
 
         let client = Arc::new(MockLlmClientTools {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+                message: Message {
+                    role: Role::Assistant,
                     content: "Let's call tools".to_string(),
                     tool_calls: vec![
                         ToolCall { id: "1".to_string(), name: "read_tool_1".to_string(), arguments: serde_json::Value::Null },
@@ -6037,72 +5974,6 @@ mod hierarchical_prompt_tests {
     }
 }
 
-
-    struct NudgeMockLlmClient {
-        call_count: tokio::sync::Mutex<usize>,
-    }
-
-    #[async_trait::async_trait]
-    impl crate::llm::LlmClient for NudgeMockLlmClient {
-        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            let mut count = self.call_count.lock().await;
-            *count += 1;
-
-            if req.messages.iter().any(|m| m.content.contains("Periodic Nudge: You have completed several complex steps.")) {
-                return Ok(crate::types::ChatResponse {
-                    message: crate::types::Message::assistant("I see the nudge"),
-                    usage: crate::types::Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("mock-id-done".to_string()),
-                });
-            }
-
-            Ok(crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
-                    content: "".to_string(),
-                    tool_calls: vec![crate::types::ToolCall {
-                        id: format!("call_{}", *count),
-                        name: "test_tool".to_string(),
-                        arguments: serde_json::json!({}),
-                    }],
-                    tool_results: vec![],
-                    response_id: Some("1".to_string()),
-                    previous_response_id: None,
-                },
-                usage: crate::types::Usage::default(),
-                stop_reason: "tool_calls".to_string(),
-                response_id: Some("mock-id".to_string()),
-            })
-        }
-    }
-
-    #[tokio::test]
-    async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
-        let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
-        let tool = Tool {
-            name: "test_tool".to_string(),
-            description: "test".to_string(),
-            is_read_only: false,
-            parameters: serde_json::json!({"type": "object", "properties": {}}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-
-        let agent = Agent::new(client.clone(), vec![tool]);
-        let mut cfg = AgentRunConfig::default();
-        cfg.enable_agent_curated_memory = true;
-        cfg.curated_memory_nudge_threshold = 2; // Nudge after 2 iterations
-
-        let mut events = vec![];
-        let mut on_event = |e| { events.push(e); };
-
-        let result = agent.run(&cfg, "Start", &mut on_event).await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "I see the nudge");
-    }
-
-
 #[tokio::test]
 async fn test_stripe_retry_limit() {
     use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
@@ -6126,9 +5997,9 @@ async fn test_stripe_retry_limit() {
             *count += 1;
 
             // On every turn, the LLM tries to call the tool again
-            Ok(crate::types::ChatResponse {
-                message: crate::types::Message {
-                    role: crate::types::Role::Assistant,
+            Ok(ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
                     content: "Let me try that tool".to_string(),
                     tool_calls: vec![ToolCall {
                         id: format!("call_{}", *count),

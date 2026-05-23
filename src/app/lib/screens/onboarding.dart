@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'agent_dashboard.dart';
-import '../widgets/walkthrough_overlay.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
@@ -20,9 +19,6 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
-  int _currentInputStep = 0;
-  String businessName = '';
-  String selectedTemplate = 'Modern';
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
   late final TextEditingController _bioController;
@@ -87,14 +83,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'bio': bio,
-            'company_name': businessName.isEmpty ? 'AI Generated Store' : businessName,
+            'company_name': 'AI Generated Store',
             'business_type': 'Auto',
             'selling_categories': ['food', 'physical'],
             'payment_pref': 'online',
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
-            'website_template': selectedTemplate,
+            'website_template': 'Modern',
             'first_product_name': 'Custom Cake Deposit',
             'first_product_price': '25.00',
             'domain_choice': 'subdomain',
@@ -258,235 +254,88 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.all(24),
       child: Form(
         key: _formKey,
-        child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 300),
-          child: _currentInputStep == 0
-              ? _buildBioStep()
-              : _currentInputStep == 1
-                  ? _buildNameStep()
-                  : _buildTemplateStep(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBioStep() {
-    return Column(
-      key: ValueKey(0),
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Welcome to OHC Smart Builder',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Tell us about your business, and AI will build it.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: TextFormField(
-              key: Key('bio-input'),
-              controller: _bioController,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.text,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                bio = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
-            ),
-          ),
-        ),
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 1);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNameStep() {
-    return Column(
-      key: ValueKey(1),
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Name your business',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'What should we call your storefront?',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: TextFormField(
-              key: Key('name-input'),
-              initialValue: businessName,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Cakes',
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-          ),
-        ),
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 2);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-        SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            setState(() => _currentInputStep = 0);
-          },
-          child: Text('Back'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTemplateStep() {
-    return Column(
-      key: ValueKey(2),
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Choose a look',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Select a starting template for your AI to use.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildTemplateChoice('Modern', Icons.auto_awesome),
-            _buildTemplateChoice('Classic', Icons.account_balance),
-            _buildTemplateChoice('Bold', Icons.flash_on),
-          ],
-        ),
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-        SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            setState(() => _currentInputStep = 1);
-          },
-          child: Text('Back'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTemplateChoice(String name, IconData icon) {
-    final isSelected = selectedTemplate == name;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedTemplate = name;
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xFF0066FF).withOpacity(0.1) : Colors.white.withOpacity(0.5),
-          border: Border.all(
-            color: isSelected ? Color(0xFF0066FF) : Colors.transparent,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Icon(icon, size: 32, color: isSelected ? Color(0xFF0066FF) : Colors.grey[600]),
-            SizedBox(height: 8),
             Text(
-              name,
+              'Welcome to OHC Smart Builder',
+              style: TextStyle(
+                fontFamily: 'Outfit',
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1D1D1F),
+                letterSpacing: -0.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Tell us about your business, and AI will build it.',
               style: TextStyle(
                 fontFamily: 'Inter',
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Color(0xFF0066FF) : Colors.grey[800],
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 32),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  key: Key('bio-input'), // for testing or just semantics
+                  controller: _bioController,
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.sentences,
+                  keyboardType: TextInputType.text,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: 'Business Bio',
+                    hintText:
+                        'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: EdgeInsets.all(20),
+                  ),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                  onChanged: (value) {
+                    bio = value;
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 500), () {
+                      _saveDraft(value);
+                    });
+                  },
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => bio = value!,
+                ),
+              ),
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Build My Storefront',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
