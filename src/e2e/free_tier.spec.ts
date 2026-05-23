@@ -4,7 +4,7 @@ test.describe('Free Tier & Upgrade Funnel', () => {
   test('shows current free plan details', async ({ page }) => {
     await page.goto('/my-plan');
 
-    await expect(page.getByRole('heading', { name: 'My Current Plan' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
     await expect(page.getByText('Plan: Free')).toBeVisible();
     await expect(page.getByText('AI Actions Used: 0 / 100')).toBeVisible();
     await expect(page.getByText('Storage Used: 0MB / 500MB')).toBeVisible();
