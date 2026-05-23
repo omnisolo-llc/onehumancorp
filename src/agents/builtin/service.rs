@@ -552,6 +552,8 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            enable_progressive_skills: false,
+            progressive_skills_dir: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
@@ -962,6 +964,8 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                enable_progressive_skills: false,
+                progressive_skills_dir: None,
                 max_retries: 2,
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
