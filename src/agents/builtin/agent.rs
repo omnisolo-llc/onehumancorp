@@ -703,7 +703,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
                             let mut retry_count = 0;
@@ -801,7 +801,7 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        let _final_res: Result<String, crate::types::ToolError> = Err(e);
+                        let final_res: Result<String, crate::types::ToolError> = Err(e);
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
@@ -827,7 +827,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));

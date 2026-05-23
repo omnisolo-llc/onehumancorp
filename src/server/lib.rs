@@ -2947,38 +2947,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inbox-screen" class="screen glass">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
-                        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Powered by Manychat Unified Inbox</p>
-
                         <div class="card glass" onclick="this.classList.toggle('active')">
                             <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Facebook Comment <span style="font-size: 20px;">📘</span></h3>
                             <p>Are you open on Sundays?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Instagram DM <span style="font-size: 20px;">📸</span></h3>
                             <p>Can I order a custom cake?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('manychat-reply-input').value = 'Sure, please send details!'">Quick Reply</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Sure, please send details!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">WhatsApp <span style="font-size: 20px;">💬</span></h3>
                             <p>Hello, do you deliver?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
+                            <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
-                            <input id="manychat-reply-input" type="text" placeholder="Type a message to send via Manychat...">
-                            <button onclick="const m = document.getElementById('manychat-reply-input').value; if(m) { alert('Sending via Manychat...'); const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('manychat-reply-input').value = ''; }">Send Reply</button>
+                            <input id="reply-input" type="text" placeholder="Type a message...">
+                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
                         </div>
                     </div>
 
@@ -2989,17 +2987,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <div style="margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
-                                <label style="display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px;">Calendly Personal Link</label>
-                                <input type="text" placeholder="https://calendly.com/your-name" style="width: 100%; min-height: 36px; border-radius: 6px; padding: 0 12px; border: 1px solid var(--border);">
-                            </div>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;" onclick="alert('Calendly Connected! Widget embedded on storefront.');">Connect Calendly</button>
-                        </div>
-
-                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Zoom Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Automatically generate a Zoom meeting link when a customer books a virtual service.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #2D8CFF; color: white; border: none; width: 100%;" onclick="alert('Zoom Connected!');">Connect Zoom</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3011,7 +2999,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
                             <p>Team Sync - 14:00</p>
                             <p style="color: #FF9500; font-weight: 500;">In 10 mins</p>
-                            <p style="font-size: 14px; margin-top: 8px; background: #eef2ff; padding: 8px; border-radius: 4px; display: inline-block;"><a href="https://zoom.us/j/mock_meeting_123" target="_blank" style="text-decoration: none; color: #2D8CFF;">🎥 Join Zoom Meeting</a></p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
@@ -3025,10 +3012,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input type="date" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                                 <input type="time" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                                 <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                                <select style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
-                                    <option value="in_person">In Person</option>
-                                    <option value="zoom">Zoom Meeting (Auto-generate link)</option>
-                                </select>
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
@@ -3116,6 +3099,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function updateApprovalSetting(deptId, isChecked) {
+                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
                             alert(`Settings updated for ${deptId}.`);
                         }
                     </script>
@@ -3170,6 +3154,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
                             </div>
 
+                            <!-- Resend Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Resend</h3>
+                                </div>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
+                            </div>
 
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
@@ -3234,13 +3225,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
-                        <h2>Notifications (Twilio SMS)</h2>
-                        <div class="card glass" style="margin-bottom: 24px;">
-                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS for New Orders</label>
-                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS Appointment Reminders</label>
-                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS Order Confirmations to Customers</label>
-                            <p style="font-size: 14px; color: var(--text-secondary); margin-top: 16px;">Powered by Twilio. Connect your Twilio account in the API settings.</p>
-                        </div>
                         <h2>General</h2>
                         <label><input type="checkbox"> Enable Email Notifications</label>
                         <label><input type="checkbox"> Enable SMS Reminders</label>
@@ -3384,55 +3368,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
-                    <!-- Contacts view -->
-                    <div id="contacts-screen" class="screen glass">
-                        <h1>Contacts</h1>
-                        <p>Manage your customers and marketing sync.</p>
-                        <div class="card glass">
-                            <h3>Mailchimp Integration</h3>
-                            <button onclick="alert('OAuth redirecting to Mailchimp...');">Connect Mailchimp</button>
-                            <br/><br/>
-                            <button onclick="alert('Exporting/Syncing to Mailchimp... Done!');">Export/Sync to Mailchimp</button>
-                        </div>
-                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
-                    </div>
-
-                    <!-- Order Details -->
-                    <div id="order-details-screen" class="screen glass">
-                        <h1>Order Details</h1>
-                        <p>Order #1234 - Status: Paid</p>
-                        <div class="card glass">
-                            <h3>Shipping via Shippo</h3>
-                            <p>Live Rates: USPS Priority $5.50 | FedEx Ground $8.00</p>
-                            <button onclick="document.getElementById('shippo-tracking').style.display='block'; alert(&quot;Generated Label PDF via Shippo!&quot;);">Generate Label</button>
-                            <p id="shippo-tracking" style="display: none; margin-top: 12px;">
-                                <a href=&quot;#&quot; onclick="alert(&quot;Downloading PDF...&quot;)">Download PDF Label</a><br/>
-                                <a href=&quot;#&quot; target="_blank">Track Package (USPS)</a>
-                            </p>
-                        </div>
-                        <button class="secondary" onclick="showScreen(&quot;dashboard-screen&quot;)">Back to Dashboard</button>
-                    </div>
-
                      <!-- Checkout Page -->
                      <div id="checkout-screen" class="screen">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-
-                             <div style="margin: 20px 0; padding: 15px; border: 1px solid var(--border); border-radius: 8px;">
-                                <h3>Payment Method</h3>
-                                <label style="display: block; margin-bottom: 10px;">
-                                    <input type="radio" name="payment_method" value="stripe" checked>
-                                    Credit Card (Stripe)
-                                </label>
-                                <label style="display: block; margin-bottom: 10px;">
-                                    <input type="radio" name="payment_method" value="mercadopago">
-                                    Mercado Pago
-                                </label>
-                             </div>
-
-                             <button onclick="const method = document.querySelector('input[name=\'payment_method\']:checked').value; if(method === 'mercadopago') { alert(&quot;Redirecting to Mercado Pago hosted checkout...&quot;); } else { alert(&quot;Payment successful via Stripe!&quot;); } showScreen('dashboard-screen');">Pay Now</button>
+                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
