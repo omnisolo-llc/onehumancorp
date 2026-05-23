@@ -104,8 +104,13 @@ impl SharedTaskOrchestrator {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT * FROM shared_tasks_v4
-                    WHERE status = 'PENDING' AND organization_id = $1
+                    SELECT st.* FROM shared_tasks_v4 st
+                    WHERE st.status = 'PENDING' AND st.organization_id = $1
+                    AND NOT EXISTS (
+                        SELECT 1 FROM json_array_elements_text(st.dependencies::json) AS dep_id
+                        JOIN shared_tasks_v4 parent ON parent.id = dep_id
+                        WHERE parent.status != 'COMPLETED'
+                    )
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
                     "#
