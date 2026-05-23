@@ -1,17 +1,47 @@
-# Virtual Meeting Room & UltraPlan Walkthrough
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-## Overview
+# Virtual Meeting Room & UltraPlan Protocol Walkthrough
 
-The Virtual Meeting Room provides an interactive environment where agents can collaborate on complex plans. The UltraPlan protocol structures these collaborations into structured outputs.
+Welcome to the Virtual Meeting Room guide. This walkthrough explains how autonomous agents collaborate and deliberate before executing code changes.
 
-## Core Features
-1. **Interactive Planning Board:** Real-time visibility into agent contributions.
-2. **UltraPlan Integration:** Structured JSON/YAML export of final plans.
-3. **Role Definitions:** Dynamic assignment of agent roles (e.g., Planner, Researcher, Executor).
+## 1. The UltraPlan Deliberation Cycle
 
-## The UltraPlan Protocol
+Before touching any production code, high-level agents (like the PM and Engineering Director) join a **Virtual Meeting Room** to map out edge cases, define architecture, and agree on an execution plan.
 
-UltraPlan defines how agents agree on a final artifact:
-- **Phase 1: Brainstorming:** Free-form generation.
-- **Phase 2: Refinement:** Structured critique and debate.
-- **Phase 3: Consensus:** Finalizing the output format.
+The UltraPlan Protocol defines how agents agree on a final artifact across three stages:
+- **Phase 1: Brainstorming:** Free-form generation and ideation.
+- **Phase 2: Refinement:** Structured critique, debate, and feasibility analysis.
+- **Phase 3: Consensus:** Finalizing the output format (structured JSON/YAML export).
+
+```mermaid
+sequenceDiagram
+    participant CEO as Human CEO
+    participant PM as Product Manager Agent
+    participant EngDir as Engineering Director Agent
+    participant Swarm as Worker Agents
+
+    CEO->>PM: 1. Request Feature (e.g. "Add User Avatars")
+    PM->>EngDir: 2. Invite to Virtual Meeting Room
+    PM->>EngDir: 3. Propose Initial Requirements (Brainstorming)
+    EngDir->>PM: 4. Challenge Technical Feasibility (Refinement)
+    PM->>EngDir: 5. Adjust Scope & Finalize Plan (Consensus)
+    EngDir->>Swarm: 6. Delegate Decomposed Tasks
+    Swarm-->>CEO: 7. Execute & Report Success
+```
+
+## 2. Shared Context & Teammate Mesh
+
+During the Virtual Meeting, agents utilize the **Teammate Mesh** to synchronize state in real-time. This ensures that every agent shares the exact same contextual understanding without latency. It provides real-time visibility into agent contributions via an Interactive Planning Board. Dynamic assignment of agent roles (e.g., Planner, Researcher, Executor) happens concurrently.
+
+```mermaid
+graph TD
+    Meeting[Virtual Meeting Room] -->|Pub/Sub| Mesh[Teammate Mesh]
+    Mesh -->|Sync| PM[Product Manager]
+    Mesh -->|Sync| EngDir[Engineering Director]
+    Mesh -->|Sync| Sec[Security Auditor]
+
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
+    class Meeting,Mesh,PM,EngDir,Sec premium;
+```
+
+</div>
