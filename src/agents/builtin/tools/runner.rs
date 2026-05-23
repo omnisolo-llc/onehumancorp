@@ -125,18 +125,6 @@ fn shell_escape(value: &str) -> String {
     }
 }
 
-#[cfg(unix)]
-fn create_exit_status(code: i32) -> std::process::ExitStatus {
-    use std::os::unix::process::ExitStatusExt;
-    std::process::ExitStatus::from_raw(code << 8)
-}
-
-#[cfg(windows)]
-fn create_exit_status(code: i32) -> std::process::ExitStatus {
-    use std::os::windows::process::ExitStatusExt;
-    std::process::ExitStatus::from_raw(code as u32)
-}
-
 #[async_trait]
 impl CommandRunner for SandboxedCommandRunner {
     async fn run(
@@ -146,41 +134,7 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
-        let mut target_backend = None;
-        let mut filtered_envs = Vec::new();
-        for (k, v) in envs {
-            if k == "__OHC_TARGET_BACKEND" {
-                target_backend = Some(v);
-            } else {
-                filtered_envs.push((k, v));
-            }
-        }
-        let envs = filtered_envs;
-
-        let is_remote_backend = match target_backend.as_deref() {
-            Some("ssh") | Some("singularity") | Some("modal") | Some("daytona") | Some("vercel") => true,
-            _ => false,
-        };
-
-        if is_remote_backend {
-            let backend_name = target_backend.unwrap();
-
-            // To properly implement remote execution for these backends,
-            // we would implement the integration using their respective APIs.
-            // For now we return an error since the backends are not fully supported yet.
-            return Err(io::Error::new(
-                io::ErrorKind::Unsupported,
-                format!("The {} backend is defined in the schema but its runner logic is currently unsupported in this environment.", backend_name),
-            ));
-        }
-
-        let use_container = match target_backend.as_deref() {
-            Some("docker") | Some("container") => true,
-            Some("local") => false,
-            _ => Self::should_use_container_backend(),
-        };
-
-        if use_container {
+        if Self::should_use_container_backend() {
             if let Some(runtime) = Self::find_container_runtime() {
                 let container_args = Self::container_args(
                     program,
@@ -320,27 +274,5 @@ pub mod mock {
             stdout: stdout.as_bytes().to_vec(),
             stderr: stderr.as_bytes().to_vec(),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_sandboxed_runner_multi_backend_routing() {
-        let runner = SandboxedCommandRunner::new(None);
-
-        let envs = vec![
-            ("__OHC_TARGET_BACKEND".to_string(), "modal".to_string())
-        ];
-
-        let out = runner.run("echo", &["hello", "world"], None, envs).await;
-
-        assert!(out.is_err());
-        let err_str = out.unwrap_err().to_string();
-
-        // Assert the mock simulated output works for 'modal'
-        assert!(err_str.contains("The modal backend is defined in the schema but its runner logic is currently unsupported"));
     }
 }
