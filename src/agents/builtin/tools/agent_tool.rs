@@ -1,42 +1,41 @@
 
 use ohc_builtin_agent_core::types::ToolError;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
 
 // ── TaskStop ──────────────────────────────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct TaskStopArgs {
+    task_id: String,
+}
 
 struct TaskStopExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskStopExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let task_id = args["task_id"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("taskstop: task_id is required".to_string()))?;
-        Ok(format!("Stop requested for task {}.", task_id))
+impl PydanticToolExecutor<TaskStopArgs> for TaskStopExecutor {
+    async fn execute_typed(&self, args: TaskStopArgs) -> Result<String, ToolError> {
+        Ok(format!("Stop requested for task {}.", args.task_id))
     }
 }
 
 // ── TaskStatus ────────────────────────────────────────────────────────────────
 
+#[derive(Deserialize)]
+struct TaskStatusArgs {
+    task_id: String,
+}
+
 struct TaskStatusExecutor;
 
 #[async_trait::async_trait]
-impl ToolExecutor for TaskStatusExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let task_id = args["task_id"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("taskstatus: task_id is required".to_string()))?;
+impl PydanticToolExecutor<TaskStatusArgs> for TaskStatusExecutor {
+    async fn execute_typed(&self, args: TaskStatusArgs) -> Result<String, ToolError> {
         Ok(json!({
-            "task_id": task_id,
+            "task_id": args.task_id,
             "status": "running",
             "message": "Status check not available for this agent mode."
         })
@@ -61,7 +60,7 @@ pub fn agent_stop_tool() -> Tool {
             },
             "required": ["task_id"]
         }),
-        execute: Arc::new(TaskStopExecutor),
+        execute: Arc::new(PydanticAdapter::new(TaskStopExecutor)),
     }
 }
 
@@ -80,6 +79,6 @@ pub fn agent_status_tool() -> Tool {
             },
             "required": ["task_id"]
         }),
-        execute: Arc::new(TaskStatusExecutor),
+        execute: Arc::new(PydanticAdapter::new(TaskStatusExecutor)),
     }
 }

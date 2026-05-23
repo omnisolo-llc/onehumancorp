@@ -1,8 +1,20 @@
 use ohc_builtin_agent_core::types::ToolError;
-use serde_json::{json, Value};
+use serde::Deserialize;
+use serde_json::json;
 use std::sync::Arc;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, pydantic::{PydanticToolExecutor, PydanticAdapter}};
+
+#[derive(Deserialize)]
+struct ScreenshotArgs {
+    url: String,
+    #[serde(default = "default_screenshot_path")]
+    path: String,
+}
+
+fn default_screenshot_path() -> String {
+    "screenshot.png".to_string()
+}
 
 struct ScreenshotExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -10,18 +22,10 @@ struct ScreenshotExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for ScreenshotExecutor {
-    async fn execute(
-        &self,
-        args: Value,
-    ) -> Result<String, ToolError> {
-        let url = args["url"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("screenshot: url is required".to_string()))?;
-
-        let path = args["path"]
-            .as_str()
-            .unwrap_or("screenshot.png");
+impl PydanticToolExecutor<ScreenshotArgs> for ScreenshotExecutor {
+    async fn execute_typed(&self, args: ScreenshotArgs) -> Result<String, ToolError> {
+        let url = &args.url;
+        let path = &args.path;
 
         // Prevent directory traversal and absolute paths on Unix/Windows
         if path.contains("..") || path.starts_with('/') || path.contains(":\\") {
@@ -69,10 +73,10 @@ pub fn screenshot_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn 
             },
             "required": ["url"]
         }),
-        execute: Arc::new(ScreenshotExecutor {
+        execute: Arc::new(PydanticAdapter::new(ScreenshotExecutor {
             working_dir,
             runner,
-        }),
+        })),
     }
 }
 
@@ -86,12 +90,12 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_missing_url() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = ScreenshotExecutor { working_dir: None, runner };
+        let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
         let args = json!({ "path": "test.png" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert_eq!(msg, "screenshot: url is required");
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
@@ -100,18 +104,18 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_path_traversal() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = ScreenshotExecutor { working_dir: None, runner };
+        let executor = PydanticAdapter::new(ScreenshotExecutor { working_dir: None, runner });
 
         let args1 = json!({ "url": "https://example.com", "path": "../test.png" });
-        let result1 = executor.execute(args1).await;
+        let result1 = super::super::ToolExecutor::execute(&executor, args1).await;
         assert!(result1.is_err());
 
         let args2 = json!({ "url": "https://example.com", "path": "/etc/shadow" });
-        let result2 = executor.execute(args2).await;
+        let result2 = super::super::ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
 
         let args3 = json!({ "url": "https://example.com", "path": "C:\\Windows" });
-        let result3 = executor.execute(args3).await;
+        let result3 = super::super::ToolExecutor::execute(&executor, args3).await;
         assert!(result3.is_err());
     }
 
@@ -128,12 +132,12 @@ mod tests {
     #[tokio::test]
     async fn test_screenshot_execute_success() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = ScreenshotExecutor {
+        let executor = PydanticAdapter::new(ScreenshotExecutor {
             working_dir: None,
             runner,
-        };
+        });
         let args = json!({ "url": "https://example.com", "path": "test.png" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Screenshot of https://example.com successfully saved to test.png");
     }
@@ -143,12 +147,12 @@ mod tests {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "Error!")));
         
-        let executor = ScreenshotExecutor {
+        let executor = PydanticAdapter::new(ScreenshotExecutor {
             working_dir: None,
             runner,
-        };
+        });
         let args = json!({ "url": "https://example.com", "path": "test.png" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("screenshot command failed with exit code"));
@@ -163,12 +167,12 @@ mod tests {
         // Simulate binary missing error
         runner.push_response(Err(std::io::Error::new(std::io::ErrorKind::NotFound, "not found")));
 
-        let executor = ScreenshotExecutor {
+        let executor = PydanticAdapter::new(ScreenshotExecutor {
             working_dir: None,
             runner,
-        };
+        });
         let args = json!({ "url": "https://example.com", "path": "test.png" });
-        let result = executor.execute(args).await;
+        let result = super::super::ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("screenshot: failed to execute playwright"));
