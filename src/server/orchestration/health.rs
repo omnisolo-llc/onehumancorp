@@ -56,7 +56,7 @@ pub async fn run_health_monitor(
                 }
 
                 let mut to_fire = Vec::new();
-                for agent in monitor_hub.get_agents().await.iter() {
+                for agent in monitor_hub.get_agents().iter() {
                     // Fire agents that are missing from active agents mesh list OR if ping failed
                     if !active_agent_ids.contains(&agent.id) || !ping_ok {
                         to_fire.push(agent.id.clone());

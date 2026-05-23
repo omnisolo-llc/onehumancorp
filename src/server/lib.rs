@@ -1,33 +1,5 @@
 pub use ::server_harness as harness;
 pub mod api;
-
-use std::collections::HashMap;
-use std::sync::RwLock;
-
-#[derive(serde::Deserialize)]
-struct ChatRequest {
-    message: String,
-}
-
-static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
-
-fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
-    TOOLTIPS_REGISTRY.get_or_init(|| {
-    let mut m = HashMap::new();
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is currently active and processing tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
-    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    RwLock::new(m)
-    })
-}
 pub mod db;
 pub use ::server_auth as auth;
 pub mod hub;
@@ -2085,18 +2057,19 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
             { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
         ])) }))
-        .route("/api/tooltips", axum::routing::get(|| async {
-            let registry = get_tooltips_registry();
-            let m = registry.read().unwrap();
-            axum::Json(serde_json::to_value(&*m).unwrap())
-        }).post(|axum::Json(payload): axum::Json<HashMap<String, String>>| async {
-            let registry = get_tooltips_registry();
-            let mut m = registry.write().unwrap();
-            for (k, v) in payload {
-                m.insert(k, v);
-            }
-            axum::Json(serde_json::json!({"success": true}))
-        }))
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({
+            "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
+            "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
+            "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
+            "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.",
+            "referral-tooltip": "Share your unique link to earn credits when friends join OHC.",
+            "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.",
+            "department-card-tooltip": "Click to view and manage pending approvals for this department.",
+            "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
+            "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
+            "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
+            "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
+        })) }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "id": 1, "title": "How to add a product", "duration": "1:20" },
             { "id": 2, "title": "Setting up payments", "duration": "1:15" },
@@ -2109,37 +2082,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
             { "id": 10, "title": "Processing refunds", "duration": "0:55" }
         ])) }))
-        .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
-            let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
-            ];
-
-            let query = req.message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let mut link_title = "Read the full article →";
-            let mut link_url = "/help";
-
-            for (kw, desc) in help_articles {
-                if query.contains(kw) {
-                    reply = format!("Based on our help center: {}", desc);
-                    if kw == "api" {
-                        link_url = "/api-docs";
-                    }
-                    break;
-                }
-            }
-
-            axum::Json(serde_json::json!({
-                "reply": reply,
-                "link": { "url": link_url, "title": link_title }
-            }))
-        }))
+        .route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({
+            "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
+            "link": { "url": "/help", "title": "Read the full article →" }
+        })) }))
         .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
@@ -3124,9 +3070,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3238,7 +3184,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function updateApprovalSetting(deptId, isChecked) {
-
+                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
                             alert(`Settings updated for ${deptId}.`);
                         }
                     </script>
@@ -3295,23 +3241,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">EasyPost</h3>
+                                    <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">API-first solution aggregating hundreds of carriers with built-in address verification.</p>
-                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to EasyPost...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API.</p>
+                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to Shippo...')">Connect</button>
                             </div>
 
-                            <!-- Twilio Integration -->
+                            <!-- MessageBird Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard for SMS and WhatsApp messaging globally.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Global reach, ultra-reliable delivery for automated text alerts.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
@@ -3454,7 +3400,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
-                        <h1>My Plan</h1>
+                        <h1>My Current Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
                         <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>

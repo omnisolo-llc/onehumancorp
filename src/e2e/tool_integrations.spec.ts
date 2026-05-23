@@ -39,6 +39,6 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('displays global sms notifications card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByText('Industry standard for SMS and WhatsApp messaging globally.')).toBeVisible();
+    await expect(page.getByText('Global reach, ultra-reliable delivery for automated text alerts.')).toBeVisible();
   });
 });

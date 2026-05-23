@@ -328,101 +328,6 @@ impl HarnessBackend for DockerBackend {
     }
 }
 
-pub struct SshBackend;
-
-impl SshBackend {
-    pub fn new() -> Self {
-        SshBackend
-    }
-}
-
-#[async_trait]
-impl HarnessBackend for SshBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
-        Ok(ResultModel {
-            stdout: format!("Mock SSH Execution: {}", command),
-            stderr: "".to_string(),
-            exit_code: 0,
-        })
-    }
-}
-
-pub struct SingularityBackend;
-
-impl SingularityBackend {
-    pub fn new() -> Self {
-        SingularityBackend
-    }
-}
-
-#[async_trait]
-impl HarnessBackend for SingularityBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
-        Ok(ResultModel {
-            stdout: format!("Mock Singularity Execution: {}", command),
-            stderr: "".to_string(),
-            exit_code: 0,
-        })
-    }
-}
-
-pub struct ModalBackend;
-
-impl ModalBackend {
-    pub fn new() -> Self {
-        ModalBackend
-    }
-}
-
-#[async_trait]
-impl HarnessBackend for ModalBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
-        Ok(ResultModel {
-            stdout: format!("Mock Modal Execution: {}", command),
-            stderr: "".to_string(),
-            exit_code: 0,
-        })
-    }
-}
-
-pub struct DaytonaBackend;
-
-impl DaytonaBackend {
-    pub fn new() -> Self {
-        DaytonaBackend
-    }
-}
-
-#[async_trait]
-impl HarnessBackend for DaytonaBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
-        Ok(ResultModel {
-            stdout: format!("Mock Daytona Execution: {}", command),
-            stderr: "".to_string(),
-            exit_code: 0,
-        })
-    }
-}
-
-pub struct VercelSandboxBackend;
-
-impl VercelSandboxBackend {
-    pub fn new() -> Self {
-        VercelSandboxBackend
-    }
-}
-
-#[async_trait]
-impl HarnessBackend for VercelSandboxBackend {
-    async fn execute(&self, command: &str, _policy: &Policy) -> Result<ResultModel, String> {
-        Ok(ResultModel {
-            stdout: format!("Mock VercelSandbox Execution: {}", command),
-            stderr: "".to_string(),
-            exit_code: 0,
-        })
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ResultModel {
     pub stdout: String,
@@ -434,11 +339,6 @@ pub struct ResultModel {
 pub enum BackendType {
     Local,
     Docker,
-    Ssh,
-    Singularity,
-    Modal,
-    Daytona,
-    VercelSandbox,
 }
 
 pub struct Manager {
@@ -446,11 +346,6 @@ pub struct Manager {
     validator: Arc<ASTValidator>,
     local_backend: Arc<dyn HarnessBackend>,
     docker_backend: Arc<dyn HarnessBackend>,
-    ssh_backend: Arc<dyn HarnessBackend>,
-    singularity_backend: Arc<dyn HarnessBackend>,
-    modal_backend: Arc<dyn HarnessBackend>,
-    daytona_backend: Arc<dyn HarnessBackend>,
-    vercel_sandbox_backend: Arc<dyn HarnessBackend>,
 }
 
 impl Manager {
@@ -458,21 +353,11 @@ impl Manager {
         let validator = Arc::new(ASTValidator::new());
         let local_backend = Arc::new(LocalBackend::new(validator.clone()));
         let docker_backend = Arc::new(DockerBackend::new());
-        let ssh_backend = Arc::new(SshBackend::new());
-        let singularity_backend = Arc::new(SingularityBackend::new());
-        let modal_backend = Arc::new(ModalBackend::new());
-        let daytona_backend = Arc::new(DaytonaBackend::new());
-        let vercel_sandbox_backend = Arc::new(VercelSandboxBackend::new());
         Manager {
             config,
             validator,
             local_backend,
             docker_backend,
-            ssh_backend,
-            singularity_backend,
-            modal_backend,
-            daytona_backend,
-            vercel_sandbox_backend,
         }
     }
 
@@ -481,11 +366,6 @@ impl Manager {
         match backend_type {
             BackendType::Local => self.local_backend.execute(command, policy).await,
             BackendType::Docker => self.docker_backend.execute(command, policy).await,
-            BackendType::Ssh => self.ssh_backend.execute(command, policy).await,
-            BackendType::Singularity => self.singularity_backend.execute(command, policy).await,
-            BackendType::Modal => self.modal_backend.execute(command, policy).await,
-            BackendType::Daytona => self.daytona_backend.execute(command, policy).await,
-            BackendType::VercelSandbox => self.vercel_sandbox_backend.execute(command, policy).await,
         }
     }
 }
@@ -635,25 +515,5 @@ mod tests {
         let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await.unwrap();
         assert_eq!(docker_res.stdout, format!("Mock Docker Execution: {}", command));
         assert_eq!(docker_res.exit_code, 0);
-
-        let ssh_res = manager.execute_with_policy(command, None, BackendType::Ssh).await.unwrap();
-        assert_eq!(ssh_res.stdout, format!("Mock SSH Execution: {}", command));
-        assert_eq!(ssh_res.exit_code, 0);
-
-        let sing_res = manager.execute_with_policy(command, None, BackendType::Singularity).await.unwrap();
-        assert_eq!(sing_res.stdout, format!("Mock Singularity Execution: {}", command));
-        assert_eq!(sing_res.exit_code, 0);
-
-        let modal_res = manager.execute_with_policy(command, None, BackendType::Modal).await.unwrap();
-        assert_eq!(modal_res.stdout, format!("Mock Modal Execution: {}", command));
-        assert_eq!(modal_res.exit_code, 0);
-
-        let daytona_res = manager.execute_with_policy(command, None, BackendType::Daytona).await.unwrap();
-        assert_eq!(daytona_res.stdout, format!("Mock Daytona Execution: {}", command));
-        assert_eq!(daytona_res.exit_code, 0);
-
-        let vercel_res = manager.execute_with_policy(command, None, BackendType::VercelSandbox).await.unwrap();
-        assert_eq!(vercel_res.stdout, format!("Mock VercelSandbox Execution: {}", command));
-        assert_eq!(vercel_res.exit_code, 0);
     }
 }

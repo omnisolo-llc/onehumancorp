@@ -22,15 +22,10 @@ impl AutoDreamPipeline {
     pub fn start_worker(&self) {
         let db = self.db.clone();
         let llm_client = self.llm_client.clone();
-        let cache = self.cache.clone();
 
         tokio::spawn(async move {
             loop {
-                let pipeline = AutoDreamPipeline {
-                    db: db.clone(),
-                    llm_client: llm_client.clone(),
-                    cache: cache.clone(),
-                };
+                let pipeline = AutoDreamPipeline::new(db.clone(), llm_client.clone());
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
@@ -157,92 +152,6 @@ mod tests {
         for chunk in chunks {
             assert!(chunk.len() <= 25);
         }
-    }
-
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use async_trait::async_trait;
-    use crate::pricing::cache::LocalEmbeddingCache;
-
-    struct TrackingMockLLMClient {
-        embedding: Vec<f32>,
-        call_count: AtomicUsize,
-    }
-
-    impl TrackingMockLLMClient {
-        fn new(embedding: Vec<f32>) -> Self {
-            Self {
-                embedding,
-                call_count: AtomicUsize::new(0),
-            }
-        }
-
-        fn get_call_count(&self) -> usize {
-            self.call_count.load(Ordering::SeqCst)
-        }
-    }
-
-    #[async_trait]
-    impl LLMClient for TrackingMockLLMClient {
-        async fn generate_embedding(&self, _text: &str) -> Result<Vec<f32>, String> {
-            self.call_count.fetch_add(1, Ordering::SeqCst);
-            Ok(self.embedding.clone())
-        }
-    }
-
-    #[tokio::test]
-    async fn test_process_closed_tasks_with_cache() {
-        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "dummy".to_string());
-        if database_url == "dummy" {
-            return;
-        }
-
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .connect(&database_url)
-            .await
-            .unwrap();
-
-        let db = Arc::new(DB { pool: pool.clone(), store: DbStore::Postgres });
-
-        let tracking_llm = Arc::new(TrackingMockLLMClient::new(vec![0.5, 0.6, 0.7]));
-
-        let cache = Arc::new(LocalEmbeddingCache::new(Duration::from_secs(60)));
-
-        // Clean up
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
-
-        let task_id_1 = "test-task-cache-1";
-        let task_id_2 = "test-task-cache-2";
-
-        // Insert two tasks with identical payload/log so their chunk text is exactly the same.
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
-            .bind(task_id_1)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
-            .bind(task_id_2)
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        let pipeline = AutoDreamPipeline::new_with_cache(db.clone(), tracking_llm.clone(), cache);
-
-        let res = pipeline.process_closed_tasks().await;
-        assert!(res.is_ok());
-
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id IN ($1, $2)")
-            .bind(task_id_1)
-            .bind(task_id_2)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
-
-        assert_eq!(count.0, 2);
-
-        // Since both tasks generated the exact same text chunk, the LLM should have only been called once.
-        assert_eq!(tracking_llm.get_call_count(), 1);
     }
 
     #[tokio::test]
