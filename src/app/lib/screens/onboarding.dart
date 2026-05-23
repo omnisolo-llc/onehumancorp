@@ -323,7 +323,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.multiline,
-              autofocus: true,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
@@ -406,7 +405,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
-              autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Cakes',
