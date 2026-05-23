@@ -473,19 +473,7 @@ impl DashboardService for MyDashboardService {
         }))
     }
 
-    async fn post_message(
-        &self,
-        _request: Request<PostMessageRequest>,
-    ) -> Result<Response<PostMessageResponse>, Status> {
-        Err(Status::unimplemented("Not implemented"))
-    }
 
-    async fn seed_dashboard(
-        &self,
-        _request: Request<SeedDashboardRequest>,
-    ) -> Result<Response<SeedDashboardResponse>, Status> {
-        Err(Status::unimplemented("Not implemented"))
-    }
 
     async fn get_onboarding_state(
         &self,
