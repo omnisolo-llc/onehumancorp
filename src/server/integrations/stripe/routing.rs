@@ -40,6 +40,21 @@ impl PaymentRouter {
             0.0
         }
     }
+
+    /// Calculates the potential savings in USD if multiple payouts are batched into a single transfer
+    /// instead of processing each individual transaction.
+    /// Stripe standard payout fee: $0.25 + 0.25% per payout.
+    pub fn batch_payout_savings(transactions: usize, amount_per_txn: f64) -> f64 {
+        if transactions <= 1 {
+            return 0.0;
+        }
+        let individual_fees = transactions as f64 * (0.25 + (amount_per_txn * 0.0025));
+        let batch_amount = transactions as f64 * amount_per_txn;
+        let batch_fee = 0.25 + (batch_amount * 0.0025);
+
+        let savings = individual_fees - batch_fee;
+        (savings * 100.0).round() / 100.0
+    }
 }
 
 #[cfg(test)]
@@ -66,6 +81,21 @@ mod tests {
         // ACH fee: 5.00
         // Savings: 24.30
         assert_eq!(savings, 24.30);
+    }
+
+    #[test]
+    fn test_batch_payout_savings() {
+        // Individual: 10 * (0.25 + (100 * 0.0025)) = 10 * 0.50 = 5.00
+        // Batch: 0.25 + (1000 * 0.0025) = 0.25 + 2.50 = 2.75
+        // Savings: 5.00 - 2.75 = 2.25
+        let savings = PaymentRouter::batch_payout_savings(10, 100.0);
+        assert_eq!(savings, 2.25);
+    }
+
+    #[test]
+    fn test_batch_payout_savings_single_transaction() {
+        let savings = PaymentRouter::batch_payout_savings(1, 100.0);
+        assert_eq!(savings, 0.0);
     }
 }
 
