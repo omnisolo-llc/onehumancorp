@@ -106,6 +106,62 @@ impl InferentialSensor for LlmJudgeSensor {
     }
 }
 
+pub struct BashComputationalGuide {
+    pub command: String,
+    pub workspace: String,
+}
+
+#[async_trait::async_trait]
+impl ComputationalGuide for BashComputationalGuide {
+    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(&self.workspace);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
+                        self.command, stdout, stderr
+                    ));
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
+        }
+    }
+}
+
+pub struct BashVisualVerifier {
+    pub command: String,
+    pub workspace: String,
+}
+
+#[async_trait::async_trait]
+impl VisualVerifier for BashVisualVerifier {
+    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(&self.workspace);
+
+        match cmd.output() {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                if !output.status.success() {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!("Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.", self.command, stdout, stderr));
+                }
+                if stdout.contains("REJECT") {
+                    return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
