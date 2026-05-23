@@ -291,6 +291,8 @@ class _BusinessProfileStepState extends ConsumerState<_BusinessProfileStep> {
             const SizedBox(height: 32),
             TextFormField(
               controller: _nameController,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
               decoration: _inputDecoration('Company Name'),
               validator: (v) => v!.isEmpty ? 'Required' : null,
               onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(name: v),
@@ -298,12 +300,16 @@ class _BusinessProfileStepState extends ConsumerState<_BusinessProfileStep> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _industryController,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
               decoration: _inputDecoration('Industry'),
               onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(industry: v),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _sizeController,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.text,
               decoration: _inputDecoration('Company Size (e.g. 1-10)'),
               onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(size: v),
             ),
@@ -606,6 +612,8 @@ class _AdminAccountStepState extends ConsumerState<_AdminAccountStep> {
             const SizedBox(height: 32),
             TextFormField(
               controller: _nameController,
+              textInputAction: TextInputAction.next,
+              textCapitalization: TextCapitalization.words,
               decoration: _inputDecoration('Full Name'),
               validator: (v) => v!.isEmpty ? 'Required' : null,
               onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(name: v),
@@ -613,6 +621,8 @@ class _AdminAccountStepState extends ConsumerState<_AdminAccountStep> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _emailController,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.emailAddress,
               decoration: _inputDecoration('Email Address'),
               validator: (v) => v!.isEmpty || !v.contains('@') ? 'Valid email required' : null,
               onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(email: v),
@@ -620,6 +630,7 @@ class _AdminAccountStepState extends ConsumerState<_AdminAccountStep> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _pwdController,
+              textInputAction: TextInputAction.done,
               decoration: _inputDecoration('Password'),
               obscureText: true,
               validator: (v) => v!.length < 6 ? 'Min 6 chars' : null,

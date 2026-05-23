@@ -116,6 +116,61 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
   });
 
+  testWidgets('Test 6: Form fields have proper keyboard actions', (WidgetTester tester) async {
+    await tester.pumpWidget(createWidgetUnderTest());
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+
+    // Navigate to Business Profile step
+    await tester.tap(find.text('Get Started'));
+    await tester.pumpAndSettle();
+
+    // Verify Company Name
+    final TextField companyNameField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(0), matching: find.byType(TextField)));
+    expect(companyNameField.textInputAction, TextInputAction.next);
+    expect(companyNameField.textCapitalization, TextCapitalization.words);
+
+    // Verify Industry
+    final TextField industryField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(1), matching: find.byType(TextField)));
+    expect(industryField.textInputAction, TextInputAction.next);
+    expect(industryField.textCapitalization, TextCapitalization.words);
+
+    // Verify Size
+    final TextField sizeField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(2), matching: find.byType(TextField)));
+    expect(sizeField.textInputAction, TextInputAction.done);
+    expect(sizeField.keyboardType, TextInputType.text);
+
+    // Navigate to Admin Account step
+    await tester.enterText(find.byType(TextFormField).at(0), 'Test Company');
+    await tester.tap(find.text('Next').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Build Software').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cloud').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Next').last, warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    // Verify Admin Name
+    final TextField adminNameField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(0), matching: find.byType(TextField)));
+    expect(adminNameField.textInputAction, TextInputAction.next);
+    expect(adminNameField.textCapitalization, TextCapitalization.words);
+
+    // Verify Admin Email
+    final TextField adminEmailField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(1), matching: find.byType(TextField)));
+    expect(adminEmailField.textInputAction, TextInputAction.next);
+    expect(adminEmailField.keyboardType, TextInputType.emailAddress);
+
+    // Verify Admin Password
+    final TextField adminPwdField = tester.widget<TextField>(find.descendant(of: find.byType(TextFormField).at(2), matching: find.byType(TextField)));
+    expect(adminPwdField.textInputAction, TextInputAction.done);
+
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+  });
+
   testWidgets('Test 5: Administrator Account, Review & Launch flow completes successfully', (WidgetTester tester) async {
     await tester.pumpWidget(createWidgetUnderTest());
     tester.view.physicalSize = const Size(800, 1200);

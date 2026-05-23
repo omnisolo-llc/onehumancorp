@@ -73,7 +73,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap to build my storefront
-    await tester.tap(find.text('Build My Storefront'));
+    // The Build My Storefront button might need to be scrolled into view
+    final buildButton = find.text('Build My Storefront');
+    await tester.ensureVisible(buildButton);
+    await tester.tap(buildButton, warnIfMissed: false);
     await tester.pumpAndSettle();
 
     // Expect to be on Dashboard state
