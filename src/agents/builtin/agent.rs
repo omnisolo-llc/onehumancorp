@@ -49,6 +49,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
+    pub enable_agent_curated_memory: bool,
+    pub curated_memory_complexity_threshold: usize,
     pub enable_llm_judge: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
@@ -99,6 +101,8 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
+            enable_agent_curated_memory: false,
+            curated_memory_complexity_threshold: 10,
             enable_llm_judge: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
@@ -2453,6 +2457,49 @@ impl Agent {
             }
 
 
+            // Hermes Agent Unique Harness Innovations: Agent-curated memory: Periodic nudges, autonomous skill creation after complex tasks
+            if final_cfg.enable_agent_curated_memory && turn_count > 0 && turn_count % (final_cfg.curated_memory_complexity_threshold as i32) == 0 {
+                let nudge_req = ChatRequest {
+                    model: final_cfg.model.clone(),
+                    system: "You are a Skill Creator for an AI agent. Review the recent conversation history and extract the complex sequence of actions into a reusable autonomous skill. Return ONLY a valid JSON object matching this schema: {\"name\": \"ShortSkillName\", \"description\": \"What it does\", \"instruction\": \"Detailed steps to execute it\", \"allowed_tools\": [\"Tool1\", \"Tool2\"], \"model\": \"\"}".to_string(),
+                    messages: messages.clone(),
+                    tools: vec![],
+                    max_tokens: 1000,
+                    temperature: 0.0,
+                };
+
+                match self.llm.chat(nudge_req).await {
+                    Ok(skill_resp) => {
+                        let content = skill_resp.message.content.trim();
+                        // Strip markdown formatting if any
+                        let json_str = if content.starts_with("```json") {
+                            content.trim_start_matches("```json").trim_end_matches("```").trim()
+                        } else if content.starts_with("```") {
+                            content.trim_start_matches("```").trim_end_matches("```").trim()
+                        } else {
+                            content
+                        };
+
+                        if let Ok(parsed_skill) = serde_json::from_str::<crate::tools::skill::LoadedSkill>(json_str) {
+                            tracing::info!("Autonomous skill created: {}", parsed_skill.name);
+                            let new_tool = crate::tools::skill::skill_tool(parsed_skill.clone());
+                            session_tools.push(new_tool);
+
+                            messages.push(Message::system(format!(
+                                "[System Nudge: Based on the recent complexity, a new autonomous skill '{}' has been generated and is now available in your toolset. You can use it to perform this complex sequence of actions in a single step in the future.]",
+                                parsed_skill.name
+                            )));
+                        } else {
+                            tracing::debug!("Failed to parse autonomous skill JSON: {}", json_str);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to generate autonomous skill: {}", e);
+                    }
+                }
+            }
+
+
             // Master Catalog B.4: Context Management (Preventing Context Rot): Compaction
             // Preserve architectural decisions and unresolved bugs, but discard redundant/raw tool outputs. When approaching token limits, summarize history.
             // Use the input_tokens from the last request to determine the current context window size.
@@ -2684,6 +2731,93 @@ mod tests {
     struct MyStructuredOutput {
         city: String,
         population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_agent_curated_memory_skill_creation() {
+        use std::sync::Arc;
+        use crate::agent::{Agent, AgentRunConfig, AgentEvent};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, Usage};
+        use crate::llm::LlmClient;
+
+        struct MockLlmClient {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for MockLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+
+                if req.system.contains("Skill Creator") {
+                    Ok(ChatResponse {
+                        message: Message::assistant(r#"```json
+{
+  "name": "AnalyzeAndPlot",
+  "description": "Analyzes data and plots a chart.",
+  "instruction": "Read data, run analysis script, output chart.",
+  "allowed_tools": ["read", "bash"],
+  "model": "gpt-4o"
+}
+```"#),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some(format!("mock-id-{}", *count)),
+                    })
+                } else if *count == 1 {
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "First turn".to_string(),
+                            tool_calls: vec![],
+                            tool_results: vec![],
+                            response_id: Some("mock-id-1".to_string()),
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-1".to_string()),
+                    })
+                } else if *count == 2 {
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: "Second turn".to_string(),
+                            tool_calls: vec![],
+                            tool_results: vec![],
+                            response_id: Some("mock-id-2".to_string()),
+                            previous_response_id: None,
+                        },
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("mock-id-2".to_string()),
+                    })
+                } else {
+                     Ok(ChatResponse {
+                        message: Message::assistant("Final Turn"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some(format!("mock-id-{}", *count)),
+                    })
+                }
+            }
+        }
+
+        let llm = Arc::new(MockLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_agent_curated_memory = true;
+        cfg.curated_memory_complexity_threshold = 2; // Trigger on turn 2
+        cfg.max_iterations = 3;
+
+        let agent = Agent::new(llm, vec![]);
+
+        let mut on_event = |_e: AgentEvent| {};
+        let result = agent.run(&cfg, "Start", &mut on_event).await;
+
+        assert!(result.is_ok());
+
+        // The mock returned 4 times: Turn 1, Turn 2, Nudge, Turn 3 (Terminal).
     }
 
     #[test]

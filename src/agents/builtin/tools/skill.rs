@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use super::{Tool, ToolExecutor};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Deserialize)]
 pub struct LoadedSkill {
     pub name: String,
     pub description: String,
