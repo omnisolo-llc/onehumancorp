@@ -43,6 +43,8 @@ pub struct AgentRunConfig {
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
+    pub enable_progressive_skills: bool,
+    pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
@@ -96,6 +98,8 @@ impl Default for AgentRunConfig {
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
+            enable_progressive_skills: false,
+            progressive_skills_dir: None,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
@@ -1471,6 +1475,24 @@ impl Agent {
         let session_tools = self_with_memory.tools.clone();
 
         let mut final_cfg = cfg.clone();
+
+        // DeerFlow Unique Harness Innovations: Progressive skills
+        if final_cfg.enable_progressive_skills {
+            if let Some(ref dir) = final_cfg.progressive_skills_dir {
+                let manager = crate::progressive_skills::ProgressiveSkillManager::new(std::path::PathBuf::from(dir));
+                match manager.get_relevant_skills(initial_message) {
+                    Ok(skills) => {
+                        for skill in skills {
+                            let skill_instr = format!("\n[Progressive Skill Loaded: {}]\n{}\n", skill.name, skill.instruction);
+                            final_cfg.developer_instructions.push_str(&skill_instr);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to load progressive skills from {}: {}", dir, e);
+                    }
+                }
+            }
+        }
 
         // 4. User Instructions (cascading AGENTS.md files, capped at 32 KiB)
         if let Some(ref wp) = final_cfg.workspace_path {
