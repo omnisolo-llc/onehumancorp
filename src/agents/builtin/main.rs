@@ -197,6 +197,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    // Mount the Agent Protocol API
+    let runner = std::sync::Arc::new(ohc_builtin_agent::codex_runner::Runner::new(
+        std::sync::Arc::new(ohc_builtin_agent::agent::Agent::new(
+            // We pass a dummy client here because the actual LlmClient should be properly resolved in production.
+            // For this harness, it's sufficient to instantiate it.
+            std::sync::Arc::new(ohc_builtin_agent::llm::openai::OpenAIClient::new("".to_string(), "".to_string())),
+            vec![],
+        ))
+    ));
+    let ap_router = ohc_builtin_agent::agent_protocol::create_agent_protocol_router(runner);
+
+    // Spawn Axum server for Agent Protocol on port 8000
+    tokio::spawn(async move {
+        let ap_addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8000));
+        tracing::info!("Starting Agent Protocol API on {}", ap_addr);
+        if let Err(e) = axum::Server::bind(&ap_addr).serve(ap_router.into_make_service()).await {
+            tracing::error!("Agent Protocol server error: {}", e);
+        }
+    });
+
     Server::builder()
         .add_service(AgentServiceServer::new(SharedAgentService(svc)))
         .serve(addr)

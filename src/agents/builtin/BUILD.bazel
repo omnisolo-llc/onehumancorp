@@ -45,6 +45,7 @@ rust_library(
         "auth.rs",
         "codex_runner.rs",
         "json_rpc_server.rs",
+        "agent_protocol.rs",
         "observation_masking.rs",
         "agent.rs",
         "checkpointer.rs",
