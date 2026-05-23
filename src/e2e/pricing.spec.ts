@@ -21,7 +21,7 @@ test.describe('Pricing Page', () => {
 
   test('shows current plan and cost dashboard', async ({ page }) => {
     await page.goto('/my-plan');
-    await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Current Plan' })).toBeVisible();
     await expect(page.getByText('Plan: Free')).toBeVisible();
     await page.getByRole('button', { name: 'View Cost Details' }).click();
     await expect(page.getByRole('heading', { name: 'Cost & AI Usage' })).toBeVisible();

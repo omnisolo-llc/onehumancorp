@@ -483,7 +483,7 @@ impl AgentServiceImpl {
         let mut sqlite_memory = None;
         if std::env::var("OHC_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
             let db_url = std::env::var("OHC_SQLITE_MEMORY_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-            if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await {
+            if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url).await {
                 sqlite_memory = Some(std::sync::Arc::new(store) as std::sync::Arc<dyn crate::memory_store::LongTermMemory>);
             } else {
                 tracing::warn!("Failed to initialize SqliteMemoryStore");
@@ -554,8 +554,6 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
-            enable_progressive_skills: false,
-            progressive_skills_dir: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
@@ -966,8 +964,6 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
-                enable_progressive_skills: false,
-                progressive_skills_dir: None,
                 max_retries: 2,
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,

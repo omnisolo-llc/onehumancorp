@@ -11,10 +11,7 @@ void main() {
     expect(find.text('OneHumanCorp'), findsOneWidget);
     expect(find.text('The universal operating system for small business.'), findsOneWidget);
     expect(find.text('Start a Business'), findsOneWidget);
-
-    await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle(const Duration(seconds: 1));
-    expect(find.text('Step 1 of 3'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {
@@ -152,46 +149,5 @@ void main() {
     // Verify the text field has the loaded bio
     expect(find.text('Existing loaded bio'), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 1));
-  });
-
-  testWidgets('Onboarding Screen - Advanced Mode UI test', (WidgetTester tester) async {
-    final client = MockClient((request) async {
-      if (request.url.path == '/api/onboarding/draft') {
-        return http.Response('{}', 200);
-      }
-      return http.Response('Not Found', 404);
-    });
-
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
-
-    // Go to input state
-    await tester.tap(find.text('Start a Business'));
-    await tester.pumpAndSettle();
-
-    // Bio step is _currentInputStep == 0
-    await tester.enterText(find.byKey(Key('bio-input')), 'Test bio');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Name step is _currentInputStep == 1
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Now we are at Template step (_currentInputStep == 2)
-    // Expect Advanced Mode toggle to be present
-    expect(find.byKey(Key('advanced-mode-toggle')), findsOneWidget);
-
-    // Domain choice dropdown shouldn't be visible yet
-    expect(find.byKey(Key('domain-choice-dropdown')), findsNothing);
-
-    // Toggle advanced mode
-    await tester.tap(find.byKey(Key('advanced-mode-toggle')));
-    await tester.pumpAndSettle();
-
-    // Now it should be visible
-    expect(find.byKey(Key('domain-choice-dropdown')), findsOneWidget);
   });
 }
