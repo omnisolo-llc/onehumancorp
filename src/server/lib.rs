@@ -3193,7 +3193,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function updateApprovalSetting(deptId, isChecked) {
-                            console.log(`Updated setting for ${deptId}: require approval = ${isChecked}`);
+
                             alert(`Settings updated for ${deptId}.`);
                         }
                     </script>
