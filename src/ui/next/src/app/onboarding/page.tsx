@@ -53,6 +53,12 @@ export default function OnboardingWizard() {
     setStep(step + 1);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleNext();
+    }
+  };
+
   const handleIntakeSubmit = async () => {
     if (!businessCategory.trim()) {
       setError("Please describe your niche.");
@@ -181,6 +187,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessType(e.target.value)}
                 placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                onKeyDown={handleKeyDown}
                 autoFocus
               />
               <button
@@ -202,6 +209,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                onKeyDown={handleKeyDown}
                 autoFocus
               />
               <div className="flex gap-3">
@@ -231,6 +239,11 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleIntakeSubmit();
+                  }
+                }}
                 autoFocus
               />
               <div className="flex gap-3">
