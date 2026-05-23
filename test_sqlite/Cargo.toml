@@ -1,0 +1,9 @@
+[package]
+name = "test_sqlite"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde_json.workspace = true
+sqlx = { version = "0.8.6", features = ["sqlite", "runtime-tokio-rustls"] }
+tokio = { workspace = true, features = ["full"] }
