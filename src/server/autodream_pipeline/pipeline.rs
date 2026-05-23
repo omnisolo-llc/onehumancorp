@@ -29,9 +29,76 @@ impl AutoDreamPipeline {
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
+                if let Err(e) = pipeline.process_memory_files().await {
+                    tracing::error!("AutoDreamPipeline file worker error: {}", e);
+                }
                 sleep(Duration::from_secs(60)).await;
             }
         });
+    }
+
+    pub async fn process_memory_files(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let memory_dir = std::path::Path::new(".agent-task/memory");
+        if !memory_dir.exists() {
+            return Ok(());
+        }
+
+        let mut entries = tokio::fs::read_dir(memory_dir).await?;
+        while let Some(entry) = entries.next_entry().await? {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("yml") {
+                if let Ok(contents) = tokio::fs::read_to_string(&path).await {
+                    let chunks = Self::chunk_content(&contents, 2000);
+                    for chunk in chunks {
+                        let cached_embedding = if let Some(cache) = &self.cache {
+                            cache.get(&chunk)
+                        } else {
+                            None
+                        };
+
+                        let embedding_res = if let Some(emb_str) = cached_embedding {
+                            Ok(emb_str)
+                        } else {
+                            match self.llm_client.generate_embedding(&chunk).await {
+                                Ok(embedding) => {
+                                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                                    if let Some(cache) = &self.cache {
+                                        cache.set(&chunk, &emb_str);
+                                    }
+                                    Ok(emb_str)
+                                }
+                                Err(e) => Err(e),
+                            }
+                        };
+
+                        if let Ok(emb_str) = embedding_res {
+                            let id = uuid::Uuid::new_v4().to_string();
+                            let query = if self.db.is_sqlite() {
+                                "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4)"
+                            } else {
+                                "INSERT INTO agent_memories (id, organization_id, content, embedding) VALUES ($1, $2, $3, $4::vector)"
+                            };
+
+                            if let Err(e) = sqlx::query(query)
+                            .bind(&id)
+                            .bind("system-org")
+                            .bind(&chunk)
+                            .bind(&emb_str)
+                            .execute(&self.db.pool)
+                            .await {
+                                tracing::error!("Failed to insert memory: {}", e);
+                                return Err(Box::new(e));
+                            }
+                        } else {
+                            return Err("Failed to embed".into());
+                        }
+                    }
+
+                    let _ = tokio::fs::remove_file(path).await;
+                }
+            }
+        }
+        Ok(())
     }
 
     fn chunk_content(content: &str, chunk_size: usize) -> Vec<String> {

@@ -839,16 +839,18 @@ export default function Dashboard() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .mac-glass-panel {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px) saturate(200%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
+            font-family: 'Outfit', 'Inter', sans-serif;
         }
         @media (prefers-color-scheme: dark) {
             .mac-glass-panel {
-                background: rgba(22, 22, 26, 0.7);
-                backdrop-filter: blur(30px) saturate(210%);
+                background: rgba(255, 255, 255, 0.03);
+                backdrop-filter: blur(20px) saturate(200%);
                 border: 1px solid rgba(255, 255, 255, 0.1);
+                font-family: 'Outfit', 'Inter', sans-serif;
             }
         }
       `}} />

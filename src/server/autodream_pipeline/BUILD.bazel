@@ -1,10 +1,19 @@
-filegroup(
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
     name = "srcs",
     srcs = [
         "llm_client.rs",
         "mod.rs",
         "pipeline.rs",
-
     ],
-    visibility = ["//src/server:__pkg__"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/pricing:server_pricing",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:uuid",
+        "@crates//:tracing",
+    ],
 )
