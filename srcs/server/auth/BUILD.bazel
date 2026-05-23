@@ -1,8 +1,0 @@
-load("@rules_go//go:def.bzl", "go_library")
-
-go_library(
-    name = "auth",
-    srcs = ["auth.go"],
-    importpath = "github.com/onehumancorp/mono/srcs/server/auth",
-    visibility = ["//visibility:public"],
-)

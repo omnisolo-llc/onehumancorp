@@ -19,3 +19,6 @@ pub mod statemachine_v2;
 pub mod locks_test;
 #[cfg(test)]
 pub mod statemachine_test;
+pub mod tasks_db;
+#[cfg(test)]
+pub mod tasks_db_test;
