@@ -73,6 +73,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap to build my storefront
+    await tester.ensureVisible(find.text('Build My Storefront'));
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
 
