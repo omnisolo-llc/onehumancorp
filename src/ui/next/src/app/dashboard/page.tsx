@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { useWalkthrough } from "../../components/help";
 
 export default function Dashboard() {
+  const { startWalkthrough } = useWalkthrough();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
@@ -27,6 +29,7 @@ export default function Dashboard() {
   const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
   const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
   const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const handleApproveReviewRequest = () => {
     setIsReviewGenerating(true);
@@ -215,7 +218,7 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Business</h1>
          <div className="flex items-center gap-3">
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
@@ -235,7 +238,7 @@ export default function Dashboard() {
          {(approvals.length > 0 || showReviewRequestCard) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Needs Your Approval</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -412,12 +415,12 @@ export default function Dashboard() {
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Team Members</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Orders to Ship</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
@@ -574,7 +577,7 @@ export default function Dashboard() {
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
-                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
+                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Ongoing Tasks</h2></WithTooltip>
                 <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                     <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
                     <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
@@ -817,6 +820,32 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around p-3 sm:hidden z-50">
+        <button className="flex flex-col items-center"><span className="text-xl">➕</span><span className="text-xs">Add</span></button>
+        <button className="flex flex-col items-center"><span className="text-xl">📦</span><span className="text-xs">Orders</span></button>
+        <button className="flex flex-col items-center"><span className="text-xl">💬</span><span className="text-xs">Chat</span></button>
+        <button className="flex flex-col items-center"><span className="text-xl">📊</span><span className="text-xs">Stats</span></button>
+        <button className="flex flex-col items-center"><span className="text-xl">🔗</span><span className="text-xs">Share</span></button>
+        <button onClick={() => setIsMobileMenuOpen(true)} className="flex flex-col items-center"><span className="text-xl">☰</span><span className="text-xs">Menu</span></button>
+        <button className="flex flex-col items-center"><span className="text-xl">💡</span><span className="text-xs">Store Tips</span></button>
+        <button className="flex flex-col items-center" id="first-time-user-tour-btn" onClick={() => startWalkthrough([{ targetId: "first-time-user-tour-btn", message: "These buttons are shortcuts to your most common daily tasks.", title: "Quick Actions" }])}><span className="text-xl">❓</span><span className="text-xs">?</span></button>
+      </div>
+
+      {/* Mobile Menu Modal Overlay for Testing */}
+      {isMobileMenuOpen && (
+        <div id="mobile-menu" className="fixed inset-0 bg-black/50 z-[100] flex items-end">
+           <div className="bg-white w-full rounded-t-2xl p-6">
+              <button className="w-full text-left py-3 font-semibold">Help Center</button>
+              <button className="w-full text-left py-3 font-semibold">Billing</button>
+              <button className="w-full text-left py-3 font-semibold">Connect Apps</button>
+              <button className="w-full text-left py-3 font-semibold">Video Tutorials</button>
+              <button className="w-full text-left py-3 font-semibold">How to use this app</button>
+              <button className="w-full text-left py-3 font-semibold">What's New</button>
+              <button onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center py-3 text-red-500 mt-4 border-t font-semibold">Close</button>
+           </div>
         </div>
       )}
 
