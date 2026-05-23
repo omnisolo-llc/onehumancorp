@@ -63,6 +63,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         if (data['selectedTemplate'] != null) {
           setState(() => selectedTemplate = data['selectedTemplate']);
         }
+        if (data['domainChoice'] != null) {
+          setState(() => domainChoice = data['domainChoice']);
+        }
+        if (data['isAdvancedMode'] != null) {
+          setState(() => isAdvancedMode = data['isAdvancedMode']);
+        }
       }
     } catch (e) {
       print('Failed to load draft: $e');
@@ -75,7 +81,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
+        body: jsonEncode({
+          'bio': text,
+          'businessName': businessName,
+          'selectedTemplate': selectedTemplate,
+          'domainChoice': domainChoice,
+          'isAdvancedMode': isAdvancedMode,
+        }),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -403,7 +415,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               key: Key('name-input'),
               initialValue: businessName,
               autofocus: true,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 labelText: 'Business Name',

@@ -289,23 +289,47 @@ class _BusinessProfileStepState extends ConsumerState<_BusinessProfileStep> {
               style: TextStyle(fontFamily: 'Inter', color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
-            TextFormField(
-              controller: _nameController,
-              decoration: _inputDecoration('Company Name'),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(name: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _inputDecoration('Company Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(name: v),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _industryController,
-              decoration: _inputDecoration('Industry'),
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(industry: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _industryController,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _inputDecoration('Industry'),
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(industry: v),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _sizeController,
-              decoration: _inputDecoration('Company Size (e.g. 1-10)'),
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(size: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _sizeController,
+                  textInputAction: TextInputAction.done,
+                  keyboardType: TextInputType.number,
+                  decoration: _inputDecoration('Company Size (e.g. 1-10)'),
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setBusinessProfile(size: v),
+                ),
+              ),
             ),
             const SizedBox(height: 40),
             Row(
@@ -604,26 +628,49 @@ class _AdminAccountStepState extends ConsumerState<_AdminAccountStep> {
               style: TextStyle(fontFamily: 'Inter', color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
-            TextFormField(
-              controller: _nameController,
-              decoration: _inputDecoration('Full Name'),
-              validator: (v) => v!.isEmpty ? 'Required' : null,
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(name: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _nameController,
+                  textInputAction: TextInputAction.next,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: _inputDecoration('Full Name'),
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(name: v),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _emailController,
-              decoration: _inputDecoration('Email Address'),
-              validator: (v) => v!.isEmpty || !v.contains('@') ? 'Valid email required' : null,
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(email: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _emailController,
+                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: _inputDecoration('Email Address'),
+                  validator: (v) => v!.isEmpty || !v.contains('@') ? 'Valid email required' : null,
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(email: v),
+                ),
+              ),
             ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _pwdController,
-              decoration: _inputDecoration('Password'),
-              obscureText: true,
-              validator: (v) => v!.length < 6 ? 'Min 6 chars' : null,
-              onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(password: v),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  controller: _pwdController,
+                  textInputAction: TextInputAction.done,
+                  decoration: _inputDecoration('Password'),
+                  obscureText: true,
+                  validator: (v) => v!.length < 6 ? 'Min 6 chars' : null,
+                  onChanged: (v) => ref.read(businessSetupProvider.notifier).setAdmin(password: v),
+                ),
+              ),
             ),
             const SizedBox(height: 40),
             Row(
@@ -724,23 +771,29 @@ class _ReviewStepState extends ConsumerState<_ReviewStep> with SingleTickerProvi
             style: TextStyle(fontFamily: 'Inter', color: Colors.grey[600]),
           ),
           const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!),
-            ),
-            child: Column(
-              children: [
-                _buildSummaryRow('Company', state.companyName),
-                const Divider(),
-                _buildSummaryRow('Goals', state.selectedGoals.isEmpty ? 'None' : state.selectedGoals.join(', ')),
-                const Divider(),
-                _buildSummaryRow('Deployment', state.deploymentPreference),
-                const Divider(),
-                _buildSummaryRow('Admin', state.adminEmail),
-              ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.65),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.4)),
+                ),
+                child: Column(
+                  children: [
+                    _buildSummaryRow('Company', state.companyName),
+                    const Divider(),
+                    _buildSummaryRow('Goals', state.selectedGoals.isEmpty ? 'None' : state.selectedGoals.join(', ')),
+                    const Divider(),
+                    _buildSummaryRow('Deployment', state.deploymentPreference),
+                    const Divider(),
+                    _buildSummaryRow('Admin', state.adminEmail),
+                  ],
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 40),

@@ -21,7 +21,7 @@ void main() {
 
     // Tap Get Started
     await tester.tap(find.text('Get Started'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify next step is Business Profile
     expect(find.text('Business Profile'), findsOneWidget);
@@ -34,7 +34,7 @@ void main() {
 
     // Navigate to step 1
     await tester.tap(find.text('Get Started'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify step 1
     expect(find.text('Business Profile'), findsOneWidget);
@@ -46,7 +46,7 @@ void main() {
 
     // Tap Next
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify next step is Goal Selection
     expect(find.text('What are your primary goals?'), findsOneWidget);
@@ -61,23 +61,23 @@ void main() {
 
     // Navigate to step 2
     await tester.tap(find.text('Get Started'), warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.enterText(find.byType(TextFormField).at(0), 'Test Company');
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify step 2
     expect(find.text('What are your primary goals?'), findsOneWidget);
 
     // Select goals
     await tester.tap(find.text('Build Software').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Customer Support').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Tap Next
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify next step is Deployment
     expect(find.text('Deployment Preference'), findsOneWidget);
@@ -92,23 +92,23 @@ void main() {
 
     // Navigate to step 3
     await tester.tap(find.text('Get Started'), warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.enterText(find.byType(TextFormField).at(0), 'Test Company');
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify step 3
     expect(find.text('Deployment Preference'), findsOneWidget);
 
     // Select Deployment
     await tester.tap(find.text('Cloud').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Tap Next
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify next step is Admin Account
     expect(find.text('Administrator Account'), findsOneWidget);
@@ -123,18 +123,18 @@ void main() {
 
     // Navigate to step 4
     await tester.tap(find.text('Get Started'), warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.enterText(find.byType(TextFormField).at(0), 'Test Company');
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Build Software').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Cloud').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify step 4
     expect(find.text('Administrator Account'), findsOneWidget);
@@ -146,7 +146,7 @@ void main() {
 
     // Tap Next
     await tester.tap(find.text('Next').last, warnIfMissed: false);
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     // Verify step 5 (Review)
     expect(find.text('Review & Launch'), findsOneWidget);
@@ -164,7 +164,7 @@ void main() {
 
     // Let the timer finish
     await tester.pump(const Duration(seconds: 2));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(seconds: 1));
 
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
