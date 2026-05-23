@@ -125,16 +125,17 @@ mod tests {
     #[tokio::test]
     async fn test_memory_mesh_transport_locking() {
         let transport = MemoryMeshTransport::new();
+        let resource_name = format!("test_resource_{}", uuid::Uuid::new_v4());
 
-        let acq1 = transport.acquire_lock("test_resource", "agent_1", 10).await.unwrap();
+        let acq1 = transport.acquire_lock(&resource_name, "agent_1", 10).await.unwrap();
         assert!(acq1);
 
-        let acq2 = transport.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        let acq2 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
         assert!(!acq2);
 
-        transport.release_lock("test_resource", "agent_1").await.unwrap();
+        transport.release_lock(&resource_name, "agent_1").await.unwrap();
 
-        let acq3 = transport.acquire_lock("test_resource", "agent_2", 10).await.unwrap();
+        let acq3 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
         assert!(acq3);
     }
 
