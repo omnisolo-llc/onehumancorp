@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'agent_dashboard.dart';
+import '../widgets/walkthrough_overlay.dart';
 
 enum OnboardingState { welcome, input, generating, dashboard, draft, live }
 
