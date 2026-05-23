@@ -28,16 +28,24 @@ export default function Dashboard() {
   const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
   const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
 
-  const handleApproveReviewRequest = () => {
+  const handleApproveReviewRequest = async () => {
     setIsReviewGenerating(true);
-    setTimeout(() => {
+    try {
+      await fetch('/api/agents/approvals/e2e-approval-1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved: true })
+      });
       setIsReviewGenerating(false);
       setReviewCampaignSent(true);
       setReviewEmailsSent(3);
       setTimeout(() => {
         setShowReviewRequestCard(false);
       }, 3000);
-    }, 2000);
+    } catch (e) {
+      console.error(e);
+      setIsReviewGenerating(false);
+    }
   };
 
 

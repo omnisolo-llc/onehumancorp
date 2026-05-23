@@ -10,13 +10,25 @@ export default function SeasonalPromoPage() {
   const [result, setResult] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-      setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
+    try {
+      const response = await fetch('/api/marketing/promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ occasion, discount })
+      });
+      if (!response.ok) {
+        throw new Error('Failed to generate promotion');
+      }
+      const data = await response.json();
+      setResult(data.result);
+    } catch (e) {
+      console.error('Promotion generation error:', e);
+      setResult('Failed to generate promotion.');
+    } finally {
       setIsGenerating(false);
-    }, 500);
+    }
   };
 
   return (
