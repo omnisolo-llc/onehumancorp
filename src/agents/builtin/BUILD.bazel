@@ -73,6 +73,7 @@ rust_library(
         "registry.rs",
         "service.rs",
         "consolidation_worker.rs",
+        "serverless.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -261,3 +262,15 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "serverless_unit_test",
+    crate = ":ohc_builtin_agent_lib",
+    args = ["serverless"],
+    edition = "2024",
+    size = "small",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
