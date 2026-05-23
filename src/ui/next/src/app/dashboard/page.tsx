@@ -13,34 +13,51 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
-  const [showMilestoneAlert, setShowMilestoneAlert] = useState<boolean>(true);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [referralLink, setReferralLink] = useState<string>("");
+
+  const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
+
+  useEffect(() => {
+    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+  }, []);
+
+  const openReferralModal = async () => {
+    setIsGeneratingReferral(true);
+    try {
+      const response = await fetch("/api/v1/growth/referrals/generate", {
+        method: "POST"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.referral_link) {
+          setReferralLink(data.referral_link);
+        }
+      } else {
+        // Fallback to local storage tenant if API fails or no auth
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      }
+    } catch (e) {
+      console.error("Failed to generate dynamic referral link", e);
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+    } finally {
+      setIsGeneratingReferral(false);
+      setShowReferralModal(true);
+    }
+  };
+
+  // Growth Loop: Upgrade Modal State
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-  // Growth Loop: Automated Review Request State
-  const [isReviewGenerating, setIsReviewGenerating] = useState<boolean>(false);
-  const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
-  const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
-  const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
-
-  const handleApproveReviewRequest = () => {
-    setIsReviewGenerating(true);
-    setTimeout(() => {
-      setIsReviewGenerating(false);
-      setReviewCampaignSent(true);
-      setReviewEmailsSent(3);
-      setTimeout(() => {
-        setShowReviewRequestCard(false);
-      }, 3000);
-    }, 2000);
-  };
-
 
   useEffect(() => {
     async function checkMilestones() {
@@ -174,30 +191,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleGenerateReviewCampaign = async () => {
-    setIsReviewGenerating(true);
-    try {
-      const response = await fetch("/api/v1/growth/campaign/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Automated Review Request",
-          subject: "How did we do? Leave a review!",
-          body: "We hope you loved your recent purchase. Please leave a review.",
-          target_segment: "recent_buyers_no_review"
-        })
-      });
-      const data = await response.json();
-      setReviewEmailsSent(data.emails_sent);
-      setReviewCampaignSent(true);
-    } catch (e) {
-      console.error("Failed to generate review campaign", e);
-    } finally {
-      setIsReviewGenerating(false);
-    }
-  };
-
-
   const handleApprove = async (id: string, approved: boolean) => {
     try {
       await fetch(`/api/agents/approvals/${id}`, {
@@ -217,11 +210,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-             <button onClick={() => setShowReferralModal(true)} className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold">Referrals</button>
          <div className="flex items-center gap-3">
-             <Link href="/referrals" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
-               Referrals
-             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
@@ -236,51 +225,8 @@ export default function Dashboard() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Success Milestone Alert */}
-         {showMilestoneAlert && (
-           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-0"></div>
-             <div className="relative z-10 flex-1">
-               <div className="flex items-center gap-3 mb-2">
-                 <span className="text-2xl">🎉</span>
-                 <h2 className="text-xl font-bold font-outfit">Milestone Unlocked: 10th Order!</h2>
-               </div>
-               <p className="text-indigo-100 text-sm mb-4 leading-relaxed">
-                 You just hit a major milestone. Success breeds success! Share your achievement to inspire others and grow your audience. Plus, when a friend opens a store, you get $50 in premium credit!
-               </p>
-               <div className="flex flex-wrap gap-3">
-                 <a
-                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just hit my 10th order on my @OneHumanCorp store! 🚀 Start your own business journey and get priority setup: ' + referralLink)}`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   className="flex items-center gap-2 bg-black/20 hover:bg-black/30 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all border border-white/20"
-                 >
-                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                   Share on X
-                 </a>
-                 <a
-                   href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on my OneHumanCorp store! 🚀 Start your own business journey and get priority setup: ' + referralLink)}`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   className="flex items-center gap-2 bg-[#25D366]/90 hover:bg-[#25D366] text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all border border-white/20 shadow-sm"
-                 >
-                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
-                   WhatsApp
-                 </a>
-               </div>
-             </div>
-             <button
-               onClick={() => setShowMilestoneAlert(false)}
-               className="relative z-10 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors shrink-0 self-start"
-               aria-label="Dismiss"
-             >
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-             </button>
-           </div>
-         )}
-
          {/* Action Required (Approvals) */}
-         {(approvals.length > 0 || showReviewRequestCard) && (
+         {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
@@ -295,54 +241,6 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">
-                    {/* Hardcoded Automated Review Request Card based on mockup */}
-                    {showReviewRequestCard && (
-                        <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                                        🤝
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-lg font-outfit text-gray-900">
-                                            CustomerSuccess Department
-                                        </h3>
-                                        <p className="text-gray-600 font-inter text-sm">3 customers haven't reviewed their orders. Request reviews?</p>
-                                    </div>
-                                </div>
-
-                                {isReviewGenerating ? (
-                                    <div className="flex items-center gap-2 text-sm text-blue-600 font-medium whitespace-nowrap px-4 py-2 bg-blue-50 rounded-lg">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                        AI generating personalized review requests...
-                                    </div>
-                                ) : reviewCampaignSent ? (
-                                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium whitespace-nowrap px-4 py-2 bg-green-50 rounded-lg">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        Sent to 3 customers!
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2 shrink-0">
-                                        <button
-                                            onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={handleApproveReviewRequest}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Approve
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     {approvals.map(approval => {
                         // Extract plain english message and payload
                         let plainMessage = approval.description;
@@ -446,7 +344,8 @@ export default function Dashboard() {
              </div>
          </section>
 
-         <>
+         {approvals.length === 0 && (
+<>
 {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
@@ -468,6 +367,38 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+         {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Business Insights</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                        <span className="text-xs font-medium text-yellow-600">Pro Feature</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fcfbf8)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Store Analytics</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Discover hidden trends in your sales data. Our AI analyzes customer behavior to recommend exactly what to sell next and how to price it for maximum profit.</p>
+                    <button
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                        View AI Insights
+                    </button>
+                </div>
+                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
+                   {/* Decorative visual */}
+                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
+                   <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
+                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                   </div>
+                </div>
             </div>
          </section>
 
@@ -545,35 +476,6 @@ export default function Dashboard() {
          </section>
 
 
-         {/* Growth Loop: Automated AI Review Requests */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: "#1D1D1F" }}>Automated Review Requests</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: "rgba(255, 255, 255, 0.03)", backdropFilter: "blur(20px) saturate(200%)", border: "1px solid rgba(255, 255, 255, 0.08)", borderColor: "rgba(0,0,0,0.05)", backgroundColor: "#ffffff" }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Your Trust Score</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
-                    </p>
-                    {reviewCampaignSent ? (
-                        <div className="inline-flex items-center gap-2 text-green-600 font-semibold bg-green-50 px-4 py-2 rounded-lg border border-green-100">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            Campaign sent to {reviewEmailsSent} customers!
-                        </div>
-                    ) : (
-                        <button onClick={handleGenerateReviewCampaign} disabled={isReviewGenerating} className={`px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-all ${isReviewGenerating ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"}`}>
-                            {isReviewGenerating ? "Generating..." : "✨ Send AI Review Requests"}
-                        </button>
-                    )}
-                </div>
-            </div>
-         </section>
 
 
          {/* Growth Loop: Referral Program Snapshot */}
@@ -586,10 +488,11 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
+                    onClick={openReferralModal}
+                    disabled={isGeneratingReferral}
+                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
                 >
-                    <span>🎁 Invite a Business & Earn $50</span>
+                    <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
                 </button>
             </div>
 
@@ -617,6 +520,7 @@ export default function Dashboard() {
          </section>
 
          </>
+)}
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
@@ -694,7 +598,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -703,7 +607,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -784,6 +688,67 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* SaaS Conversion: Upgrade Modal (Soft Paywall) */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-yellow-600">
+                📈
+              </div>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Upgrade to Pro</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Unlock AI Business Insights and start seeing actionable trends in your sales data. Pro members sell <strong className="text-gray-900">3x more</strong> on average within their first month!
+            </p>
+
+            <div className="space-y-4">
+               <ul className="text-sm text-gray-700 space-y-3 mb-6">
+                 <li className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Predictive sales analytics
+                 </li>
+                 <li className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    AI-driven pricing recommendations
+                 </li>
+                 <li className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    Automated competitor tracking
+                 </li>
+               </ul>
+
+              <button
+                onClick={() => {
+                  alert('Redirecting to upgrade checkout... (Mocked for Demo)');
+                  setShowUpgradeModal(false);
+                }}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
+              >
+                Upgrade Now - $29/mo
+              </button>
+
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Referral Modal */}
       {showReferralModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -819,12 +784,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value="https://ohc.store/join?ref=acme-corp"
+                    value={referralLink}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText("https://ohc.store/join?ref=acme-corp");
+                      navigator.clipboard.writeText(referralLink);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
@@ -843,7 +808,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -852,7 +817,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
