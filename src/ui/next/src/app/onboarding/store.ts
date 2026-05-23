@@ -10,6 +10,7 @@ interface OnboardingState {
   error: string;
   intakeData: any;
   startResult: any;
+  _hasHydrated: boolean;
   setStep: (step: number) => void;
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
@@ -18,6 +19,7 @@ interface OnboardingState {
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
   setStartResult: (result: any) => void;
+  setHasHydrated: (state: boolean) => void;
   loadStateFromBackend: () => Promise<void>;
   syncStateToBackend: () => Promise<void>;
 }
@@ -33,6 +35,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       error: '',
       intakeData: null,
       startResult: null,
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       setStep: (step) => {
         set({ step });
         get().syncStateToBackend();
@@ -106,6 +110,9 @@ export const useOnboardingStore = create<OnboardingState>()(
     }),
     {
       name: 'onboarding-storage', // name of the item in the storage (must be unique)
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      }
     }
   )
 );
