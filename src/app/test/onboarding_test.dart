@@ -14,6 +14,37 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
+  testWidgets('Onboarding Screen - Input State new UI components present', (WidgetTester tester) async {
+    final client = MockClient((request) async {
+      return http.Response('{}', 200);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
+
+    // Go to input state
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    // Verify Business Bio input
+    expect(find.byKey(Key('bio-input')), findsOneWidget);
+
+    // Verify Template choices
+    expect(find.text('Template'), findsOneWidget);
+    expect(find.byKey(Key('template-Modern')), findsOneWidget);
+    expect(find.byKey(Key('template-Classic')), findsOneWidget);
+    expect(find.byKey(Key('template-Playful')), findsOneWidget);
+
+    // Verify Domain choices
+    expect(find.text('Domain'), findsOneWidget);
+    expect(find.byKey(Key('domain-subdomain')), findsOneWidget);
+    expect(find.byKey(Key('domain-custom')), findsOneWidget);
+
+    // Verify Product inputs
+    expect(find.text('Initial Product (Optional)'), findsOneWidget);
+    expect(find.byKey(Key('product-name-input')), findsOneWidget);
+    expect(find.byKey(Key('product-price-input')), findsOneWidget);
+  });
+
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {
     final client = MockClient((request) async {
       if (request.url.path == '/api/onboarding/draft') {
@@ -31,6 +62,9 @@ void main() {
     // Enter text
     await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio');
     await tester.pumpAndSettle();
+
+    // Ensure we scroll to the button
+    await tester.ensureVisible(find.text('Build My Storefront'));
 
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
@@ -93,6 +127,9 @@ void main() {
     // Enter text
     await tester.enterText(find.byKey(Key('bio-input')), 'Test generating state');
     await tester.pumpAndSettle();
+
+    // Ensure we scroll to the button
+    await tester.ensureVisible(find.text('Build My Storefront'));
 
     // Submit form
     await tester.tap(find.text('Build My Storefront'));

@@ -20,9 +20,16 @@ class OnboardingScreen extends StatefulWidget {
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   String bio = '';
+  String template = 'Modern';
+  String domainChoice = 'subdomain';
+  String productName = '';
+  String productPrice = '';
+
   OnboardingState _state = OnboardingState.welcome;
   late final http.Client _client;
   late final TextEditingController _bioController;
+  late final TextEditingController _productNameController;
+  late final TextEditingController _productPriceController;
   Timer? _debounce;
 
   @override
@@ -30,6 +37,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.initState();
     _client = widget.httpClient ?? http.Client();
     _bioController = TextEditingController();
+    _productNameController = TextEditingController();
+    _productPriceController = TextEditingController();
     _loadBio();
   }
 
@@ -37,6 +46,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void dispose() {
     _debounce?.cancel();
     _bioController.dispose();
+    _productNameController.dispose();
+    _productPriceController.dispose();
     super.dispose();
   }
 
@@ -91,10 +102,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'admin_email': 'admin@test.com',
             'admin_name': 'Admin User',
             'admin_password': 'password123',
-            'website_template': 'Modern',
-            'first_product_name': 'Custom Cake Deposit',
-            'first_product_price': '25.00',
-            'domain_choice': 'subdomain',
+            'website_template': template,
+            'first_product_name': productName.isNotEmpty ? productName : 'Custom Cake Deposit',
+            'first_product_price': productPrice.isNotEmpty ? productPrice : '25.00',
+            'domain_choice': domainChoice,
             'price_type': 'fixed',
           }),
         );
@@ -255,91 +266,221 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.all(24),
       child: Form(
         key: _formKey,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Welcome to OHC Smart Builder',
-              style: TextStyle(
-                fontFamily: 'Outfit',
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1D1D1F),
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Tell us about your business, and AI will build it.',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 32),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: TextFormField(
-                  key: Key('bio-input'), // for testing or just semantics
-                  controller: _bioController,
-                  textInputAction: TextInputAction.done,
-                  textCapitalization: TextCapitalization.sentences,
-                  keyboardType: TextInputType.text,
-                  maxLines: 4,
-                  decoration: InputDecoration(
-                    labelText: 'Business Bio',
-                    hintText:
-                        'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.5),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: EdgeInsets.all(20),
-                  ),
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-                  onChanged: (value) {
-                    bio = value;
-                    if (_debounce?.isActive ?? false) _debounce!.cancel();
-                    _debounce = Timer(const Duration(milliseconds: 500), () {
-                      _saveDraft(value);
-                    });
-                  },
-                  validator: (value) =>
-                      value == null || value.isEmpty ? 'Required' : null,
-                  onSaved: (value) => bio = value!,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Welcome to OHC Smart Builder',
+                style: TextStyle(
+                  fontFamily: 'Outfit',
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1D1D1F),
+                  letterSpacing: -0.5,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: submit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Build My Storefront',
+              SizedBox(height: 16),
+              Text(
+                'Tell us about your business, and AI will build it.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 32),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: TextFormField(
+                    key: Key('bio-input'),
+                    controller: _bioController,
+                    textInputAction: TextInputAction.next,
+                    textCapitalization: TextCapitalization.sentences,
+                    keyboardType: TextInputType.text,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'Business Bio',
+                      hintText:
+                          'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.5),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.all(20),
+                    ),
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                    onChanged: (value) {
+                      bio = value;
+                      if (_debounce?.isActive ?? false) _debounce!.cancel();
+                      _debounce = Timer(const Duration(milliseconds: 500), () {
+                        _saveDraft(value);
+                      });
+                    },
+                    validator: (value) =>
+                        value == null || value.isEmpty ? 'Required' : null,
+                    onSaved: (value) => bio = value!,
+                  ),
                 ),
               ),
-            ),
-          ],
+              SizedBox(height: 24),
+              Text(
+                'Template',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1D1D1F),
+                ),
+              ),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: ['Modern', 'Classic', 'Playful'].map((t) {
+                  return ChoiceChip(
+                    key: Key('template-$t'),
+                    label: Text(t),
+                    selected: template == t,
+                    onSelected: (selected) {
+                      if (selected) setState(() => template = t);
+                    },
+                    selectedColor: Color(0xFF0066FF).withOpacity(0.1),
+                    labelStyle: TextStyle(
+                      color: template == t ? Color(0xFF0066FF) : Colors.black87,
+                      fontWeight: template == t ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Domain',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1D1D1F),
+                ),
+              ),
+              SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: ['subdomain', 'custom'].map((d) {
+                  return ChoiceChip(
+                    key: Key('domain-$d'),
+                    label: Text(d == 'subdomain' ? 'Free Subdomain' : 'Custom Domain'),
+                    selected: domainChoice == d,
+                    onSelected: (selected) {
+                      if (selected) setState(() => domainChoice = d);
+                    },
+                    selectedColor: Color(0xFF0066FF).withOpacity(0.1),
+                    labelStyle: TextStyle(
+                      color: domainChoice == d ? Color(0xFF0066FF) : Colors.black87,
+                      fontWeight: domainChoice == d ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Initial Product (Optional)',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1D1D1F),
+                ),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 2,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: TextFormField(
+                          key: Key('product-name-input'),
+                          controller: _productNameController,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: 'Product Name',
+                            hintText: 'e.g., Cupcake',
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.all(16),
+                          ),
+                          onSaved: (value) => productName = value ?? '',
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: TextFormField(
+                          key: Key('product-price-input'),
+                          controller: _productPriceController,
+                          textInputAction: TextInputAction.done,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Price',
+                            hintText: '0.00',
+                            prefixText: '\$',
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.5),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.all(16),
+                          ),
+                          onSaved: (value) => productPrice = value ?? '',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 32),
+              ElevatedButton(
+                onPressed: submit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Build My Storefront',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

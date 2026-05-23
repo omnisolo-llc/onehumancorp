@@ -31,6 +31,9 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), '');
     await tester.pumpAndSettle();
 
+    // Ensure we scroll to the button
+    await tester.ensureVisible(find.text('Build My Storefront'));
+
     // Tap without entering text to trigger validation
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
@@ -41,6 +44,23 @@ void main() {
     // Fill out the bio form
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
+
+    // Select Template
+    await tester.tap(find.byKey(Key('template-Classic')));
+    await tester.pumpAndSettle();
+
+    // Select Domain
+    await tester.tap(find.byKey(Key('domain-custom')));
+    await tester.pumpAndSettle();
+
+    // Enter Initial Product details
+    await tester.enterText(find.byKey(Key('product-name-input')), "Vegan Chocolate Cake");
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(Key('product-price-input')), "45.00");
+    await tester.pumpAndSettle();
+
+    // Ensure we scroll to the button
+    await tester.ensureVisible(find.text('Build My Storefront'));
 
     // Tap to build my storefront
     await tester.tap(find.text('Build My Storefront'));
