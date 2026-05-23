@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tracing::instrument;
 use serde_json::json;
 use sqlx::PgPool;
 
@@ -20,8 +19,6 @@ pub struct SandboxPolicy {
     pub read_only_paths: Vec<String>,
     #[serde(default)]
     pub blocked_domains: Vec<String>,
-    #[serde(default)]
-    pub dangerously_disable_sandbox: bool,
 }
 
 #[async_trait]
@@ -50,14 +47,7 @@ impl SandboxManager {
 
 #[async_trait]
 impl SandboxAdapter for SandboxManager {
-    #[instrument(skip(self), fields(command = %cmd))]
     async fn wrap_command(&self, cmd: &str) -> Result<String, String> {
-
-        if self.wrapper.dangerously_disable_sandbox() {
-            tracing::warn!("Sandbox is dangerously disabled. Executing command without AST validation.");
-            return Ok(self.wrapper.wrap(cmd));
-        }
-
         let mut ast_parser = ASTParser::new();
         if let Err(reason) = ast_parser.parse_for_security(cmd) {
             let details = json!({ "command": cmd, "reason": reason });
@@ -86,7 +76,6 @@ impl SandboxAdapter for SandboxManager {
         Ok(self.wrapper.wrap(cmd))
     }
 
-    #[instrument(skip(self, policy_json))]
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
         let policy: SandboxPolicy = serde_json::from_str(policy_json)
             .map_err(|e| format!("Invalid policy JSON: {}", e))?;

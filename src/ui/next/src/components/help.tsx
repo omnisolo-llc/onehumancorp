@@ -214,35 +214,24 @@ export function HelpWidget() {
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const helpArticles = [
-    { title: "Getting Started", desc: "Learn the basics of setting up your store." },
-    { title: "My Store", desc: "Manage your products and layout." },
-    { title: "Payments", desc: "Connect your bank and get paid." },
-    { title: "AI Agents", desc: "Hire and manage your AI workforce." },
-    { title: "Marketing", desc: "Grow your audience and sales." },
-    { title: "Account & Billing", desc: "Manage your subscription." },
-    { title: "API Documentation (Advanced)", desc: "Interactive API reference for integrations.", link: "/api-docs" }
-  ];
+  const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
+
+  useEffect(() => {
+    fetch("/api/help")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) setHelpArticles(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredArticles = helpArticles.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([
-    { id: 1, title: "How to add a product", duration: "1:20" },
-    { id: 2, title: "Setting up payments", duration: "1:15" },
-    { id: 3, title: "Managing inventory", duration: "0:50" },
-    { id: 4, title: "Adding team members", duration: "1:05" },
-    { id: 5, title: "Reviewing orders", duration: "1:10" },
-    { id: 6, title: "Connecting social media", duration: "1:25" },
-    { id: 7, title: "Using the builder", duration: "1:30" },
-    { id: 8, title: "Understanding analytics", duration: "1:00" },
-    { id: 9, title: "Fulfilling orders", duration: "0:45" },
-    { id: 10, title: "Processing refunds", duration: "0:55" }
-  ]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
 
   useEffect(() => {
-    // Local videos take precedence if no API
     fetch("/api/videos")
       .then(res => res.json())
       .then(data => {
@@ -280,8 +269,8 @@ export function HelpWidget() {
       </button>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white/60 backdrop-blur-[20px] saturate-[200%] rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-white/40 transition-all">
-          <div className="flex border-b border-white/30 bg-white/40">
+        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
+          <div className="flex border-b border-gray-200">
             {[
               { id: "center", label: "Help" },
               { id: "chat", label: "Ask AI" },
@@ -300,14 +289,14 @@ export function HelpWidget() {
             ))}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 bg-transparent">
+          <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 <div className="space-y-2 mb-4">
                   {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white/60 backdrop-blur-[20px] saturate-[200%] p-4 rounded-xl shadow-sm border border-white/40 cursor-pointer hover:border-blue-300">
+                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
                       {a.link ? (
                         <a href={a.link}><h4 className="font-bold text-gray-800 text-sm hover:underline">{a.title}</h4></a>
                       ) : (
@@ -320,16 +309,16 @@ export function HelpWidget() {
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">
-                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50/70 backdrop-blur-[20px] p-3 rounded-xl shadow-sm border border-blue-100/50 hover:bg-blue-100/80 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "View the real-time actions performed by your AI workforce." }])} className="w-full text-left bg-blue-50/70 backdrop-blur-[20px] p-3 rounded-xl shadow-sm border border-blue-100/50 hover:bg-blue-100/80 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "View the real-time actions performed by your AI workforce." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50/70 backdrop-blur-[20px] p-3 rounded-xl shadow-sm border border-blue-100/50 hover:bg-blue-100/80 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50/70 backdrop-blur-[20px] p-3 rounded-xl shadow-sm border border-blue-100/50 hover:bg-blue-100/80 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
                 </div>
@@ -340,10 +329,10 @@ export function HelpWidget() {
               <div className="flex flex-col h-full">
                 <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
                   {chatMessages.map((msg, idx) => {
-                    const className = `p-3 rounded-2xl text-sm w-4/5 backdrop-blur-[20px] saturate-[200%] ${
+                    const className = `p-3 rounded-2xl text-sm w-4/5 ${
                       msg.role === "bot"
-                        ? "bg-blue-50/80 text-blue-900 rounded-tl-none border border-blue-100/50"
-                        : "bg-gray-100/80 text-gray-800 rounded-tr-none ml-auto border border-gray-200/50"
+                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
+                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
                     }`;
                     return msg.role === "bot" ? (
                       <div key={idx} className={className}>
@@ -359,14 +348,14 @@ export function HelpWidget() {
                     );
                   })}
                 </div>
-                <div className="mt-4 flex gap-2 pt-2 border-t border-white/30">
+                <div className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
                   <input
                     type="text"
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyDown={handleChatSubmit}
-                    className="flex-1 p-3 bg-white/50 backdrop-blur-sm border border-white/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>

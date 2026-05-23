@@ -95,6 +95,33 @@ const swaggerSpec = {
         }
       }
     },
+    "/api/videos": {
+      get: {
+        summary: "Get video tutorials",
+        description: "Retrieves a list of video tutorial metadata for the Help Center.",
+        tags: ["Documentation"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      id: { type: "integer" },
+                      title: { type: "string" },
+                      duration: { type: "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/agents/status": {
       get: {
         summary: "Get workforce status",
@@ -141,10 +168,8 @@ export default function ApiDocsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-white/40 backdrop-blur-[20px] saturate-[200%] sm:p-6 p-2">
-      <div className="max-w-6xl mx-auto bg-white/80 rounded-2xl shadow-xl overflow-hidden border border-white/60 p-4">
-        {mounted && <SwaggerUI spec={swaggerSpec} />}
-      </div>
+    <div className="min-h-screen bg-white">
+      {mounted && <SwaggerUI spec={swaggerSpec} />}
     </div>
   );
 }

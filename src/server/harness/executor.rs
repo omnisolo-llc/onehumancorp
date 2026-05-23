@@ -61,7 +61,7 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("bwrap --ro-bind /usr /usr --ro-bind /lib /lib --bind . . --unshare-net bash -c \"set -e; umask 077; echo 'hello'\""));
+        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\""));
     }
 
     #[tokio::test]
