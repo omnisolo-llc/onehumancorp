@@ -18,6 +18,19 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [referralLink, setReferralLink] = useState<string>("https://ohc.store/join?ref=acme-corp");
+
+  const handleGenerateReferral = async () => {
+    try {
+      const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
+      const data = await res.json();
+      if (data && data.referral_link) {
+        setReferralLink(data.referral_link);
+      }
+    } catch (e) {
+      console.error('Failed to generate referral link', e);
+    }
+  };
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
@@ -27,11 +40,6 @@ export default function Dashboard() {
   const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
   const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
   const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
-
-  // Growth Loop: Interactive Trial Extension (Growth Quest) State
-  const [questSharedOnX, setQuestSharedOnX] = useState<boolean>(false);
-  const [questReferredBusiness, setQuestReferredBusiness] = useState<boolean>(false);
-  const [questSentAiPromo, setQuestSentAiPromo] = useState<boolean>(false);
 
   const handleApproveReviewRequest = () => {
     setIsReviewGenerating(true);
@@ -55,6 +63,7 @@ export default function Dashboard() {
         if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
+            await handleGenerateReferral();
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
             localStorage.setItem('10th_order_milestone_shown', 'true');
@@ -233,70 +242,6 @@ export default function Dashboard() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Growth Quest Widget */}
-         <section className="mb-6">
-            <div className="p-6 rounded-2xl shadow-lg border border-indigo-100 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)' }}>
-               <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-               <div className="absolute top-0 -left-4 w-48 h-48 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-
-               <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                  <div className="flex-1">
-                     <h2 className="text-2xl font-bold font-outfit text-indigo-900 mb-2">
-                        {questSharedOnX && questReferredBusiness && questSentAiPromo ? "🎉 14 Days of Pro Unlocked!" : "Unlock 14 Days of Pro 🚀"}
-                     </h2>
-                     <p className="text-indigo-800 text-sm font-inter leading-relaxed">
-                        {questSharedOnX && questReferredBusiness && questSentAiPromo
-                          ? "Congratulations! You've completed the Growth Quest. Enjoy 14 days of unlimited agents and storage to grow your business."
-                          : "Complete these 3 growth actions to get a free 14-day trial of our Pro plan and supercharge your business."}
-                     </p>
-                  </div>
-
-                  {!(questSharedOnX && questReferredBusiness && questSentAiPromo) && (
-                      <div className="flex flex-col gap-3 w-full sm:w-auto">
-                         <button
-                            onClick={() => {
-                               setQuestSharedOnX(true);
-                               window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just launched my store on OHC! Check it out and launch your own.')}`, '_blank');
-                            }}
-                            className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${questSharedOnX ? 'bg-indigo-100 text-indigo-400 cursor-default' : 'bg-white text-indigo-700 hover:bg-indigo-50 hover:shadow-md'}`}
-                            disabled={questSharedOnX}
-                         >
-                            <span className="flex items-center gap-2">
-                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                               Share on X
-                            </span>
-                            {questSharedOnX && <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
-                         </button>
-
-                         <button
-                            onClick={() => {
-                               setShowReferralModal(true);
-                               setQuestReferredBusiness(true);
-                            }}
-                            className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${questReferredBusiness ? 'bg-indigo-100 text-indigo-400 cursor-default' : 'bg-white text-indigo-700 hover:bg-indigo-50 hover:shadow-md'}`}
-                            disabled={questReferredBusiness}
-                         >
-                            <span className="flex items-center gap-2">🤝 Refer a Business</span>
-                            {questReferredBusiness && <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
-                         </button>
-
-                         <button
-                            onClick={() => {
-                               setShowPromoModal(true);
-                               setQuestSentAiPromo(true);
-                            }}
-                            className={`flex items-center justify-between gap-4 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm ${questSentAiPromo ? 'bg-indigo-100 text-indigo-400 cursor-default' : 'bg-white text-indigo-700 hover:bg-indigo-50 hover:shadow-md'}`}
-                            disabled={questSentAiPromo}
-                         >
-                            <span className="flex items-center gap-2">✨ Send AI Promo</span>
-                            {questSentAiPromo && <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>}
-                         </button>
-                      </div>
-                  )}
-               </div>
-            </div>
-         </section>
-
          {/* Action Required (Approvals) */}
          {(approvals.length > 0 || showReviewRequestCard) && (
             <section className="mb-6">
@@ -343,7 +288,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2 shrink-0">
                                         <button
                                             onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -388,7 +333,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -605,7 +550,10 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowReferralModal(true)}
+                    onClick={async () => {
+                        await handleGenerateReferral();
+                        setShowReferralModal(true);
+                    }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
                 >
                     <span>🎁 Invite a Business & Earn $50</span>
@@ -647,7 +595,7 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel mac-glass-panel shadow-sm overflow-hidden">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
@@ -714,7 +662,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -723,7 +671,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -839,12 +787,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value="https://ohc.store/join?ref=acme-corp"
+                    value={referralLink}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText("https://ohc.store/join?ref=acme-corp");
+                      navigator.clipboard.writeText(referralLink);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
@@ -863,7 +811,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -872,7 +820,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -890,6 +838,19 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
+        .mac-glass-panel {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .mac-glass-panel {
+                background: rgba(22, 22, 26, 0.7);
+                backdrop-filter: blur(30px) saturate(210%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
       `}} />
     </div>
   );
