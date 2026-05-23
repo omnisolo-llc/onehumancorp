@@ -19,6 +19,8 @@ impl TaskQueue for PgTaskQueue {
         if jobs.is_empty() { return Ok(()); }
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
+        let mut current_depths = std::collections::HashMap::new();
+
         let mut query_str = String::from("INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id) VALUES ");
         let mut values = Vec::new();
 
@@ -30,14 +32,35 @@ impl TaskQueue for PgTaskQueue {
 
         let mut query = sqlx::query(&query_str);
 
+        let bursts_threshold = 10;
         for job in jobs {
+            let depth = match current_depths.get(&job.tenant_id) {
+                Some(&d) => d,
+                None => {
+                    let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
+                        .bind(&job.tenant_id)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .unwrap_or((0,));
+                    current_depths.insert(job.tenant_id.clone(), count_row.0);
+                    count_row.0
+                }
+            };
+
+            let mut run_after = job.run_after;
+            if depth > bursts_threshold {
+                let delay_seconds = (depth - bursts_threshold) * 5;
+                run_after = run_after + chrono::Duration::seconds(delay_seconds);
+            }
+            *current_depths.get_mut(&job.tenant_id).unwrap() += 1;
+
             let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
             query = query
                 .bind(job.id)
                 .bind(job.parent_task_id)
                 .bind(job.agent_role)
                 .bind(payload_json)
-                .bind(job.run_after)
+                .bind(run_after)
                 .bind(job.tenant_id);
         }
 
@@ -48,6 +71,20 @@ impl TaskQueue for PgTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
+
+        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
+            .bind(&job.tenant_id)
+            .fetch_one(&*self.pool)
+            .await
+            .unwrap_or((0,));
+
+        let mut run_after = job.run_after;
+        let bursts_threshold = 10;
+        if count_row.0 > bursts_threshold {
+            let delay_seconds = (count_row.0 - bursts_threshold) * 5;
+            run_after = run_after + chrono::Duration::seconds(delay_seconds);
+        }
+
         sqlx::query(
             "INSERT INTO sub_agent_jobs (id, parent_task_id, agent_role, payload, status, run_after, organization_id)
              VALUES ($1, $2, $3, $4, 'QUEUED', $5, $6)"
@@ -56,7 +93,7 @@ impl TaskQueue for PgTaskQueue {
         .bind(&job.parent_task_id)
         .bind(&job.agent_role)
         .bind(payload_json)
-        .bind(job.run_after)
+        .bind(run_after)
         .bind(&job.tenant_id)
         .execute(&*self.pool)
         .await

@@ -370,9 +370,9 @@ async fn generate_storefront(
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     let prompt = format!(
-        r#"You are The Advisor and The Promoter AI. Your task is to act as an autonomous teammate.
+        r#"You are The AI Architect. Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
 First, extract entities from the user's business description (company_name, business_type, product_name, product_price, company_description).
-Then, instantly generate a live site draft with those entities.
+Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
 
 User Description: "{}"
 

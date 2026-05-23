@@ -77,6 +77,13 @@ async fn handle_webhook(
     let id = Uuid::new_v4().to_string();
     let status = "pending";
     let pool = get_pool();
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+    };
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+    }
     let _ = sqlx::query(
         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
     )
@@ -86,8 +93,9 @@ async fn handle_webhook(
     .bind(&payload.message)
     .bind(&draft_reply)
     .bind(&status)
-    .execute(&pool)
+    .execute(&mut *tx)
     .await;
+    let _ = tx.commit().await;
 
     match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,

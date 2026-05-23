@@ -1858,14 +1858,30 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
-async fn get_inbox_messages_handler() -> axum::response::Response {
+async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
+
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to begin transaction: {}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
+        }
+    };
+
+    let org_id = user.organization_id.unwrap_or_default();
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+        tracing::error!("Failed to set org context: {}", e);
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
+    }
+
     match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await
     {
         Ok(rows) => {
+            let _ = tx.commit().await;
             let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 use sqlx::Row;
                 let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
@@ -1899,7 +1915,27 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
         .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler)).route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler))
+        .route("/inbox", axum::routing::get(ui_handler))
+        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
@@ -2012,7 +2048,45 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Tell us what you sell, who buys it, and how your brand feels.", "generate-btn-tooltip": "Our smart helpers will read your text and build a complete store for you.", "launch-btn-tooltip": "Make your store live on the internet right now.", "team-activity-tooltip": "See what your smart helpers are working on right now.", "referral-tooltip": "Share this link with friends. If they join, you earn credits.", "swarm-online-tooltip": "Your smart helpers are online and doing work for you.", "department-card-tooltip": "Click to see tasks that need your okay.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "Hi! I am your Help Helper! I answer questions about how to use this app. Want to set up your store? Read our Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
+        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
+            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
+            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
+            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
+            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
+        ])) }))
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({
+            "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
+            "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
+            "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
+            "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.",
+            "referral-tooltip": "Share your unique link to earn credits when friends join OHC.",
+            "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.",
+            "department-card-tooltip": "Click to view and manage pending approvals for this department.",
+            "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
+            "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
+            "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
+            "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
+        })) }))
+        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
+            { "id": 1, "title": "How to add a product", "duration": "1:20" },
+            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
+            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
+            { "id": 4, "title": "Adding team members", "duration": "1:05" },
+            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
+            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
+            { "id": 7, "title": "Using the builder", "duration": "1:30" },
+            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
+            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
+            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+        ])) }))
+        .route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({
+            "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
+            "link": { "url": "/help", "title": "Read the full article →" }
+        })) }))
+        .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -2655,6 +2729,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
+            @media (prefers-color-scheme: dark) {
+                .glass, .screen {
+                    background: rgba(22, 22, 26, 0.7) !important;
+                    backdrop-filter: blur(30px) saturate(210%) !important;
+                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                }
+            }
                     </style>
                 </head>
                 <body>
@@ -2752,7 +2834,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
+                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2928,6 +3010,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
                         </div>
 
+                        <!-- Automated AI Review Requests -->
+                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                            </div>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.</p>
+                            <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
+                                ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
+                            </div>
+                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
+                        </div>
+
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -3049,7 +3143,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page (Your Team) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
+                        <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -3116,50 +3210,44 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Buffer Integration -->
+                            <!-- Meta Graph API Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Manychat</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
+                                    <h3 style="margin: 0;">Meta Graph API</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Customer Inbox. Manage all your messages and posts from one place.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Manychat...')">Connect</button>
-                            </div>
-
-                            <!-- Acuity Scheduling Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Calendly</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Booking. Let customers schedule appointments 24/7.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Calendly...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC.</p>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Meta Graph API...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Cal.com</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
-                            </div>
-
-                            <!-- ActiveCampaign Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Mailchimp</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Newsletters. Keep your customers engaged easily.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
                             </div>
 
                             <!-- Resend Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Resend</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📧</span>
                                 </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Developer-friendly API, excellent deliverability, modern React-email templates.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
+                            </div>
+
+                            <!-- Mercado Pago Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- ShipStation Integration -->
@@ -3168,7 +3256,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Labels & Tracking. Save time on fulfilling orders.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API.</p>
                                 <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to Shippo...')">Connect</button>
                             </div>
 
@@ -3176,37 +3264,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Twilio</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Text Alerts. Send critical updates directly to phones.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Global reach, ultra-reliable delivery for automated text alerts.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
-                            </div>
-
-                            <!-- Alipay Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Mercado Pago</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept Payments. Simple checkout for global customers.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
-                            </div>
-
-                            <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Mercado Pago</h3>
-                                </div>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Zoom</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Instant Video Rooms. Host online meetings effortlessly.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard video conferencing. High user familiarity.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
                         </div>
@@ -3461,15 +3531,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
+                    <div id="setup-screen" class="screen glass">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -3480,7 +3550,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -3488,7 +3558,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3499,7 +3569,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
                             <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -3507,20 +3577,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden" style="display: none;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -3531,7 +3601,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
@@ -3558,13 +3628,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -3573,7 +3643,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" class="hidden" style="display: none;">
+                        <div id="step-launch-ai" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
@@ -3895,6 +3965,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
+                        async function sendReviewCampaign() {
+                            const btn = document.getElementById('send-review-campaign-btn');
+                            btn.textContent = 'Generating...';
+                            btn.disabled = true;
+
+                            try {
+                                const response = await fetch('/api/v1/growth/campaign/send', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        name: 'Automated Review Request',
+                                        subject: 'How did we do? Leave a review!',
+                                        body: 'We hope you loved your recent purchase. Please leave a review.',
+                                        target_segment: 'recent_buyers_no_review'
+                                    })
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    document.getElementById('review-emails-sent').textContent = data.emails_sent;
+                                    document.getElementById('review-campaign-success').style.display = 'block';
+                                    btn.style.display = 'none';
+                                } else {
+                                    btn.textContent = '✨ Send AI Review Requests';
+                                    btn.disabled = false;
+                                    alert('Failed to send campaign');
+                                }
+                            } catch (e) {
+                                console.error('Failed to send review campaign', e);
+                                btn.textContent = '✨ Send AI Review Requests';
+                                btn.disabled = false;
+                                alert('Failed to send campaign');
+                            }
+                        }
+
                         function closeDomainSetup() {
                             document.getElementById('domain-setup-sheet').classList.remove('open');
                         }
@@ -4110,7 +4215,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'inbox-screen': '/inbox',
                             'seasonal-promo-screen': '/seasonal-promos',
                             'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1'
+                            'meeting-room-screen': '/meetings/room/1',
+                            'cost-dashboard-screen': '/cost-dashboard'
                         };
 
                         async function handleLogin(btn) {
@@ -4567,7 +4673,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
