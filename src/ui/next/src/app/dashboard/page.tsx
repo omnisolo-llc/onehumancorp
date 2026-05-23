@@ -13,24 +13,12 @@ export default function Dashboard() {
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
+  const [showMilestoneAlert, setShowMilestoneAlert] = useState<boolean>(true);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
-  const [referralLink, setReferralLink] = useState<string>("https://ohc.store/join?ref=acme-corp");
-
-  const handleGenerateReferral = async () => {
-    try {
-      const res = await fetch('/api/v1/growth/referrals/generate', { method: 'POST' });
-      const data = await res.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
-      }
-    } catch (e) {
-      console.error('Failed to generate referral link', e);
-    }
-  };
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
@@ -63,7 +51,6 @@ export default function Dashboard() {
         if (data && data.milestones) {
           const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
           if (orderMilestone) {
-            await handleGenerateReferral();
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
             localStorage.setItem('10th_order_milestone_shown', 'true');
@@ -143,31 +130,34 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const salesRes = await fetch('/api/v1/dashboard/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
+            const [salesRes, metricsRes, invitesRes] = await Promise.all([
+                fetch('/api/v1/dashboard/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch('/api/v1/dashboard/metrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
             if (salesRes.ok) {
                 const salesData = await salesRes.json();
                 setTodaysSales(salesData.total_sales);
             }
 
-            const metricsRes = await fetch('/api/v1/dashboard/metrics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
 
-            const invitesRes = await fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);
@@ -227,7 +217,11 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+             <button onClick={() => setShowReferralModal(true)} className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold">Referrals</button>
          <div className="flex items-center gap-3">
+             <Link href="/referrals" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+               Referrals
+             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
@@ -241,6 +235,49 @@ export default function Dashboard() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Success Milestone Alert */}
+         {showMilestoneAlert && (
+           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-6 shadow-lg text-white flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-0"></div>
+             <div className="relative z-10 flex-1">
+               <div className="flex items-center gap-3 mb-2">
+                 <span className="text-2xl">🎉</span>
+                 <h2 className="text-xl font-bold font-outfit">Milestone Unlocked: 10th Order!</h2>
+               </div>
+               <p className="text-indigo-100 text-sm mb-4 leading-relaxed">
+                 You just hit a major milestone. Success breeds success! Share your achievement to inspire others and grow your audience. Plus, when a friend opens a store, you get $50 in premium credit!
+               </p>
+               <div className="flex flex-wrap gap-3">
+                 <a
+                   href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just hit my 10th order on my @OneHumanCorp store! 🚀 Start your own business journey and get priority setup: ' + referralLink)}`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="flex items-center gap-2 bg-black/20 hover:bg-black/30 backdrop-blur-sm text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all border border-white/20"
+                 >
+                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                   Share on X
+                 </a>
+                 <a
+                   href={`https://wa.me/?text=${encodeURIComponent('I just hit my 10th order on my OneHumanCorp store! 🚀 Start your own business journey and get priority setup: ' + referralLink)}`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="flex items-center gap-2 bg-[#25D366]/90 hover:bg-[#25D366] text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all border border-white/20 shadow-sm"
+                 >
+                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                   WhatsApp
+                 </a>
+               </div>
+             </div>
+             <button
+               onClick={() => setShowMilestoneAlert(false)}
+               className="relative z-10 p-2 text-white/70 hover:text-white rounded-full hover:bg-white/10 transition-colors shrink-0 self-start"
+               aria-label="Dismiss"
+             >
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+             </button>
+           </div>
+         )}
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0 || showReviewRequestCard) && (
@@ -288,7 +325,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2 shrink-0">
                                         <button
                                             onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -333,7 +370,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -409,8 +446,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && !showReviewRequestCard && (
-<>
+         <>
 {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
@@ -550,10 +586,7 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
-                    onClick={async () => {
-                        await handleGenerateReferral();
-                        setShowReferralModal(true);
-                    }}
+                    onClick={() => setShowReferralModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
                 >
                     <span>🎁 Invite a Business & Earn $50</span>
@@ -584,7 +617,6 @@ export default function Dashboard() {
          </section>
 
          </>
-)}
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
@@ -595,7 +627,7 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel mac-glass-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
@@ -662,7 +694,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -671,7 +703,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -787,12 +819,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value={referralLink}
+                    value="https://ohc.store/join?ref=acme-corp"
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(referralLink);
+                      navigator.clipboard.writeText("https://ohc.store/join?ref=acme-corp");
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
@@ -811,7 +843,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -820,7 +852,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -838,19 +870,6 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .mac-glass-panel {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-        }
-        @media (prefers-color-scheme: dark) {
-            .mac-glass-panel {
-                background: rgba(22, 22, 26, 0.7);
-                backdrop-filter: blur(30px) saturate(210%);
-                border: 1px solid rgba(255, 255, 255, 0.1);
-            }
-        }
       `}} />
     </div>
   );

@@ -28,6 +28,7 @@ pub mod head;
 pub mod tail;
 pub mod hybrid_blob;
 pub mod anthropic_memory;
+pub mod repo_map;
 pub mod lazy_load;
 pub mod screenshot;
 pub mod generative_visibility;
@@ -35,6 +36,7 @@ pub mod magentic;
 pub mod recall;
 pub mod mcp_dynamic;
 pub mod skill;
+pub mod create_skill;
 pub mod pydantic;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
@@ -101,6 +103,7 @@ pub fn all_tools(
         edit::edit_tool(working_dir.clone(), runner.clone()),
         glob::glob_tool(working_dir.clone()),
         grep::grep_tool(working_dir.clone()),
+        repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| std::path::PathBuf::from("."))),
         webfetch::webfetch_tool(),
         websearch::websearch_tool(),
         booking::booking_get_services_tool(booking_store.clone()),

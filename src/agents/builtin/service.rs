@@ -594,6 +594,8 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
+            enable_agent_curated_memory: false,
+            curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
@@ -655,6 +657,10 @@ impl AgentServiceImpl {
             memory_accessor,
             observation_store,
         );
+
+
+        // Add create_skill tool
+        tools.push(crate::tools::create_skill::create_skill_tool(()));
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -1007,6 +1013,8 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
+            enable_agent_curated_memory: false,
+            curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
