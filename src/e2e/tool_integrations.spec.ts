@@ -13,26 +13,26 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meta' })).toBeVisible();
     await expect(page.getByText('Unified Customer Inbox. Manage all your messages and posts from one place.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).nth(0)).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Calendly' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
     await expect(page.getByText('Automated Booking. Let customers schedule appointments 24/7.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(1)).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(3)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(5)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).nth(4)).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Mailchimp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(2)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).nth(6)).toBeVisible();
@@ -40,6 +40,6 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
 
   test('displays global sms notifications card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).nth(4)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect' }).nth(5)).toBeVisible();
   });
 });
