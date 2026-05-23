@@ -758,6 +758,9 @@ mod tests {
             .await
             .unwrap();
 
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, department TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', action_risk TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1)"
+        ).execute(&pool).await;
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
@@ -943,6 +946,9 @@ mod chaos_tests {
             .unwrap();
 
         // Setup tables
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, department TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', action_risk TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1)"
+        ).execute(&pool).await;
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
@@ -1010,6 +1016,9 @@ mod chaos_tests {
             .unwrap();
 
         // Setup tables
+        let _ = sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_approvals (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, department TEXT NOT NULL, description TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'PENDING', action_risk TEXT NOT NULL, created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP, _sync_status TEXT DEFAULT 'pending', version INTEGER DEFAULT 1)"
+        ).execute(&pool).await;
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
