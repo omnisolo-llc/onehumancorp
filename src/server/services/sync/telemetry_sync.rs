@@ -1,6 +1,7 @@
 use sqlx::{PgPool, Row, query};
 use chrono::{DateTime, Utc};
 use tracing::error;
+use ::server_telemetry::record_sync_daemon_batch_size;
 use serde_json::Value;
 
 pub mod perf {
@@ -51,6 +52,10 @@ impl TelemetrySyncDaemon {
         )
         .fetch_all(&self.pool)
         .await?;
+
+        if let Err(e) = record_sync_daemon_batch_size(&self.pool, rows.len() as f32, "TelemetrySyncDaemon").await {
+            error!("Failed to record sync daemon batch size: {}", e);
+        }
 
         if rows.is_empty() {
             return Ok(());

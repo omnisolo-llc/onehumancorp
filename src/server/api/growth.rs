@@ -175,8 +175,9 @@ async fn handle_storefront_embed() -> impl IntoResponse {
         <h2 class="title">Premium Product</h2>
         <p class="price">$49.99</p>
         <a href="#" class="btn">Buy Now</a>
-        <div class="footer">
-            <a href="ohc://join?ref=embed">⚡ Powered by OHC</a>
+        <div class="footer" style="padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; margin-top: 20px; text-align: center;">
+            <a href="https://ohc.store/join?ref=embed" style="color: white; text-decoration: none; font-weight: 600; display: block; font-size: 0.95rem; margin-bottom: 4px;">⚡ Powered by OHC</a>
+            <p style="color: rgba(255,255,255,0.9); font-size: 0.8rem; margin: 0;">Launch your own AI storefront today and get $50 credit.</p>
         </div>
     </div>
 </body>

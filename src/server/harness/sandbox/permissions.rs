@@ -84,6 +84,7 @@ mod tests {
             disabled_patterns: vec![r"(?i)\bwget\b".to_string()],
             read_only_paths: vec![],
             blocked_domains: vec![],
+            dangerously_disable_sandbox: false,
         };
         evaluator.update_policy(policy);
 
