@@ -20,6 +20,15 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
+
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 2
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     // Fill in the business name
@@ -28,7 +37,7 @@ test.describe('Onboarding Wizard', () => {
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
 
-    // Step 2
+    // Step 3
     await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
 
     // Fill in the niche
@@ -45,6 +54,11 @@ test.describe('Onboarding Wizard', () => {
 
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
 
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
@@ -62,6 +76,15 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
+
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 2
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
     // Fill in the business name
@@ -70,7 +93,7 @@ test.describe('Onboarding Wizard', () => {
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
 
-    // Step 2
+    // Step 3
     await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
 
     // Fill in the niche
@@ -87,5 +110,10 @@ test.describe('Onboarding Wizard', () => {
 
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
 });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
@@ -61,16 +62,34 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
+
     const connectSwarmMesh = () => {
         try {
-            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
+            const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/connect?channel=system`);
 
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
-                    const payload = JSON.parse(event.data);
+                    const binaryString = atob(event.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    let payload: any = {};
+                    try {
+                       payload = JSON.parse(new TextDecoder().decode(bytes));
+                    } catch(e) {
+                       // Since we don't have protobufjs in the legacy Next.js app, perform basic string extraction
+                       const str = new TextDecoder("utf-8").decode(bytes);
+                       // Standard protobuf strings usually have length prefixes, finding plain text action descriptions
+                       // Example actions are standard sentences like "Draft email for review"
+                       const stringMatches = str.match(/[a-zA-Z0-9\s_\-\.\:\,]{8,}/g);
+                       if (stringMatches && stringMatches.length > 0) {
+                           // Filter out base64 padding or noise
+                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing mesh task..." };
+                       } else {
+                           return; // Unprocessable binary
+                       }
+                    }
                     setSwarmActivity(prev => [{
                         id: Math.random().toString(),
                         agent: payload.agent_id || "Swarm Agent",
@@ -181,6 +200,9 @@ export default function Dashboard() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
          <div className="flex items-center gap-3">
+             <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+               Seasonal Promos ✨
+             </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -293,6 +315,20 @@ export default function Dashboard() {
                  </div>
              </section>
          )}
+
+         {/* Top Action Banner (Stripe Setup) */}
+         <section className="mb-6">
+             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+                 <div className="flex items-center gap-4">
+                     <div>
+                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
+                     </div>
+                 </div>
+                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
+                     Complete Stripe Setup
+                 </button>
+             </div>
+         </section>
 
          {approvals.length === 0 && (
 <>
