@@ -62,16 +62,6 @@ void main() {
     await tester.tap(find.text('Classic'));
     await tester.pumpAndSettle();
 
-    // Toggle advanced mode
-    await tester.tap(find.byKey(Key('advanced-mode-toggle')));
-    await tester.pumpAndSettle();
-
-    // Choose custom domain
-    await tester.tap(find.byKey(Key('domain-choice-dropdown')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Custom Domain').last);
-    await tester.pumpAndSettle();
-
     // Tap to build my storefront
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();

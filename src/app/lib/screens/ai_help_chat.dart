@@ -69,7 +69,7 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
       ),
       body: Center(
         child: Container(
-          constraints: BoxConstraints(maxWidth: 600),
+          maxWidth: 600,
           child: Column(
             children: [
               Expanded(
