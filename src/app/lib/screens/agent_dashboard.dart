@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../widgets/tooltip_wrapper.dart';
 
 class AgentDashboard extends StatefulWidget {
   @override
@@ -69,7 +70,10 @@ class _AgentDashboardState extends State<AgentDashboard> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7),
       appBar: AppBar(
-        title: Text('Agent Updates', style: TextStyle(fontFamily: 'Outfit', color: Colors.black87, fontWeight: FontWeight.bold)),
+        title: TooltipWrapper(
+          tooltipId: 'agent_updates',
+          child: Text('Agent Updates', style: TextStyle(fontFamily: 'Outfit', color: Colors.black87, fontWeight: FontWeight.bold)),
+        ),
         backgroundColor: Colors.white.withOpacity(0.8),
         elevation: 0,
         flexibleSpace: ClipRect(
