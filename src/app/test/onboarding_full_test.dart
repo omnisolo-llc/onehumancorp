@@ -32,7 +32,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap without entering text to trigger validation
-    await tester.tap(find.text('Build My Storefront'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Expect the validator message 'Required' for the bio field
@@ -40,6 +40,26 @@ void main() {
 
     // Fill out the bio form
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    await tester.pumpAndSettle();
+
+    // Tap Next to go to Name step
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Name your business'), findsOneWidget);
+
+    // Fill out the name form
+    await tester.enterText(find.byKey(Key('name-input')), "Maya's Cakes");
+    await tester.pumpAndSettle();
+
+    // Tap Next to go to Template step
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a look'), findsOneWidget);
+
+    // Select 'Classic' Template
+    await tester.tap(find.text('Classic'));
     await tester.pumpAndSettle();
 
     // Tap to build my storefront
