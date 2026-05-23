@@ -11,6 +11,7 @@ type Props = {
 
 export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
   return (
+    <WithTooltip id="department-card-tooltip" defaultText="Click to view and manage pending approvals for this department.">
     <button
       onClick={onClick}
       className="w-full text-left bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center justify-between group mb-4"
@@ -38,5 +39,6 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
         </svg>
       </div>
     </button>
+    </WithTooltip>
   );
 }
