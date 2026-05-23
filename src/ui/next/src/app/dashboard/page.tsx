@@ -129,31 +129,34 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const salesRes = await fetch('/api/v1/dashboard/sales', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
+            const [salesRes, metricsRes, invitesRes] = await Promise.all([
+                fetch('/api/v1/dashboard/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch('/api/v1/dashboard/metrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ tenant_id: tenant })
+                }),
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+
             if (salesRes.ok) {
                 const salesData = await salesRes.json();
                 setTodaysSales(salesData.total_sales);
             }
 
-            const metricsRes = await fetch('/api/v1/dashboard/metrics', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ tenant_id: tenant })
-            });
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
 
-            const invitesRes = await fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
             if (invitesRes.ok) {
                 const invitesData = await invitesRes.json();
                 setTeamInvitesSent(invitesData.total_invites);

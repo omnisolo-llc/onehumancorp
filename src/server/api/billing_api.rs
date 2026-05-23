@@ -48,9 +48,15 @@ pub async fn my_plan_handler(
     };
 
     let tracker = hub.tracker();
-    let tier = tracker.get_tenant_tier(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-    let ai_used = tracker.get_tenant_actions_used(&tenant_id).await.unwrap_or(0);
-    let storage_used_bytes = tracker.get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
+    let tier_future = tracker.get_tenant_tier(&tenant_id);
+    let ai_used_future = tracker.get_tenant_actions_used(&tenant_id);
+    let storage_used_bytes_future = tracker.get_tenant_storage_used(&tenant_id);
+
+    let (tier_res, ai_used_res, storage_used_bytes_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
+
+    let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+    let ai_used = ai_used_res.unwrap_or(0);
+    let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
