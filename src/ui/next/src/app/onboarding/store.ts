@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
@@ -19,8 +20,10 @@ interface OnboardingState {
   setStartResult: (result: any) => void;
 }
 
-export const useOnboardingStore = create<OnboardingState>((set) => ({
-  step: 1,
+export const useOnboardingStore = create<OnboardingState>()(
+  persist(
+    (set) => ({
+      step: 1,
   businessType: '',
   businessName: '',
   businessCategory: '',
@@ -35,5 +38,10 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),
-  setStartResult: (startResult) => set({ startResult }),
-}));
+      setStartResult: (startResult) => set({ startResult }),
+    }),
+    {
+      name: 'onboarding-storage', // name of the item in the storage (must be unique)
+    }
+  )
+);
