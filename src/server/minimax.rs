@@ -338,6 +338,7 @@ pub struct LocalLLMClient {
     endpoint: String,
     embed_endpoint: String,
     model: String,
+    cache: PromptCache,
 }
 
 #[allow(dead_code)]
@@ -350,10 +351,15 @@ impl LocalLLMClient {
         let model = std::env::var("OHC_LOCAL_MODEL_NAME")
             .unwrap_or_else(|_| "llama3".to_string());
             
-        LocalLLMClient { endpoint, embed_endpoint, model }
+        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)) }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+            return Ok(cached.text);
+        }
+
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
             "model": self.model,
@@ -373,6 +379,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
+        self.cache.set(prompt, response, prompt.len() / 4);
         Ok(response.to_string())
     }
 
