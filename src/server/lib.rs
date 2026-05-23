@@ -2857,18 +2857,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Referral Dashboard</h1>
 
                         <!-- Hero Card: Give a Month, Get a Month -->
-                        <div class="card glass" style="background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
+                        <div class="card glass" style="background: #3b82f6; background: linear-gradient(135deg, var(--primary, #0066ff) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
                             <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
                             <div style="position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
                             <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: white; position: relative; z-index: 1;">Give 1 Month, Get 1 Month Free</h2>
                             <p style="color: rgba(255,255,255,0.9); font-size: 16px; max-width: 400px; margin: 0 auto 24px; line-height: 1.5; position: relative; z-index: 1;">Invite other small business owners to OHC. When they launch, you both get a free month of OHC Pro. There's no limit!</p>
 
+                            <p style="font-size: 14px; font-weight: bold; margin-bottom: 8px; position: relative; z-index: 1; color: white;">Your Referral Link</p>
                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="alert('Link Copied! Share it with your network.');">Copy</button>
+                                <button style="margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); alert('Copied');">Copy</button>
                             </div>
 
-                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1;">
+                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
+                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
+                                <div id="invite-copied-msg" style="display: none; width: 100%; font-size: 14px; color: #a7f3d0; margin-top: 4px;">Invite message copied!</div>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
                                 <button style="background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
                                 <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
                                 <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
@@ -2928,7 +2934,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
                                 </div>
-                                <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Logs</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
+                                    <button class="secondary" style="margin: 0;" onclick="alert('Data exported')">Export Data</button>
+                                </div>
                             </div>
                         </div>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
