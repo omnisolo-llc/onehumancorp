@@ -12,6 +12,8 @@ export async function GET() {
     "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
     "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
     "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
-    "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
+    "credit-tooltip": "Earn credits to use on premium tools when you refer a friend.",
+    "help-btn-tooltip": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
+    "changelog-nav-tooltip": "See what's new in the latest OneHumanCorp updates."
   });
 }
