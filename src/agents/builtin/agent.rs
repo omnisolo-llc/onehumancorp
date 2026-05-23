@@ -48,6 +48,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub observation_masking_size_limit: usize,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
+    pub verification_loops: Option<std::sync::Arc<crate::verification::VerificationLoops>>,
     pub compaction_threshold_tokens: i32,
     pub enable_llm_judge: bool,
     pub enable_computational_guides: bool,
@@ -79,6 +80,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
 impl Default for AgentRunConfig {
     fn default() -> Self {
         Self {
+            verification_loops: None,
             agent_id: "default-agent".to_string(),
             max_retries: 2,
             model: String::new(),
@@ -1279,10 +1281,29 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 2 });
-        let final_resp = self.llm.chat(replier_req).await?;
+        let mut req = replier_req;
+        let mut verification_attempts = 0;
+        loop {
+            let final_resp = self.llm.chat(req.clone()).await?;
+            if let Some(loops) = &cfg.verification_loops {
+                if let Err(e) = loops.run_all(&final_resp.message.content, &initial_message).await {
+                    on_event(AgentEvent::TaskError { error: format!("Verification failed: {}", e) });
+                    verification_attempts += 1;
+                    if verification_attempts > 3 {
+                        return Err(format!("Verification failed continuously: {}", e).into());
+                    }
+                    req.messages.push(Message::assistant(final_resp.message.content.clone()));
+                    req.messages.push(Message::user(format!("Verification failed: {}\nPlease fix the issues and try again.", e)));
+                    continue;
+                }
+            }
 
-        on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
-        Ok(final_resp.message.content)
+            on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
+            return Ok(final_resp.message.content);
+        }
+
+
+
     }
 
     /// Anthropic Claude Agent SDK Archetype: Implements the harness via a single `query()` function

@@ -552,6 +552,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            verification_loops: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
@@ -960,7 +961,8 @@ impl AgentService for AgentServiceImpl {
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
-                agent_id: self.agent_id.clone(),
+                verification_loops: None,
+            agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
                 developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
