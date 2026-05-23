@@ -1,0 +1,25 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "mcp_audit_sync",
+    srcs = [
+        "mod.rs",
+        "tool.rs",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/db:db",
+        "@crates//:serde",
+        "@crates//:sqlx",
+        "@crates//:tracing",
+        "@crates//:tokio",
+    ],
+)
+
+rust_test(
+    name = "mcp_audit_sync_test",
+    crate = ":mcp_audit_sync",
+    deps = [
+        "@crates//:tokio",
+    ],
+)

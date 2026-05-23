@@ -21,6 +21,7 @@ pub mod shippo;
 pub mod zoom;
 pub mod manychat;
 pub mod calendly;
+pub mod mcp_audit_sync;
 pub mod mailchimp;
 pub mod ayrshare;
 pub mod listmonk;
