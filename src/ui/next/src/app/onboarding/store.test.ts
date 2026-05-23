@@ -1,7 +1,21 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 describe('useOnboardingStore', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useOnboardingStore.setState({
+      step: 1,
+      businessType: '',
+      businessName: '',
+      businessCategory: '',
+      isLoading: false,
+      error: '',
+      intakeData: null,
+      startResult: null,
+    });
+  });
+
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
@@ -46,5 +60,15 @@ describe('useOnboardingStore', () => {
   it('should update startResult', () => {
     useOnboardingStore.getState().setStartResult({ result: 'test' });
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
+  });
+
+  it('should persist state to localStorage', () => {
+    useOnboardingStore.getState().setStep(3);
+    useOnboardingStore.getState().setBusinessName('Persisted Name');
+
+    // The state is persisted in localStorage under 'onboarding-storage'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
+    expect(storedState.state.step).toBe(3);
+    expect(storedState.state.businessName).toBe('Persisted Name');
   });
 });
