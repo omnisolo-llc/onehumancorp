@@ -99,14 +99,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          setState(() => _state = OnboardingState.dashboard);
+          if (mounted) setState(() => _state = OnboardingState.dashboard);
         } else {
           // If error occurs, go back to input.
-          setState(() => _state = OnboardingState.input);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Network error. Please try again.')),
+            );
+            setState(() => _state = OnboardingState.input);
+          }
         }
       } catch (e) {
         print('Error: \$e');
-        setState(() => _state = OnboardingState.input);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Network error. Please try again.')),
+          );
+          setState(() => _state = OnboardingState.input);
+        }
       }
     }
   }
@@ -270,35 +280,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 32),
-            TextFormField(
-              key: Key('bio-input'), // for testing or just semantics
-              controller: _bioController,
-              textInputAction: TextInputAction.done,
-              keyboardType: TextInputType.text,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText:
-                    'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide.none,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: TextFormField(
+                  key: Key('bio-input'), // for testing or just semantics
+                  controller: _bioController,
+                  textInputAction: TextInputAction.done,
+                  textCapitalization: TextCapitalization.sentences,
+                  keyboardType: TextInputType.text,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: 'Business Bio',
+                    hintText:
+                        'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: EdgeInsets.all(20),
+                  ),
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                  onChanged: (value) {
+                    bio = value;
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 500), () {
+                      _saveDraft(value);
+                    });
+                  },
+                  validator: (value) =>
+                      value == null || value.isEmpty ? 'Required' : null,
+                  onSaved: (value) => bio = value!,
                 ),
-                contentPadding: EdgeInsets.all(20),
               ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                bio = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
-                });
-              },
-              validator: (value) =>
-                  value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
             ),
             SizedBox(height: 32),
             ElevatedButton(
