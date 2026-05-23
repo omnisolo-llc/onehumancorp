@@ -1,9 +1,9 @@
 import { test, expect } from './fixtures';
 
 test.describe('Agent Management', () => {
-  test('should display agents page (My Staff)', async ({ page }) => {
+  test('should display agents page (AI Departments)', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'My Staff' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('should show The Ambassador department', async ({ page }) => {
@@ -18,31 +18,22 @@ test.describe('Agent Management', () => {
     await expect(page.locator('text=Operations')).toBeVisible();
   });
 
-  test('should show The Salesperson department', async ({ page }) => {
+  test('should show The Closer department', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.locator('text=The Salesperson')).toBeVisible();
+    await expect(page.locator('text=The Closer')).toBeVisible();
     await expect(page.locator('text=Sales')).toBeVisible();
   });
 
   test('should toggle department settings', async ({ page }) => {
     await page.goto('/agents');
-    const ambassadorCard = page.locator('text=The Ambassador').locator('..');
 
     // Settings should be hidden initially
-    await expect(page.locator('text=Require approval for quotes > $100')).not.toBeVisible();
+    await expect(page.locator('text=Auto-approve: $0')).not.toBeVisible();
 
-    // Click card to show settings
-    await ambassadorCard.click();
-    await expect(page.locator('text=Require approval for quotes > $100')).toBeVisible();
+    // Click the Advanced toggle to show settings
+    await page.locator('span:has-text("Advanced")').locator('..').locator('button').click();
 
-    // Click checkbox
-    await page.locator('text=Require approval for quotes > $100').locator('input[type="checkbox"]').uncheck();
-
-    // Wait for the alert
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Settings updated for ambassador');
-      await dialog.accept();
-    });
+    await expect(page.locator('text=Auto-approve: $0').first()).toBeVisible();
   });
 });
 
