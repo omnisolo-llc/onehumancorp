@@ -336,7 +336,7 @@ impl DashboardService for MyDashboardService {
         }
 
         let mut final_meetings = Vec::new();
-        let mut final_agents_payload = Vec::new();
+        let final_agents_payload;
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
