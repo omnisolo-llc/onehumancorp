@@ -20,6 +20,8 @@ rust_library(
         "marketing.rs",
         "mcp_dynamic.rs",
         "mod.rs",
+        "marketplace.rs",
+        "marketplace_tool.rs",
         "pydantic.rs",
         "repo_map.rs",
         "ollama.rs",
