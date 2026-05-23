@@ -214,35 +214,24 @@ export function HelpWidget() {
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const helpArticles = [
-    { title: "Getting Started", desc: "Learn the basics of setting up your store." },
-    { title: "My Store", desc: "Manage your products and layout." },
-    { title: "Payments", desc: "Connect your bank and get paid." },
-    { title: "AI Agents", desc: "Hire and manage your AI workforce." },
-    { title: "Marketing", desc: "Grow your audience and sales." },
-    { title: "Account & Billing", desc: "Manage your subscription." },
-    { title: "API Documentation (Advanced)", desc: "Interactive API reference for integrations.", link: "/api-docs" }
-  ];
+  const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
+
+  useEffect(() => {
+    fetch("/api/help")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) setHelpArticles(data);
+      })
+      .catch(() => {});
+  }, []);
 
   const filteredArticles = helpArticles.filter(a =>
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([
-    { id: 1, title: "How to add a product", duration: "1:20" },
-    { id: 2, title: "Setting up payments", duration: "1:15" },
-    { id: 3, title: "Managing inventory", duration: "0:50" },
-    { id: 4, title: "Adding team members", duration: "1:05" },
-    { id: 5, title: "Reviewing orders", duration: "1:10" },
-    { id: 6, title: "Connecting social media", duration: "1:25" },
-    { id: 7, title: "Using the builder", duration: "1:30" },
-    { id: 8, title: "Understanding analytics", duration: "1:00" },
-    { id: 9, title: "Fulfilling orders", duration: "0:45" },
-    { id: 10, title: "Processing refunds", duration: "0:55" }
-  ]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
 
   useEffect(() => {
-    // Local videos take precedence if no API
     fetch("/api/videos")
       .then(res => res.json())
       .then(data => {
