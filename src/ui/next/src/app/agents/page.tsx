@@ -6,6 +6,13 @@ import Link from 'next/link';
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'approvals'>('departments');
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ohc_advanced_settings');
+    if (saved === 'true') {
+      setShowAdvanced(true);
+    }
+  }, []);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -70,15 +77,7 @@ export default function AgentsPage() {
             <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Advanced</span>
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className={`w-10 h-6 rounded-full transition-colors relative ${showAdvanced ? 'bg-indigo-600' : 'bg-gray-200'}`}
-              >
-                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
-              </button>
-            </div>
+
           </div>
           <h1 className="text-3xl font-extrabold font-outfit text-gray-900">AI Departments</h1>
           <p className="text-sm text-gray-500 mt-1">Your autonomous business team.</p>

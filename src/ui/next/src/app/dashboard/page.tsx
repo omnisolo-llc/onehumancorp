@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
@@ -9,6 +9,33 @@ export default function Dashboard() {
   const router = useRouter();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ohc_advanced_settings');
+    if (saved === 'true') {
+      setShowAdvanced(true);
+    }
+  }, []);
+
+  const handleToggleAdvanced = () => {
+    const newVal = !showAdvanced;
+    setShowAdvanced(newVal);
+    localStorage.setItem('ohc_advanced_settings', String(newVal));
+  };
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
@@ -224,9 +251,36 @@ export default function Dashboard() {
              <Link href="/referrals" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🎁</span> Referrals
              </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                 AC
+
+             <div className="relative" ref={profileMenuRef}>
+                 <button
+                     onClick={() => setShowProfileMenu(!showProfileMenu)}
+                     aria-expanded={showProfileMenu}
+                     aria-haspopup="true"
+                     aria-label="Profile menu"
+                     className="w-11 h-11 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 cursor-pointer hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                 >
+                     AC
+                 </button>
+                 {showProfileMenu && (
+                     <div className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl z-50 p-2 flex flex-col" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)" }}>
+                         <div className="px-3 py-3 text-sm font-bold text-gray-900 border-b border-gray-100 mb-1">
+                             Profile menu
+                         </div>
+                         <button
+                            onClick={handleToggleAdvanced}
+                            className="flex items-center justify-between px-3 py-4 min-h-[44px] hover:bg-gray-50 rounded-lg cursor-pointer transition-colors w-full text-left"
+                            aria-pressed={showAdvanced}
+                         >
+                            <span className="text-sm font-medium text-gray-700 pr-2">Advanced Developer Settings</span>
+                            <div className={`w-10 h-6 rounded-full transition-colors duration-300 relative shrink-0 ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                            </div>
+                         </button>
+                     </div>
+                 )}
              </div>
+
          </div>
       </header>
 
@@ -237,15 +291,7 @@ export default function Dashboard() {
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
-                        >
-                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
-                        </button>
-                    </div>
+
                 </div>
                 <div className="flex flex-col gap-4">
                     {approvals.map(approval => {
