@@ -3,25 +3,13 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "ohc.fullname" . }}-backend-vpa
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-backend
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ include "ohc.fullname" . }}-backend
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: backend
-        controlledResources: ["cpu", "memory"]
-        minAllowed:
-          cpu: {{ .Values.backend.resources.requests.cpu | quote }}
-          memory: {{ .Values.backend.resources.requests.memory | quote }}
-        maxAllowed:
-          cpu: {{ .Values.backend.resources.limits.cpu | quote }}
-          memory: {{ .Values.backend.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.vpa.enabled }}
@@ -29,25 +17,13 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "ohc.fullname" . }}-core-vpa
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-core
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ include "ohc.fullname" . }}-core
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: ohc-core
-        controlledResources: ["cpu", "memory"]
-        minAllowed:
-          cpu: {{ .Values.ohcCore.resources.requests.cpu | quote }}
-          memory: {{ .Values.ohcCore.resources.requests.memory | quote }}
-        maxAllowed:
-          cpu: {{ .Values.ohcCore.resources.limits.cpu | quote }}
-          memory: {{ .Values.ohcCore.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.vpa.enabled }}
@@ -55,25 +31,13 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "ohc.fullname" . }}-chatwoot-vpa
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-chatwoot
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ include "ohc.fullname" . }}-chatwoot
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: chatwoot
-        controlledResources: ["cpu", "memory"]
-        minAllowed:
-          cpu: {{ .Values.chatwoot.resources.requests.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.requests.memory | quote }}
-        maxAllowed:
-          cpu: {{ .Values.chatwoot.resources.limits.cpu | quote }}
-          memory: {{ .Values.chatwoot.resources.limits.memory | quote }}
 {{- end }}
 ---
 {{- if and .Values.powersync.enabled .Values.powersync.vpa.enabled }}
@@ -81,23 +45,11 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ include "ohc.fullname" . }}-powersync-vpa
-  labels:
-    {{- include "ohc.labels" . | nindent 4 }}
 spec:
   targetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "ohc.fullname" . }}-powersync
+    apiVersion: "apps/v1"
+    kind:       Deployment
+    name:       {{ include "ohc.fullname" . }}-powersync
   updatePolicy:
     updateMode: "Auto"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: powersync
-        controlledResources: ["cpu", "memory"]
-        minAllowed:
-          cpu: {{ .Values.powersync.resources.requests.cpu | quote }}
-          memory: {{ .Values.powersync.resources.requests.memory | quote }}
-        maxAllowed:
-          cpu: {{ .Values.powersync.resources.limits.cpu | quote }}
-          memory: {{ .Values.powersync.resources.limits.memory | quote }}
 {{- end }}

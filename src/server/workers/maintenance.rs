@@ -16,7 +16,7 @@ impl MaintenanceWorker {
             let mut interval = interval(Duration::from_secs(300)); // Every 5 minutes
             loop {
                 interval.tick().await;
-                if let Err(e) = self.db.cleanup_stagnant_missions(3600).await { // 1 hour timeout
+                if let Err(e) = self.db.cleanup_stagnant_missions(300).await { // 1 hour timeout
                     tracing::error!("MaintenanceWorker: Failed to cleanup stagnant missions: {}", e);
                 }
             }
