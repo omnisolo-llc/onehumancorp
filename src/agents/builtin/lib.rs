@@ -53,4 +53,3 @@ pub mod consolidation_worker;
 pub mod sqlite_memory;
 
 pub mod agent_protocol;
-pub mod actor_model;

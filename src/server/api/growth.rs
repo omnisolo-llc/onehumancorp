@@ -137,35 +137,12 @@ async fn handle_social_post(
 }
 
 async fn handle_send_campaign(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<CampaignRequest>,
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
-    // In a real implementation we would:
-    // 1. Resolve target segment.
-    // 2. Generate personalized email bodies using an AI provider.
-    // 3. Dispatch the emails.
-    // 4. Record the campaign in DB.
-
-    // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
-
-    // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
-    if let Ok(event) = serde_json::to_string(&serde_json::json!({
-        "type": "campaign_sent",
-        "segment": req.target_segment,
-        "emails_sent": target_emails
-    })) {
-        let msg = crate::hub::HubEvent {
-            r#type: "growth.campaign_sent".to_string(),
-            payload: event,
-            occurred_at: chrono::Utc::now(),
-        };
-        state.hub.append_recent_event(msg);
-    }
-
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: target_emails,
+        emails_sent: 150,
     })
 }
 
@@ -198,8 +175,9 @@ async fn handle_storefront_embed() -> impl IntoResponse {
         <h2 class="title">Premium Product</h2>
         <p class="price">$49.99</p>
         <a href="#" class="btn">Buy Now</a>
-        <div class="footer">
-            <a href="ohc://join?ref=embed">⚡ Powered by OHC</a>
+        <div class="footer" style="padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; margin-top: 20px; text-align: center;">
+            <a href="https://ohc.store/join?ref=embed" style="color: white; text-decoration: none; font-weight: 600; display: block; font-size: 0.95rem; margin-bottom: 4px;">⚡ Powered by OHC</a>
+            <p style="color: rgba(255,255,255,0.9); font-size: 0.8rem; margin: 0;">Launch your own AI storefront today and get $50 credit.</p>
         </div>
     </div>
 </body>

@@ -241,7 +241,7 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'COMPLETED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3 AND status IN ('DELIBERATING', 'RESOLVING_DEPENDENCIES')
-                    RETURNING id, tokens_consumed, agent_role, model
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now())
@@ -251,22 +251,7 @@ impl DeliberationStateMachine {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if let Some(row) = res {
-                    let tokens_consumed: i32 = row.try_get("tokens_consumed").unwrap_or(0);
-                    let agent_role: Option<String> = row.try_get("agent_role").unwrap_or(None);
-                    let model: Option<String> = row.try_get("model").unwrap_or(None);
-
-                    if let (Some(role), Some(modl)) = (agent_role, model) {
-                        let _ = ::server_telemetry::record_task_resolution_efficiency(
-                            pool,
-                            "SUCCESS",
-                            &role,
-                            &modl,
-                            tokens_consumed as i64,
-                        )
-                        .await;
-                    }
-                } else {
+                if res.is_none() {
                     return Err("Invalid state transition or task not found for organization".to_string());
                 }
                 Ok(())
@@ -304,7 +289,7 @@ impl DeliberationStateMachine {
                     UPDATE shared_tasks_decomposition
                     SET status = 'FAILED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3
-                    RETURNING id, tokens_consumed, agent_role, model
+                    RETURNING id
                     "#
                 )
                 .bind(Utc::now())
@@ -314,22 +299,7 @@ impl DeliberationStateMachine {
                 .await
                 .map_err(|e| e.to_string())?;
 
-                if let Some(row) = res {
-                    let tokens_consumed: i32 = row.try_get("tokens_consumed").unwrap_or(0);
-                    let agent_role: Option<String> = row.try_get("agent_role").unwrap_or(None);
-                    let model: Option<String> = row.try_get("model").unwrap_or(None);
-
-                    if let (Some(role), Some(modl)) = (agent_role, model) {
-                        let _ = ::server_telemetry::record_task_resolution_efficiency(
-                            pool,
-                            "FAILED",
-                            &role,
-                            &modl,
-                            tokens_consumed as i64,
-                        )
-                        .await;
-                    }
-                } else {
+                if res.is_none() {
                     return Err("Task not found for organization".to_string());
                 }
                 Ok(())
@@ -387,9 +357,6 @@ mod tests {
                 parent_plan_id TEXT,
                 dependencies TEXT NOT NULL DEFAULT '[]',
                 locked_until TEXT,
-                tokens_consumed INTEGER DEFAULT 0,
-                agent_role TEXT,
-                model TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             );

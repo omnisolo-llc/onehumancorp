@@ -146,7 +146,7 @@ impl StateManager for StandaloneStateManager {
             self.transition_state_inner(task_id, tenant_id, from_state, to_state, agent_id, reason, &lock_guard, sqlite_pool).await
         };
 
-        match tokio::time::timeout(std::time::Duration::from_secs(60), transition_future).await {
+        match tokio::time::timeout(std::time::Duration::from_secs(2), transition_future).await {
             Ok(Ok(())) => Ok(()),
             Ok(Err(e)) => Err(e),
             Err(_) => Err("Timeout acquiring lock or writing database transition".to_string()),
@@ -194,7 +194,7 @@ impl StateManager for StandaloneStateManager {
             Ok::<_, String>((lock_guard, tx, rows))
         };
 
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
+        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(2), acquire_and_fetch).await {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
                 if e.contains("Timeout acquiring lock") {

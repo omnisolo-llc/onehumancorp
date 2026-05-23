@@ -11,7 +11,6 @@ void main() {
     expect(find.text('OneHumanCorp'), findsOneWidget);
     expect(find.text('The universal operating system for small business.'), findsOneWidget);
     expect(find.text('Start a Business'), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {
@@ -32,18 +31,6 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio');
     await tester.pumpAndSettle();
 
-    // Next to Name step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Enter name
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-
-    // Next to Template step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
@@ -51,10 +38,8 @@ void main() {
     // Expect to see SnackBar
     expect(find.text('Network error. Please try again.'), findsOneWidget);
 
-    // Expect to still be on the template selection state (after going back to input state on error)
-    // Actually the code says setState(() => _state = OnboardingState.input);
-    // So it stays in the Input state but the _currentInputStep will remain what it was (2).
-    expect(find.text('Choose a look'), findsOneWidget);
+    // Expect to still be on the input state
+    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Debounce triggers draft save', (WidgetTester tester) async {
@@ -108,18 +93,6 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), 'Test generating state');
     await tester.pumpAndSettle();
 
-    // Next to Name step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Enter name
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-
-    // Next to Template step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
     await tester.pump(); // Don't pump and settle, so we can see the generating state!
@@ -128,7 +101,7 @@ void main() {
     expect(find.text('AI is building your storefront...'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
   });
 
   testWidgets('Onboarding Screen - Loads existing draft bio on init', (WidgetTester tester) async {
@@ -148,6 +121,5 @@ void main() {
 
     // Verify the text field has the loaded bio
     expect(find.text('Existing loaded bio'), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 }

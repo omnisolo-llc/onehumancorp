@@ -218,7 +218,7 @@ impl TeammateMesh for SleepingMockMesh {
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
-        tokio::time::sleep(tokio::time::Duration::from_millis(61000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
         Ok(true)
     }
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
@@ -239,14 +239,14 @@ async fn test_degradation_fallback_standalone() {
     let state_manager = StandaloneStateManager::new(db.clone(), mesh);
 
     // Testing the fail-safe behavior via mocked timeout
-    // The acquire_lock on the MockMesh sleeps for 61s, which exceeds the 60s timeout.
+    // The acquire_lock on the MockMesh sleeps for 2.5s, which exceeds the 2s timeout.
     let start = std::time::Instant::now();
     let tasks = state_manager.pull_available_tasks(10).await.unwrap();
     let elapsed = start.elapsed();
 
-    // It should have timed out around 60 seconds, not the full 61 seconds
-    assert!(elapsed < std::time::Duration::from_millis(62000));
-    assert!(elapsed > std::time::Duration::from_millis(59000));
+    // It should have timed out around 2 seconds, not the full 2.5 seconds
+    assert!(elapsed < std::time::Duration::from_millis(2200));
+    assert!(elapsed > std::time::Duration::from_millis(1900));
 
     // And returned empty list fail-safe
     assert_eq!(tasks.len(), 0);

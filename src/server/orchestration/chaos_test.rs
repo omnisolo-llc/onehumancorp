@@ -138,7 +138,7 @@ impl TeammateMesh for SleepingMockMesh {
     async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> {
-        tokio::time::sleep(tokio::time::Duration::from_millis(61000)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await;
         Ok(true)
     }
     async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
@@ -256,10 +256,10 @@ mod chaos_tests {
         let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
-        // The pull_available_tasks for cloud has a 60-second timeout on the lock or DB
-        // The mocked sleeping mesh sleeps for 61s, forcing the 60s timeout to trigger.
-        assert!(elapsed < std::time::Duration::from_millis(62000));
-        assert!(elapsed > std::time::Duration::from_millis(59000));
+        // The pull_available_tasks for cloud has a 2-second timeout on the lock or DB
+        // The mocked sleeping mesh sleeps for 2.5s, forcing the 2s timeout to trigger.
+        assert!(elapsed < std::time::Duration::from_millis(2200));
+        assert!(elapsed > std::time::Duration::from_millis(1900));
 
         // It must fallback safely returning an empty vector
         assert_eq!(tasks.len(), 0);

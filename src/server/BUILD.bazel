@@ -162,7 +162,6 @@ rust_binary(
         "benchmarks",
         "chaos",
         "db",
-        "hub",
         "msgbus",
         "pipeline",
         "powersync",
@@ -173,6 +172,7 @@ rust_binary(
         "orchestration",
         "interop",
         "workers",
+        "services",
     ]
 ]
 

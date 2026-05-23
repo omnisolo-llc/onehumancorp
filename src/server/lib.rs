@@ -2012,45 +2012,7 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
-        ])) }))
-        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({
-            "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
-            "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
-            "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
-            "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.",
-            "referral-tooltip": "Share your unique link to earn credits when friends join OHC.",
-            "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.",
-            "department-card-tooltip": "Click to view and manage pending approvals for this department.",
-            "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
-            "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
-            "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
-            "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
-        })) }))
-        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
-        ])) }))
-        .route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({
-            "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
-            "link": { "url": "/help", "title": "Read the full article →" }
-        })) }))
-        .merge(webhook_router)
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Tell us what you sell, who buys it, and how your brand feels.", "generate-btn-tooltip": "Our smart helpers will read your text and build a complete store for you.", "launch-btn-tooltip": "Make your store live on the internet right now.", "team-activity-tooltip": "See what your smart helpers are working on right now.", "referral-tooltip": "Share this link with friends. If they join, you earn credits.", "swarm-online-tooltip": "Your smart helpers are online and doing work for you.", "department-card-tooltip": "Click to see tasks that need your okay.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "Hi! I am your Help Helper! I answer questions about how to use this app. Want to set up your store? Read our Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 
@@ -2693,14 +2655,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
-            @media (prefers-color-scheme: dark) {
-                .glass, .screen {
-                    background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(30px) saturate(210%) !important;
-                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                }
-            }
                     </style>
                 </head>
                 <body>
@@ -2798,7 +2752,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
+                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -2974,18 +2928,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
                         </div>
 
-                        <!-- Automated AI Review Requests -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.</p>
-                            <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
-                                ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
-                            </div>
-                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
-                        </div>
-
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -3005,36 +2947,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inbox-screen" class="screen glass">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
+                        <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Powered by Manychat Unified Inbox</p>
+
                         <div class="card glass" onclick="this.classList.toggle('active')">
                             <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
+                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Facebook Comment <span style="font-size: 20px;">📘</span></h3>
                             <p>Are you open on Sundays?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
+                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Instagram DM <span style="font-size: 20px;">📸</span></h3>
                             <p>Can I order a custom cake?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Sure, please send details!'">Quick Reply</button>
+                            <button onclick="document.getElementById('manychat-reply-input').value = 'Sure, please send details!'">Quick Reply</button>
                         </div>
                         <div class="card glass">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">WhatsApp <span style="font-size: 20px;">💬</span></h3>
                             <p>Hello, do you deliver?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
-                            <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
+                            <button onclick="document.getElementById('manychat-reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
-                            <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+                            <input id="manychat-reply-input" type="text" placeholder="Type a message to send via Manychat...">
+                            <button onclick="const m = document.getElementById('manychat-reply-input').value; if(m) { alert('Sending via Manychat...'); const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('manychat-reply-input').value = ''; }">Send Reply</button>
                         </div>
                     </div>
 
@@ -3045,7 +2989,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Calendly Integration</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Calendly account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Calendly</button>
+                            <div style="margin-bottom: 16px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 8px;">
+                                <label style="display: block; font-size: 14px; font-weight: bold; margin-bottom: 8px;">Calendly Personal Link</label>
+                                <input type="text" placeholder="https://calendly.com/your-name" style="width: 100%; min-height: 36px; border-radius: 6px; padding: 0 12px; border: 1px solid var(--border);">
+                            </div>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;" onclick="alert('Calendly Connected! Widget embedded on storefront.');">Connect Calendly</button>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Zoom Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Automatically generate a Zoom meeting link when a customer books a virtual service.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #2D8CFF; color: white; border: none; width: 100%;" onclick="alert('Zoom Connected!');">Connect Zoom</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3057,6 +3011,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Next Item</h3>
                             <p>Team Sync - 14:00</p>
                             <p style="color: #FF9500; font-weight: 500;">In 10 mins</p>
+                            <p style="font-size: 14px; margin-top: 8px; background: #eef2ff; padding: 8px; border-radius: 4px; display: inline-block;"><a href="https://zoom.us/j/mock_meeting_123" target="_blank" style="text-decoration: none; color: #2D8CFF;">🎥 Join Zoom Meeting</a></p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
@@ -3070,6 +3025,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input type="date" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                                 <input type="time" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                                 <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                <select style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                    <option value="in_person">In Person</option>
+                                    <option value="zoom">Zoom Meeting (Auto-generate link)</option>
+                                </select>
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
@@ -3107,7 +3066,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page (Your Team) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Agents</h1>
+                        <h1 class="outfit">Your Team</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -3212,13 +3171,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mailchimp...')">Connect</button>
                             </div>
 
-                            <!-- Resend Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Resend</h3>
-                                </div>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
-                            </div>
 
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
@@ -3283,6 +3235,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
+                        <h2>Notifications (Twilio SMS)</h2>
+                        <div class="card glass" style="margin-bottom: 24px;">
+                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS for New Orders</label>
+                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS Appointment Reminders</label>
+                            <label style="display: block; margin-bottom: 12px;"><input type="checkbox"> Send SMS Order Confirmations to Customers</label>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-top: 16px;">Powered by Twilio. Connect your Twilio account in the API settings.</p>
+                        </div>
                         <h2>General</h2>
                         <label><input type="checkbox"> Enable Email Notifications</label>
                         <label><input type="checkbox"> Enable SMS Reminders</label>
@@ -3426,13 +3385,55 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
                     </div>
 
+                    <!-- Contacts view -->
+                    <div id="contacts-screen" class="screen glass">
+                        <h1>Contacts</h1>
+                        <p>Manage your customers and marketing sync.</p>
+                        <div class="card glass">
+                            <h3>Mailchimp Integration</h3>
+                            <button onclick="alert('OAuth redirecting to Mailchimp...');">Connect Mailchimp</button>
+                            <br/><br/>
+                            <button onclick="alert('Exporting/Syncing to Mailchimp... Done!');">Export/Sync to Mailchimp</button>
+                        </div>
+                        <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                    </div>
+
+                    <!-- Order Details -->
+                    <div id="order-details-screen" class="screen glass">
+                        <h1>Order Details</h1>
+                        <p>Order #1234 - Status: Paid</p>
+                        <div class="card glass">
+                            <h3>Shipping via Shippo</h3>
+                            <p>Live Rates: USPS Priority $5.50 | FedEx Ground $8.00</p>
+                            <button onclick="document.getElementById('shippo-tracking').style.display='block'; alert(&quot;Generated Label PDF via Shippo!&quot;);">Generate Label</button>
+                            <p id="shippo-tracking" style="display: none; margin-top: 12px;">
+                                <a href=&quot;#&quot; onclick="alert(&quot;Downloading PDF...&quot;)">Download PDF Label</a><br/>
+                                <a href=&quot;#&quot; target="_blank">Track Package (USPS)</a>
+                            </p>
+                        </div>
+                        <button class="secondary" onclick="showScreen(&quot;dashboard-screen&quot;)">Back to Dashboard</button>
+                    </div>
+
                      <!-- Checkout Page -->
                      <div id="checkout-screen" class="screen">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+
+                             <div style="margin: 20px 0; padding: 15px; border: 1px solid var(--border); border-radius: 8px;">
+                                <h3>Payment Method</h3>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    <input type="radio" name="payment_method" value="stripe" checked>
+                                    Credit Card (Stripe)
+                                </label>
+                                <label style="display: block; margin-bottom: 10px;">
+                                    <input type="radio" name="payment_method" value="mercadopago">
+                                    Mercado Pago
+                                </label>
+                             </div>
+
+                             <button onclick="const method = document.querySelector('input[name=\'payment_method\']:checked').value; if(method === 'mercadopago') { alert(&quot;Redirecting to Mercado Pago hosted checkout...&quot;); } else { alert(&quot;Payment successful via Stripe!&quot;); } showScreen('dashboard-screen');">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
@@ -3519,15 +3520,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px auto; max-width: 375px; width: 100%; box-sizing: border-box;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="background: rgba(255, 255, 255, 0.5); backdrop-filter: blur(20px); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -3538,7 +3539,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -3546,7 +3547,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3557,7 +3558,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
                             <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -3565,20 +3566,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden" class="hidden" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
                             <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden" class="hidden" style="display: none;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -3589,7 +3590,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
@@ -3616,13 +3617,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none;">
+                        <div id="step-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none;">
+                        <div id="step-generating" class="hidden" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
@@ -3631,7 +3632,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none;">
+                        <div id="step-launch-ai" class="hidden" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
@@ -3953,41 +3954,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
-                        async function sendReviewCampaign() {
-                            const btn = document.getElementById('send-review-campaign-btn');
-                            btn.textContent = 'Generating...';
-                            btn.disabled = true;
-
-                            try {
-                                const response = await fetch('/api/v1/growth/campaign/send', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        name: 'Automated Review Request',
-                                        subject: 'How did we do? Leave a review!',
-                                        body: 'We hope you loved your recent purchase. Please leave a review.',
-                                        target_segment: 'recent_buyers_no_review'
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    document.getElementById('review-emails-sent').textContent = data.emails_sent;
-                                    document.getElementById('review-campaign-success').style.display = 'block';
-                                    btn.style.display = 'none';
-                                } else {
-                                    btn.textContent = '✨ Send AI Review Requests';
-                                    btn.disabled = false;
-                                    alert('Failed to send campaign');
-                                }
-                            } catch (e) {
-                                console.error('Failed to send review campaign', e);
-                                btn.textContent = '✨ Send AI Review Requests';
-                                btn.disabled = false;
-                                alert('Failed to send campaign');
-                            }
-                        }
-
                         function closeDomainSetup() {
                             document.getElementById('domain-setup-sheet').classList.remove('open');
                         }
@@ -4203,8 +4169,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'inbox-screen': '/inbox',
                             'seasonal-promo-screen': '/seasonal-promos',
                             'meetings-screen': '/meetings',
-                            'meeting-room-screen': '/meetings/room/1',
-                            'cost-dashboard-screen': '/cost-dashboard'
+                            'meeting-room-screen': '/meetings/room/1'
                         };
 
                         async function handleLogin(btn) {
@@ -4661,7 +4626,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {

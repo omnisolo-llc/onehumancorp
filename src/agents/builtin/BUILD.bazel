@@ -48,7 +48,6 @@ rust_library(
         "json_rpc_server.rs",
         "observation_masking.rs",
         "verification_loops.rs",
-        "actor_model.rs",
         "agent.rs",
         "checkpointer.rs",
         "tools_gating.rs",
