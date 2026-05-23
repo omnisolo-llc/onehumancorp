@@ -23,6 +23,7 @@ pub struct IntegrationsRegistry {
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
+    nylas_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nylas::provider::NylasProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
@@ -61,6 +62,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            nylas_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -238,6 +240,10 @@ impl IntegrationsRegistry {
             let mut clients = self.google_calendar_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
         }
+        if integration_id == "nylas" {
+            let mut clients = self.nylas_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::nylas::provider::NylasProvider::new(creds.api_token.clone())));
+        }
         if integration_id == "mailchimp" {
             let mut clients = self.mailchimp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mailchimp::provider::MailchimpProvider::new(creds.api_token.clone())));
@@ -379,6 +385,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
+        if integration_id == "nylas" {
+            let clients = self.nylas_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.get_free_busy(time_min, time_max).await;
+            }
+        }
+
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
@@ -499,6 +512,13 @@ impl IntegrationsRegistry {
     }
 
     pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
+        if integration_id == "nylas" {
+            let clients = self.nylas_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.create_event(summary, start_time, end_time).await;
+            }
+        }
+
         let client = {
             if integration_id == "google_calendar" {
                 let clients = self.google_calendar_clients.read().unwrap();
