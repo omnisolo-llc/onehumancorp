@@ -2,69 +2,96 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../lib/screens/onboarding.dart';
 
 void main() {
-  testWidgets('Onboarding Screen - Full Flow Test', (WidgetTester tester) async {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('Onboarding Screen - Full 4-Step Flow Test', (WidgetTester tester) async {
     final client = MockClient((request) async {
       if (request.url.path == '/api/onboarding/start') {
+        await Future.delayed(Duration(milliseconds: 500));
         return http.Response('{"status": "ok"}', 200);
-      } else if (request.url.path == '/api/onboarding/launch') {
-        return http.Response('{"status": "ok"}', 200);
-      } else if (request.url.path == '/api/onboarding/draft') {
-        return http.Response('{"bio": "saved bio test"}', 200);
       }
       return http.Response('Not Found', 404);
     });
 
     await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
 
-    // Tap 'Start a Business' on the welcome screen
+    // Welcome Screen
     await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle();
 
-    // Verify we are on the input screen
-    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
-
-    // We no longer trigger 'Required' because the mock returns 'saved bio test'
-    // so the field is not empty! Let's clear the field first.
-    await tester.enterText(find.byKey(Key('bio-input')), '');
-    await tester.pumpAndSettle();
+    // Step 1: Business Info
+    expect(find.text('Step 1 of 4'), findsOneWidget);
 
     // Tap without entering text to trigger validation
-    await tester.tap(find.text('Build My Storefront'));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Required'), findsWidgets);
+
+    await tester.enterText(find.byKey(Key('business-name-input')), 'Test Business Name');
+    await tester.enterText(find.byKey(Key('business-category-input')), 'Test Category');
     await tester.pumpAndSettle();
 
-    // Expect the validator message 'Required' for the bio field
-    expect(find.text('Required'), findsOneWidget);
-
-    // Fill out the bio form
-    await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Tap to build my storefront
-    await tester.tap(find.text('Build My Storefront'));
+    // Step 2: Visual Style
+    expect(find.text('Step 2 of 4'), findsOneWidget);
+
+    // Try without selecting
+    await tester.ensureVisible(find.text('Next'));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Please select a visual style'), findsOneWidget);
+
+    // Select style
+    await tester.ensureVisible(find.text('Elegant'));
+    await tester.tap(find.text('Elegant'));
     await tester.pumpAndSettle();
 
-    // Expect to be on Dashboard state
-    expect(find.text('Storefront Generated!'), findsOneWidget);
-
-    // Go to draft preview
-    await tester.tap(find.text('Preview Site'));
+    await tester.ensureVisible(find.text('Next'));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
-    // Expect to be on Draft state
-    expect(find.text('Preview Mode'), findsOneWidget);
-    expect(find.text('1-Tap Launch'), findsOneWidget);
+    // Step 3: First Item
+    expect(find.text('Step 3 of 4'), findsOneWidget);
 
-    // Verify touch target for edit
-    expect(find.byIcon(Icons.edit), findsOneWidget);
-
-    // Launch store
-    await tester.tap(find.text('1-Tap Launch'));
+    await tester.enterText(find.byKey(Key('item-name-input')), 'First Awesome Item');
+    await tester.enterText(find.byKey(Key('item-price-input')), '42.00');
     await tester.pumpAndSettle();
 
-    // Expect to be on Live state
-    expect(find.text("You're Live!"), findsOneWidget);
+    await tester.ensureVisible(find.text('Next'));
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+
+    // Step 4: Payment
+    expect(find.text('Step 4 of 4'), findsOneWidget);
+
+    // Initial state check
+    expect(find.text('Connect Bank Account'), findsOneWidget);
+
+    await tester.tap(find.text('Connect Bank Account'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Bank Connected'), findsOneWidget);
+
+    // Launch
+    await tester.tap(find.text('Launch My Business'));
+    await tester.pump(); // Don't pumpAndSettle to catch loading state if needed, but going to pumpAndSettle is okay since API is mocked fast
+
+    // Expect generating
+    expect(find.text('AI is building your storefront...'), findsOneWidget);
+
+    await tester.pumpAndSettle();
+
+    // Final Success / Live state
+    expect(find.text('Store Live!'), findsOneWidget);
+    expect(find.text('https://testbusinessname.ohc.app'), findsOneWidget);
+    expect(find.text('Go to Dashboard'), findsOneWidget);
   });
 }
