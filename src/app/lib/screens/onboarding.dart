@@ -258,13 +258,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       padding: EdgeInsets.all(24),
       child: Form(
         key: _formKey,
-        child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 300),
-          child: _currentInputStep == 0
-              ? _buildBioStep()
-              : _currentInputStep == 1
-                  ? _buildNameStep()
-                  : _buildTemplateStep(),
+        child: Column(
+          children: [
+            Text(
+              'Step ${_currentInputStep + 1} of 3',
+              style: TextStyle(fontFamily: 'Inter', color: Colors.grey[600]),
+            ),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: Duration(milliseconds: 300),
+                child: _currentInputStep == 0
+                    ? _buildBioStep()
+                    : _currentInputStep == 1
+                        ? _buildNameStep()
+                        : _buildTemplateStep(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -297,7 +307,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               controller: _bioController,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.text,
+              keyboardType: TextInputType.multiline,
+              autofocus: true,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
@@ -368,6 +379,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               initialValue: businessName,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
+              autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Cakes',
