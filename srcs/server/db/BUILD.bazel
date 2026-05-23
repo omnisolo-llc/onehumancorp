@@ -1,0 +1,9 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "db",
+    srcs = ["db.go"],
+    embedsrcs = ["migrations/014_shared_tasks.sql"],
+    importpath = "github.com/onehumancorp/mono/srcs/server/db",
+    visibility = ["//visibility:public"],
+)
