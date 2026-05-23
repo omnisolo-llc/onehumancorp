@@ -56,6 +56,10 @@ export default function Dashboard() {
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
+  // Storage Limit / Contextual Upgrade State
+  const [storageUsedMB, setStorageUsedMB] = useState<number>(450); // Simulating approaching limit
+  const [showUpgradeCTA, setShowUpgradeCTA] = useState<boolean>(true);
+
   useEffect(() => {
     async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
@@ -343,29 +347,114 @@ export default function Dashboard() {
 
          {approvals.length === 0 && (
 <>
-{/* Business Snapshot */}
-         <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+{/* Today View (Mobile Optimized) & Agent Actions */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Today</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+                {/* Mobile-first 375px optimized snapshot */}
+                <div className="lg:col-span-1 max-w-[375px] w-full flex flex-col gap-4">
+                  <div className="ohc-hybrid-panel p-5 shadow-sm rounded-2xl bg-white/80 border border-gray-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-gray-500 mb-1">You have</div>
+                        <div className="text-2xl font-bold font-outfit text-gray-900">2 new orders</div>
+                        <div className="text-xs text-green-600 font-medium mt-1">Ready to process</div>
+                      </div>
+                      <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-xl shadow-inner">
+                        📦
+                      </div>
+                  </div>
+
+                  <div className="ohc-hybrid-panel p-5 shadow-sm rounded-2xl bg-white/80 border border-gray-100 flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-medium text-gray-500 mb-1">Today's Sales</div>
+                        <div className="text-2xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+                      </div>
+                      <div className="w-12 h-12 bg-green-50 rounded-full flex items-center justify-center text-xl shadow-inner">
+                        💰
+                      </div>
+                  </div>
                 </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
-                </div>
+                {/* Agent Actions Feed */}
+                <div className="lg:col-span-2">
+                  <div className="ohc-hybrid-panel p-0 shadow-sm rounded-2xl bg-white/80 border border-gray-100 overflow-hidden h-full flex flex-col">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                      <h3 className="font-semibold text-gray-900 font-outfit">Agent Actions</h3>
+                      <span className="text-xs font-medium px-2 py-1 bg-indigo-50 text-indigo-600 rounded-full">Live</span>
+                    </div>
+                    <div className="p-2 flex-1 flex flex-col gap-2">
+                      <div className="p-3 rounded-xl hover:bg-gray-50 flex gap-3 items-start transition-colors border border-transparent">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Order #1042 processed</div>
+                          <div className="text-xs text-gray-500 mt-0.5">The Operations Agent synced inventory and updated stock.</div>
+                          <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider font-semibold">2m ago</div>
+                        </div>
+                      </div>
 
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                      <div className="p-3 rounded-xl hover:bg-gray-50 flex gap-3 items-start transition-colors border border-transparent">
+                        <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Auto-replied to Instagram DM</div>
+                          <div className="text-xs text-gray-500 mt-0.5">The Marketing Agent answered a question about pricing.</div>
+                          <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider font-semibold">15m ago</div>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl hover:bg-gray-50 flex gap-3 items-start transition-colors border border-transparent">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 flex-shrink-0 mt-0.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">Low stock alert</div>
+                          <div className="text-xs text-gray-500 mt-0.5">The Advisor noticed you are running low on "Vanilla Cupcakes".</div>
+                          <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider font-semibold">1h ago</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
             </div>
          </section>
+
+         {/* Contextual Upgrade CTA */}
+         {showUpgradeCTA && storageUsedMB > 400 && (
+           <section className="mb-8">
+             <div className="p-4 sm:p-6 bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+                <div className="flex items-center gap-4 z-10">
+                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" /></svg>
+                   </div>
+                   <div>
+                     <h3 className="font-bold text-gray-900 font-outfit">You're growing fast!</h3>
+                     <p className="text-sm text-gray-600 mt-1">You've used {storageUsedMB}MB of your 500MB free storage. Upgrade to Starter to get unlimited high-res photo storage and a custom domain.</p>
+
+                     <div className="w-full bg-gray-200 rounded-full h-1.5 mt-3 max-w-xs">
+                        <div className="bg-blue-600 h-1.5 rounded-full" style={{ width: `${(storageUsedMB / 500) * 100}%` }}></div>
+                     </div>
+                   </div>
+                </div>
+                <div className="flex gap-2 z-10 w-full sm:w-auto">
+                  <button
+                    onClick={() => setShowUpgradeCTA(false)}
+                    className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors flex-1 sm:flex-none text-center"
+                  >
+                    Dismiss
+                  </button>
+                  <Link href="/pricing" className="px-4 py-2 bg-[#1D1D1F] text-white text-sm font-bold rounded-lg shadow-md hover:bg-black transition-colors whitespace-nowrap flex-1 sm:flex-none text-center">
+                    Upgrade to Starter
+                  </Link>
+                </div>
+             </div>
+           </section>
+         )}
 
          {/* Growth & Promotions Generator Card */}
          <section className="mb-8">

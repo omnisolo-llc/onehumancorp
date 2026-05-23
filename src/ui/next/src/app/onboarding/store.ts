@@ -6,6 +6,7 @@ interface OnboardingState {
   businessType: string;
   businessName: string;
   businessCategory: string;
+  uploadedPhoto: string | null;
   isLoading: boolean;
   error: string;
   intakeData: any;
@@ -14,6 +15,7 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
   setBusinessCategory: (category: string) => void;
+  setUploadedPhoto: (photo: string | null) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
@@ -27,6 +29,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   businessType: '',
   businessName: '',
   businessCategory: '',
+  uploadedPhoto: null,
   isLoading: false,
   error: '',
   intakeData: null,
@@ -35,6 +38,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
   setBusinessCategory: (businessCategory) => set({ businessCategory }),
+  setUploadedPhoto: (uploadedPhoto) => set({ uploadedPhoto }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),

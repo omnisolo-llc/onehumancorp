@@ -12,6 +12,7 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
+    uploadedPhoto, setUploadedPhoto,
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
@@ -20,16 +21,6 @@ export default function OnboardingWizard() {
 
   const handleNext = () => {
     if (step === 1) {
-      if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
       if (!businessName.trim()) {
         setError("Please enter your business name.");
         return;
@@ -39,13 +30,9 @@ export default function OnboardingWizard() {
         return;
       }
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!businessCategory.trim()) {
-        setError("Please describe your niche.");
-        return;
-      }
-      if (businessCategory.trim().length < 5) {
-        setError("Niche description must be at least 5 characters.");
+        setError("Please select a category.");
         return;
       }
     }
@@ -54,19 +41,10 @@ export default function OnboardingWizard() {
   };
 
   const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
-      return;
-    }
-
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}\nPhoto Provided: ${uploadedPhoto ? 'Yes' : 'No'}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -158,9 +136,11 @@ export default function OnboardingWizard() {
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
-           </div>
+           {step <= 3 && (
+             <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
+               Step {Math.min(step, 3)} of 3
+             </div>
+           )}
         </div>
 
         {/* Content Area */}
@@ -173,13 +153,13 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
+              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
               <input
                 type="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                placeholder="e.g. Sell cakes, plumbing"
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
+                placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
@@ -194,16 +174,34 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
-              <input
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Select your category</h2>
+              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {[
+                  { id: 'Food & Beverage', icon: '🍔' },
+                  { id: 'Retail/Products', icon: '🛍️' },
+                  { id: 'Services', icon: '🛠️' },
+                  { id: 'Bookings/Lessons', icon: '📅' }
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      setBusinessCategory(cat.id);
+                      setBusinessType(cat.id);
+                    }}
+                    className={`p-4 rounded-[12px] border flex flex-col items-center gap-2 transition-all ${
+                      businessCategory === cat.id
+                        ? 'border-[#0066FF] bg-blue-50/50'
+                        : 'border-gray-200 bg-white/80 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-2xl">{cat.icon}</span>
+                    <span className="text-sm font-semibold text-gray-800 text-center">{cat.id}</span>
+                  </button>
+                ))}
+              </div>
+
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
@@ -223,17 +221,35 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
-              <input
-                type="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
-              <div className="flex gap-3">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add a photo</h2>
+              <p className="text-gray-500 text-sm mb-6">Upload a photo to help AI generate your storefront.</p>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-[12px] p-8 mb-6 flex flex-col items-center justify-center bg-white/50 hover:bg-gray-50 transition-colors">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 text-[#0066FF]">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                </div>
+                <span className="text-sm font-medium text-gray-600 mb-1">Click to upload</span>
+                <span className="text-xs text-gray-400">JPG, PNG, WEBP</span>
+                <input
+                  type="file"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  accept="image/*"
+                  onChange={(e) => {
+                    // Simulation of upload, we just move forward in this demo
+                    console.log("File selected:", e.target.files);
+                    if (e.target.files && e.target.files.length > 0) {
+                      setUploadedPhoto(e.target.files[0].name);
+                    }
+                  }}
+                />
+                {uploadedPhoto && (
+                  <div className="mt-2 text-sm text-green-600 font-medium z-20">
+                    Selected: {uploadedPhoto}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(2)}
                   className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
@@ -246,10 +262,9 @@ export default function OnboardingWizard() {
                   className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Generate Draft"
-                  )}
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin flex-shrink-0 mr-2"></span>
+                  ) : null}
+                  {isLoading ? "Generating Draft..." : "Generate Draft"}
                 </button>
               </div>
             </div>
