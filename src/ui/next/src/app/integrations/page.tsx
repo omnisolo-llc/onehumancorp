@@ -6,13 +6,13 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Developer-friendly API, excellent deliverability, modern React-email templates." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Global reach, ultra-reliable delivery for automated text alerts." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Industry standard video conferencing. High user familiarity." }
+    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox within OHC for Instagram, Facebook, and WhatsApp." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Seamless, self-serve booking pages with Google/Outlook calendar sync." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Frictionless email marketing feature powered by Resend API." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Real-time shipping rates and one-click label generation." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "High-urgency SMS alerts and immediate notifications." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Access to local payment methods (e.g., PIX) for LATAM." },
+    { id: "daily_co", name: "Daily.co", category: "operations", status: "disconnected", icon: "📹", description: "Seamless virtual sessions with automated link distribution." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);

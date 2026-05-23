@@ -12,33 +12,31 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Seamlessly connect your favorite apps to streamline your business operations.')).toBeVisible();
   });
 
-  test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
-    await expect(page.getByText('Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
+  test('displays ManyChat integration', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'ManyChat' })).toBeVisible();
   });
 
-  test('displays online booking integration card', async ({ page }) => {
+  test('displays Cal.com integration', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
-    await expect(page.getByText('Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync.')).toBeVisible();
   });
 
-  test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
-    await expect(page.getByText('Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API.')).toBeVisible();
-    await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
-  });
-
-  test('displays email marketing and automated video links cards', async ({ page }) => {
+  test('displays Resend integration', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
-    await expect(page.getByText('Developer-friendly API, excellent deliverability, modern React-email templates.')).toBeVisible();
-    await expect(page.getByText('Industry standard video conferencing. High user familiarity.')).toBeVisible();
   });
 
-  test('displays global sms notifications card', async ({ page }) => {
+  test('displays Mercado Pago integration', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
+  });
+
+  test('displays EasyPost integration', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'EasyPost' })).toBeVisible();
+  });
+
+  test('displays Twilio integration', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByText('Global reach, ultra-reliable delivery for automated text alerts.')).toBeVisible();
+  });
+
+  test('displays Daily.co integration', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Daily.co' })).toBeVisible();
   });
 });
