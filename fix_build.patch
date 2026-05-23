@@ -1,9 +1,0 @@
---- src/agents/builtin/BUILD.bazel
-+++ src/agents/builtin/BUILD.bazel
-@@ -194,6 +194,7 @@
-         "pubsub",
-         "registry",
-         "local_provider",
-+        "sqlite_memory",
-     ]
- ]

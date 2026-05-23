@@ -16,13 +16,13 @@ impl SqliteMemoryStore {
             .connect(db_url)
             .await?;
 
-        // Initialize table
+        // Initialize table using FTS5 for full-text search as per Hermes Agent mechanic.
+        // Master Catalog: Hermes Agent Unique Harness Innovations: FTS5 session search
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS agent_memory (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                content TEXT NOT NULL,
-                tags TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            "CREATE VIRTUAL TABLE IF NOT EXISTS agent_memory USING fts5(
+                content,
+                tags,
+                created_at UNINDEXED
             )"
         )
         .execute(&pool)
@@ -36,7 +36,7 @@ impl SqliteMemoryStore {
 impl LongTermMemory for SqliteMemoryStore {
     async fn store(&self, content: &str, tags: Vec<String>) -> Result<(), String> {
         let tags_json = serde_json::to_string(&tags).map_err(|e| e.to_string())?;
-        sqlx::query("INSERT INTO agent_memory (content, tags) VALUES (?, ?)")
+        sqlx::query("INSERT INTO agent_memory (content, tags, created_at) VALUES (?, ?, CURRENT_TIMESTAMP)")
             .bind(content)
             .bind(tags_json)
             .execute(&self.pool)
@@ -46,10 +46,10 @@ impl LongTermMemory for SqliteMemoryStore {
     }
 
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
-        // Simple text search for long term memory retrieval
-        let search_pattern = format!("%{}%", query);
-        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE content LIKE ? LIMIT ?")
-            .bind(search_pattern)
+        // Master Catalog: Hermes Agent Unique Harness Innovations: FTS5 session search: Cross-session recall
+        // Uses FTS5 MATCH for high-performance text search
+        let rows = sqlx::query_as::<_, (String,)>("SELECT content FROM agent_memory WHERE agent_memory MATCH ? ORDER BY rank LIMIT ?")
+            .bind(query)
             .bind(limit as i64)
             .fetch_all(&self.pool)
             .await

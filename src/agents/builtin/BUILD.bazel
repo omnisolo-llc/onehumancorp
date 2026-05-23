@@ -200,7 +200,6 @@ rust_binary(
         "pubsub",
         "registry",
         "local_provider",
-        "sqlite_memory",
     ]
 ]
 
@@ -238,6 +237,18 @@ rust_test(
         "@crates//:dashmap",
         "@crates//:serde_json",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_test(
+    name = "sqlite_memory_unit_test",
+    crate = ":ohc_builtin_agent_lib",
+    args = ["sqlite_memory"],
+    edition = "2024",
+    size = "small",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

@@ -1596,6 +1596,7 @@ impl Agent {
             }
         }
 
+        // Master Catalog B.1. The Orchestration Loop: Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle
         let mut turn_count = 0;
         while turn_count < max_iterations {
             let iteration = turn_count;
