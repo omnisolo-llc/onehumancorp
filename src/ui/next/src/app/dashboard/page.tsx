@@ -216,6 +216,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+             <button onClick={() => setShowReferralModal(true)} className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold">Referrals</button>
          <div className="flex items-center gap-3">
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
@@ -398,8 +399,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && !showReviewRequestCard && (
-<>
+         <>
 {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
@@ -570,7 +570,6 @@ export default function Dashboard() {
          </section>
 
          </>
-)}
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
