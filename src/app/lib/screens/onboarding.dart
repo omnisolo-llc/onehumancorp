@@ -51,31 +51,48 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['bio'] != null) {
-          setState(() {
+        setState(() {
+          if (data['bio'] != null) {
             bio = data['bio'];
             _bioController.text = bio;
-          });
-        }
-        if (data['businessName'] != null) {
-          setState(() => businessName = data['businessName']);
-        }
-        if (data['selectedTemplate'] != null) {
-          setState(() => selectedTemplate = data['selectedTemplate']);
-        }
+          }
+          if (data['businessName'] != null) {
+            businessName = data['businessName'];
+          }
+          if (data['selectedTemplate'] != null) {
+            selectedTemplate = data['selectedTemplate'];
+          }
+          if (data['currentInputStep'] != null) {
+            _currentInputStep = data['currentInputStep'];
+            _state = OnboardingState.input;
+          }
+          if (data['isAdvancedMode'] != null) {
+            isAdvancedMode = data['isAdvancedMode'];
+          }
+          if (data['domainChoice'] != null) {
+            domainChoice = data['domainChoice'];
+          }
+        });
       }
     } catch (e) {
       print('Failed to load draft: $e');
     }
   }
 
-  Future<void> _saveDraft(String text) async {
+  Future<void> _saveDraft() async {
     try {
       final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
+        body: jsonEncode({
+          'bio': bio,
+          'businessName': businessName,
+          'selectedTemplate': selectedTemplate,
+          'currentInputStep': _currentInputStep,
+          'isAdvancedMode': isAdvancedMode,
+          'domainChoice': domainChoice,
+        }),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -85,7 +102,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      await _saveDraft(bio);
+      await _saveDraft();
       setState(() => _state = OnboardingState.generating);
 
       try {
@@ -159,24 +176,40 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: 500),
           child: Container(
-            height: MediaQuery.of(
-              context,
-            ).size.height, // Takes up screen height gracefully
-            padding: EdgeInsets.symmetric(vertical: 20),
+            height: MediaQuery.of(context).size.height,
+            padding: EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Colors.white.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
-                      width: 1,
+                      color: Colors.white.withOpacity(0.5),
+                      width: 1.5,
                     ),
                   ),
-                  child: _buildContent(),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween<Offset>(
+                            begin: const Offset(0.05, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: KeyedSubtree(
+                      key: ValueKey(_state),
+                      child: _buildContent(),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -267,7 +300,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Form(
         key: _formKey,
         child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 400),
+          transitionBuilder: (Widget child, Animation<double> animation) {
+            return FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0.1, 0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                )),
+                child: child,
+              ),
+            );
+          },
           child: _currentInputStep == 0
               ? _buildBioStep()
               : _currentInputStep == 1
@@ -312,14 +360,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.text,
+              keyboardType: TextInputType.multiline,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
                 hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                ),
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
@@ -327,7 +378,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 bio = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -340,7 +391,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               _formKey.currentState!.save();
-              setState(() => _currentInputStep = 1);
+              setState(() {
+                _currentInputStep = 1;
+                _saveDraft();
+              });
             }
           },
           style: ElevatedButton.styleFrom(
@@ -393,22 +447,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               key: Key('name-input'),
               initialValue: businessName,
               autofocus: true,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Cakes',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+                ),
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              onFieldSubmitted: (_) {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() {
+                    _currentInputStep = 2;
+                    _saveDraft();
+                  });
+                }
+              },
               onChanged: (value) {
                 businessName = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(bio);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -421,7 +487,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               _formKey.currentState!.save();
-              setState(() => _currentInputStep = 2);
+              setState(() {
+                _currentInputStep = 2;
+                _saveDraft();
+              });
             }
           },
           style: ElevatedButton.styleFrom(
@@ -502,7 +571,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     value: isAdvancedMode,
                     activeColor: Color(0xFF0066FF),
                     onChanged: (val) {
-                      setState(() => isAdvancedMode = val);
+                      setState(() {
+                        isAdvancedMode = val;
+                        _saveDraft();
+                      });
                     },
                   ),
                 ],
@@ -537,8 +609,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     DropdownMenuItem(value: 'custom', child: Text('Custom Domain')),
                   ],
                   onChanged: (val) {
-                    if (val != null) setState(() => domainChoice = val);
-                    _saveDraft(bio);
+                    if (val != null) {
+                      setState(() {
+                        domainChoice = val;
+                        _saveDraft();
+                      });
+                    }
                   },
                 ),
               ),
@@ -579,7 +655,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onTap: () {
         setState(() {
           selectedTemplate = name;
-          _saveDraft(bio);
+          _saveDraft();
         });
       },
       child: Container(

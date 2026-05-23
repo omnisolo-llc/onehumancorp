@@ -18,6 +18,24 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
+  React.useEffect(() => {
+    const loadDraft = async () => {
+      try {
+        const response = await fetch('/api/onboarding/draft');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.businessType) setBusinessType(data.businessType);
+          if (data.businessName) setBusinessName(data.businessName);
+          if (data.bio) setBusinessCategory(data.bio); // Mapping backend 'bio' to 'businessCategory'
+          if (data.currentInputStep !== undefined) setStep(data.currentInputStep + 1);
+        }
+      } catch (err) {
+        console.error('Failed to load onboarding draft:', err);
+      }
+    };
+    loadDraft();
+  }, [setBusinessType, setBusinessName, setBusinessCategory, setStep]);
+
   const handleNext = () => {
     if (step === 1) {
       if (!businessType.trim()) {
@@ -50,7 +68,20 @@ export default function OnboardingWizard() {
       }
     }
     setError("");
-    setStep(step + 1);
+    const newStep = step + 1;
+    setStep(newStep);
+
+    // Persist step change to backend
+    fetch('/api/onboarding/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        businessType,
+        businessName,
+        bio: businessCategory,
+        currentInputStep: newStep - 1
+      }),
+    }).catch(e => console.error('Failed to save step draft:', e));
   };
 
   const handleIntakeSubmit = async () => {
@@ -67,6 +98,22 @@ export default function OnboardingWizard() {
     setIsLoading(true);
 
     const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+
+    // Save draft before intake
+    try {
+      await fetch('/api/onboarding/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessType,
+          businessName,
+          bio: businessCategory,
+          currentInputStep: step - 1
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to save draft:', e);
+    }
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -106,6 +153,8 @@ export default function OnboardingWizard() {
         website_template: "modern",
         first_product_name: intakeData.initial_products?.[0]?.name || "Sample Product",
         first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+        domain_choice: "subdomain",
+        price_type: "fixed",
       };
 
       const response = await fetch('/api/onboarding/start', {
@@ -129,17 +178,20 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 dark:from-[#050505] dark:to-[#121212] font-inter p-4">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(40px) saturate(180%);
+          -webkit-backdrop-filter: blur(40px) saturate(180%);
+          border: 1.5px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
-            background: rgba(22, 22, 26, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(18, 18, 18, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
           }
           .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
             color: #F5F5F7;
@@ -148,13 +200,20 @@ export default function OnboardingWizard() {
             color: #A1A1A6;
           }
           .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.05);
             color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.1);
           }
         }
+        .animate-slide-up {
+          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[667px] sm:min-h-[812px] flex flex-col relative rounded-[24px] overflow-hidden glass-container animate-slide-up">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
