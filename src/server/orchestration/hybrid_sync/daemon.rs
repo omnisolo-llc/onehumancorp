@@ -36,6 +36,10 @@ impl HybridSyncDaemon {
             .fetch_all(&self.sqlite_pool)
             .await?;
 
+        if let Err(e) = ::server_telemetry::record_sync_daemon_batch_size(&self.pg_pool, rows.len() as f32, "HybridSyncDaemon").await {
+            warn!("Failed to record sync daemon batch size telemetry: {}", e);
+        }
+
         if rows.is_empty() {
             return Ok(());
         }
