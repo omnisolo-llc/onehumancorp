@@ -41,23 +41,3 @@ pub async fn sync_audit_logs_to_cloud(
 
     Ok(())
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_sync_audit_logs_to_cloud_coverage() {
-        // Just mock test to satisfy coverage requirement without real DB setup
-        let payload = AuditSyncPayload {
-            tenant_id: "t1".to_string(),
-            agent_id: "a1".to_string(),
-            action: "act".to_string(),
-            resource: "res".to_string(),
-            status: "st".to_string(),
-            metadata: "{}".to_string(),
-            timestamp: 123,
-        };
-        assert_eq!(payload.tenant_id, "t1");
-    }
-}

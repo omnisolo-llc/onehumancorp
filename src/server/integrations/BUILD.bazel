@@ -8,7 +8,7 @@ filegroup(
         "imessage.rs",
         "jira.rs",
         "mcp_gateway.rs",
-        "//src/server/integrations/mcp_audit_sync",
+        "//src/server/integrations/mcp_audit_sync:srcs",
         "mod.rs",
         "obsidian.rs",
         "registry.rs",
