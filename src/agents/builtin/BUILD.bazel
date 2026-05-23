@@ -207,6 +207,7 @@ rust_binary(
         "pubsub",
         "registry",
         "local_provider",
+        "actor_model",
     ]
 ]
 
