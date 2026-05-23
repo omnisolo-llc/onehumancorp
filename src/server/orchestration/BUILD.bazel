@@ -24,3 +24,18 @@ filegroup(
     ],
     visibility = ["//src/server:__pkg__"],
 )
+
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "tasks_db",
+    srcs = ["tasks_db.go"],
+    importpath = "github.com/onehumancorp/platform/src/server/orchestration",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "tasks_db_test",
+    srcs = ["tasks_db_test.go"],
+    embed = [":tasks_db"],
+)
