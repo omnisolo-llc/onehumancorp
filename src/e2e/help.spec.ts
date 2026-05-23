@@ -120,7 +120,7 @@ test.describe('Documentation Features End-to-End Tests', () => {
     await chatInput.press('Enter');
 
     // Wait for the mock response to appear
-    await expect(page.locator('text=Hi! I am your Help Helper!')).toBeVisible();
+    await expect(page.locator('text=I am your AI Help Agent! I specialize in answering questions about OHC features.')).toBeVisible();
     await expect(page.locator('text=Read the full article →')).toBeVisible();
   });
 
