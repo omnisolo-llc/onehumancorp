@@ -306,26 +306,26 @@ export default function Dashboard() {
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            className={`w-11 h-6 rounded-full transition-colors duration-300 relative border ${showAdvanced ? 'bg-blue-500 border-blue-500' : 'bg-gray-200 border-gray-300'}`}
                         >
-                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                            <span className={`absolute top-0.5 left-0.5 bg-white w-4.5 h-4.5 rounded-full transition-transform duration-300 shadow-sm ${showAdvanced ? 'translate-x-5' : 'translate-x-0'}`} style={{ width: '1.125rem', height: '1.125rem' }}></span>
                         </button>
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">
                     {/* Hardcoded Automated Review Request Card based on mockup */}
                     {showReviewRequestCard && (
-                        <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                        <div className="p-5 flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#F5F5F7' }}>
                                         🤝
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-lg font-outfit text-gray-900">
+                                        <h3 className="font-semibold text-[17px] font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.01em' }}>
                                             CustomerSuccess Department
                                         </h3>
-                                        <p className="text-gray-600 font-inter text-sm">3 customers haven't reviewed their orders. Request reviews?</p>
+                                        <p className="font-inter text-[14px]" style={{ color: '#6E6E73' }}>3 customers haven't reviewed their orders. Request reviews?</p>
                                     </div>
                                 </div>
 
@@ -340,18 +340,18 @@ export default function Dashboard() {
                                         Sent to 3 customers!
                                     </div>
                                 ) : (
-                                    <div className="flex gap-2 shrink-0">
+                                    <div className="flex gap-3 shrink-0">
                                         <button
                                             onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-5 py-2 font-medium transition-colors"
+                                            style={{ color: '#FF3B30', backgroundColor: '#FFF0F0', borderRadius: '8px', fontSize: '14px' }}
                                         >
                                             Reject
                                         </button>
                                         <button
                                             onClick={handleApproveReviewRequest}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-5 py-2 font-medium transition-colors shadow-sm"
+                                            style={{ color: '#ffffff', backgroundColor: '#2563eb', borderRadius: '8px', fontSize: '14px' }}
                                         >
                                             Approve
                                         </button>
@@ -647,11 +647,11 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                 {swarmActivity.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
-                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
+                    <div className="p-20 text-center flex flex-col items-center justify-center">
+                        <div className="inline-block w-8 h-8 rounded-full border-[1.5px] border-[#E5E5EA] border-t-[#0066FF] animate-spin mb-4"></div>
+                        <p className="text-sm font-medium font-inter" style={{ color: '#86868B' }}>Waiting for team activity...</p>
                     </div>
                 ) : (
                     <div className="flex flex-col">
