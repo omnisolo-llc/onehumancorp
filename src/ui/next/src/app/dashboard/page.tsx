@@ -18,6 +18,39 @@ export default function Dashboard() {
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [referralLink, setReferralLink] = useState<string>("");
+
+  const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
+
+  useEffect(() => {
+    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+  }, []);
+
+  const openReferralModal = async () => {
+    setIsGeneratingReferral(true);
+    try {
+      const response = await fetch("/api/v1/growth/referrals/generate", {
+        method: "POST"
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.referral_link) {
+          setReferralLink(data.referral_link);
+        }
+      } else {
+        // Fallback to local storage tenant if API fails or no auth
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+        setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+      }
+    } catch (e) {
+      console.error("Failed to generate dynamic referral link", e);
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+    } finally {
+      setIsGeneratingReferral(false);
+      setShowReferralModal(true);
+    }
+  };
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
@@ -539,10 +572,11 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
-                    onClick={() => setShowReferralModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm"
+                    onClick={openReferralModal}
+                    disabled={isGeneratingReferral}
+                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
                 >
-                    <span>🎁 Invite a Business & Earn $50</span>
+                    <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
                 </button>
             </div>
 
@@ -648,7 +682,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -657,7 +691,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just hit my 10th order on my new store! Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
@@ -773,12 +807,12 @@ export default function Dashboard() {
                   <input
                     type="text"
                     readOnly
-                    value="https://ohc.store/join?ref=acme-corp"
+                    value={referralLink}
                     className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none"
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText("https://ohc.store/join?ref=acme-corp");
+                      navigator.clipboard.writeText(referralLink);
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     }}
@@ -797,7 +831,7 @@ export default function Dashboard() {
               {/* Social Share Buttons */}
               <div className="grid grid-cols-2 gap-3">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -806,7 +840,7 @@ export default function Dashboard() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent('Launch your business online instantly with OHC! Use my invite link: https://ohc.store/join?ref=acme-corp')}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Launch your business online instantly with OHC! Use my invite link: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
