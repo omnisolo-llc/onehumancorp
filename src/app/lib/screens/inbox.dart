@@ -57,8 +57,7 @@ class _InboxScreenState extends State<InboxScreen> {
       _isLoading = true;
     });
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
-      final response = await http.get(Uri.parse('$baseUrl/api/inbox/messages'));
+      final response = await http.get(Uri.parse('http://localhost:8080/api/inbox/messages'));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
