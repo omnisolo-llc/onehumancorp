@@ -9,13 +9,13 @@ impl ToolGater {
     pub fn check_gating(tc: &ToolCall, is_read_only: bool, cfg: &AgentRunConfig) -> Result<(), ToolError> {
         // Stage 1: Trust establishment at project load
         if !cfg.project_trusted && !is_read_only {
-            return Err(ToolError::Fatal("Project not trusted. Mutating tools are disabled.".to_string()));
+            return Err(ToolError::Unexpected("Project not trusted. Mutating tools are disabled.".to_string()));
         }
 
         // Stage 2: Permission check before each tool call
         if let Some(allowed) = &cfg.allowed_tools {
             if !allowed.contains(&tc.name) {
-                return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
+                return Err(ToolError::Unexpected(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
         }
         // Stage 3: Explicit user confirmation for high-risk operations
@@ -60,10 +60,10 @@ mod tests {
 
         let tc = create_tool_call("1", "mutating_tool");
 
-        // Untrusted + Mutating -> Fatal Error
+        // Untrusted + Mutating -> Unexpected Error
         let res = ToolGater::check_gating(&tc, false, &cfg);
-        assert!(matches!(res, Err(ToolError::Fatal(_))));
-        if let Err(ToolError::Fatal(msg)) = res {
+        assert!(matches!(res, Err(ToolError::Unexpected(_))));
+        if let Err(ToolError::Unexpected(msg)) = res {
             assert!(msg.contains("Project not trusted"));
         }
 
@@ -89,8 +89,8 @@ mod tests {
         assert!(ToolGater::check_gating(&tc_allowed, true, &cfg).is_ok());
 
         let res = ToolGater::check_gating(&tc_denied, true, &cfg);
-        assert!(matches!(res, Err(ToolError::Fatal(_))));
-        if let Err(ToolError::Fatal(msg)) = res {
+        assert!(matches!(res, Err(ToolError::Unexpected(_))));
+        if let Err(ToolError::Unexpected(msg)) = res {
             assert!(msg.contains("not in the allowed list"));
         }
     }

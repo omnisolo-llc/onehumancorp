@@ -707,12 +707,12 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
                             let mut retry_count = 0;
                             let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
+                            let _final_res;
 
                             loop {
                                 match tool.execute.execute(args.clone()).await {
@@ -764,7 +764,7 @@ impl Agent {
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tool_name, msg));
+                                return Err(format!("Unexpected tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: {}", tool_name, msg));
                             }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -777,9 +777,6 @@ impl Agent {
                         }
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
-                        }
-                        Err(crate::types::ToolError::Fatal(msg)) => {
-                            return Err(format!("Fatal tool error: {}", msg));
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
                             return Err(format!("Unexpected tool error: {}", msg));
@@ -805,14 +802,14 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        let _final_res: Result<String, crate::types::ToolError> = Err(e);
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
                                 let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > cfg_max_retries as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                    return Err(format!("Unexpected tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
@@ -822,7 +819,6 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
-                            Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
                             Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
                             Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
                         }
@@ -831,12 +827,12 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
                             if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
+                                return Err(format!("Unexpected tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: Schema validation failed: {}", tool_name, e));
                             }
                             tool_results_json[idx] = serde_json::json!({
                                 "tool_call_id": id,
@@ -847,7 +843,7 @@ impl Agent {
                         }
                         let mut retry_count = 0;
                         let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
+                        let _final_res;
 
                         loop {
                             match tool.execute.execute(args.clone()).await {
@@ -886,7 +882,7 @@ impl Agent {
                                 let count = error_counts.entry(name.to_string()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                                 error_counts.insert(name.to_string(), serde_json::json!(count));
                                 if count > std::cmp::min(cfg_max_retries, 2) as u64 {
-                                    return Err(format!("Fatal tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", name, msg));
+                                    return Err(format!("Unexpected tool error: Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: {}", name, msg));
                                 }
                                 tool_results_json[idx] = serde_json::json!({
                                     "tool_call_id": id,
@@ -899,9 +895,6 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
-                            }
-                            Err(crate::types::ToolError::Fatal(msg)) => {
-                                return Err(format!("Fatal tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
@@ -1176,14 +1169,11 @@ impl Agent {
                     on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                     return Err(err.into());
                 }
-                Err(crate::types::ToolError::Fatal(msg)) => {
-                    return Err(format!("Fatal tool error: {}", msg).into());
-                }
                 Err(crate::types::ToolError::Unexpected(msg)) => {
                     return Err(format!("Unexpected tool error: {}", msg).into());
                 }
                 Err(e) => {
-                    return Err(format!("Fatal tool error: {:?}", e).into());
+                    return Err(format!("Unexpected tool error: {:?}", e).into());
                 }
             };
 
@@ -1234,14 +1224,11 @@ impl Agent {
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
-                        return Err(format!("Fatal tool error: {}", msg).into());
-                    }
                     Err(crate::types::ToolError::Unexpected(msg)) => {
                         return Err(format!("Unexpected tool error: {}", msg).into());
                     }
                     Err(e) => {
-                        return Err(format!("Fatal tool error: {:?}", e).into());
+                        return Err(format!("Unexpected tool error: {:?}", e).into());
                     }
                 }
             };
@@ -1283,7 +1270,7 @@ impl Agent {
         };
 
         on_event(AgentEvent::RunStarted { iteration: 2 });
-        let final_resp = self.llm.chat(replier_req).await?;
+        let _final_resp = self.llm.chat(replier_req).await?;
 
         on_event(AgentEvent::TaskComplete { content: final_resp.message.content.clone() });
         Ok(final_resp.message.content)
@@ -2164,7 +2151,7 @@ impl Agent {
                                     }
                                 }
                             }
-                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                            let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: {}", tc.name, msg);
                             on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                             return Err(fatal_msg.into());
                         }
@@ -2187,15 +2174,11 @@ impl Agent {
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
-                    Err(ToolError::Fatal(msg)) => {
-                        let err = format!("Fatal tool error: {}", msg);
-                        on_event(AgentEvent::TaskError { error: err.clone() });
-                        return Err(err.into());
-                    }
                     Err(ToolError::Unexpected(msg)) => {
                         let err = format!("Unexpected tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
+                    }
                     }
                     Err(ToolError::HandoffRequested(target)) => {
                         on_event(AgentEvent::Handoff { target_agent: target.clone() });
@@ -2232,22 +2215,18 @@ impl Agent {
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
-                        ToolError::Fatal(msg) => {
-                            let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
                         ToolError::Unexpected(msg) => {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
                         }
                         ToolError::HandoffRequested(target) => {
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
                             return Ok(format!("Handoff requested to {}", target));
                         }
                         _ => {
-                            let err = format!("Fatal tool error: {:?}", e);
+                            let err = format!("Unexpected tool error: {:?}", e);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
@@ -2353,7 +2332,7 @@ impl Agent {
                                         }
                                     }
                                 }
-                                let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Fatal to prevent compounding error loops. Last error: {}", tc.name, msg);
+                                let fatal_msg = format!("Tool '{}' failed consecutively beyond max_retries limit with recoverable errors. Escalating to Unexpected to prevent compounding error loops. Last error: {}", tc.name, msg);
                                 on_event(AgentEvent::TaskError { error: fatal_msg.clone() });
                                 return Err(fatal_msg.into());
                             }
@@ -2374,15 +2353,11 @@ impl Agent {
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
-                        Err(ToolError::Fatal(msg)) => {
-                            let err = format!("Fatal tool error: {}", msg);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
                         Err(ToolError::Unexpected(msg)) => {
                             let err = format!("Unexpected tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
+                        }
                         }
                         Err(ToolError::HandoffRequested(target)) => {
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
@@ -2994,13 +2969,13 @@ mod tests {
         let e_transient = crate::types::ToolError::Transient("timeout".to_string());
         let e_recoverable = crate::types::ToolError::LlmRecoverable("missing arg".to_string());
         let e_user = crate::types::ToolError::UserFixable("need input".to_string());
-        let e_fatal = crate::types::ToolError::Fatal("crash".to_string());
+        let e_fatal = crate::types::ToolError::Unexpected("crash".to_string());
         let e_unexpected = crate::types::ToolError::Unexpected("unknown".to_string());
 
         assert_eq!(e_transient.to_string(), "Transient error: timeout");
         assert_eq!(e_recoverable.to_string(), "Recoverable error: missing arg");
         assert_eq!(e_user.to_string(), "User intervention required: need input");
-        assert_eq!(e_fatal.to_string(), "Fatal error: crash");
+        assert_eq!(e_fatal.to_string(), "Unexpected error: crash");
         assert_eq!(e_unexpected.to_string(), "Unexpected error: unknown");
     }
 
@@ -3924,7 +3899,7 @@ mod tests {
                     "transient_tool" => Err(ToolError::Transient("network timeout".to_string())),
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to external service".to_string())),
-                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "fatal_tool" => Err(ToolError::Unexpected("system corrupted".to_string())),
                     "unexpected_tool" => Err(ToolError::Unexpected("random crash".to_string())),
                     _ => Ok("success".to_string()),
                 }
@@ -4094,7 +4069,7 @@ mod tests {
         });
         assert!(user_fixable_handled);
 
-        // 4. Fatal
+        // 4. Unexpected
         let client_fatal = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
                 message: crate::types::Message {
@@ -4117,7 +4092,7 @@ mod tests {
         assert!(res4.is_err());
         let fatal_handled = events4.iter().any(|e| {
             if let AgentEvent::TaskError { error } = e {
-                error.contains("Fatal tool error: system corrupted")
+                error.contains("Unexpected tool error: system corrupted")
             } else {
                 false
             }
@@ -5195,7 +5170,7 @@ mod tests {
                 match self.name.as_str() {
                     "transient_tool" => Err(ToolError::Transient(format!("network timeout {}", *count))),
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
-                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "fatal_tool" => Err(ToolError::Unexpected("system corrupted".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to proceed".to_string())),
                     _ => Ok("success".to_string()),
                 }
@@ -5248,7 +5223,7 @@ mod tests {
         // Should succeed because it handles the recoverable error and gets the final answer
         assert!(res1.is_ok());
 
-        // Test Fatal
+        // Test Unexpected
         let client2 = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
