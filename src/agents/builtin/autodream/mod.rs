@@ -424,7 +424,7 @@ impl AutoDreamWorker {
                         counter.add(1, &[]);
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let record = crate::memory_store::EmbeddingRecord {
+                        let record = ohc_builtin_agent::memory_store::EmbeddingRecord {
                             id: mem_id,
                             tenant_id: "system".to_string(),
                             agent_id: "system_agent".to_string(),
@@ -440,8 +440,8 @@ impl AutoDreamWorker {
                         };
 
                         let repository = match &db.store {
-                            ::server_lib::db::DbStore::Postgres => crate::memory_store::VectorRepository::new(db.pool.clone()),
-                            ::server_lib::db::DbStore::Sqlite(sqlite_pool) => crate::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                            ::server_lib::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                            ::server_lib::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
                         };
 
                         if let Err(e) = repository.upsert(&record).await {
