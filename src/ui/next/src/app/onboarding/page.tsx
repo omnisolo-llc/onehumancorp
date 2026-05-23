@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -15,8 +15,16 @@ export default function OnboardingWizard() {
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
-    startResult, setStartResult
+    startResult, setStartResult,
+    loadStateFromBackend
   } = useOnboardingStore();
+  const [isInitializing, setIsInitializing] = React.useState(true);
+
+  useEffect(() => {
+    loadStateFromBackend().finally(() => {
+      setIsInitializing(false);
+    });
+  }, [loadStateFromBackend]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -124,6 +132,14 @@ export default function OnboardingWizard() {
     }
   };
 
+  if (isInitializing) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0066FF]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
@@ -208,7 +224,10 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => {
+                  setBusinessName(e.target.value);
+                  if (error) setError("");
+                }}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -251,7 +270,10 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
+                onChange={(e) => {
+                  setBusinessCategory(e.target.value);
+                  if (error) setError("");
+                }}
                 placeholder={
                  businessType === 'Food & Beverage' ? "e.g. Falafel, Shawarma, Hummus" :
                  businessType === 'Physical Products' ? "e.g. Custom vegan cakes, cookies" :
