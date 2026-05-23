@@ -325,7 +325,7 @@ impl InteropProtocol {
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let update = crate::orchestration::handoff::proto::JobStatusUpdate {
+        let update = proto::JobStatusUpdate {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             status: status.to_string(),
@@ -360,11 +360,11 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(crate::orchestration::handoff::proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = crate::orchestration::handoff::proto::JobStatusUpdate::decode(&msg.payload[..]) {
+                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -717,7 +717,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |update: crate::orchestration::handoff::proto::JobStatusUpdate| {
+        let handler = Box::new(move |update: proto::JobStatusUpdate| {
             if update.job_id == "job_status_123" && update.status == "COMPLETED" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -938,7 +938,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_update: crate::orchestration::handoff::proto::JobStatusUpdate| {
+        let handler = Box::new(move |_update: proto::JobStatusUpdate| {
             rx.store(true, Ordering::SeqCst);
         });
 
