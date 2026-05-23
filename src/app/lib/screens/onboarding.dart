@@ -41,7 +41,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _loadBio() async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -59,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _saveDraft(String text) async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
@@ -77,7 +77,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
         final response = await _client.post(
           Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
@@ -123,7 +123,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> launchStore() async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       final response = await _client.post(
         Uri.parse('$baseUrl/api/onboarding/launch'),
       );

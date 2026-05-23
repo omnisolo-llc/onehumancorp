@@ -45,7 +45,7 @@ class GrowthReferralWidget extends StatelessWidget {
                   try {
                     final prefs = await SharedPreferences.getInstance();
                     final token = prefs.getString('auth_token') ?? '';
-                    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'https://api.ohc.app');
+                    final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
 
                     final response = await http.post(
                       Uri.parse('$baseUrl/referrals/generate'),
