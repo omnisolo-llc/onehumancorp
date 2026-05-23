@@ -66,6 +66,5 @@ void main() {
 
     // Expect to be on Live state
     expect(find.text("You're Live!"), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 }

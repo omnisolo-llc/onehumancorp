@@ -1,11 +1,11 @@
-# Epic: Nova Mission Track
+# Epic: General Mission Track
 
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">
 
-This epic serves as the master tracking issue for all missions related to nova-related platform improvements and cross-cutting concerns within the One Human Corp (OHC) Hybrid Agentic OS.
+This epic serves as the master tracking issue for all missions related to general platform improvements and cross-cutting concerns within the One Human Corp (OHC) Hybrid Agentic OS.
 
 ## Overview
-The "Nova" track encompasses foundational tasks, architecture reviews, and systemic refactoring efforts that do not fit strictly into specific feature verticals (like KAIROS Orchestration or Agentic UI), but are crucial for the holistic performance, security, and maintainability of the One Human Corp (OHC) ecosystem.
+The "General" track encompasses foundational tasks, architecture reviews, and systemic refactoring efforts that do not fit strictly into specific feature verticals (like KAIROS Orchestration or Agentic UI), but are crucial for the holistic performance, security, and maintainability of the One Human Corp (OHC) ecosystem.
 
 ## Mission Scope
 This tracking issue synthesizes:
