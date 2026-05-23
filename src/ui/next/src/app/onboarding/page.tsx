@@ -21,11 +21,7 @@ export default function OnboardingWizard() {
   const handleNext = () => {
     if (step === 1) {
       if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
+        setError("Please select a business type.");
         return;
       }
     }
@@ -175,17 +171,30 @@ export default function OnboardingWizard() {
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
               <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
+
+              <div className="flex flex-col gap-3 mb-6">
+                {['Physical Products', 'Services & Bookings', 'Omnichannel Retail', 'Digital Services', 'Food & Beverage'].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setBusinessType(type);
+                      setError("");
+                      setStep(2);
+                    }}
+                    className={`w-full p-4 rounded-[8px] border text-left font-medium transition-all ${
+                      businessType === type
+                        ? 'border-[#0066FF] bg-[#f0f5ff] text-[#0066FF]'
+                        : 'border-gray-200 bg-white/80 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
               <button
                 onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-50"
+                disabled={!businessType}
               >
                 Next
               </button>
@@ -223,13 +232,33 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">
+                {businessType === 'Food & Beverage' ? "What's on your menu?" :
+                 businessType === 'Physical Products' ? "What products do you sell?" :
+                 businessType === 'Services & Bookings' ? "What services do you offer?" :
+                 businessType === 'Digital Services' ? "What digital services do you provide?" :
+                 businessType === 'Omnichannel Retail' ? "What is your main inventory?" :
+                 "What's your niche?"}
+              </h2>
+              <p className="text-gray-500 text-sm mb-6">
+                {businessType === 'Food & Beverage' ? "List some of your popular dishes." :
+                 businessType === 'Physical Products' ? "Tell us about your physical items." :
+                 businessType === 'Services & Bookings' ? "Tell us about the services you book." :
+                 businessType === 'Digital Services' ? "Tell us about your digital offerings." :
+                 businessType === 'Omnichannel Retail' ? "Tell us about your in-store and online items." :
+                 "Products, services, or bookings."}
+              </p>
               <input
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
-                placeholder="e.g. I bake custom wedding cakes"
+                placeholder={
+                 businessType === 'Food & Beverage' ? "e.g. Falafel, Shawarma, Hummus" :
+                 businessType === 'Physical Products' ? "e.g. Custom vegan cakes, cookies" :
+                 businessType === 'Services & Bookings' ? "e.g. Plumbing repairs, pipe fitting" :
+                 businessType === 'Digital Services' ? "e.g. Guitar lessons, sheet music" :
+                 businessType === 'Omnichannel Retail' ? "e.g. Dresses, shoes, accessories" :
+                 "e.g. I bake custom wedding cakes"}
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
