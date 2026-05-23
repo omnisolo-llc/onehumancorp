@@ -482,35 +482,35 @@ impl AutoDreamWorker {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        db.insert_autodream_memory(&mem_id, "system", "system_agent", "agent-task", &content, &emb_str, "TASK_SUMMARY").await?;
+                        let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                                .bind(&mem_id)
-                                .bind("system") // Placeholder since we don't have org_id in yml name
-                                .bind("system_agent")
-                                .bind("agent-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("TASK_SUMMARY")
-                                .execute(&db.pool)
-                                .await?;
+                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
+                            id: mem_id,
+                            tenant_id: "system".to_string(),
+                            agent_id: "system_agent".to_string(),
+                            content: content.clone(),
+                            embedding: embedding_vec,
+                            source_type: "TASK_SUMMARY".to_string(),
+                            created_at: chrono::Utc::now(),
+                            last_referenced_at: chrono::Utc::now(),
+                            reference_count: 0,
+                            reliability_score: 50,
+                            owner_override: false,
+                            metadata: None,
+                        };
+
+                        let repository = match &db.store {
+                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
+                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                        };
+
+                        if let Err(e) = repository.upsert(&record).await {
+                            debug!("AutoDreamWorker: failed to upsert agent-task memory {:?}: {}", path, e);
                         } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                                .bind(&mem_id)
-                                .bind("system") // Placeholder since we don't have org_id in yml name
-                                .bind("system_agent")
-                                .bind("agent-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("TASK_SUMMARY")
-                                .execute(&db.pool)
-                                .await?;
+                            let path_clone = path.clone();
+                            tokio::fs::remove_file(path).await?;
+                            debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                         }
-
-                        let path_clone = path.clone();
-                        tokio::fs::remove_file(path).await?;
-                        debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
                         debug!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
@@ -568,6 +568,27 @@ mod tests {
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
         }
+    }
+
+    #[tokio::test]
+    async fn test_consolidate_agent_task_memories_empty() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter, &worker.cache).await;
+        // Should return Ok(()) if directory doesn't exist
+        assert!(res.is_ok());
     }
 }
 
