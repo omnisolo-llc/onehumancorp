@@ -35,7 +35,6 @@ pub mod magentic;
 pub mod recall;
 pub mod mcp_dynamic;
 pub mod skill;
-pub mod create_skill;
 pub mod pydantic;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.

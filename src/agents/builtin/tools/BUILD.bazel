@@ -28,7 +28,6 @@ rust_library(
         "screenshot.rs",
         "sendmessage.rs",
         "skill.rs",
-        "create_skill.rs",
         "sleep.rs",
         "subagent.rs",
         "tail.rs",

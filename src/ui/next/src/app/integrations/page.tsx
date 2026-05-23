@@ -19,7 +19,11 @@ export default function Integrations() {
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📆", description: "Industry standard scheduling with Google/Outlook sync." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated label generation with multiple carriers." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "🎥", description: "Auto-generated meeting links for scheduled services." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "✉️", description: "Developer-friendly email API for AI-powered marketing." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
