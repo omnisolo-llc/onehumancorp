@@ -1,8 +1,10 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    vi.useFakeTimers();
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
@@ -70,5 +72,54 @@ describe('useOnboardingStore', () => {
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessName).toBe('Persisted Name');
+  });
+
+
+  it('should syncStateToBackend when setting state with debounce', async () => {
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
+    useOnboardingStore.getState().setStep(2);
+    vi.advanceTimersByTime(500);
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"step":2')
+    }));
+
+    useOnboardingStore.getState().setBusinessName('Synced Name');
+    vi.advanceTimersByTime(500);
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      body: expect.stringContaining('"businessName":"Synced Name"')
+    }));
+  });
+
+  it('should loadStateFromBackend correctly', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        step: 3,
+        businessType: 'Loaded Type',
+        businessName: 'Loaded Name',
+        businessCategory: 'Loaded Category'
+      })
+    });
+
+    await useOnboardingStore.getState().loadStateFromBackend();
+
+    const state = useOnboardingStore.getState();
+    expect(state.step).toBe(3);
+    expect(state.businessType).toBe('Loaded Type');
+    expect(state.businessName).toBe('Loaded Name');
+    expect(state.businessCategory).toBe('Loaded Category');
+  });
+
+  it('should handle loadStateFromBackend error gracefully', async () => {
+    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+
+    // Should not throw
+    await expect(useOnboardingStore.getState().loadStateFromBackend()).resolves.toBeUndefined();
+
+    // State should remain unchanged
+    const state = useOnboardingStore.getState();
+    expect(state.step).toBe(1);
   });
 });
