@@ -24,8 +24,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String businessName = '';
   String selectedTemplate = 'Modern';
   OnboardingState _state = OnboardingState.welcome;
-  bool isAdvancedMode = false;
-  String domainChoice = 'subdomain';
   late final http.Client _client;
   late final TextEditingController _bioController;
   Timer? _debounce;
@@ -57,12 +55,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _bioController.text = bio;
           });
         }
-        if (data['businessName'] != null) {
-          setState(() => businessName = data['businessName']);
-        }
-        if (data['selectedTemplate'] != null) {
-          setState(() => selectedTemplate = data['selectedTemplate']);
-        }
       }
     } catch (e) {
       print('Failed to load draft: $e');
@@ -75,7 +67,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
+        body: jsonEncode({'bio': text}),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -105,7 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             'website_template': selectedTemplate,
             'first_product_name': 'Custom Cake Deposit',
             'first_product_price': '25.00',
-            'domain_choice': domainChoice,
+            'domain_choice': 'subdomain',
             'price_type': 'fixed',
           }),
         );
@@ -279,18 +271,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildBioStep() {
-    return LayoutBuilder(
+    return Column(
       key: ValueKey(0),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
           'Welcome to OHC Smart Builder',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
           textAlign: TextAlign.center,
@@ -309,7 +295,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextFormField(
               key: Key('bio-input'),
               controller: _bioController,
-              autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.text,
@@ -350,30 +335,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 0,
           ),
-                    child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+        ),
+      ],
     );
   }
 
   Widget _buildNameStep() {
-    return LayoutBuilder(
+    return Column(
       key: ValueKey(1),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
           'Name your business',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
           textAlign: TextAlign.center,
@@ -392,7 +366,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextFormField(
               key: Key('name-input'),
               initialValue: businessName,
-              autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
@@ -404,13 +377,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                businessName = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(bio);
-                });
-              },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => businessName = value!,
             ),
@@ -438,30 +404,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onPressed: () {
             setState(() => _currentInputStep = 0);
           },
-                    child: Text('Back'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+          child: Text('Back'),
+        ),
+      ],
     );
   }
 
   Widget _buildTemplateStep() {
-    return LayoutBuilder(
+    return Column(
       key: ValueKey(2),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
           'Choose a look',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
           textAlign: TextAlign.center,
@@ -482,70 +437,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.65),
-                border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Advanced Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-                  Switch(
-                    key: Key('advanced-mode-toggle'),
-                    value: isAdvancedMode,
-                    activeColor: Color(0xFF0066FF),
-                    onChanged: (val) {
-                      setState(() => isAdvancedMode = val);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (isAdvancedMode) ...[
-          SizedBox(height: 16),
-          Text('Domain Choice', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-          SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: DropdownButtonFormField<String>(
-                  key: Key('domain-choice-dropdown'),
-                  value: domainChoice,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  ),
-                  items: [
-                    DropdownMenuItem(value: 'subdomain', child: Text('Subdomain (.ohc.app)')),
-                    DropdownMenuItem(value: 'custom', child: Text('Custom Domain')),
-                  ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => domainChoice = val);
-                    _saveDraft(bio);
-                  },
-                ),
-              ),
-            ),
-          ),
-        ],
-        SizedBox(height: 32),
         ElevatedButton(
           onPressed: submit,
           style: ElevatedButton.styleFrom(
@@ -562,14 +453,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           onPressed: () {
             setState(() => _currentInputStep = 1);
           },
-                    child: Text('Back'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+          child: Text('Back'),
+        ),
+      ],
     );
   }
 
@@ -579,7 +465,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onTap: () {
         setState(() {
           selectedTemplate = name;
-          _saveDraft(bio);
         });
       },
       child: Container(

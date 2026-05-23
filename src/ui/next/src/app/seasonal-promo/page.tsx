@@ -12,9 +12,11 @@ export default function SeasonalPromoPage() {
 
   const handleGenerate = () => {
     setIsGenerating(true);
-    const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-    setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
-    setIsGenerating(false);
+    setTimeout(() => {
+      const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
+      setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
+      setIsGenerating(false);
+    }, 500);
   };
 
   return (
