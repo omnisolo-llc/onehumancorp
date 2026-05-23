@@ -1858,14 +1858,30 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
-async fn get_inbox_messages_handler() -> axum::response::Response {
+async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
+
+    let mut tx = match pool.begin().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to begin transaction: {}", e);
+            return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
+        }
+    };
+
+    let org_id = user.organization_id.unwrap_or_default();
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+        tracing::error!("Failed to set org context: {}", e);
+        return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
+    }
+
     match sqlx::query("SELECT id, tenant_id, source, content, draft_reply, status, created_at FROM inbox_messages ORDER BY created_at DESC")
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await
     {
         Ok(rows) => {
+            let _ = tx.commit().await;
             let messages: Vec<serde_json::Value> = rows.into_iter().map(|row| {
                 use sqlx::Row;
                 let created_at: Option<chrono::NaiveDateTime> = row.get("created_at");
@@ -1899,7 +1915,27 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
         .route("/team", axum::routing::get(ui_handler))
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
-        .route("/inbox", axum::routing::get(ui_handler)).route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler))
+        .route("/inbox", axum::routing::get(ui_handler))
+        .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
+            axum::middleware::from_fn(
+                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                    use axum::response::IntoResponse;
+                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
+                    let token = match auth_header {
+                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
+                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let claims = match store.validate_token(token).await {
+                        Ok(c) => c,
+                        Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                    };
+                    let mut req = req;
+                    req.extensions_mut().insert(claims);
+                    next.run(req).await
+                }
+            )
+        ))
         .route("/healthz", axum::routing::get(|| async { "ok" }))
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
