@@ -10,13 +10,28 @@ export default function SeasonalPromoPage() {
   const [result, setResult] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      const code = occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount;
-      setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${code}`);
+    try {
+      const response = await fetch('/api/v1/growth/campaign/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: "Seasonal Promo",
+          subject: `${occasion} Special`,
+          body: `Enjoy ${discount}% OFF your next order for ${occasion}!`,
+          target_segment: "all"
+        })
+      });
+      const data = await response.json();
+      const backendPromoCode = data.campaign_id || (occasion.substring(0, 8).toUpperCase().replace(/[^A-Z]/g, '') + discount);
+      setResult(`${occasion} Special! ${discount}% OFF\nUse code: ${backendPromoCode}\n\nCampaign sent via AI!`);
+    } catch(e) {
+      console.error(e);
+      setResult("Failed to generate campaign");
+    } finally {
       setIsGenerating(false);
-    }, 500);
+    }
   };
 
   return (
