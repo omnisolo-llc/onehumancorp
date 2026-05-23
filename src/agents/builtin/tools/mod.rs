@@ -38,6 +38,7 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
+pub mod marketplace;
 
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
@@ -133,6 +134,7 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        marketplace::marketplace_tool(std::env::var("MARKETPLACE_URL").unwrap_or_else(|_| "https://registry.agentprotocol.ai".to_string())),
     ];
 
     if let Some(accessor) = memory_accessor {

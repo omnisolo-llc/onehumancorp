@@ -17,6 +17,7 @@ rust_library(
         "lazy_load.rs",
         "local_fs_sync.rs",
         "magentic.rs",
+        "marketplace.rs",
         "marketing.rs",
         "mcp_dynamic.rs",
         "mod.rs",
