@@ -138,4 +138,48 @@ test.describe('Lens Audit E2E Flow', () => {
     // This expects the element to correctly apply styling properties directly or via css overrides.
     expect(hasToken).toBe(true);
   });
+
+  // NEW AUDIT TESTS
+  test('verify that no mock Automated Review Request is hardcoded in the Action Required panel', async ({ page }) => {
+    await page.goto('/dashboard');
+    // Ensure the main "Action Required" section loads with real data, but not the hardcoded mock text
+    await expect(page.getByText('Action Required')).toBeVisible({ timeout: 10000 });
+    const mockCardText = page.getByText("3 customers haven't reviewed their orders. Request reviews?", { exact: false });
+    await expect(mockCardText).not.toBeVisible();
+  });
+
+  test('verify Seasonal Promo generator creates campaign immediately without mock timeouts', async ({ page }) => {
+    await page.goto('/seasonal-promo');
+    const occasionInput = page.locator('input#promo-occasion');
+    await occasionInput.fill('Spring Sale');
+    const discountInput = page.locator('input#promo-discount');
+    await discountInput.fill('20');
+
+    const generateBtn = page.getByRole('button', { name: /Generate Campaign/ });
+    await generateBtn.click();
+
+    // Because the setTimeout was removed, it should appear synchronously.
+    await expect(page.getByText('Spring Sale Special! 20% OFF')).toBeVisible({ timeout: 1000 });
+  });
+
+  test('verify embedded desktop Rust UI dashboard-screen does not contain hardcoded approval-item-1', async ({ page }) => {
+    await page.goto('/');
+    // We navigate to dashboard and evaluate the DOM to make sure id="approval-item-1" was stripped.
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    const hardcodedApprovalItem = page.locator('#approval-item-1');
+    await expect(hardcodedApprovalItem).not.toBeAttached();
+  });
+
+  test('verify the real seeded DB approvals persist on reload without mock state reset', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    // First load confirms real data is populated.
+    await expect(page.getByText("Draft email for review")).toBeVisible();
+
+    // Reload page, it should fetch from the DB again and display the identical data without relying on hardcoded arrays.
+    await page.reload();
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Draft email for review")).toBeVisible();
+  });
 });
