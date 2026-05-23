@@ -37,16 +37,11 @@ async fn execute_publish_site_job(
     // 1. Fetch site and pages
     let _pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
-    // 2. Mock Site Compilation & Edge Delivery
+    // 2. Mock Site Compilation
     info!("Compiling site {} to static PWA/SSR...", site_id);
-    info!("Pushing structural payload to Edge delivery network for site {}...", site_id);
 
     // 3. Mock SEO Metadata Generation (via Marketing AI Agent)
     info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
-    info!("Injecting SEO metadata (title, desc, JSON-LD) for site {}...", site_id);
-
-    // 3.1 Mock Domain & Infrastructure Provisioning
-    info!("Automated Domain Provisioner: Checking availability and provisioning infrastructure for site {}...", site_id);
 
     // 4. Update published_at timestamp
     sqlx::query(

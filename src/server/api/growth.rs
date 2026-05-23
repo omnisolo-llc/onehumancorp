@@ -137,35 +137,12 @@ async fn handle_social_post(
 }
 
 async fn handle_send_campaign(
-    Extension(state): Extension<GrowthState>,
-    Json(req): Json<CampaignRequest>,
+    Extension(_state): Extension<GrowthState>,
+    Json(_req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
-    // In a real implementation we would:
-    // 1. Resolve target segment.
-    // 2. Generate personalized email bodies using an AI provider.
-    // 3. Dispatch the emails.
-    // 4. Record the campaign in DB.
-
-    // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
-
-    // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
-    if let Ok(event) = serde_json::to_string(&serde_json::json!({
-        "type": "campaign_sent",
-        "segment": req.target_segment,
-        "emails_sent": target_emails
-    })) {
-        let msg = crate::hub::HubEvent {
-            r#type: "growth.campaign_sent".to_string(),
-            payload: event,
-            occurred_at: chrono::Utc::now(),
-        };
-        state.hub.append_recent_event(msg);
-    }
-
     Json(CampaignResponse {
         campaign_id: uuid::Uuid::new_v4().to_string(),
-        emails_sent: target_emails,
+        emails_sent: 150,
     })
 }
 

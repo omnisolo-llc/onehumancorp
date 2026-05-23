@@ -573,14 +573,14 @@ impl AgentServiceImpl {
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
             enable_lost_in_the_middle_prevention: true,
+            enable_agent_curated_memory: false,
+            curated_memory_complexity_threshold: 10,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
-            enable_agent_curated_memory: false,
-            curated_memory_complexity_threshold: 10,
             guardrails: None,
             enable_llm_judge: false,
             enable_computational_guides: false,
@@ -594,8 +594,6 @@ impl AgentServiceImpl {
             resume_from_checkpoint_id: None,
             injected_context: None,
             enable_langgraph_mechanic: false,
-            enable_agent_curated_memory: false,
-            curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
@@ -657,10 +655,6 @@ impl AgentServiceImpl {
             memory_accessor,
             observation_store,
         );
-
-
-        // Add create_skill tool
-        tools.push(crate::tools::create_skill::create_skill_tool(()));
 
         if !department.is_empty() {
             if let Ok(dep) = Department::from_str(department) {
@@ -988,14 +982,14 @@ impl AgentService for AgentServiceImpl {
                 observation_masking_threshold: 3,
                 observation_masking_size_limit: 512,
                 enable_lost_in_the_middle_prevention: true,
+                enable_agent_curated_memory: false,
+                curated_memory_complexity_threshold: 10,
             project_trusted: true,
             allowed_tools: None,
             high_risk_tools: vec![],
             approved_tool_calls: vec![],
                 enable_context_compaction: true,
                 compaction_threshold_tokens: 60_000,
-                enable_agent_curated_memory: false,
-                curated_memory_complexity_threshold: 10,
                 guardrails: None,
                 enable_llm_judge: false,
                 enable_computational_guides: false,
@@ -1013,8 +1007,6 @@ impl AgentService for AgentServiceImpl {
                 resume_from_checkpoint_id: None,
                 injected_context,
                 enable_langgraph_mechanic: false,
-            enable_agent_curated_memory: false,
-            curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,

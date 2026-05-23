@@ -9,18 +9,16 @@ void main() {
   testWidgets('1) InboxScreen shows loading indicator initially', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: InboxScreen()));
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1)); // allow walkthrough timer to finish
   });
 
   testWidgets('2) InboxScreen has Unified Inbox title', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: InboxScreen()));
     expect(find.text('Unified Inbox'), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
   testWidgets('3) InboxScreen shows No messages when list is empty after loading', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: InboxScreen()));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
     expect(find.text('No messages.'), findsOneWidget);
   });
 
@@ -28,13 +26,11 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: InboxScreen()));
     expect(find.byType(AppBar), findsOneWidget);
     expect(find.byType(LayoutBuilder), findsOneWidget);
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
   testWidgets('5) InboxScreen sets background color properly', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: InboxScreen()));
     final Scaffold scaffold = tester.widget(find.byType(Scaffold));
     expect(scaffold.backgroundColor, Color(0xFFF5F5F7));
-    await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 }
