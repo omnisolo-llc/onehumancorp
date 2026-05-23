@@ -28,6 +28,10 @@ impl HybridSyncDaemon {
     }
 
     pub async fn sync_telemetry_step(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if !::server_config::get().telemetry_enabled {
+            return Ok(());
+        }
+
         let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM telemetry_buffer WHERE sync_status = 'pending'")
             .fetch_all(&self.sqlite_pool)
             .await?;
