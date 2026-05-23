@@ -237,6 +237,46 @@ pub async fn record_token_usage_forecast(pool: &PgPool, org_id: &str, forecast: 
     buffer_metric(pool, "ohc_token_burn_rate_forecast", "gauge", forecast, serde_json::json!({ "organization_id": org_id })).await
 }
 
+pub async fn record_task_resolution_efficiency(
+    pool: &PgPool,
+    outcome: &str,
+    role: &str,
+    model: &str,
+    tokens: i64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // 1. Outcome-Labeled Token Metrics
+    buffer_metric(
+        pool,
+        "ohc_token_usage_by_outcome",
+        "counter",
+        tokens as f32,
+        serde_json::json!({
+            "outcome": outcome,
+            "agent_role": role,
+            "model": model,
+        }),
+    )
+    .await?;
+
+    // 2. ROI Calculation in Telemetry
+    // Efficiency = 1 / (Tokens Consumed * 1000) for SUCCESS
+    if outcome == "SUCCESS" && tokens > 0 {
+        let efficiency = 1.0 / (tokens as f32 / 1000.0);
+        buffer_metric(
+            pool,
+            "ohc_agent_efficiency_gauge",
+            "gauge",
+            efficiency,
+            serde_json::json!({
+                "agent_role": role,
+            }),
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn record_agent_cost(pool: &PgPool, agent_id: &str, organization_id: &str, role: &str, model: &str, entity: &str, cost: f64) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(
         pool,
