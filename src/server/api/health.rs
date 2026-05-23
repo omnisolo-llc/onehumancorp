@@ -21,9 +21,15 @@ pub async fn health_handler(
         .await
         .unwrap_or(0);
 
+    let status = if health.get("db_ping_ms").and_then(|v| v.as_u64()).unwrap_or(0) > 0 {
+        if stuck_missions > 10 { "degraded" } else { "healthy" }
+    } else {
+        "unhealthy"
+    };
+
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),
-        "status": health.get("status").unwrap_or(&serde_json::json!("degraded")),
+        "status": status,
         "db_ping": health.get("db_ping_ms").unwrap_or(&serde_json::json!(0)),
         "sync_backlog": health.get("local_to_cloud_sync_queue").unwrap_or(&serde_json::json!(0)),
         "sync_error_count": health.get("sync_error_count").unwrap_or(&serde_json::json!(0)),

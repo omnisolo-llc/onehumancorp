@@ -18,13 +18,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: 70
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: 80
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}
@@ -47,13 +47,13 @@ spec:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ohcCore.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: 70
     - type: Resource
       resource:
         name: memory
         target:
           type: Utilization
-          averageUtilization: {{ .Values.ohcCore.autoscaling.targetMemoryUtilizationPercentage }}
+          averageUtilization: 80
 {{- end }}
 ---
 {{- if and .Values.chatwoot.enabled .Values.chatwoot.autoscaling.enabled }}

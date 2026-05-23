@@ -64,14 +64,23 @@ impl SipDB {
             let res = async {
                 let mut tx = self.pool.begin().await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'STUCK' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
+                // 1. Identify "stuck" missions (pending/bursting for too long)
+                sqlx::query("UPDATE agent_missions SET status = 'STUCK', updated_at = CURRENT_TIMESTAMP WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
-                // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' AND tenant_id = $1")
+                // 2. Proactively resolve missions that have been stuck for > 1 hour
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', mission_log = mission_log || '\n[SYSTEM]: Mission marked as FAILED due to prolonged STUCK state (exceeded 1 hour threshold).' WHERE status = 'STUCK' AND updated_at < $1 AND tenant_id = $2")
+                    .bind(stuck_threshold)
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                // 3. Fail missions that exceed the global age threshold
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED', mission_log = mission_log || '\n[SYSTEM]: Mission marked as FAILED due to exceeding global age threshold.' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND created_at < $1 AND tenant_id = $2")
+                    .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -82,13 +91,8 @@ impl SipDB {
                     .execute(&mut *tx)
                     .await?;
 
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
-                    .bind(fail_threshold)
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
-                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'BURSTING') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
+                // 4. Aggressive cleanup of COMPLETED or ancient FAILED missions
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE (status = 'COMPLETED' OR ((status = 'FAILED' OR status = 'STUCK') AND created_at < $1)) AND tenant_id = $2 LIMIT 1000) RETURNING id")
                     .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)

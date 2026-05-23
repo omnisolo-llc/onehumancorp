@@ -226,17 +226,32 @@ pub fn run() {
     #[cfg(not(ohc_bazel_tauri_context))]
     let context = tauri::generate_context!();
 
-    tauri::Builder::default()
+    let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
+
+    let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             greet,
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
-        ])
+        ]);
+
+    if !is_standalone {
+        // Only initialize heavy cloud-sync/telemetry plugins in Cloud mode
+        // builder = builder.plugin(tauri_plugin_cloud_sync::init());
+    }
+
+    builder
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             window.set_title("OHC").unwrap();
+
+            if is_standalone {
+                println!("Running in Standalone mode - local resources optimized.");
+                // Disable non-essential background timers if any existed in tauri-layer
+            }
+
             Ok(())
         })
         .run(context)

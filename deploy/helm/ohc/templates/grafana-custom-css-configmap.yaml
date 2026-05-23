@@ -6,12 +6,12 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
 data:
   custom.css: |-
-    /* OHC Premium CSS Tokens */
+    /* OHC Premium CSS Tokens - Visual Excellence Mandate */
     * {
         font-family: 'Outfit', 'Inter', sans-serif;
     }
     .panel-container {
-        backdrop-filter: blur(30px) saturate(210%);
+        backdrop-filter: blur(30px) saturate(210%) !important;
         background: rgba(22, 22, 26, 0.7) !important;
         font-family: 'Outfit', 'Inter', sans-serif !important;
         border-radius: 12px !important;
@@ -25,9 +25,11 @@ data:
     @media (prefers-color-scheme: light) {
         .panel-container {
             background: rgba(255, 255, 255, 0.65) !important;
+            backdrop-filter: blur(30px) saturate(210%) !important;
             border: 1px solid rgba(255, 255, 255, 0.4) !important;
         }
         .grafana-app {
             background: rgba(255, 255, 255, 0.65) !important;
+            backdrop-filter: blur(30px) saturate(210%) !important;
         }
     }

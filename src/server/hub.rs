@@ -704,8 +704,16 @@ impl Hub {
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
 
-        let hybrid_mode_ready = if mode == "standalone" {
-            std::env::var("DATABASE_URL").is_ok() && db_ping > 0
+        let is_standalone = mode == "standalone";
+        let hybrid_mode_ready = if is_standalone {
+            let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+            let db_exists = if db_url.starts_with("sqlite:") {
+                let path = db_url.trim_start_matches("sqlite:").trim_start_matches("//");
+                if path == ":memory:" { true } else { std::path::Path::new(path).exists() }
+            } else {
+                !db_url.is_empty()
+            };
+            db_exists && db_ping > 0
         } else {
             db_ping > 0
         };

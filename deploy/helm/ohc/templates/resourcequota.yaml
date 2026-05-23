@@ -7,11 +7,11 @@ metadata:
     {{- include "ohc.labels" . | nindent 4 }}
 spec:
   hard:
-    requests.cpu: {{ .Values.resourceQuota.requests.cpu | quote }}
-    requests.memory: {{ .Values.resourceQuota.requests.memory | quote }}
-    requests.ephemeral-storage: {{ .Values.resourceQuota.requests.ephemeralStorage | quote }}
-    limits.cpu: {{ .Values.resourceQuota.limits.cpu | quote }}
-    limits.memory: {{ .Values.resourceQuota.limits.memory | quote }}
-    limits.ephemeral-storage: {{ .Values.resourceQuota.limits.ephemeralStorage | quote }}
-    pods: {{ .Values.resourceQuota.limits.pods | quote }}
+    requests.cpu: {{ default "4" .Values.resourceQuota.requests.cpu | quote }}
+    requests.memory: {{ default "8Gi" .Values.resourceQuota.requests.memory | quote }}
+    requests.ephemeral-storage: {{ default "10Gi" .Values.resourceQuota.requests.ephemeralStorage | quote }}
+    limits.cpu: {{ default "8" .Values.resourceQuota.limits.cpu | quote }}
+    limits.memory: {{ default "16Gi" .Values.resourceQuota.limits.memory | quote }}
+    limits.ephemeral-storage: {{ default "20Gi" .Values.resourceQuota.limits.ephemeralStorage | quote }}
+    pods: {{ default "20" .Values.resourceQuota.limits.pods | quote }}
 {{- end }}
