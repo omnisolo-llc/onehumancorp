@@ -235,7 +235,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 18),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
             ),
@@ -259,7 +259,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Form(
         key: _formKey,
         child: AnimatedSwitcher(
-          duration: Duration(milliseconds: 300),
+          duration: Duration(milliseconds: 250),
+          reverseDuration: Duration(milliseconds: 150),
+          switchInCurve: Cubic(0.4, 0.0, 0.2, 1.0),
+          switchOutCurve: Cubic(0.4, 0.0, 0.2, 1.0),
           child: _currentInputStep == 0
               ? _buildBioStep()
               : _currentInputStep == 1
@@ -304,7 +307,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
@@ -332,7 +335,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             backgroundColor: Color(0xFF0066FF),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
           ),
           child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
@@ -373,7 +376,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 hintText: 'e.g., Maya\'s Cakes',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
@@ -394,7 +397,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             backgroundColor: Color(0xFF0066FF),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
           ),
           child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
@@ -443,7 +446,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             backgroundColor: Color(0xFF0066FF),
             foregroundColor: Colors.white,
             padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             elevation: 0,
           ),
           child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
@@ -610,7 +613,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           padding: EdgeInsets.symmetric(vertical: 16),
                           minimumSize: Size(double.infinity, 50),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           elevation: 0,
                         ),
@@ -718,7 +721,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: EdgeInsets.symmetric(vertical: 18),
               minimumSize: Size(double.infinity, 50),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(8),
               ),
               elevation: 0,
             ),
@@ -819,7 +822,7 @@ class StoreLiveScreen extends StatelessWidget {
                             padding: EdgeInsets.symmetric(vertical: 18),
                             minimumSize: Size(double.infinity, 50),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 0,
                           ),
