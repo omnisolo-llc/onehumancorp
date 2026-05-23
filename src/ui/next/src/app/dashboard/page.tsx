@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
   const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
   const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
+  const [showPhotoTask, setShowPhotoTask] = useState<boolean>(true);
 
   const handleApproveReviewRequest = () => {
     setIsReviewGenerating(true);
@@ -231,11 +232,11 @@ export default function Dashboard() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Action Required (Approvals) */}
-         {(approvals.length > 0 || showReviewRequestCard) && (
+         {/* Today's Action Items (Approvals) */}
+         {(approvals.length > 0 || showReviewRequestCard || showPhotoTask) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Today's Action Items</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -247,6 +248,35 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">
+                    {/* Upload Photo Task */}
+                    {showPhotoTask && (
+                        <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
+                                        📸
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-lg font-outfit text-gray-900">
+                                            Marketing Department
+                                        </h3>
+                                        <p className="text-gray-600 font-inter text-sm">Upload your first real product photo.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-2 shrink-0">
+                                    <button
+                                        onClick={() => setShowPhotoTask(false)}
+                                        className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
+                                        style={{ borderRadius: '8px' }}
+                                    >
+                                        Upload Photo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Hardcoded Automated Review Request Card based on mockup */}
                     {showReviewRequestCard && (
                         <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
@@ -398,7 +428,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && !showReviewRequestCard && (
+         {approvals.length === 0 && !showReviewRequestCard && !showPhotoTask && (
 <>
 {/* Business Snapshot */}
          <section>
