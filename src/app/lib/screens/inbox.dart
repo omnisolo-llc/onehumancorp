@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../widgets/tooltip_wrapper.dart';
 import 'dart:convert';
+import 'agent_audit_dashboard.dart';
 
 class InboxMessage {
   final String id;
@@ -95,14 +97,29 @@ class _InboxScreenState extends State<InboxScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F5F7), // Light translucent glass background
       appBar: AppBar(
-        title: Text(
-          'Unified Inbox',
-          style: TextStyle(
-            fontFamily: 'Outfit',
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1D1D1F),
+        title: const TooltipWrapper(
+          tooltipId: 'unified_inbox',
+          child: Text(
+            'Unified Inbox',
+            style: TextStyle(
+              fontFamily: 'Outfit',
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1D1D1F),
+            ),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.admin_panel_settings, color: Colors.black87),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AgentAuditDashboard()),
+              );
+            },
+            tooltip: 'Agent Audit Dashboard',
+          )
+        ],
         backgroundColor: Colors.white.withOpacity(0.65),
         elevation: 0,
         flexibleSpace: ClipRect(
@@ -288,15 +305,19 @@ class _InboxScreenState extends State<InboxScreen> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: TextField(
-                          controller: _replyController,
-                          maxLines: null,
-                          decoration: InputDecoration(
-                            hintText: 'Type your reply...',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            border: InputBorder.none,
+                        child: TooltipWrapper(
+                          tooltipId: 'reply_box',
+                          preferDirection: AxisDirection.up,
+                          child: TextField(
+                            controller: _replyController,
+                            maxLines: null,
+                            decoration: InputDecoration(
+                              hintText: 'Type your reply...',
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              border: InputBorder.none,
+                            ),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 14),
                           ),
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 14),
                         ),
                       ),
                       IconButton(

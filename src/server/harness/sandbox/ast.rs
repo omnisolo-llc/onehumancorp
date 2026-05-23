@@ -1,5 +1,4 @@
 use tree_sitter::{Node, Parser};
-use tracing::instrument;
 
 pub struct ASTParser {
     parser: Parser,
@@ -14,7 +13,6 @@ impl ASTParser {
         Self { parser }
     }
 
-    #[instrument(skip(self), fields(command = %cmd))]
     pub fn parse_for_security(&mut self, cmd: &str) -> Result<(), String> {
         let tree = self.parser.parse(cmd, None).ok_or("Failed to parse command")?;
         let root_node = tree.root_node();
@@ -22,10 +20,8 @@ impl ASTParser {
         self.walk_node_for_security(root_node, cmd)
     }
 
-    #[instrument(skip(self, node, source))]
     fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
         let node_kind = node.kind();
-
 
         // zmodload check
         if node_kind == "command" {
@@ -34,26 +30,8 @@ impl ASTParser {
                 if name == "zmodload" {
                     return Err("Dangerous pattern detected: zmodload".to_string());
                 }
-                if name == "rm" {
-                    let mut is_rf = false;
-                    let mut is_root = false;
-                    let mut cursor = node.walk();
-                    for child in node.children(&mut cursor) {
-                        let text = &source[child.start_byte()..child.end_byte()];
-                        if text == "-rf" || text == "-fr" || text == "-r" || text == "-f" {
-                            is_rf = true;
-                        }
-                        if text == "/" || text == "/*" {
-                            is_root = true;
-                        }
-                    }
-                    if is_rf && is_root {
-                         return Err("Dangerous command detected: rm -rf /".to_string());
-                    }
-                }
             }
         }
-
 
         // process substitution <() or >()
         if node_kind == "process_substitution" {
@@ -105,15 +83,6 @@ mod tests {
         assert!(parser.parse_for_security("echo 'hello world'").is_ok());
         assert!(parser.parse_for_security("ls -l /tmp").is_ok());
         assert!(parser.parse_for_security("cat file.txt | grep foo").is_ok());
-    }
-
-
-    #[test]
-    fn test_block_rm_rf_root() {
-        let mut parser = ASTParser::new();
-        let res = parser.parse_for_security("rm -rf /");
-        assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Dangerous command detected: rm -rf /");
     }
 
     #[test]

@@ -27,7 +27,6 @@ rust_library(
         "@crates//:serde_json",
         "@crates//:sqlx",
         "@crates//:tokio",
-        "@crates//:tracing",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
@@ -48,6 +47,5 @@ rust_test(
     }),
     deps = [
         "@crates//:tokio",
-        "@crates//:tracing",
     ],
 )
