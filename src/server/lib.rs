@@ -2012,7 +2012,45 @@ async fn get_inbox_messages_handler() -> axum::response::Response {
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({ "bio-input-tooltip": "Tell us what you sell, who buys it, and how your brand feels.", "generate-btn-tooltip": "Our smart helpers will read your text and build a complete store for you.", "launch-btn-tooltip": "Make your store live on the internet right now.", "team-activity-tooltip": "See what your smart helpers are working on right now.", "referral-tooltip": "Share this link with friends. If they join, you earn credits.", "swarm-online-tooltip": "Your smart helpers are online and doing work for you.", "department-card-tooltip": "Click to see tasks that need your okay.", })) })).route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([ { "id": 1, "title": "Set up your store", "duration": "1:15" }, { "id": 2, "title": "Accepting payments", "duration": "0:45" }, { "id": 3, "title": "Activating AI Agents", "duration": "1:20" }, { "id": 4, "title": "Managing inventory", "duration": "0:55" } ])) })).route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({ "reply": "Hi! I am your Help Helper! I answer questions about how to use this app. Want to set up your store? Read our Getting Started guide.", "link": { "url": "/help", "title": "Read the full article →" } })) })).merge(webhook_router)
+        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
+            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
+            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
+            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
+            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
+            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
+        ])) }))
+        .route("/api/tooltips", axum::routing::get(|| async { axum::Json(serde_json::json!({
+            "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
+            "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
+            "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
+            "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.",
+            "referral-tooltip": "Share your unique link to earn credits when friends join OHC.",
+            "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.",
+            "department-card-tooltip": "Click to view and manage pending approvals for this department.",
+            "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
+            "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
+            "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
+            "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
+        })) }))
+        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
+            { "id": 1, "title": "How to add a product", "duration": "1:20" },
+            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
+            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
+            { "id": 4, "title": "Adding team members", "duration": "1:05" },
+            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
+            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
+            { "id": 7, "title": "Using the builder", "duration": "1:30" },
+            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
+            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
+            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+        ])) }))
+        .route("/api/chat", axum::routing::post(|| async { axum::Json(serde_json::json!({
+            "reply": "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.",
+            "link": { "url": "/help", "title": "Read the full article →" }
+        })) }))
+        .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);
 

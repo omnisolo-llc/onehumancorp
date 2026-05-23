@@ -5,6 +5,7 @@ use tonic::{Request, Response, Status};
 
 static HELP_ARTICLES: OnceLock<Vec<HelpArticle>> = OnceLock::new();
 static TOOLTIPS: OnceLock<Vec<Tooltip>> = OnceLock::new();
+static VIDEO_TUTORIALS: OnceLock<Vec<VideoTutorial>> = OnceLock::new();
 
 pub struct MyDocsService;
 
@@ -53,6 +54,23 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Understanding your invoice".to_string(),
                 content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
             },
+        ]
+    })
+}
+
+fn get_video_tutorials() -> &'static Vec<VideoTutorial> {
+    VIDEO_TUTORIALS.get_or_init(|| {
+        vec![
+            VideoTutorial { id: 1, title: "How to add a product".to_string(), duration: "1:20".to_string() },
+            VideoTutorial { id: 2, title: "Setting up payments".to_string(), duration: "1:15".to_string() },
+            VideoTutorial { id: 3, title: "Managing inventory".to_string(), duration: "0:50".to_string() },
+            VideoTutorial { id: 4, title: "Adding team members".to_string(), duration: "1:05".to_string() },
+            VideoTutorial { id: 5, title: "Reviewing orders".to_string(), duration: "1:10".to_string() },
+            VideoTutorial { id: 6, title: "Connecting social media".to_string(), duration: "1:25".to_string() },
+            VideoTutorial { id: 7, title: "Using the builder".to_string(), duration: "1:30".to_string() },
+            VideoTutorial { id: 8, title: "Understanding analytics".to_string(), duration: "1:00".to_string() },
+            VideoTutorial { id: 9, title: "Fulfilling orders".to_string(), duration: "0:45".to_string() },
+            VideoTutorial { id: 10, title: "Processing refunds".to_string(), duration: "0:55".to_string() },
         ]
     })
 }
@@ -156,6 +174,16 @@ impl DocsService for MyDocsService {
         } else {
             Err(Status::not_found("Tooltip not found"))
         }
+    }
+
+    async fn get_video_tutorials(
+        &self,
+        _request: Request<GetVideoTutorialsRequest>,
+    ) -> Result<Response<GetVideoTutorialsResponse>, Status> {
+        let tutorials = get_video_tutorials();
+        Ok(Response::new(GetVideoTutorialsResponse {
+            tutorials: tutorials.clone(),
+        }))
     }
 }
 

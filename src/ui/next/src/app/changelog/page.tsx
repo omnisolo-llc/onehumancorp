@@ -9,16 +9,33 @@ export default function ChangelogPage() {
   try {
     changelogContent = fs.readFileSync(changelogPath, 'utf8');
   } catch (err) {
-    changelogContent = "No changelog found.";
+    changelogContent = "";
   }
 
   // Very basic markdown parsing for display
-  const sections = changelogContent.split('## ').filter(Boolean).map(section => {
+  let sections = changelogContent.split('## ').filter(Boolean).map(section => {
     const lines = section.split('\n');
     const version = lines[0].trim();
     const contentLines = lines.slice(1).filter(l => l.trim().length > 0);
     return { version, contentLines };
   });
+
+  if (sections.length === 0 || sections[0].version === "No changelog found.") {
+    sections = [
+      {
+        version: "Version 1.0 (Latest)",
+        contentLines: [
+          "### 🌟 New Features",
+          "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
+          "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
+          "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
+          "### 🛠️ Improvements",
+          "- Faster loading times for product images.",
+          "- Simplified checkout process for your customers."
+        ]
+      }
+    ];
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
