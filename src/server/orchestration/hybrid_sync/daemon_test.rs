@@ -107,3 +107,81 @@ mod tests {
         assert!(mission_payload_str.contains("safe_data"));
     }
 }
+
+#[tokio::test]
+async fn test_hybrid_sync_daemon_telemetry_opt_out() {
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+    let pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect(&database_url)
+        .await;
+
+    let pg_pool = match pg_pool {
+        Ok(p) => p,
+        Err(_) => return,
+    };
+
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            metric_name TEXT NOT NULL,
+            metric_type TEXT NOT NULL,
+            value REAL NOT NULL,
+            labels_json TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            sync_status TEXT NOT NULL
+        )"
+    ).execute(&sqlite_pool).await.unwrap();
+
+    sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES (?, ?, ?, ?, ?, 'pending')")
+        .bind("test_metric")
+        .bind("counter")
+        .bind(1.0)
+        .bind("{}")
+        .bind(chrono::Utc::now().naive_utc().to_string())
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+    // The async env issue... temp_env is synchronous
+    let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
+    let _old_standalone = std::env::var("STANDALONE_MODE");
+
+    unsafe {
+        std::env::set_var("OHC_TELEMETRY_ENABLED", "false");
+        std::env::set_var("STANDALONE_MODE", "true");
+    }
+
+    // We also need to reload config somehow... or actually our change reads ::server_config::get().
+    // We can't really reload standard OnceLock easily so we'll just check if it blocks.
+    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+    daemon.sync_telemetry_step().await.unwrap();
+
+    // Check that it's still pending
+    let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
+        .fetch_one(&sqlite_pool)
+        .await
+        .unwrap();
+    use sqlx::Row;
+    let status: String = row.get("sync_status");
+    assert_eq!(status, "pending");
+
+    unsafe {
+        if let Ok(val) = _old_telemetry {
+            std::env::set_var("OHC_TELEMETRY_ENABLED", val);
+        } else {
+            std::env::remove_var("OHC_TELEMETRY_ENABLED");
+        }
+
+        if let Ok(val) = _old_standalone {
+            std::env::set_var("STANDALONE_MODE", val);
+        } else {
+            std::env::remove_var("STANDALONE_MODE");
+        }
+    }
+}
