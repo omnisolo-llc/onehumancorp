@@ -76,6 +76,29 @@ impl StripeClient {
         ])
     }
 
+
+    pub async fn process_payouts(&self, account_id: &str, payouts: Vec<f64>) -> Result<Vec<String>, String> {
+        let _ = ::server_telemetry::record_api_call_cost(
+            &crate::db::get_pool(),
+            account_id,
+            "stripe_process_payouts",
+            0.05
+        ).await;
+
+        let batches = crate::integrations::stripe::routing::PaymentRouter::optimize_payout_batch(payouts.clone(), 50.0);
+        let _savings = crate::integrations::stripe::routing::PaymentRouter::calculate_payout_savings(&payouts, &batches);
+
+        // Omitted tracing log due to telemetry strictness on variables.
+
+        let mut payout_ids = Vec::new();
+        for (i, batch) in batches.iter().enumerate() {
+            let amount: f64 = batch.iter().sum();
+            payout_ids.push(format!("po_batch_{}_{}_amount_{}", account_id, i, amount));
+        }
+
+        Ok(payout_ids)
+    }
+
     pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),

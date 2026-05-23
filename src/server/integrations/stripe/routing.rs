@@ -29,6 +29,50 @@ impl PaymentRouter {
 
     /// Calculates the potential savings in USD if the optimal payment method is used
     /// instead of defaulting to Credit Card.
+
+    /// Calculates optimal batching for payouts to minimize fixed fees.
+    /// Stripe charges $0.25 + 0.25% for standard payouts.
+    /// By batching smaller payouts into a larger one, the fixed $0.25 fee is minimized.
+    pub fn optimize_payout_batch(payouts: Vec<f64>, min_batch_size: f64) -> Vec<Vec<f64>> {
+        let mut batches = Vec::new();
+        let mut current_batch = Vec::new();
+        let mut current_sum = 0.0;
+
+        for payout in payouts {
+            current_batch.push(payout);
+            current_sum += payout;
+
+            if current_sum >= min_batch_size {
+                batches.push(current_batch.clone());
+                current_batch.clear();
+                current_sum = 0.0;
+            }
+        }
+
+        if !current_batch.is_empty() {
+            if let Some(last_batch) = batches.last_mut() {
+                // if there's a leftover batch, merge it into the last batch to save fixed fee
+                last_batch.extend(current_batch);
+            } else {
+                batches.push(current_batch);
+            }
+        }
+
+        batches
+    }
+
+    /// Calculates the fee savings of batching payouts compared to paying them individually.
+    pub fn calculate_payout_savings(payouts: &[f64], batches: &[Vec<f64>]) -> f64 {
+        let individual_fees: f64 = payouts.iter().map(|&p| 0.25 + (p * 0.0025)).sum();
+        let batched_fees: f64 = batches.iter().map(|b| {
+            let sum: f64 = b.iter().sum();
+            0.25 + (sum * 0.0025)
+        }).sum();
+
+        let savings = individual_fees - batched_fees;
+        (savings * 100.0).round() / 100.0
+    }
+
     pub fn calculate_fee_savings(amount_usd: f64) -> f64 {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
@@ -44,6 +88,31 @@ impl PaymentRouter {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn test_optimize_payout_batch() {
+        let payouts = vec![10.0, 20.0, 30.0, 40.0, 50.0];
+        let batches = PaymentRouter::optimize_payout_batch(payouts, 45.0);
+
+        // 10+20+30 = 60 (Batch 1) -> 40+50 = 90 (Batch 2)
+        assert_eq!(batches.len(), 2);
+        assert_eq!(batches[0], vec![10.0, 20.0, 30.0]);
+        assert_eq!(batches[1], vec![40.0, 50.0]);
+    }
+
+    #[test]
+    fn test_calculate_payout_savings() {
+        let payouts = vec![10.0, 20.0, 30.0, 40.0, 50.0]; // 5 payouts
+        let batches = PaymentRouter::optimize_payout_batch(payouts.clone(), 45.0); // 2 batches
+
+        // Individual fixed fees: 5 * $0.25 = $1.25
+        // Batched fixed fees: 2 * $0.25 = $0.50
+        // Percentage fee is the same regardless of batching.
+        // Savings should be $1.25 - $0.50 = $0.75
+        let savings = PaymentRouter::calculate_payout_savings(&payouts, &batches);
+        assert_eq!(savings, 0.75);
+    }
+
     use super::*;
 
     #[test]

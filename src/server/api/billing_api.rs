@@ -24,10 +24,40 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
+
+#[derive(serde::Deserialize)]
+pub struct PayoutRequest {
+    pub account_id: String,
+}
+
+pub async fn process_payouts_handler(
+    _headers: HeaderMap,
+    State(hub): State<Arc<Hub>>,
+    axum::extract::Json(payload): axum::extract::Json<PayoutRequest>,
+) -> Json<Vec<String>> {
+    let tracker = hub.tracker();
+    if let Some(ref client) = tracker.stripe_client {
+        let auditor = hub.get_cost_auditor();
+        let total_revenue = auditor.get_total_revenue();
+
+        let mut payouts = Vec::new();
+        if total_revenue > 0.0 {
+            payouts.push(total_revenue * 0.5);
+            payouts.push(total_revenue * 0.5);
+        }
+
+        if let Ok(ids) = client.process_payouts(&payload.account_id, payouts).await {
+            return Json(ids);
+        }
+    }
+    Json(vec![])
+}
+
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/payouts", axum::routing::post(process_payouts_handler))
         .with_state(hub)
 }
 
