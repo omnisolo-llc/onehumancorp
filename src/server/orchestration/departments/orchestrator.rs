@@ -90,6 +90,7 @@ impl Department for DummyDepartment {
                 ActionRisk::DraftForReview => ApprovalStatus::Pending,
             },
             action_risk: risk.clone(),
+            feature_type: None,
         };
         self.orchestrator.add_approval_request(req.clone()).await;
         Ok(req)
@@ -268,6 +269,7 @@ impl DepartmentOrchestrator {
                     description: format!("{} | Payload: {}", description, _action_payload.to_string()),
                     status: ApprovalStatus::Approved,
                     action_risk: ActionRisk::AutoExecute,
+                    feature_type: None,
                 };
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
@@ -280,6 +282,7 @@ impl DepartmentOrchestrator {
                     description: format!("{} | Payload: {}", description, _action_payload.to_string()),
                     status: ApprovalStatus::Pending,
                     action_risk: ActionRisk::DraftForReview,
+            feature_type: None,
                 };
                 self.add_approval_request(req.clone()).await;
                 Ok(req.clone())
