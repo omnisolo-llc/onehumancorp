@@ -48,7 +48,7 @@ jobs:
           #  runner: macos-15-intel
           #  bazel_config: macos_x86_64
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')

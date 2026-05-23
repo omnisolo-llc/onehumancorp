@@ -58,7 +58,7 @@ jobs:
             archive_name: ohc-x86_64-apple-darwin.tar.gz
             install_linux_deps: false
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
@@ -179,7 +179,7 @@ jobs:
             patterns: "*.deb *.rpm"
             install_linux_deps: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -343,7 +343,7 @@ jobs:
             targets: "//src/ui/tauri:tauri_ios_ipa"
             patterns: "*.ipa"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
@@ -470,7 +470,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Install Linux build dependencies
         run: |
@@ -612,7 +612,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
