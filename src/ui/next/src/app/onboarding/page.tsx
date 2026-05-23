@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -17,6 +17,47 @@ export default function OnboardingWizard() {
     intakeData, setIntakeData,
     startResult, setStartResult
   } = useOnboardingStore();
+
+  useEffect(() => {
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const userId = localStorage.getItem('user_id') || 'test-user';
+    fetch('/api/onboarding/state', {
+      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data) {
+        if (data.step) setStep(data.step);
+        if (data.businessType) setBusinessType(data.businessType);
+        if (data.businessName) setBusinessName(data.businessName);
+        if (data.businessCategory) setBusinessCategory(data.businessCategory);
+      }
+    })
+    .catch(err => console.error('Failed to load onboarding state', err));
+  }, []);
+
+  useEffect(() => {
+    // Save to server on state change
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const userId = localStorage.getItem('user_id') || 'test-user';
+
+    const payload = {
+      step,
+      businessType,
+      businessName,
+      businessCategory
+    };
+
+    const timer = setTimeout(() => {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify(payload)
+      }).catch(err => console.error('Failed to sync onboarding state', err));
+    }, 1000); // debounce 1s
+
+    return () => clearTimeout(timer);
+  }, [step, businessType, businessName, businessCategory]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -179,6 +220,8 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                enterKeyHint="next"
                 placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -200,6 +243,8 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleNext()}
+                enterKeyHint="next"
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -229,6 +274,8 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleIntakeSubmit()}
+                enterKeyHint="done"
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
