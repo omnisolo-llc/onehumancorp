@@ -15,6 +15,11 @@ export default function Dashboard() {
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
 
+  // Growth Loop: Trial Extension State
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
+  const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
+  const [reviewLeft, setReviewLeft] = useState<boolean>(false);
+
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
@@ -501,6 +506,80 @@ export default function Dashboard() {
                 >
                     <span>+ Add Product</span>
                 </button>
+            </div>
+         </section>
+
+         {/* Growth Loop: Interactive Trial Extension */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Extend Your Trial</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                        <span className="text-xs font-medium text-yellow-600">Grow Faster</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock More Time</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong className="text-gray-900">{trialDaysLeft} days left</strong> in your free trial. Complete these quick tasks to earn more time and get the most out of OHC.</p>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">Connect Twitter</h4>
+                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (!twitterConnected) {
+                                        setTwitterConnected(true);
+                                        setTrialDaysLeft(prev => prev + 7);
+                                    }
+                                }}
+                                disabled={twitterConnected}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${twitterConnected ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                            >
+                                {twitterConnected ? 'Connected' : 'Connect'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">Leave a Review</h4>
+                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    if (!reviewLeft) {
+                                        setReviewLeft(true);
+                                        setTrialDaysLeft(prev => prev + 7);
+                                    }
+                                }}
+                                disabled={reviewLeft}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${reviewLeft ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+                            >
+                                {reviewLeft ? 'Done' : 'Review'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 flex justify-center mt-4 md:mt-0">
+                     <div className="text-center">
+                        <div className="text-5xl font-outfit font-bold text-gray-900 mb-2">{trialDaysLeft}</div>
+                        <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Days Left</div>
+                    </div>
+                </div>
             </div>
          </section>
 
