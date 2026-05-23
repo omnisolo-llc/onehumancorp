@@ -14,7 +14,7 @@ void main() {
 
     await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle(const Duration(seconds: 1));
-    expect(find.text('Step 1 of 3'), findsOneWidget);
+    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {
@@ -35,18 +35,6 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio');
     await tester.pumpAndSettle();
 
-    // Next to Name step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Enter name
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-
-    // Next to Template step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
     await tester.pumpAndSettle();
@@ -54,10 +42,8 @@ void main() {
     // Expect to see SnackBar
     expect(find.text('Network error. Please try again.'), findsOneWidget);
 
-    // Expect to still be on the template selection state (after going back to input state on error)
-    // Actually the code says setState(() => _state = OnboardingState.input);
-    // So it stays in the Input state but the _currentInputStep will remain what it was (2).
-    expect(find.text('Choose a look'), findsOneWidget);
+    // Expect to remain in input state since it errors out
+    expect(find.text('Welcome to OHC Smart Builder'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Debounce triggers draft save', (WidgetTester tester) async {
@@ -111,18 +97,6 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), 'Test generating state');
     await tester.pumpAndSettle();
 
-    // Next to Name step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Enter name
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-
-    // Next to Template step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
     // Submit form
     await tester.tap(find.text('Build My Storefront'));
     await tester.pump(); // Don't pump and settle, so we can see the generating state!
@@ -154,44 +128,4 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 1));
   });
 
-  testWidgets('Onboarding Screen - Advanced Mode UI test', (WidgetTester tester) async {
-    final client = MockClient((request) async {
-      if (request.url.path == '/api/onboarding/draft') {
-        return http.Response('{}', 200);
-      }
-      return http.Response('Not Found', 404);
-    });
-
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
-
-    // Go to input state
-    await tester.tap(find.text('Start a Business'));
-    await tester.pumpAndSettle();
-
-    // Bio step is _currentInputStep == 0
-    await tester.enterText(find.byKey(Key('bio-input')), 'Test bio');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Name step is _currentInputStep == 1
-    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    // Now we are at Template step (_currentInputStep == 2)
-    // Expect Advanced Mode toggle to be present
-    expect(find.byKey(Key('advanced-mode-toggle')), findsOneWidget);
-
-    // Domain choice dropdown shouldn't be visible yet
-    expect(find.byKey(Key('domain-choice-dropdown')), findsNothing);
-
-    // Toggle advanced mode
-    await tester.tap(find.byKey(Key('advanced-mode-toggle')));
-    await tester.pumpAndSettle();
-
-    // Now it should be visible
-    expect(find.byKey(Key('domain-choice-dropdown')), findsOneWidget);
-  });
-}
+  }

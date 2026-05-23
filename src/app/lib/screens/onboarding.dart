@@ -261,368 +261,96 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildInputState() {
+    Widget _buildInputState() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Form(
         key: _formKey,
-        child: Column(
-          children: [
-            Text(
-              'Step ${_currentInputStep + 1} of 3',
-              style: TextStyle(fontFamily: 'Inter', color: Colors.grey[600]),
-            ),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: Duration(milliseconds: 300),
-                child: _currentInputStep == 0
-                    ? _buildBioStep()
-                    : _currentInputStep == 1
-                        ? _buildNameStep()
-                        : _buildTemplateStep(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBioStep() {
-    return LayoutBuilder(
-      key: ValueKey(0),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-          'Welcome to OHC Smart Builder',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Tell us about your business, and AI will build it.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: TextFormField(
-              key: Key('bio-input'),
-              controller: _bioController,
-              autofocus: true,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.multiline,
-              autofocus: true,
-              maxLines: 4,
-              decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                bio = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
-            ),
-          ),
-        ),
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 1);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-                    child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildNameStep() {
-    return LayoutBuilder(
-      key: ValueKey(1),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-          'Name your business',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'What should we call your storefront?',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: TextFormField(
-              key: Key('name-input'),
-              initialValue: businessName,
-              autofocus: true,
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Cakes',
-                filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                contentPadding: EdgeInsets.all(20),
-              ),
-              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
-              onChanged: (value) {
-                businessName = value;
-                if (_debounce?.isActive ?? false) _debounce!.cancel();
-                _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(bio);
-                });
-              },
-              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => businessName = value!,
-            ),
-          ),
-        ),
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 2);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-        SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            setState(() => _currentInputStep = 0);
-          },
-                    child: Text('Back'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTemplateStep() {
-    return LayoutBuilder(
-      key: ValueKey(2),
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-          'Choose a look',
-          style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Select a starting template for your AI to use.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildTemplateChoice('Modern', Icons.auto_awesome),
-            _buildTemplateChoice('Classic', Icons.account_balance),
-            _buildTemplateChoice('Bold', Icons.flash_on),
-          ],
-        ),
-        SizedBox(height: 32),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.65),
-                border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Advanced Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-                  Switch(
-                    key: Key('advanced-mode-toggle'),
-                    value: isAdvancedMode,
-                    activeColor: Color(0xFF0066FF),
-                    onChanged: (val) {
-                      setState(() => isAdvancedMode = val);
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (isAdvancedMode) ...[
-          SizedBox(height: 16),
-          Text('Domain Choice', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
-          SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.65),
-                  border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: DropdownButtonFormField<String>(
-                  key: Key('domain-choice-dropdown'),
-                  value: domainChoice,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.transparent,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  ),
-                  items: [
-                    DropdownMenuItem(value: 'subdomain', child: Text('Subdomain (.ohc.app)')),
-                    DropdownMenuItem(value: 'custom', child: Text('Custom Domain')),
+        child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Welcome to OHC Smart Builder',
+                      style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'Tell us about your business, and AI will build it.',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 32),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                        child: TextFormField(
+                          key: Key('bio-input'),
+                          controller: _bioController,
+                          autofocus: true,
+                          textInputAction: TextInputAction.done,
+                          textCapitalization: TextCapitalization.sentences,
+                          keyboardType: TextInputType.multiline,
+                          maxLines: 4,
+                          decoration: InputDecoration(
+                            labelText: 'Business Bio',
+                            hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                            filled: true,
+                            fillColor: Colors.white.withOpacity(0.5),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                            contentPadding: EdgeInsets.all(20),
+                          ),
+                          style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+                          onChanged: (value) {
+                            bio = value;
+                            if (_debounce?.isActive ?? false) _debounce!.cancel();
+                            _debounce = Timer(const Duration(milliseconds: 500), () {
+                              _saveDraft(value);
+                            });
+                          },
+                          validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                          onSaved: (value) => bio = value!,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _formKey.currentState!.save();
+                          submit();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF0066FF),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 18),
+                        minimumSize: Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 0,
+                      ),
+                      child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+                    ),
                   ],
-                  onChanged: (val) {
-                    if (val != null) setState(() => domainChoice = val);
-                    _saveDraft(bio);
-                  },
                 ),
               ),
             ),
-          ),
-        ],
-        SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
-          ),
-          child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-        ),
-        SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            setState(() => _currentInputStep = 1);
-          },
-                    child: Text('Back'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTemplateChoice(String name, IconData icon) {
-    final isSelected = selectedTemplate == name;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          selectedTemplate = name;
-          _saveDraft(bio);
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? Color(0xFF0066FF).withOpacity(0.1) : Colors.white.withOpacity(0.5),
-          border: Border.all(
-            color: isSelected ? Color(0xFF0066FF) : Colors.transparent,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: isSelected ? Color(0xFF0066FF) : Colors.grey[600]),
-            SizedBox(height: 8),
-            Text(
-              name,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Color(0xFF0066FF) : Colors.grey[800],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
+      ),
       ),
     );
   }
 
-  Widget _buildGeneratingState() {
+Widget _buildGeneratingState() {
     return Padding(
       padding: EdgeInsets.all(24),
       child: Column(
