@@ -490,7 +490,9 @@ impl AgentServiceImpl {
             }
         }
 
-        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if sqlite_memory.is_some() {
+        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if std::env::var("OHC_USE_RUFLO_HNSW_MEMORY_STORE").unwrap_or_default() == "true" {
+            Some(std::sync::Arc::new(crate::memory_store::RufloHnswMemoryStore::new(llm.clone())))
+        } else if sqlite_memory.is_some() {
             sqlite_memory
         } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
             let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
