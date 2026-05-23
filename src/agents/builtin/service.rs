@@ -593,6 +593,7 @@ impl AgentServiceImpl {
             injected_context: None,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
@@ -1004,6 +1005,7 @@ impl AgentService for AgentServiceImpl {
                 injected_context,
                 enable_langgraph_mechanic: false,
                 enable_time_travel_rewind: false,
+                enable_serverless_hibernation: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,

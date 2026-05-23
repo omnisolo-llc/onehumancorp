@@ -70,6 +70,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_time_travel_rewind: bool,
+    pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
@@ -120,6 +121,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_time_travel_rewind: false,
+            enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
@@ -1532,6 +1534,24 @@ impl Agent {
         let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
 
+        // Hermes Agent Serverless Hibernation Mechanic
+        if final_cfg.enable_serverless_hibernation {
+            if let Some(thread_id) = &final_cfg.thread_id {
+                if let Some(dir) = &final_cfg.workspace_path {
+                    let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                    let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                    if hm.is_hibernated(thread_id).await {
+                        tracing::info!("Waking agent session {} from serverless hibernation", thread_id);
+                        if let Ok(state) = hm.wake(thread_id).await {
+                            if let Ok(restored_msgs) = serde_json::from_str::<Vec<Message>>(&state.messages_json) {
+                                messages = restored_msgs;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         if final_cfg.enable_langgraph_mechanic {
             return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
@@ -2392,6 +2412,25 @@ impl Agent {
                 response_id: None,
                 previous_response_id: last_response_id.clone(),
             });
+
+            // Hermes Agent Serverless Hibernation Mechanic
+            if final_cfg.enable_serverless_hibernation {
+                if let Some(thread_id) = &final_cfg.thread_id {
+                    if let Some(dir) = &final_cfg.workspace_path {
+                        let hibernation_dir = format!("{}/.ohc_hibernation", dir);
+                        let hm = crate::hibernation::HibernationManager::new(&hibernation_dir).await;
+                        if let Ok(msgs_json) = serde_json::to_string(&messages) {
+                            let state = crate::hibernation::HibernationState {
+                                session_id: thread_id.clone(),
+                                messages_json: msgs_json,
+                                current_step: iteration as usize,
+                                active_tools: vec![],
+                            };
+                            let _ = hm.hibernate(thread_id, &state).await;
+                        }
+                    }
+                }
+            }
 
             // State Management Checkpointing Mechanic
             // 1. Configured Checkpointer (Database or Git)
