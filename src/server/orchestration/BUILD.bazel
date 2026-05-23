@@ -16,6 +16,8 @@ filegroup(
         "shared_tasks.rs",
         "shared_tasks_test.rs",
         "tasks.rs",
+        "tasks_db.rs",
+        "tasks_db_test.rs",
         "//src/server/orchestration/departments:srcs",
         "//src/server/orchestration/queue:srcs",
         "//src/server/orchestration/state:srcs",

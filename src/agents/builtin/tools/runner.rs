@@ -33,15 +33,13 @@ impl SandboxedCommandRunner {
             .to_lowercase()
     }
 
-    // Hermes Agent Unique Harness Innovations: Multi-backend terminal: local, Docker, SSH, Singularity, Modal, Daytona, Vercal Sandbox
     fn should_use_container_backend() -> bool {
-        let backend = std::env::var("OHC_AGENT_COMMAND_BACKEND")
-            .unwrap_or_default()
-            .to_lowercase();
-
         matches!(
-            backend.as_str(),
-            "container" | "docker" | "podman" | "ssh" | "singularity" | "modal" | "daytona" | "vercal"
+            std::env::var("OHC_AGENT_COMMAND_BACKEND")
+                .unwrap_or_default()
+                .to_lowercase()
+                .as_str(),
+            "container" | "docker" | "podman"
         ) || matches!(Self::execution_mode().as_str(), "cluster" | "cloud")
     }
 
@@ -49,22 +47,9 @@ impl SandboxedCommandRunner {
         static RUNTIME: OnceLock<Option<String>> = OnceLock::new();
         RUNTIME
             .get_or_init(|| {
-                let backend_env = std::env::var("OHC_AGENT_COMMAND_BACKEND").unwrap_or_default().to_lowercase();
-
-                // If a specific multi-backend is requested, try to use it if available
-                let candidates = match backend_env.as_str() {
-                    "ssh" => vec!["ssh"],
-                    "singularity" => vec!["singularity"],
-                    "modal" => vec!["modal"],
-                    "daytona" => vec!["daytona"],
-                    "vercal" => vec!["vercal"],
-                    _ => vec!["docker", "podman"],
-                };
-
-                for candidate in candidates {
-                    let mut cmd = std::process::Command::new(candidate);
-                    let arg = if candidate == "ssh" { "-V" } else { "--version" };
-                    let available = cmd.arg(arg)
+                for candidate in ["docker", "podman"] {
+                    let available = std::process::Command::new(candidate)
+                        .arg("--version")
                         .stdout(std::process::Stdio::null())
                         .stderr(std::process::Stdio::null())
                         .status()
@@ -96,68 +81,36 @@ impl SandboxedCommandRunner {
         current_dir: Option<&Path>,
         sandbox_dir: Option<&Path>,
         envs: &[(String, String)],
-        runtime: &str,
     ) -> Vec<String> {
+        let image = std::env::var("OHC_AGENT_CONTAINER_IMAGE")
+            .unwrap_or_else(|_| "alpine:3.20".to_string());
+        let workspace = sandbox_dir
+            .or(current_dir)
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
         let command = Self::shell_command(program, args);
 
-        // Multi-backend argument mapping based on selected runtime
-        match runtime {
-            "ssh" => {
-                let target = std::env::var("OHC_AGENT_SSH_TARGET").unwrap_or_else(|_| "localhost".to_string());
-                let mut ssh_args = vec![target];
-                let mut env_prefix = String::new();
-                for (key, value) in envs {
-                    env_prefix.push_str(&format!("{}={} ", key, value));
-                }
-                ssh_args.push(format!("{} {}", env_prefix, command));
-                ssh_args
-            },
-            "singularity" | "modal" | "daytona" | "vercal" => {
-                // Placeholder mappings for these advanced multi-backends
-                // They generally wrap the command in their own execution context
-                let mut exec_args = vec!["exec".to_string()];
+        let mut docker_args = vec![
+            "run".to_string(),
+            "--rm".to_string(),
+            "--network".to_string(),
+            std::env::var("OHC_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
+            "-v".to_string(),
+            format!("{}:/workspace", workspace.display()),
+            "-w".to_string(),
+            "/workspace".to_string(),
+        ];
 
-                // Add environments
-                for (key, value) in envs {
-                    exec_args.push("-e".to_string());
-                    exec_args.push(format!("{}={}", key, value));
-                }
-
-                exec_args.push(command);
-                exec_args
-            },
-            _ => {
-                // Default Docker / Podman mapping
-                let image = std::env::var("OHC_AGENT_CONTAINER_IMAGE")
-                    .unwrap_or_else(|_| "alpine:3.20".to_string());
-                let workspace = sandbox_dir
-                    .or(current_dir)
-                    .map(Path::to_path_buf)
-                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
-
-                let mut docker_args = vec![
-                    "run".to_string(),
-                    "--rm".to_string(),
-                    "--network".to_string(),
-                    std::env::var("OHC_AGENT_CONTAINER_NETWORK").unwrap_or_else(|_| "none".to_string()),
-                    "-v".to_string(),
-                    format!("{}:/workspace", workspace.display()),
-                    "-w".to_string(),
-                    "/workspace".to_string(),
-                ];
-
-                for (key, value) in envs {
-                    docker_args.push("-e".to_string());
-                    docker_args.push(format!("{}={}", key, value));
-                }
-
-                docker_args.push(image);
-                docker_args.push("/bin/sh".to_string());
-                docker_args.push("-lc".to_string());
-                docker_args.push(command);
-                docker_args
-            }
+        for (key, value) in envs {
+            docker_args.push("-e".to_string());
+            docker_args.push(format!("{}={}", key, value));
         }
+
+        docker_args.push(image);
+        docker_args.push("/bin/sh".to_string());
+        docker_args.push("-lc".to_string());
+        docker_args.push(command);
+        docker_args
     }
 }
 
@@ -172,6 +125,18 @@ fn shell_escape(value: &str) -> String {
     }
 }
 
+#[cfg(unix)]
+fn create_exit_status(code: i32) -> std::process::ExitStatus {
+    use std::os::unix::process::ExitStatusExt;
+    std::process::ExitStatus::from_raw(code << 8)
+}
+
+#[cfg(windows)]
+fn create_exit_status(code: i32) -> std::process::ExitStatus {
+    use std::os::windows::process::ExitStatusExt;
+    std::process::ExitStatus::from_raw(code as u32)
+}
+
 #[async_trait]
 impl CommandRunner for SandboxedCommandRunner {
     async fn run(
@@ -181,7 +146,41 @@ impl CommandRunner for SandboxedCommandRunner {
         current_dir: Option<&Path>,
         envs: Vec<(String, String)>,
     ) -> io::Result<Output> {
-        if Self::should_use_container_backend() {
+        let mut target_backend = None;
+        let mut filtered_envs = Vec::new();
+        for (k, v) in envs {
+            if k == "__OHC_TARGET_BACKEND" {
+                target_backend = Some(v);
+            } else {
+                filtered_envs.push((k, v));
+            }
+        }
+        let envs = filtered_envs;
+
+        let is_remote_backend = match target_backend.as_deref() {
+            Some("ssh") | Some("singularity") | Some("modal") | Some("daytona") | Some("vercel") => true,
+            _ => false,
+        };
+
+        if is_remote_backend {
+            let backend_name = target_backend.unwrap();
+
+            // To properly implement remote execution for these backends,
+            // we would implement the integration using their respective APIs.
+            // For now we return an error since the backends are not fully supported yet.
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                format!("The {} backend is defined in the schema but its runner logic is currently unsupported in this environment.", backend_name),
+            ));
+        }
+
+        let use_container = match target_backend.as_deref() {
+            Some("docker") | Some("container") => true,
+            Some("local") => false,
+            _ => Self::should_use_container_backend(),
+        };
+
+        if use_container {
             if let Some(runtime) = Self::find_container_runtime() {
                 let container_args = Self::container_args(
                     program,
@@ -189,7 +188,6 @@ impl CommandRunner for SandboxedCommandRunner {
                     current_dir,
                     self.sandbox_dir.as_deref(),
                     &envs,
-                    &runtime,
                 );
                 let mut cmd = Command::new(runtime);
                 cmd.args(&container_args);
@@ -322,5 +320,27 @@ pub mod mock {
             stdout: stdout.as_bytes().to_vec(),
             stderr: stderr.as_bytes().to_vec(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_sandboxed_runner_multi_backend_routing() {
+        let runner = SandboxedCommandRunner::new(None);
+
+        let envs = vec![
+            ("__OHC_TARGET_BACKEND".to_string(), "modal".to_string())
+        ];
+
+        let out = runner.run("echo", &["hello", "world"], None, envs).await;
+
+        assert!(out.is_err());
+        let err_str = out.unwrap_err().to_string();
+
+        // Assert the mock simulated output works for 'modal'
+        assert!(err_str.contains("The modal backend is defined in the schema but its runner logic is currently unsupported"));
     }
 }

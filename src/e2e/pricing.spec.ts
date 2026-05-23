@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures';
-test.describe.configure({ mode: 'serial' });
+
 test.describe('Pricing Page', () => {
   test('displays current pricing plans and limits', async ({ page }) => {
     await page.goto('/pricing');
