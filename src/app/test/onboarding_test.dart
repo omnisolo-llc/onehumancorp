@@ -150,4 +150,89 @@ void main() {
     expect(find.text('Existing loaded bio'), findsOneWidget);
     await tester.pumpAndSettle(const Duration(seconds: 1));
   });
+
+  testWidgets('Onboarding Screen - Keyboard submit transitions correctly', (WidgetTester tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/draft') {
+        return http.Response('{}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
+
+    // Go to input state
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    // Enter text in bio
+    await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio for keyboard');
+
+    // Simulate keyboard submit for bio
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    // Verify transition to Name step
+    expect(find.text('Name your business'), findsOneWidget);
+
+    // Enter name
+    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business Keyboard');
+
+    // Simulate keyboard submit for name
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    // Verify transition to Template step
+    expect(find.text('Choose a look'), findsOneWidget);
+  });
+
+  testWidgets('Onboarding Screen - Transitions dashboard to draft to live', (WidgetTester tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/draft') {
+        return http.Response('{}', 200);
+      }
+      if (request.url.path == '/api/onboarding/start') {
+        return http.Response('{"status": "ok"}', 200);
+      }
+      if (request.url.path == '/api/onboarding/launch') {
+        return http.Response('{"status": "live"}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
+
+    // Full flow to dashboard
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(Key('bio-input')), 'Test business bio flow');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business Flow');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Build My Storefront'));
+    await tester.pumpAndSettle();
+
+    // Verify Dashboard state
+    expect(find.text('Storefront Generated!'), findsOneWidget);
+
+    // Transition to Draft preview
+    await tester.tap(find.text('Preview Site'));
+    await tester.pumpAndSettle();
+
+    // Verify Draft state
+    expect(find.text('Preview Mode'), findsOneWidget);
+
+    // Launch store
+    await tester.tap(find.text('1-Tap Launch'));
+    await tester.pumpAndSettle();
+
+    // Verify Live state
+    expect(find.text('You\'re Live!'), findsOneWidget);
+    expect(find.text('Go to Dashboard'), findsOneWidget);
+  });
 }

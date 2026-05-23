@@ -226,25 +226,31 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 48),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _state = OnboardingState.input);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Start a Business',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() => _state = OnboardingState.input);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0066FF).withOpacity(0.8), // OHC Accent Blue translucent
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Start a Business',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ),
@@ -295,6 +301,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextFormField(
               key: Key('bio-input'),
               controller: _bioController,
+              autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.text,
@@ -315,27 +322,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _saveDraft(value);
                 });
               },
+              onFieldSubmitted: (value) {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() => _currentInputStep = 1);
+                }
+              },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => bio = value!,
             ),
           ),
         ),
         SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 1);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() => _currentInputStep = 1);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF).withOpacity(0.8),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
           ),
-          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
         ),
       ],
     );
@@ -366,7 +385,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextFormField(
               key: Key('name-input'),
               initialValue: businessName,
-              textInputAction: TextInputAction.next,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 labelText: 'Business Name',
@@ -377,27 +397,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 contentPadding: EdgeInsets.all(20),
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              onFieldSubmitted: (value) {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() => _currentInputStep = 2);
+                }
+              },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
               onSaved: (value) => businessName = value!,
             ),
           ),
         ),
         SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              setState(() => _currentInputStep = 2);
-            }
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: ElevatedButton(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  _formKey.currentState!.save();
+                  setState(() => _currentInputStep = 2);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF).withOpacity(0.8),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
           ),
-          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         SizedBox(height: 16),
         TextButton(
@@ -437,16 +469,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ],
         ),
         SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: submit,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFF0066FF),
-            foregroundColor: Colors.white,
-            padding: EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            elevation: 0,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: ElevatedButton(
+              onPressed: submit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF0066FF).withOpacity(0.8),
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
+              ),
+              child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+            ),
           ),
-          child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         SizedBox(height: 16),
         TextButton(
@@ -600,26 +638,32 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
                       SizedBox(height: 24),
-                      ElevatedButton(
-                        onPressed: () {
-                          setState(() => _state = OnboardingState.draft);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFF0066FF),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          minimumSize: Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Preview Site',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() => _state = OnboardingState.draft);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Color(0xFF0066FF).withOpacity(0.8),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'Preview Site',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -710,32 +754,38 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             color: Colors.white,
             border: Border(top: BorderSide(color: Colors.grey[200]!)),
           ),
-          child: ElevatedButton(
-            onPressed: launchStore,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              minimumSize: Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '1-Tap Launch',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: ElevatedButton(
+                onPressed: launchStore,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF0066FF).withOpacity(0.8),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  minimumSize: Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  elevation: 0,
                 ),
-                SizedBox(width: 8),
-                Icon(Icons.rocket_launch, size: 18),
-              ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '1-Tap Launch',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.rocket_launch, size: 18),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
