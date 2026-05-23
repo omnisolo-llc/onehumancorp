@@ -367,7 +367,7 @@ impl Worker {
                             // No job available
                         }
                         Err(e) => {
-                            tracing::error!("Worker failed to dequeue job: {}", e);
+                            tracing::trace!("Worker failed to dequeue job: {}", e);
                         }
                     }
                 }
@@ -462,7 +462,7 @@ impl WorkerPool {
                                     }
                                 }
                                 Err(e) => {
-                                    tracing::error!("Worker {} failed to pop: {}", i, e);
+                                    tracing::trace!("Worker {} failed to pop: {}", i, e);
                                 }
                             }
                         }
