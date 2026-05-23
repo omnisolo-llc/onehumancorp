@@ -219,6 +219,9 @@ export default function Dashboard() {
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
              <button onClick={() => setShowReferralModal(true)} className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold">Referrals</button>
          <div className="flex items-center gap-3">
+             <Link href="/referrals" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+               Referrals
+             </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
