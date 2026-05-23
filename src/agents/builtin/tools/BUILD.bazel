@@ -23,6 +23,7 @@ rust_library(
         "ollama.rs",
         "read.rs",
         "recall.rs",
+        "pydantic.rs",
         "runner.rs",
         "screenshot.rs",
         "sendmessage.rs",

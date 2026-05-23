@@ -3,6 +3,7 @@ use serde_json::Value;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+pub mod pydantic;
 pub mod runner;
 pub mod bash;
 pub mod read;
