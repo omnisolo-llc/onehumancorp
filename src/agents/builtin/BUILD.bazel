@@ -67,6 +67,7 @@ rust_library(
         "mesh/mod.rs",
         "mesh/transport.rs",
         "plane.rs",
+        "progressive_skills.rs",
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",

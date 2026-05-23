@@ -651,7 +651,7 @@ impl AgentServiceImpl {
             todos,
             task_store,
             mailbox,
-            working_dir,
+            working_dir.clone(),
             memory_accessor,
             observation_store,
         );
@@ -693,6 +693,24 @@ impl AgentServiceImpl {
                 ohc_builtin_agent_tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
                     .await;
             tools.append(&mut mcp_tools);
+        }
+
+        // DeerFlow Unique Harness Innovations: Progressive skills
+        // Load Markdown-based skills progressively from the workspace `.skills` directory
+        if let Some(ref dir) = working_dir {
+            let skills_dir = dir.join(".skills");
+            let progressive_skills = crate::progressive_skills::load_progressive_skills(&skills_dir).await;
+            for skill in progressive_skills {
+                tools.push(ohc_builtin_agent_tools::skill::skill_tool(
+                    ohc_builtin_agent_tools::skill::LoadedSkill {
+                        name: skill.name.clone(),
+                        description: skill.description.clone(),
+                        instruction: skill.instruction.clone(),
+                        allowed_tools: skill.allowed_tools.clone(),
+                        model: skill.model.clone(),
+                    },
+                ));
+            }
         }
 
         tools
