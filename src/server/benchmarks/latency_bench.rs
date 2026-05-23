@@ -7,9 +7,7 @@ use chrono::Utc;
 use uuid::Uuid;
 
 pub async fn bench_queue_latency() {
-    tracing::info!("Benchmarking AI Job Dispatch Latency...");
 
-    tracing::info!("--- Cloud Mode (Postgres) ---");
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
@@ -22,18 +20,13 @@ pub async fn bench_queue_latency() {
         }
     }
 
-    tracing::info!("--- Standalone Mode (Memory) ---");
     let mem_queue = Arc::new(MemoryTaskQueue::new());
     bench_queue("AI Job Dispatch Latency Standalone Mode (Memory)", mem_queue).await;
 }
 
 pub async fn bench_db_query_time() {
-    tracing::info!("Benchmarking Database Query Time...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if database_url == "sqlite::memory:" {
-        return;
-    }
 
     let iterations = 1000;
 
@@ -64,12 +57,8 @@ pub async fn bench_db_query_time() {
 }
 
 pub async fn bench_api_response_time() {
-    tracing::info!("Benchmarking API Response Time...");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-    if database_url == "sqlite::memory:" {
-        return;
-    }
     let iterations = 100;
 
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
@@ -128,9 +117,6 @@ pub async fn bench_dashboard_snapshot() {
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    if database_url == "sqlite::memory:" {
-        return;
-    }
 
     let db = if database_url.starts_with("sqlite") {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
