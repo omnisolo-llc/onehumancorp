@@ -22,25 +22,6 @@ export default function Dashboard() {
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-  // Growth Loop: Automated Review Request State
-  const [isReviewGenerating, setIsReviewGenerating] = useState<boolean>(false);
-  const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
-  const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
-  const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
-
-  const handleApproveReviewRequest = () => {
-    setIsReviewGenerating(true);
-    setTimeout(() => {
-      setIsReviewGenerating(false);
-      setReviewCampaignSent(true);
-      setReviewEmailsSent(3);
-      setTimeout(() => {
-        setShowReviewRequestCard(false);
-      }, 3000);
-    }, 2000);
-  };
-
-
   useEffect(() => {
     async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
@@ -64,7 +45,12 @@ export default function Dashboard() {
     setBannerDismissed(localStorage.getItem('milestone_banner_dismissed') === 'true');
     async function fetchApprovals() {
       try {
-        const res = await fetch('/api/agents/approvals');
+        const token = localStorage.getItem('token') || 'test-token';
+        const res = await fetch('/api/agents/approvals', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
         const data = await res.json();
         if (data && data.pending_approvals) {
           setApprovals(data.pending_approvals);
@@ -170,35 +156,17 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleGenerateReviewCampaign = async () => {
-    setIsReviewGenerating(true);
-    try {
-      const response = await fetch("/api/v1/growth/campaign/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: "Automated Review Request",
-          subject: "How did we do? Leave a review!",
-          body: "We hope you loved your recent purchase. Please leave a review.",
-          target_segment: "recent_buyers_no_review"
-        })
-      });
-      const data = await response.json();
-      setReviewEmailsSent(data.emails_sent);
-      setReviewCampaignSent(true);
-    } catch (e) {
-      console.error("Failed to generate review campaign", e);
-    } finally {
-      setIsReviewGenerating(false);
-    }
-  };
 
 
   const handleApprove = async (id: string, approved: boolean) => {
     try {
+      const token = localStorage.getItem('token') || 'test-token';
       await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({ approved })
       });
       setApprovals(approvals.filter(a => a.id !== id));
@@ -229,7 +197,7 @@ export default function Dashboard() {
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Action Required (Approvals) */}
-         {(approvals.length > 0 || showReviewRequestCard) && (
+         {approvals.length > 0 && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
@@ -244,54 +212,6 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">
-                    {/* Hardcoded Automated Review Request Card based on mockup */}
-                    {showReviewRequestCard && (
-                        <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                                        🤝
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-lg font-outfit text-gray-900">
-                                            CustomerSuccess Department
-                                        </h3>
-                                        <p className="text-gray-600 font-inter text-sm">3 customers haven't reviewed their orders. Request reviews?</p>
-                                    </div>
-                                </div>
-
-                                {isReviewGenerating ? (
-                                    <div className="flex items-center gap-2 text-sm text-blue-600 font-medium whitespace-nowrap px-4 py-2 bg-blue-50 rounded-lg">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                        AI generating personalized review requests...
-                                    </div>
-                                ) : reviewCampaignSent ? (
-                                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium whitespace-nowrap px-4 py-2 bg-green-50 rounded-lg">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        Sent to 3 customers!
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2 shrink-0">
-                                        <button
-                                            onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={handleApproveReviewRequest}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Approve
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     {approvals.map(approval => {
                         // Extract plain english message and payload
                         let plainMessage = approval.description;
@@ -395,7 +315,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && !showReviewRequestCard && (
+         {approvals.length === 0 && (
 <>
 {/* Business Snapshot */}
          <section>
@@ -496,34 +416,6 @@ export default function Dashboard() {
 
 
          {/* Growth Loop: Automated AI Review Requests */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: "#1D1D1F" }}>Automated Review Requests</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: "rgba(255, 255, 255, 0.03)", backdropFilter: "blur(20px) saturate(200%)", border: "1px solid rgba(255, 255, 255, 0.08)", borderColor: "rgba(0,0,0,0.05)", backgroundColor: "#ffffff" }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Your Trust Score</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-                        You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
-                    </p>
-                    {reviewCampaignSent ? (
-                        <div className="inline-flex items-center gap-2 text-green-600 font-semibold bg-green-50 px-4 py-2 rounded-lg border border-green-100">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            Campaign sent to {reviewEmailsSent} customers!
-                        </div>
-                    ) : (
-                        <button onClick={handleGenerateReviewCampaign} disabled={isReviewGenerating} className={`px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm transition-all ${isReviewGenerating ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md hover:-translate-y-0.5 active:translate-y-0"}`}>
-                            {isReviewGenerating ? "Generating..." : "✨ Send AI Review Requests"}
-                        </button>
-                    )}
-                </div>
-            </div>
-         </section>
 
 
          {/* Growth Loop: Referral Program Snapshot */}
@@ -547,21 +439,6 @@ export default function Dashboard() {
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1 text-indigo-800">Team Invites Sent</div>
                     <div className="text-3xl font-bold font-outfit text-indigo-900">{teamInvitesSent}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Active Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">4</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Revenue from Referrals</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$120.00</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1 text-indigo-800">Pending Rewards</div>
-                    <div className="text-3xl font-bold font-outfit text-indigo-900">$24.00</div>
                 </div>
             </div>
          </section>

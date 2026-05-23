@@ -111,11 +111,72 @@ test.describe('Lens Audit E2E Flow', () => {
       const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
       await dashboardLink.click();
 
-      // E2E seed data has 1 pending approval: 'Draft email for review' in customer_success
-      // The dashboard page will render it natively if the UI is wired correctly
+      // E2E seed data has pending approvals
       await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
       await expect(page.getByText("Draft email for review")).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Approve' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Approve' }).first()).toBeVisible();
+  });
+
+  test('verify approval rejection action updates DB and UI', async ({ page, request }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      // Verify initial state
+      await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Draft email for review")).toBeVisible();
+
+      // Click reject on the first approval
+      await page.getByRole('button', { name: 'Reject' }).first().click();
+
+      // Verify it disappeared from UI
+      await expect(page.getByText("Draft email for review")).not.toBeVisible();
+
+      // Refresh the page and assert it is still gone to verify backend actually saved it
+      await page.reload();
+      await expect(page.getByText("Draft email for review")).not.toBeVisible();
+  });
+
+  test('verify approval acceptance action updates DB and UI', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      // Verify initial state
+      await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+      await expect(page.getByText("Generated 7-day social media plan for Vegan Celebration Cake")).toBeVisible();
+
+      // Click approve on the approval
+      // We will look for the button near the text
+      const approvalCard = page.locator('div').filter({ hasText: 'Generated 7-day social media plan for Vegan Celebration Cake' }).first();
+      await approvalCard.getByRole('button', { name: 'Approve' }).click();
+
+      // Verify it disappeared from UI
+      await expect(page.getByText("Generated 7-day social media plan for Vegan Celebration Cake")).not.toBeVisible();
+
+      // Refresh the page and assert it is still gone to verify backend actually saved it
+      await page.reload();
+      await expect(page.getByText("Generated 7-day social media plan for Vegan Celebration Cake")).not.toBeVisible();
+  });
+
+  test('verify absence of hardcoded CustomerSuccess mockup data', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+      // The text from the old mock should NOT be there
+      await expect(page.getByText("3 customers haven't reviewed their orders. Request reviews?")).not.toBeVisible();
+  });
+
+  test('verify Referral Program Snapshot uses dynamic data', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+      await expect(page.getByText("Referral Program")).toBeVisible();
+      await expect(page.getByText("Team Invites Sent")).toBeVisible();
+      // Ensure the old hardcoded mock data is absent
+      await expect(page.getByText("Active Referrals")).not.toBeVisible();
+      await expect(page.getByText("Revenue from Referrals")).not.toBeVisible();
+      await expect(page.getByText("Pending Rewards")).not.toBeVisible();
   });
 
   test('verify visual grid token consistency and translucent card styling', async ({ page }) => {
