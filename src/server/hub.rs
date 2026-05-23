@@ -181,7 +181,7 @@ impl Hub {
         self.invalidate_agent_cache();
     }
 
-    pub fn get_agents(&self) -> Arc<Vec<Agent>> {
+    pub async fn get_agents(&self) -> Arc<Vec<Agent>> {
         {
             let cache = self.agent_cache.read().unwrap();
             if let Some(agents) = &*cache {
@@ -190,12 +190,13 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
-                let mut conn = client.get_connection().ok()?;
-                let data: Option<String> = redis::Commands::get(&mut conn, "hub:agents").ok()?;
+            let res: Option<Arc<Vec<Agent>>> = async {
+                let mut conn = client.get_multiplexed_tokio_connection().await.ok()?;
+                use redis::AsyncCommands;
+                let data: Option<String> = conn.get("hub:agents").await.ok()?;
                 let agents: Vec<Agent> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(agents))
-            });
+            }.await;
             if let Some(arc) = res {
                 *self.agent_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -842,7 +843,7 @@ mod tests {
         let hub = std::sync::Arc::new(Hub::new(tx, pool));
 
         // 1. Initial get caches empty state
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 0);
 
         // Cache should be populated
@@ -860,7 +861,7 @@ mod tests {
         assert!(hub.agent_cache.read().unwrap().is_none());
 
         // 3. Get agents caches again
-        let agents = hub.get_agents();
+        let agents = hub.get_agents().await;
         assert_eq!(agents.len(), 1);
         assert!(hub.agent_cache.read().unwrap().is_some());
 

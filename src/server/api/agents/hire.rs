@@ -87,5 +87,5 @@ async fn hire_handler(
 }
 
 async fn list_agents_handler(State(hub): State<Arc<Hub>>) -> impl IntoResponse {
-    (StatusCode::OK, Json((*hub.get_agents()).clone())).into_response()
+    (StatusCode::OK, Json((*hub.get_agents().await).clone())).into_response()
 }

@@ -65,8 +65,8 @@ impl DashboardService for MyDashboardService {
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub1.get_agents())
+            tokio::spawn(async move {
+                Ok::<_, String>(hub1.get_agents().await)
             }),
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub2.get_meetings())
