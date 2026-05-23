@@ -274,7 +274,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2 shrink-0">
                                         <button
                                             onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
@@ -319,7 +319,7 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
                                             style={{ borderRadius: '8px' }}
                                         >
                                             Reject
