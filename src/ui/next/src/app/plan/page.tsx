@@ -170,7 +170,7 @@ export default function MyPlanPage() {
                 <h3 className="font-medium text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>

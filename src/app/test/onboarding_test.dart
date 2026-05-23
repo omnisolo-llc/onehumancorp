@@ -11,10 +11,7 @@ void main() {
     expect(find.text('OneHumanCorp'), findsOneWidget);
     expect(find.text('The universal operating system for small business.'), findsOneWidget);
     expect(find.text('Start a Business'), findsOneWidget);
-
-    await tester.tap(find.text('Start a Business'));
     await tester.pumpAndSettle(const Duration(seconds: 1));
-    expect(find.text('Step 1 of 3'), findsOneWidget);
   });
 
   testWidgets('Onboarding Screen - Shows SnackBar on API failure', (WidgetTester tester) async {

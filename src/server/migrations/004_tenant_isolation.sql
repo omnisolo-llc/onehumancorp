@@ -134,23 +134,3 @@ BEGIN
     END IF;
 END
 $$;
-
-DO $$
-BEGIN
-    IF to_regclass('sub_agent_queue') IS NOT NULL THEN
-        ALTER TABLE sub_agent_queue ENABLE ROW LEVEL SECURITY;
-
-        IF NOT EXISTS (
-            SELECT 1
-            FROM pg_policies
-            WHERE schemaname = current_schema()
-                AND tablename = 'sub_agent_queue'
-                AND policyname = 'tenant_isolation_sub_agent_queue'
-        ) THEN
-            CREATE POLICY tenant_isolation_sub_agent_queue
-                ON sub_agent_queue
-                USING (tenant_id::text = current_setting('app.current_tenant', true));
-        END IF;
-    END IF;
-END
-$$;
