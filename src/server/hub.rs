@@ -955,6 +955,90 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_fork_agent() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&db_url)
+            .unwrap();
+
+        let (tx, _) = mpsc::channel(100);
+        let hub = std::sync::Arc::new(Hub::new(tx, pool));
+
+        let parent_id = "parent_agent_id".to_string();
+
+        hub.register_agent(Agent {
+            id: parent_id.clone(),
+            name: "Parent Agent".to_string(),
+            role: "Developer".to_string(),
+            organization_id: "org1".to_string(),
+            status: "IDLE".to_string(),
+            provider_type: "builtin".to_string(),
+        });
+
+        let msg1 = Message {
+            id: "msg1".to_string(),
+            from_agent: "user".to_string(),
+            to_agent: parent_id.clone(),
+            r#type: "text".to_string(),
+            content: "Hello parent".to_string(),
+            occurred_at_unix: 0,
+            meeting_id: "".to_string(),
+        };
+
+        let msg2 = Message {
+            id: "msg2".to_string(),
+            from_agent: "user".to_string(),
+            to_agent: parent_id.clone(),
+            r#type: "text".to_string(),
+            content: "How are you".to_string(),
+            occurred_at_unix: 1,
+            meeting_id: "".to_string(),
+        };
+
+        hub.clone().publish(msg1.clone()).unwrap();
+        hub.clone().publish(msg2.clone()).unwrap();
+
+        let directive = "Do something specific in the fork";
+        let child_id_res = hub.clone().fork_agent(&parent_id, directive);
+
+        assert!(child_id_res.is_ok());
+        let child_id = child_id_res.unwrap();
+
+        assert!(child_id.starts_with("parent_agent_id-fork-"));
+
+        let child_agent_opt = hub.get_agent(&child_id);
+        assert!(child_agent_opt.is_some());
+        let child_agent = child_agent_opt.unwrap();
+        assert_eq!(child_agent.name, "Parent Agent (Fork)");
+        assert_eq!(child_agent.role, "Developer");
+
+        let child_inbox = hub.get_inbox(&child_id);
+
+        // Should have 3 messages: msg1, msg2, and the directive
+        assert_eq!(child_inbox.len(), 3);
+
+        assert_eq!(child_inbox[0].content, "Hello parent");
+        assert_eq!(child_inbox[0].to_agent, child_id);
+        assert_ne!(child_inbox[0].id, "msg1"); // ID should be new
+
+        assert_eq!(child_inbox[1].content, "How are you");
+        assert_eq!(child_inbox[1].to_agent, child_id);
+        assert_ne!(child_inbox[1].id, "msg2"); // ID should be new
+
+        assert_eq!(child_inbox[2].from_agent, "SYSTEM");
+        assert_eq!(child_inbox[2].to_agent, child_id);
+        assert_eq!(child_inbox[2].r#type, "TaskAssignment");
+        assert!(child_inbox[2].content.contains(directive));
+        assert!(child_inbox[2].content.contains("<task-notification>"));
+    }
+
+    #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
         if std::env::var("DATABASE_URL").is_err() {
