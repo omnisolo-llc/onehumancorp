@@ -46,7 +46,9 @@ impl Department for CustomerSuccessAgent {
         if event.event_type == "agent:customer_success:approved" {
             // Actual logic to send the message when approved.
             // For now, we simulate sending the message.
-            println!("Simulating sending approved message for tenant {}", event.tenant_id);
+            // Simulate sending message
+            let _tenant = event.tenant_id.clone();
+            tracing::info!("Simulating sending approved message.");
             return Ok(());
         }
 

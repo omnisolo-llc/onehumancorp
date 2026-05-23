@@ -103,8 +103,22 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
-            tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
+        let (cached_opt, cost_saved) = self.cache.get_with_cost_cents(prompt);
+        if let Some(cached) = cached_opt {
+            tracing::info!("Prompt cache hit (saved ~{} tokens, {} cents)", cached.token_count, cost_saved);
+
+            // Log cost savings (negative cost means savings)
+            let _ = ::server_telemetry::buffer_metric(
+                &crate::db::get_pool(),
+                "ohc_mission_cost_cents",
+                "counter",
+                -(cost_saved as f32),
+                serde_json::json!({
+                    "organization_id": "cache_system",
+                    "agent_id": "minimax_cache",
+                })
+            ).await;
+
             return Ok(cached.text);
         }
 
@@ -191,9 +205,23 @@ impl MinimaxClient {
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let Some(cached) = self.cache.get(prompt) {
-            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+        let (cached_opt, cost_saved) = self.cache.get_with_cost_cents(prompt);
+        if let Some(cached) = cached_opt {
+            tracing::info!("Prompt cache hit in stream (saved ~{} tokens, {} cents)", cached.token_count, cost_saved);
             let cached_text = cached.text.clone();
+
+            // Log cost savings
+            let _ = ::server_telemetry::buffer_metric(
+                &crate::db::get_pool(),
+                "ohc_mission_cost_cents",
+                "counter",
+                -(cost_saved as f32),
+                serde_json::json!({
+                    "organization_id": "cache_system",
+                    "agent_id": "minimax_cache",
+                })
+            ).await;
+
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
             });
