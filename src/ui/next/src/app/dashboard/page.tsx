@@ -61,20 +61,17 @@ export default function Dashboard() {
     fetchApprovals();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
-    // Using a fake mock for UI tests if connection fails
     const connectSwarmMesh = () => {
         try {
             const ws = new WebSocket(`ws://${window.location.host}/api/v1/mesh/ws?topic=system`);
 
             ws.onmessage = (event) => {
                 try {
-                    // Try to parse base64 proto message (mocking standard behavior)
-                    // For the sake of the UI, we'll just push simple text events
                     const payload = JSON.parse(event.data);
                     setSwarmActivity(prev => [{
                         id: Math.random().toString(),
-                        agent: payload.agent_id || "Swarm Agent",
-                        action: payload.action || "Working on task...",
+                        agent: payload.agent_id,
+                        action: payload.action,
                         time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
                     }, ...prev].slice(0, 5)); // Keep last 5
                 } catch(e) {
@@ -224,7 +221,7 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900">
-                                                {approval.department} Department
+                                                {approval.department.replace(/([a-z])([A-Z])/g, '$1 $2')} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
