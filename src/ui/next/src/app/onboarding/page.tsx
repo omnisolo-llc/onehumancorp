@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -18,6 +18,67 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
+  const isInitialMount = useRef(true);
+
+  // Load state from backend on initial mount
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+        const res = await fetch('/api/onboarding/state', {
+          headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessCategory) setBusinessCategory(data.businessCategory);
+            if (data.intakeData) setIntakeData(data.intakeData);
+            if (data.startResult) setStartResult(data.startResult);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load onboarding state", err);
+      }
+    };
+    loadState();
+  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setIntakeData, setStartResult]);
+
+  // Sync state to backend when it changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const syncState = async () => {
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+          body: JSON.stringify({
+            step,
+            businessType,
+            businessName,
+            businessCategory,
+            intakeData,
+            startResult
+          })
+        });
+      } catch (err) {
+        console.error("Failed to sync onboarding state", err);
+      }
+    };
+
+    const timer = setTimeout(syncState, 500); // Debounce sync
+    return () => clearTimeout(timer);
+  }, [step, businessType, businessName, businessCategory, intakeData, startResult]);
+
   const handleNext = () => {
     if (step === 1) {
       if (!businessType.trim()) {
@@ -26,6 +87,10 @@ export default function OnboardingWizard() {
       }
       if (businessType.trim().length < 3) {
         setError("Please enter at least 3 characters.");
+        return;
+      }
+      if (!/^[a-zA-Z0-9\s,\.-]+$/.test(businessType)) {
+        setError("Please use only letters, numbers, spaces, and basic punctuation.");
         return;
       }
     }
@@ -38,6 +103,10 @@ export default function OnboardingWizard() {
         setError("Business name must be at least 3 characters.");
         return;
       }
+      if (!/^[a-zA-Z0-9\s\.'&-]+$/.test(businessName)) {
+        setError("Business name contains invalid characters.");
+        return;
+      }
     }
     if (step === 3) {
       if (!businessCategory.trim()) {
@@ -46,6 +115,10 @@ export default function OnboardingWizard() {
       }
       if (businessCategory.trim().length < 5) {
         setError("Niche description must be at least 5 characters.");
+        return;
+      }
+      if (!/^[a-zA-Z0-9\s,\.-]+$/.test(businessCategory)) {
+        setError("Please use only letters, numbers, spaces, and basic punctuation.");
         return;
       }
     }
@@ -152,6 +225,13 @@ export default function OnboardingWizard() {
             color: #F5F5F7;
             border-color: rgba(255, 255, 255, 0.2);
           }
+        }
+        .animate-fade-in {
+          animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}} />
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
