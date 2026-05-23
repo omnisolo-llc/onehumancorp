@@ -54,3 +54,4 @@ pub mod sqlite_memory;
 
 pub mod agent_protocol;
 pub mod actor_model;
+pub mod visual_workflow;
