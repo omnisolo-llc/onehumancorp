@@ -32,6 +32,7 @@ pub mod memory_store;
 pub mod json_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
+pub mod actor_model;
 pub mod ralph_loop;
 
 pub use ohc_builtin_agent_llm as llm;

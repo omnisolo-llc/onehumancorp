@@ -74,6 +74,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_actor_model_message_passing: bool,
 }
 
 impl Default for AgentRunConfig {
@@ -124,6 +125,7 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            enable_actor_model_message_passing: false,
         }
     }
 }
@@ -299,6 +301,7 @@ pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[cr
 }
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
+#[derive(Clone)]
 pub struct Agent {
     pub llm: Arc<dyn LlmClient>,
     pub tools: Vec<Tool>,
@@ -1485,6 +1488,9 @@ impl Agent {
         }
         if final_cfg.enable_llmcompiler_plan_and_execute {
             return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+        }
+        if final_cfg.enable_actor_model_message_passing {
+            return crate::actor_model::run_actor_model(std::sync::Arc::new(self_with_memory.clone()), &final_cfg, initial_message, session_tools, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
