@@ -63,6 +63,7 @@ rust_library(
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
+        "progressive_skills.rs",
         "output_parser.rs",
         "memory_exhaustive_tests.rs",
         "mesh/mod.rs",
