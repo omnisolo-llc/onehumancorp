@@ -29,6 +29,13 @@ export default function Dashboard() {
 
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
+  // Growth Loop: AI Review Requests State
+  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
+  const [selectedOrderForReview, setSelectedOrderForReview] = useState<any>(null);
+  const [generatedReview, setGeneratedReview] = useState<string>("");
+  const [isGeneratingReview, setIsGeneratingReview] = useState<boolean>(false);
+  const [reviewSent, setReviewSent] = useState<boolean>(false);
+
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -583,6 +590,57 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Automated AI-Driven Review Requests */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Automated Review Requests</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl bg-white">
+                <p className="text-sm text-gray-600 mb-6">Turn recent buyers into advocates. Let AI draft personalized review requests to increase your store's trust and conversions.</p>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-gray-100">
+                                <th className="pb-3 text-sm font-semibold text-gray-900">Customer</th>
+                                <th className="pb-3 text-sm font-semibold text-gray-900">Order Amount</th>
+                                <th className="pb-3 text-sm font-semibold text-gray-900">Status</th>
+                                <th className="pb-3 text-sm font-semibold text-gray-900 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="text-sm">
+                            <tr className="border-b border-gray-50">
+                                <td className="py-4 text-gray-800 font-medium">Sarah Jenkins</td>
+                                <td className="py-4 text-gray-600">$124.00</td>
+                                <td className="py-4"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Pending Review</span></td>
+                                <td className="py-4 text-right">
+                                    <button onClick={() => { setSelectedOrderForReview({ customer: 'Sarah Jenkins', item: 'Premium Ceramic Vase' }); setShowReviewModal(true); setGeneratedReview(""); setReviewSent(false); }} className="text-purple-600 font-semibold hover:text-purple-800 transition-colors">Draft AI Request</button>
+                                </td>
+                            </tr>
+                            <tr className="border-b border-gray-50">
+                                <td className="py-4 text-gray-800 font-medium">Michael Chen</td>
+                                <td className="py-4 text-gray-600">$89.50</td>
+                                <td className="py-4"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Review Received</span></td>
+                                <td className="py-4 text-right text-gray-400">Completed</td>
+                            </tr>
+                            <tr>
+                                <td className="py-4 text-gray-800 font-medium">Emma Roberts</td>
+                                <td className="py-4 text-gray-600">$45.00</td>
+                                <td className="py-4"><span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Pending Review</span></td>
+                                <td className="py-4 text-right">
+                                    <button onClick={() => { setSelectedOrderForReview({ customer: 'Emma Roberts', item: 'Handmade Soap Set' }); setShowReviewModal(true); setGeneratedReview(""); setReviewSent(false); }} className="text-purple-600 font-semibold hover:text-purple-800 transition-colors">Draft AI Request</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -891,6 +949,85 @@ export default function Dashboard() {
               >
                 Maybe later
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Review Request Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner">
+                ✨
+              </div>
+              <button
+                onClick={() => { setShowReviewModal(false); setSelectedOrderForReview(null); }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Draft AI Review Request</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Generating a personalized message for <strong>{selectedOrderForReview?.customer}</strong> regarding their purchase of <strong>{selectedOrderForReview?.item}</strong>.
+            </p>
+
+            <div className="space-y-4">
+                {!generatedReview && !isGeneratingReview && !reviewSent && (
+                    <button
+                        onClick={() => {
+                            setIsGeneratingReview(true);
+                            setTimeout(() => {
+                                setGeneratedReview(`Hi ${selectedOrderForReview?.customer.split(' ')[0]},\n\nI hope you're loving your new ${selectedOrderForReview?.item}! We're a small business and your support means the world to us.\n\nIf you have a quick minute, we'd be thrilled if you could share your experience. Your review helps others discover our products.\n\nThank you again!\nThe OHC Team`);
+                                setIsGeneratingReview(false);
+                            }, 1500);
+                        }}
+                        className="w-full py-3 bg-purple-600 text-white rounded-xl font-semibold hover:bg-purple-700 transition-colors"
+                    >
+                        Generate Message
+                    </button>
+                )}
+
+                {isGeneratingReview && (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center text-sm text-gray-500 animate-pulse">
+                        Analyzing purchase history and drafting personalized message...
+                    </div>
+                )}
+
+                {generatedReview && !reviewSent && (
+                    <>
+                        <textarea
+                            value={generatedReview}
+                            onChange={(e) => setGeneratedReview(e.target.value)}
+                            className="w-full h-40 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        />
+                        <button
+                            onClick={() => {
+                                setReviewSent(true);
+                                setTimeout(() => {
+                                    setShowReviewModal(false);
+                                    setSelectedOrderForReview(null);
+                                }, 2000);
+                            }}
+                            className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                            Send Request
+                        </button>
+                    </>
+                )}
+
+                {reviewSent && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl text-center text-sm text-green-700 font-medium flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                        Review request sent successfully!
+                    </div>
+                )}
             </div>
           </div>
         </div>
