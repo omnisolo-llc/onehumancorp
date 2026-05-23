@@ -33,7 +33,7 @@ impl SipDB {
         sqlx::query(
             "UPDATE agent_missions
              SET status = 'blocked',
-                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN 'Blocked: Insufficient mission details provided in context.' ELSE mission_log || '\nBlocked: Insufficient mission details provided in context.' END,
+                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
                  updated_at = CURRENT_TIMESTAMP
              WHERE id = $2 AND tenant_id = $3"
         )
@@ -503,7 +503,7 @@ mod tests {
             let log: String = row.get("mission_log");
 
             assert_eq!(status, "blocked");
-            assert!(log.contains("Blocked: Insufficient mission details provided in context."));
+            assert!(log.contains("Missing dependencies"));
 
             // Call again to test append
             let res2 = sip_db.handoff_mission("test_mission_id", "Another blocker").await;
@@ -515,7 +515,7 @@ mod tests {
                 .unwrap();
 
             let log2: String = row2.get("mission_log");
-            assert!(log2.contains("Blocked: Insufficient mission details provided in context.\nBlocked: Insufficient mission details provided in context."));
+            assert!(log2.contains("Missing dependencies\nAnother blocker"));
 
             // Clean up
             sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
