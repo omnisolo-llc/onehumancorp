@@ -60,17 +60,6 @@ pub struct MilestonesResponse {
     pub milestones: Vec<Milestone>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OnboardingMetric {
-    pub step: String,
-    pub count: i32,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct OnboardingMetricsResponse {
-    pub metrics: Vec<OnboardingMetric>,
-}
-
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -87,7 +76,6 @@ where
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
-        .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -269,24 +257,6 @@ async fn handle_team_invites_metrics(
     match tracker.get_team_invites_count(&query.team_id).await {
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
-    }
-}
-
-async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
-) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
-    match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
-    {
-        Ok(rows) => {
-            use sqlx::Row;
-            let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
-            Ok(Json(OnboardingMetricsResponse { metrics }))
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch onboarding metrics: {:?}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
     }
 }
 
@@ -608,28 +578,5 @@ mod tests {
         let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
         assert!(res_missing.is_err());
         assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
-    }
-
-    #[tokio::test]
-    async fn test_onboarding_metrics() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            println!("Skipping DB test, DB not available");
-            return;
-        }
-
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
-
-        sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
-            .bind("funnel-1").bind("user1").bind("step1")
-            .execute(&pool).await.unwrap();
-
-        let res = handle_onboarding_metrics(Extension(state.clone())).await;
-        assert!(res.is_ok());
-        let metrics_json = res.unwrap().0;
-        let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
-        assert_eq!(count_step1, 1);
     }
 }

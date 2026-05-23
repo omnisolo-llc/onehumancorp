@@ -11,7 +11,6 @@ export async function GET() {
     "department-card-tooltip": "Click to view and manage pending approvals for this department.",
     "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
     "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
-    "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
-    "credit-tooltip": "Earn credits to use on premium tools when you refer a friend."
+    "nav-setup-tooltip": "Configure your business details, branding, and payment settings."
   });
 }

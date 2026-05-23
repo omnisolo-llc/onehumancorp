@@ -178,16 +178,9 @@ impl TaskQueue for PostgresTaskQueue {
 
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-
-        let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
-
-        let mut current_depths = std::collections::HashMap::new();
-
         let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) ");
-
-        let mut prepared_jobs = Vec::new();
-        for job in &jobs {
-            let mut run_after = job.run_after;
+        builder.push_values(jobs.into_iter(), |mut b, job| {
+            let run_after = job.run_after;
             let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
             payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
             payload_map["attempts"] = serde_json::json!(job.attempts);
@@ -198,47 +191,19 @@ impl TaskQueue for PostgresTaskQueue {
             } else {
                 job.tenant_id.clone()
             };
-
-            let depth = match current_depths.get(&org_id) {
-                Some(&d) => d,
-                None => {
-                    let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'PENDING'")
-                        .bind(&org_id)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .unwrap_or((0,));
-                    current_depths.insert(org_id.clone(), count_row.0);
-                    count_row.0
-                }
-            };
-
-            let bursts_threshold = 10;
-            if depth > bursts_threshold {
-                let delay_seconds = (depth - bursts_threshold) * 5;
-                run_after = run_after + chrono::Duration::seconds(delay_seconds);
-            }
-            *current_depths.get_mut(&org_id).unwrap() += 1;
-
-            prepared_jobs.push((job.id.clone(), org_id, job.parent_task_id.clone(), new_payload, run_after));
-        }
-
-        builder.push_values(prepared_jobs.into_iter(), |mut b, (id, org_id, parent_task_id, new_payload, run_after)| {
-            b.push_bind(id)
+            b.push_bind(job.id)
              .push_bind(org_id)
-             .push_bind(parent_task_id)
+             .push_bind(job.parent_task_id)
              .push_bind(new_payload)
              .push_bind("PENDING")
              .push_bind(run_after);
         });
-
-        builder.build().execute(&mut *tx).await.map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
+        builder.build().execute(&self.pool).await.map_err(|e| e.to_string())?;
         Ok(())
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        let mut run_after = job.run_after;
+        let run_after = job.run_after;
         
         let mut payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
         payload_map["agent_role"] = serde_json::Value::String(job.agent_role.clone());
@@ -255,20 +220,6 @@ impl TaskQueue for PostgresTaskQueue {
         
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         set_org_context(&mut *tx, &org_id).await.map_err(|e| e.to_string())?;
-
-        let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'PENDING'")
-            .bind(&org_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or((0,));
-
-        let depth = count_row.0;
-        let bursts_threshold = 10;
-        if depth > bursts_threshold {
-            let delay_seconds = (depth - bursts_threshold) * 5;
-            run_after = run_after + chrono::Duration::seconds(delay_seconds);
-        }
-
         sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
             .bind(job.id)
             .bind(org_id)

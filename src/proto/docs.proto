@@ -42,21 +42,8 @@ message GetTooltipResponse {
   Tooltip tooltip = 1;
 }
 
-message VideoTutorial {
-  int32 id = 1;
-  string title = 2;
-  string duration = 3;
-}
-
-message GetVideoTutorialsRequest {}
-
-message GetVideoTutorialsResponse {
-  repeated VideoTutorial tutorials = 1;
-}
-
 service DocsService {
   rpc GetHelpArticle(GetHelpArticleRequest) returns (GetHelpArticleResponse);
   rpc SearchHelpArticles(SearchHelpArticlesRequest) returns (SearchHelpArticlesResponse);
   rpc GetTooltip(GetTooltipRequest) returns (GetTooltipResponse);
-  rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
 }

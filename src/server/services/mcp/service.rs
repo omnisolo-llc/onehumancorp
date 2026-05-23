@@ -197,7 +197,7 @@ impl McpService for MyMcpService {
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
             "sync_audit_logs_to_cloud" => {
-                if let Ok(payload) = serde_json::from_str::<crate::integrations::mcp_audit_sync::tool::AuditSyncPayload>(&req.payload) {
+                if let Ok(payload) = serde_json::from_str::<crate::integrations::mcp_audit_sync::tool::AuditSyncPayload>(req.params.as_deref().unwrap_or("{}")) {
                     crate::integrations::mcp_audit_sync::tool::sync_audit_logs_to_cloud(&self.hub.pool, payload).await.map_err(|e| Status::internal(e.to_string()))?;
                 }
                 let resp_payload = serde_json::to_string(&serde_json::json!({"status": "success"})).unwrap();
