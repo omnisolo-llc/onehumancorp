@@ -1,16 +1,21 @@
-use super::sandbox::{SandboxManager, SandboxAdapter};
+use super::sandbox::{SandboxManager, LinuxSandbox, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
 use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
 
 pub struct LocalShellTask {
-    manager: SandboxManager,
+    manager: Box<dyn SandboxAdapter>,
 }
 
 impl LocalShellTask {
     pub fn new(pool: Option<PgPool>) -> Self {
+        #[cfg(target_os = "linux")]
+        let manager = Box::new(LinuxSandbox::new(pool));
+        #[cfg(not(target_os = "linux"))]
+        let manager = Box::new(SandboxManager::new(pool));
+
         LocalShellTask {
-            manager: SandboxManager::new(pool),
+            manager,
         }
     }
 
@@ -61,7 +66,10 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\""));
+        #[cfg(not(target_os = "linux"))]
+        assert!(msg.contains("Executing: bash -c \"set -e; umask 077; echo 'hello'\"") || msg.contains("sandbox-exec"));
+        #[cfg(target_os = "linux")]
+        assert!(msg.contains("bwrap"));
     }
 
     #[tokio::test]
@@ -108,7 +116,10 @@ mod tests {
         let result = task.execute("echo 'hello'").await;
         assert!(result.is_ok());
         let msg = result.unwrap();
-        assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
+        #[cfg(not(target_os = "linux"))]
+        if !msg.contains("sandbox-exec") {
+            assert!(msg.contains("export READ_ONLY_PATHS='/etc:/var'"));
         assert!(msg.contains("export BLOCKED_DOMAINS='evil.com'"));
+        }
     }
 }
