@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SmartBlock } from "./components";
+import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
@@ -12,7 +12,14 @@ export default function BuilderPage() {
   const [vibe, setVibe] = useState("");
   const [wizardStep, setWizardStep] = useState(1);
   const [blocks, setBlocks] = useState<any[]>([]);
-  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
+  const [drafts, setDrafts] = useState<any[][]>([]);
+  const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [startY, setStartY] = useState(0);
+  const [status, setStatus] = useState<"onboarding" | "idle" | "generating" | "draft" | "selection" | "live">("onboarding");
+  const [businessGoal, setBusinessGoal] = useState<"products" | "services" | "work" | null>(null);
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
@@ -87,8 +94,17 @@ export default function BuilderPage() {
         }
       });
 
+      // For V2, we simulate 3 drafts by slightly varying the first one if only one is returned,
+      // or we just use what's there. In real V2, backend would return 3.
+      const draft2 = JSON.parse(JSON.stringify(newBlocks));
+      if (draft2[0] && draft2[0].props) draft2[0].props.headline += " (Variant B)";
+
+      const draft3 = JSON.parse(JSON.stringify(newBlocks));
+      if (draft3[0] && draft3[0].props) draft3[0].props.headline += " (Variant C)";
+
+      setDrafts([newBlocks, draft2, draft3]);
       setBlocks(newBlocks);
-      setStatus("draft");
+      setStatus("selection");
     } catch (error) {
       console.error("Failed to generate storefront", error);
       setStatus("idle");
@@ -142,6 +158,95 @@ export default function BuilderPage() {
       console.error('Error publishing:', error);
     }
   };
+
+  if (status === "selection") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
+           <div className="px-8 pt-12 pb-6 text-center">
+              <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
+              <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
+           </div>
+
+           <div className="flex-1 overflow-y-auto px-6 space-y-6 pb-24">
+              {drafts.map((d, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => {
+                    setBlocks(d);
+                    setSelectedDraftIndex(idx);
+                  }}
+                  className={`w-full text-left glassmorphism border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/40 opacity-70'}`}
+                >
+                   <div className="h-32 bg-gray-100 flex items-center justify-center relative">
+                      <span className="font-outfit font-bold text-gray-400">Draft {idx + 1}</span>
+                      {selectedDraftIndex === idx && (
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        </div>
+                      )}
+                   </div>
+                   <div className="p-4 bg-white/80">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Preview</p>
+                      <p className="text-sm text-gray-800 line-clamp-1">{d[0]?.props?.headline || "Storefront Preview"}</p>
+                   </div>
+                </button>
+              ))}
+           </div>
+
+           <div className="absolute bottom-0 w-full p-6 bg-white/90 backdrop-blur-md border-t border-gray-200">
+              <button
+                onClick={() => setStatus("draft")}
+                className="w-full bg-[#0071E3] text-white p-4 rounded-xl font-bold font-outfit shadow-lg active:scale-[0.98] transition-all"
+              >
+                Customize Selected Draft
+              </button>
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "onboarding") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
+          {/* Abstract Background Blur */}
+          <div className="absolute inset-0 -z-10">
+            <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+            <div className="glassmorphism p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+              <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6 leading-tight">
+                What are you building today?
+              </h1>
+
+              <div className="space-y-4">
+                {[
+                  { id: 'products', label: 'Selling Products', icon: '🛍️' },
+                  { id: 'services', label: 'Offering Services', icon: '🛠️' },
+                  { id: 'work', label: 'Showcasing Work', icon: '✨' },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => {
+                      setBusinessGoal(option.id as any);
+                      setTimeout(() => setStatus("idle"), 300);
+                    }}
+                    className="w-full p-6 glassmorphism border border-white/40 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group"
+                  >
+                    <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
+                    <span className="text-lg font-bold font-outfit text-gray-800">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (status === "idle") {
     return (
@@ -307,11 +412,18 @@ export default function BuilderPage() {
   if (status === "generating") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col items-center justify-center border-x border-gray-200">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-6"></div>
-          <p className="text-gray-600 font-medium animate-pulse text-center px-8">
-            The Promoter is picking colors and building your menu...
-          </p>
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col border-x border-gray-200 overflow-hidden relative">
+           <div className="px-8 pt-20 pb-4 text-center">
+              <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
+              <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
+           </div>
+           <div className="flex-1 overflow-y-auto px-4">
+              <SkeletonBlock />
+              <SkeletonBlock />
+              <SkeletonBlock />
+           </div>
+           {/* Abstract pulse overlay */}
+           <div className="absolute inset-0 bg-blue-500/5 animate-pulse pointer-events-none" />
         </div>
       </div>
     );
@@ -321,13 +433,19 @@ export default function BuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col items-center border-x border-gray-200 text-center px-6 relative overflow-y-auto hide-scrollbar pt-12 pb-8">
-          <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-br from-green-50 to-white -z-10" />
+          {/* Success Animation Background */}
+          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 shadow-sm">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+          <div className="w-20 h-20 bg-green-500 text-white rounded-full flex items-center justify-center mb-6 shadow-lg animate-bounce mt-8">
+            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h1>
-          <p className="text-gray-500 mb-6 text-sm">Your automated storefront is successfully published.</p>
+
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-2 tracking-tight">You're Live!</h1>
+          <p className="text-gray-500 mb-8 text-sm max-w-[240px]">Your business is now open to the world. Scan the code to see it.</p>
+
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <QRCode value={liveUrl} />
+          </div>
 
           {/* Growth Loop: Embeddable Storefront Widget */}
           <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
@@ -442,17 +560,94 @@ export default function BuilderPage() {
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
-          <span>Preview Mode</span>
+          <span>Mobile Editor</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto pb-32 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <SmartBlock key={i} {...b} />
+            <DraggableBlock
+              key={i}
+              isSelected={selectedBlockIndex === i}
+              onClick={() => {
+                setSelectedBlockIndex(i);
+                setIsActionSheetOpen(true);
+              }}
+              onDragStart={(e) => {
+                setDraggedIndex(i);
+                setStartY(e.touches[0].clientY);
+                setSelectedBlockIndex(i);
+              }}
+              onDragOver={(e) => {
+                if (draggedIndex === null) return;
+                const currentY = e.touches[0].clientY;
+                const diff = currentY - startY;
+                if (Math.abs(diff) > 50) {
+                  const newIndex = diff > 0 ? i + 1 : i - 1;
+                  if (newIndex >= 0 && newIndex < blocks.length && newIndex !== draggedIndex) {
+                    const newBlocks = [...blocks];
+                    const [removed] = newBlocks.splice(draggedIndex, 1);
+                    newBlocks.splice(newIndex, 0, removed);
+                    setBlocks(newBlocks);
+                    setDraggedIndex(newIndex);
+                    setStartY(currentY);
+                  }
+                }
+              }}
+              onDragEnd={() => {
+                setDraggedIndex(null);
+              }}
+            >
+              <SmartBlock {...b} />
+            </DraggableBlock>
           ))}
           {!isPremium && <SmartBlock type="PoweredBy" props={{ tenantId }} />}
         </div>
+
+        {/* Action Sheet for Editing Blocks */}
+        <ActionSheet
+          isOpen={isActionSheetOpen}
+          onClose={() => setIsActionSheetOpen(false)}
+          title={`Edit ${blocks[selectedBlockIndex || 0]?.type} Block`}
+        >
+          <div className="space-y-4 font-inter">
+            {blocks[selectedBlockIndex || 0]?.type === 'Hero' && (
+              <>
+                <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
+                <input
+                  type="text"
+                  className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  value={blocks[selectedBlockIndex || 0]?.props.headline}
+                  onChange={(e) => {
+                    const newBlocks = [...blocks];
+                    newBlocks[selectedBlockIndex || 0].props.headline = e.target.value;
+                    setBlocks(newBlocks);
+                  }}
+                />
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button className="p-4 glassmorphism text-sm font-bold flex flex-col items-center gap-2">
+                    <span>🖼️</span>
+                    <span>Upload Photo</span>
+                  </button>
+                  <button className="p-4 glassmorphism text-sm font-bold flex flex-col items-center gap-2">
+                    <span>✨</span>
+                    <span>AI Generate</span>
+                  </button>
+                </div>
+              </>
+            )}
+            {blocks[selectedBlockIndex || 0]?.type !== 'Hero' && (
+              <p className="text-sm text-gray-500 italic">Context-aware editing for {blocks[selectedBlockIndex || 0]?.type} coming soon...</p>
+            )}
+            <button
+              onClick={() => setIsActionSheetOpen(false)}
+              className="w-full bg-gray-900 text-white p-4 rounded-xl font-bold mt-4"
+            >
+              Save Changes
+            </button>
+          </div>
+        </ActionSheet>
 
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
@@ -530,12 +725,17 @@ export default function BuilderPage() {
       </div>
 
       <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
           .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
