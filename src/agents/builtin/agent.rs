@@ -1418,13 +1418,26 @@ impl Agent {
             attempts += 1;
             let result = tokio::time::timeout(timeout_duration, self.run_internal(cfg, initial_message, on_event)).await;
             match result {
-                Ok(res) => {
-                    return res;
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
                 },
                 Err(_) => {
                     if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
                 }
             }
         }
