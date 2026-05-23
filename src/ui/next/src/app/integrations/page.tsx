@@ -6,24 +6,13 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "social", name: "Social Media Auto-Poster", category: "marketing", status: "connected", icon: "📱", description: "Automatically post product updates to Facebook, Instagram, and Twitter." },
-    { id: "shipping", name: "ShipStation Sync", category: "operations", status: "disconnected", icon: "📦", description: "Sync orders with ShipStation for automated label printing." },
-    { id: "mailchimp", name: "Mailchimp Automations", category: "marketing", status: "disconnected", icon: "📧", description: "Trigger email campaigns based on customer purchase behavior." },
-    { id: "quickbooks", name: "QuickBooks Online", category: "finance", status: "connected", icon: "📊", description: "Automatically sync sales data and expenses for easier accounting." },
-    { id: "stripe", name: "Stripe Advanced", category: "finance", status: "connected", icon: "💳", description: "Accept global payments and manage subscriptions seamlessly." },
-    { id: "zendesk", name: "Zendesk Support", category: "operations", status: "disconnected", icon: "🎧", description: "Turn customer inquiries into support tickets automatically." },
-    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified inbox for Instagram, Messenger, and WhatsApp." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📆", description: "Industry standard scheduling with Google/Outlook sync." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚚", description: "Automated label generation with multiple carriers." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "🎥", description: "Auto-generated meeting links for scheduled services." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "✉️", description: "Developer-friendly email API for AI-powered marketing." }
+    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Social Media Inbox and Cross-Posting across all major social networks." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync to prevent double-booking." },
+    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns for customer segmentation." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Expand payments with local LATAM payment methods." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking with unified API for carriers." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Global SMS Alerts & Customer Notifications for immediate order updates." },
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Embed Jitsi Meet for Zero-Setup Online Lessons with auto-generated links." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -69,24 +58,24 @@ export default function Integrations() {
         {/* Integration Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredIntegrations.map(integration => (
-            <div key={integration.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col transition-shadow hover:shadow-md">
+            <div key={integration.id} className="rounded-[16px] p-6 flex flex-col transition-shadow hover:shadow-md" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-2xl border border-gray-100">
+                <div className="w-12 h-12 bg-white/50 rounded-xl flex items-center justify-center text-2xl border border-white/60 shadow-sm">
                   {integration.icon}
                 </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide ${
-                  integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide shadow-sm ${
+                  integration.status === 'connected' ? 'bg-[#34C759]/10 text-[#34C759] border border-[#34C759]/20' : 'bg-white/50 text-[#1D1D1F] border border-white/60'
                 }`}>
                   {integration.status}
                 </span>
               </div>
-              <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
-              <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
+              <h3 className="font-bold font-outfit text-[#1D1D1F] text-lg mb-2">{integration.name}</h3>
+              <p className="text-[#1D1D1F]/70 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-xl font-semibold text-sm transition-transform active:scale-[0.98] ${
+              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
                 integration.status === 'connected'
-                  ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
-                  : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                  ? "bg-white/50 text-[#1D1D1F] border border-white/60 hover:bg-white/70"
+                  : "bg-[#0071E3] text-white shadow-sm hover:bg-[#0071E3]/90"
               }`}>
                 {integration.status === 'connected' ? 'Manage' : 'Connect'}
               </button>
