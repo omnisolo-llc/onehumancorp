@@ -51,9 +51,13 @@ impl ToolExecutor for MarketplaceExecutor {
                     return Err(ToolError::LlmRecoverable("agent_id is required for install action".to_string()));
                 }
 
-                // Sanitize agent_id to prevent path traversal
-                if agent_id.contains('/') || agent_id.contains('\\') || agent_id.contains("..") {
-                    return Err(ToolError::LlmRecoverable("Invalid agent_id format: path separators and parent directory references are not allowed.".to_string()));
+                // Sanitize agent_id to prevent path traversal by extracting the file name.
+                let safe_agent_id = std::path::Path::new(agent_id)
+                    .file_name()
+                    .and_then(|name| name.to_str())
+                    .unwrap_or("");
+                if safe_agent_id.is_empty() || safe_agent_id != agent_id {
+                    return Err(ToolError::LlmRecoverable(format!("Invalid agent_id format. Provide a simple filename without path separators.")));
                 }
 
                 let client = reqwest::Client::new();

@@ -200,4 +200,5 @@ impl WizardService for MyWizardService {
 
 #[cfg(test)]
 mod tests {
+    include!("wizard_tests.rs");
 }
