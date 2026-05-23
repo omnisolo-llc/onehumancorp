@@ -1,15 +1,15 @@
 <div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: 'Outfit', 'Inter', sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); color: #fff;">
 
-# User Guide: OHC Slint App
+# User Guide: OHC App
 
 ## 1. Overview
 
-This guide covers the Bazel-native Slint app workflow in `src/app`.
+This guide covers the Flutter app workflow in `src/app`.
 The app provides a unified, mobile-first onboarding experience for small business owners.
 
 ## 2. Onboarding Flow
 
-The OHC Slint app features a comprehensive 12-step onboarding wizard:
+The OHC App features a comprehensive 12-step onboarding wizard:
 1.  **Welcome**: Introduction to OneHumanCorp.
 2.  **Business Type**: Selection of business category (Online Store, Service, etc.).
 3.  **Name & Description**: Naming the business and AI-assisted description.

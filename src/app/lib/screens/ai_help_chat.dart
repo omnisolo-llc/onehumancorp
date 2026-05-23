@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../help_registry.dart';
 
 class ChatMessage {
@@ -20,7 +22,7 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
     ChatMessage(text: "Hi! I'm your OHC Help Assistant. I can answer any questions you have about using the app. What do you need help with today?", isMe: false),
   ];
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     if (_controller.text.trim().isEmpty) return;
 
     final query = _controller.text;
@@ -29,32 +31,39 @@ class _AiHelpChatScreenState extends State<AiHelpChatScreen> {
     });
     _controller.clear();
 
-    // Simulate AI response based on HelpRegistry
-    Future.delayed(const Duration(seconds: 1), () {
-      final lowerQuery = query.toLowerCase();
-      HelpArticle? match;
+    final backendUrl = const String.fromEnvironment('OHC_CORE_URL', defaultValue: 'http://127.0.0.1:18789');
 
-      try {
-        match = HelpRegistry().articles.firstWhere(
-          (article) => article.title.toLowerCase().contains(lowerQuery) ||
-                       article.description.toLowerCase().contains(lowerQuery)
-        );
-      } catch (e) {
-        match = null;
-      }
+    try {
+      final response = await http.post(
+        Uri.parse('$backendUrl/api/chat'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'message': query}),
+      );
 
-      setState(() {
-        if (match != null) {
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        setState(() {
           _messages.add(ChatMessage(
-            text: "I found something that might help: ${match.description}",
+            text: data['reply'],
             isMe: false,
-            linkedArticle: match
           ));
-        } else {
-          _messages.add(ChatMessage(text: "I'm still learning! Could you try asking about adding products, payments, or subscriptions?", isMe: false));
-        }
+        });
+      } else {
+        setState(() {
+          _messages.add(ChatMessage(
+            text: "Sorry, I'm having trouble connecting right now.",
+            isMe: false,
+          ));
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: "Sorry, I'm having trouble connecting right now.",
+          isMe: false,
+        ));
       });
-    });
+    }
   }
 
   @override

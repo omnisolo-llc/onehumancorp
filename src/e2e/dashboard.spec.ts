@@ -21,4 +21,31 @@ test.describe('Dashboard Core', () => {
     await page.getByRole('button', { name: 'Launch Site' }).click();
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
   });
+
+  test('upgrade checkout redirects correctly', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Open the upgrade modal
+    const upgradeButton = page.locator('button:has-text("View AI Insights")').first();
+    await upgradeButton.waitFor({ state: 'visible' });
+    await upgradeButton.click();
+
+    // Click the Upgrade Now button
+    const checkoutButton = page.locator('button:has-text("Upgrade Now - $29/mo")');
+    await checkoutButton.waitFor({ state: 'visible' });
+    await checkoutButton.click();
+
+    // Verify redirect to checkout
+    await expect(page).toHaveURL(/\/checkout/);
+
+    // Verify checkout page content
+    await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
+
+    // Click Pay Now
+    page.on('dialog', dialog => dialog.accept());
+    await page.locator('button:has-text("Pay Now")').click();
+
+    // Verify redirect back to dashboard
+    await expect(page).toHaveURL(/\/dashboard/);
+  });
 });

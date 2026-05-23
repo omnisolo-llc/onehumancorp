@@ -730,7 +730,7 @@ export default function Dashboard() {
 
               <button
                 onClick={() => {
-                  alert('Redirecting to upgrade checkout... (Mocked for Demo)');
+                  router.push('/checkout');
                   setShowUpgradeModal(false);
                 }}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
