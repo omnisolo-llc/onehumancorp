@@ -385,11 +385,16 @@ impl IntegrationsRegistry {
     }
 
     pub async fn get_free_busy(&self, integration_id: &str, time_min: &str, time_max: &str) -> Result<String, String> {
-        if integration_id == "nylas" {
-            let clients = self.nylas_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.get_free_busy(time_min, time_max).await;
+        let nylas_client = {
+            if integration_id == "nylas" {
+                let clients = self.nylas_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = nylas_client {
+            return c.get_free_busy(time_min, time_max).await;
         }
 
         let client = {
@@ -512,11 +517,16 @@ impl IntegrationsRegistry {
     }
 
     pub async fn create_event(&self, integration_id: &str, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
-        if integration_id == "nylas" {
-            let clients = self.nylas_clients.read().unwrap();
-            if let Some(c) = clients.get(integration_id).cloned() {
-                return c.create_event(summary, start_time, end_time).await;
+        let nylas_client = {
+            if integration_id == "nylas" {
+                let clients = self.nylas_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
             }
+        };
+        if let Some(c) = nylas_client {
+            return c.create_event(summary, start_time, end_time).await;
         }
 
         let client = {
