@@ -1,45 +1,10 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "tools",
-    srcs = [
-        "agent_tool.rs",
-        "anthropic_memory.rs",
-        "bash.rs",
-        "booking.rs",
-        "edit.rs",
-        "finance.rs",
-        "generative_visibility.rs",
-        "glob.rs",
-        "grep.rs",
-        "head.rs",
-        "hybrid_blob.rs",
-        "lazy_load.rs",
-        "local_fs_sync.rs",
-        "magentic.rs",
-        "marketing.rs",
-        "mcp_dynamic.rs",
-        "mod.rs",
-        "ollama.rs",
-        "read.rs",
-        "recall.rs",
-        "runner.rs",
-        "screenshot.rs",
-        "sendmessage.rs",
-        "skill.rs",
-        "sleep.rs",
-        "subagent.rs",
-        "tail.rs",
-        "task.rs",
-        "todowrite.rs",
-        "toolsearch.rs",
-        "webfetch.rs",
-        "websearch.rs",
-        "write.rs",
-    ],
+    srcs = glob(["*.rs"]),
     crate_root = "mod.rs",
     crate_name = "ohc_builtin_agent_tools",
-
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -63,22 +28,20 @@ rust_library(
         "@crates//:async-recursion",
         "@crates//:async-trait",
     ],
-
 )
 
-load("@rules_rust//rust:defs.bzl", "rust_test")
-
 rust_test(
-    name = "todowrite_test",
-    srcs = ["todowrite_test.rs"],
+    name = "tools_unit_test",
+    crate = ":tools",
     edition = "2024",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     deps = [
-        ":tools",
         "@crates//:tokio",
         "@crates//:serde_json",
+        "@crates//:tempfile",
+        "@crates//:temp-env",
     ],
 )

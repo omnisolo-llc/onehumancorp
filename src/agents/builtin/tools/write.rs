@@ -3,7 +3,13 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use tokio::fs;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, TypedToolExecutor, TypedToolExecutorImpl};
+
+#[derive(serde::Deserialize, Debug)]
+pub struct WriteArgs {
+    pub path: String,
+    pub content: String,
+}
 
 struct WriteExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -11,18 +17,16 @@ struct WriteExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for WriteExecutor {
-    async fn execute(
+impl TypedToolExecutorImpl<WriteArgs> for WriteExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: WriteArgs,
     ) -> Result<String, ToolError> {
-        let path = args["path"].as_str().ok_or_else(|| ToolError::LlmRecoverable("write: path is required".to_string()))?;
-        let content = args["content"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("write: content is required".to_string()))?;
+        let path = args.path;
+        let content = args.content;
 
-        let safe_path = std::path::Path::new(path).strip_prefix("/").unwrap_or(std::path::Path::new(path));
-        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(path) };
+        let safe_path = std::path::Path::new(&path).strip_prefix("/").unwrap_or(std::path::Path::new(&path));
+        let actual_path = if let Some(wd) = &self.working_dir { wd.join(safe_path) } else { std::path::PathBuf::from(&path) };
 
         // Create parent directories if needed.
         if let Some(parent) = actual_path.parent() {
@@ -31,7 +35,7 @@ impl ToolExecutor for WriteExecutor {
                 .map_err(|e| format!("write: create dir {}: {}", parent.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
         }
 
-        fs::write(&actual_path, content)
+        fs::write(&actual_path, &content)
             .await
             .map_err(|e| format!("write: {}: {}", actual_path.display(), e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
@@ -91,12 +95,13 @@ pub fn write_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate
             },
             "required": ["path", "content"]
         }),
-        execute: Arc::new(WriteExecutor { working_dir, runner }),
+        execute: Arc::new(TypedToolExecutor::new(Arc::new(WriteExecutor { working_dir, runner }))),
     }
 }
 
 #[cfg(test)]
 mod tests {
+use crate::ToolExecutor;
     use super::*;
     use tempfile::tempdir;
 
@@ -104,14 +109,14 @@ mod tests {
     async fn test_write_tool_basic() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = TypedToolExecutor::new(Arc::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner }));
 
         let args = json!({
             "path": "test.txt",
             "content": "hello world"
         });
 
-        let result = executor.execute(args).await.unwrap();
+        let result = ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File written: test.txt");
 
         let content = fs::read_to_string(dir.path().join("test.txt")).await.unwrap();
@@ -121,14 +126,14 @@ mod tests {
     #[tokio::test]
     async fn test_write_tool_missing_args() {
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: None, runner };
+        let executor = TypedToolExecutor::new(Arc::new(WriteExecutor { working_dir: None, runner }));
 
         let args = json!({ "path": "test.txt" });
-        let result = executor.execute(args).await;
+        let result = ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err());
 
         let args2 = json!({ "content": "test" });
-        let result2 = executor.execute(args2).await;
+        let result2 = ToolExecutor::execute(&executor, args2).await;
         assert!(result2.is_err());
     }
 
@@ -136,7 +141,7 @@ mod tests {
     async fn test_write_tool_rust_verification_success() {
         let dir = tempdir().unwrap();
         let runner = Arc::new(crate::runner::mock::MockCommandRunner::new());
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = TypedToolExecutor::new(Arc::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner }));
 
         let args = json!({
             "path": "test.rs",
@@ -144,7 +149,7 @@ mod tests {
         });
 
         // Should succeed and pass verification
-        let result = executor.execute(args).await.unwrap();
+        let result = ToolExecutor::execute(&executor, args).await.unwrap();
         assert_eq!(result, "File written: test.rs");
     }
 
@@ -155,7 +160,7 @@ mod tests {
         // Simulate rustc failure
         runner.push_response(Ok(crate::runner::mock::mock_output(1, "", "error: expected expression, found `;`")));
 
-        let executor = WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner };
+        let executor = TypedToolExecutor::new(Arc::new(WriteExecutor { working_dir: Some(dir.path().to_path_buf()), runner }));
 
         let args = json!({
             "path": "test.rs",
@@ -163,7 +168,7 @@ mod tests {
         });
 
         // Should fail verification due to syntax error
-        let result = executor.execute(args).await;
+        let result = ToolExecutor::execute(&executor, args).await;
         assert!(result.is_err(), "Expected error from mock rustc verification");
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Verification Loop Failed: `rustc` reported syntax errors"));

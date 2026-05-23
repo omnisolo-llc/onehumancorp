@@ -64,6 +64,42 @@ impl Clone for Tool {
 }
 
 #[async_trait::async_trait]
+#[async_trait::async_trait]
+pub trait TypedToolExecutorImpl<T: serde::de::DeserializeOwned + Send + Sync>: Send + Sync {
+    async fn execute_typed(&self, args: T) -> Result<String, ToolError>;
+}
+
+pub struct TypedToolExecutor<T> {
+    inner: Arc<dyn TypedToolExecutorImpl<T>>,
+    _marker: std::marker::PhantomData<T>,
+}
+
+impl<T: serde::de::DeserializeOwned + Send + Sync + 'static> TypedToolExecutor<T> {
+    pub fn new(inner: Arc<dyn TypedToolExecutorImpl<T>>) -> Self {
+        Self {
+            inner,
+            _marker: std::marker::PhantomData,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<T: serde::de::DeserializeOwned + Send + Sync + 'static> ToolExecutor for TypedToolExecutor<T> {
+    async fn execute(&self, args: Value) -> Result<String, ToolError> {
+        // Pydantic-first tool schema validation mechanic:
+        // Intercept validation errors and feed them back to the LLM for self-correction.
+        let typed_args: T = match serde_json::from_value(args.clone()) {
+            Ok(v) => v,
+            Err(e) => {
+                let err_msg = format!("Schema validation failed for tool arguments. Error: {}. Please correct the arguments and try again. Your input was: {}", e, args);
+                return Err(ToolError::LlmRecoverable(err_msg));
+            }
+        };
+        self.inner.execute_typed(typed_args).await
+    }
+}
+
+#[async_trait::async_trait]
 pub trait ToolExecutor: Send + Sync {
     async fn execute(
         &self,
@@ -137,4 +173,70 @@ pub fn all_tools(
     }
 
     tools
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize, Debug)]
+    struct DummyArgs {
+        required_field: String,
+        count: usize,
+    }
+
+    struct DummyExecutor;
+
+    #[async_trait::async_trait]
+    impl TypedToolExecutorImpl<DummyArgs> for DummyExecutor {
+        async fn execute_typed(&self, args: DummyArgs) -> Result<String, ToolError> {
+            Ok(format!("{}: {}", args.required_field, args.count))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_typed_executor_success() {
+        let exec = TypedToolExecutor::new(Arc::new(DummyExecutor));
+        let args = serde_json::json!({
+            "required_field": "test",
+            "count": 42
+        });
+        let result = exec.execute(args).await.unwrap();
+        assert_eq!(result, "test: 42");
+    }
+
+    #[tokio::test]
+    async fn test_typed_executor_validation_failure() {
+        let exec = TypedToolExecutor::new(Arc::new(DummyExecutor));
+
+        // Missing required field
+        let args = serde_json::json!({
+            "count": 42
+        });
+
+        let result = exec.execute(args).await;
+        assert!(result.is_err());
+
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("Schema validation failed for tool arguments"));
+            assert!(msg.contains("missing field `required_field`"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+
+        // Wrong type
+        let args2 = serde_json::json!({
+            "required_field": "test",
+            "count": "not a number"
+        });
+
+        let result2 = exec.execute(args2).await;
+        if let Err(ToolError::LlmRecoverable(msg)) = result2 {
+            assert!(msg.contains("Schema validation failed for tool arguments"));
+            assert!(msg.contains("invalid type: string"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
 }

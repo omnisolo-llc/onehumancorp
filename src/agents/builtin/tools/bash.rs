@@ -3,7 +3,16 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::{Tool, ToolExecutor};
+use super::{Tool, TypedToolExecutor, TypedToolExecutorImpl};
+
+#[derive(serde::Deserialize, Debug)]
+pub struct BashArgs {
+    pub command: String,
+    #[serde(default = "default_timeout")]
+    pub timeout: f64,
+}
+
+fn default_timeout() -> f64 { 120.0 }
 
 struct BashExecutor {
     working_dir: Option<std::path::PathBuf>,
@@ -11,16 +20,13 @@ struct BashExecutor {
 }
 
 #[async_trait::async_trait]
-impl ToolExecutor for BashExecutor {
-    async fn execute(
+impl TypedToolExecutorImpl<BashArgs> for BashExecutor {
+    async fn execute_typed(
         &self,
-        args: Value,
+        args: BashArgs,
     ) -> Result<String, ToolError> {
-        let command = args["command"]
-            .as_str()
-            .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
-            .to_string();
-        let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
+        let command = args.command;
+        let timeout_secs = args.timeout;
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
         let wd_ref = self.working_dir.as_deref();
@@ -77,6 +83,6 @@ pub fn bash_tool(working_dir: Option<std::path::PathBuf>, runner: Arc<dyn crate:
             },
             "required": ["command"]
         }),
-        execute: Arc::new(BashExecutor { working_dir, runner }),
+        execute: Arc::new(TypedToolExecutor::new(Arc::new(BashExecutor { working_dir, runner }))),
     }
 }
