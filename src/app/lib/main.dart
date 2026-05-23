@@ -26,7 +26,7 @@ class MainNavigator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: InboxScreen(), // Changed to InboxScreen to show the new unified inbox by default for testing
+      body: OnboardingScreen(),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (context) => HelpCenterScreen()));
