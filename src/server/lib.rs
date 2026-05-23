@@ -2655,6 +2655,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                 box-sizing: border-box;
             }
         }
+            @media (prefers-color-scheme: dark) {
+                .glass, .screen {
+                    background: rgba(22, 22, 26, 0.7) !important;
+                    backdrop-filter: blur(30px) saturate(210%) !important;
+                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                }
+            }
                     </style>
                 </head>
                 <body>
@@ -2752,7 +2760,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
-                            <button onclick="showScreen('team-screen')">Manage Your Team</button>
+                            <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
                             <button onclick="showScreen('setup-screen')">Launch Site</button>
                             <button onclick="showScreen('storefront-builder-screen')">Edit Website</button>
                             <button onclick="showScreen('meetings-screen')">Agenda</button>
@@ -3066,7 +3074,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page (Your Team) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Your Team</h1>
+                        <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
