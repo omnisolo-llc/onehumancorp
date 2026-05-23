@@ -32,4 +32,27 @@ impl ResendProvider {
             }
         }
     }
+
+    pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        self._client.send_email(to, subject, body).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resend_provider_new() {
+        let provider = ResendProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "resend");
+        assert_eq!(provider.metadata.category, "email");
+    }
+
+    #[test]
+    fn test_resend_provider_into() {
+        let provider = ResendProvider::new("test_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "resend");
+    }
 }
