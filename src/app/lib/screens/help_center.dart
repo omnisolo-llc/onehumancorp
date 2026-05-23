@@ -53,7 +53,7 @@ class _HelpCenterScreenState extends State<HelpCenterScreen> {
       ),
       body: Center(
         child: Container(
-          maxWidth: 600,
+          constraints: BoxConstraints(maxWidth: 600),
           child: Column(
             children: [
               Padding(
