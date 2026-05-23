@@ -1401,7 +1401,15 @@ impl Agent {
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
         let raw_json_str = temp_agent.run(&final_cfg, initial_message, on_event).await?;
 
-        let parsed: T = serde_json::from_str(&raw_json_str)
+        let cleaned_json_str = raw_json_str.trim();
+        let cleaned_json_str = if cleaned_json_str.starts_with("```json") {
+            cleaned_json_str.trim_start_matches("```json").trim_end_matches("```").trim()
+        } else if cleaned_json_str.starts_with("```") {
+            cleaned_json_str.trim_start_matches("```").trim_end_matches("```").trim()
+        } else {
+            cleaned_json_str
+        };
+        let parsed: T = serde_json::from_str(cleaned_json_str)
             .map_err(|e| format!("Failed to parse JSON into struct: {}. Raw: {}", e, raw_json_str))?;
         Ok(parsed)
     }
