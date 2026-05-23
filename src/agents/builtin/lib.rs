@@ -23,6 +23,7 @@
 pub use ohc_builtin_agent_core::*;
 
 pub mod observation_masking;
+pub mod verification_loops;
 pub mod agent;
 pub mod tools_gating;
 pub mod service;
@@ -50,3 +51,5 @@ pub mod codex_runner;
 pub mod json_rpc_server;
 pub mod consolidation_worker;
 pub mod sqlite_memory;
+
+pub mod agent_protocol;

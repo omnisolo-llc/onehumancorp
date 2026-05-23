@@ -44,8 +44,10 @@ rust_library(
     srcs = [
         "auth.rs",
         "codex_runner.rs",
+        "agent_protocol.rs",
         "json_rpc_server.rs",
         "observation_masking.rs",
+        "verification_loops.rs",
         "agent.rs",
         "checkpointer.rs",
         "tools_gating.rs",
@@ -193,6 +195,7 @@ rust_binary(
         "caveman",
         "checkpointer",
         "codex_runner",
+        "verification_loops",
         "guardrails",
         "harness",
         "memory_store",
