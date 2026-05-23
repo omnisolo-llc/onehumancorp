@@ -19,17 +19,35 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const handleNext = () => {
-    if (step === 1 && !businessType.trim()) {
-      setError("Please describe what you sell.");
-      return;
+    if (step === 1) {
+      if (!businessType.trim()) {
+        setError("Please describe what you sell.");
+        return;
+      }
+      if (businessType.trim().length < 3) {
+        setError("Please enter at least 3 characters.");
+        return;
+      }
     }
-    if (step === 2 && !businessName.trim()) {
-      setError("Please enter your business name.");
-      return;
+    if (step === 2) {
+      if (!businessName.trim()) {
+        setError("Please enter your business name.");
+        return;
+      }
+      if (businessName.trim().length < 3) {
+        setError("Business name must be at least 3 characters.");
+        return;
+      }
     }
-    if (step === 3 && !businessCategory.trim()) {
-      setError("Please describe your niche.");
-      return;
+    if (step === 3) {
+      if (!businessCategory.trim()) {
+        setError("Please describe your niche.");
+        return;
+      }
+      if (businessCategory.trim().length < 5) {
+        setError("Niche description must be at least 5 characters.");
+        return;
+      }
     }
     setError("");
     setStep(step + 1);
@@ -38,6 +56,10 @@ export default function OnboardingWizard() {
   const handleIntakeSubmit = async () => {
     if (!businessCategory.trim()) {
       setError("Please describe your niche.");
+      return;
+    }
+    if (businessCategory.trim().length < 5) {
+      setError("Niche description must be at least 5 characters.");
       return;
     }
 
@@ -158,12 +180,12 @@ export default function OnboardingWizard() {
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <button
                 onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
               >
                 Next
               </button>
@@ -179,19 +201,19 @@ export default function OnboardingWizard() {
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
                 >
                   Next
                 </button>
@@ -208,20 +230,20 @@ export default function OnboardingWizard() {
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-xl border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleIntakeSubmit}
                   disabled={isLoading}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-xl font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -241,7 +263,7 @@ export default function OnboardingWizard() {
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
               <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
 
-              <div className="bg-white/80 p-5 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
+              <div className="bg-white/80 p-5 rounded-[16px] border border-gray-100 shadow-sm mb-6 space-y-3">
                 <div>
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Business Name</span>
                   <div className="font-medium text-gray-900">{intakeData.business_name}</div>
@@ -263,7 +285,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-xl font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -271,7 +293,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="flex-1 bg-[#34C759] text-white p-4 rounded-xl font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -298,13 +320,13 @@ export default function OnboardingWizard() {
               <div className="w-full space-y-3 mt-auto">
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-xl font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-xl font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-[8px] font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
