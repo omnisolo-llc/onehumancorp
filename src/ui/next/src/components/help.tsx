@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
+import { WithTooltip } from './TooltipRegistry';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -258,15 +259,19 @@ export function HelpWidget() {
 
   return (
     <>
-      <button
-        onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all z-[90]"
-        aria-label="Help"
-      >
-        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
+      <div className="fixed bottom-6 right-6 z-[90]">
+        <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
+          <button
+            onClick={() => setOpen(!open)}
+            className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all"
+            aria-label="Help"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+        </WithTooltip>
+      </div>
 
       {open && (
         <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
@@ -397,7 +402,9 @@ export function HelpWidget() {
                   <h4 className="font-bold text-gray-800 text-sm mb-1">New AI Store Builder</h4>
                   <p className="text-xs text-gray-600">You can now generate a complete storefront from just a short description of your business.</p>
                 </div>
-                <a href="/changelog" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
+                <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">
+                  <a href="/changelog" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
+                </WithTooltip>
               </div>
             )}
           </div>
