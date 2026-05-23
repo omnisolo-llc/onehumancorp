@@ -10,8 +10,8 @@ export default function Integrations() {
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Developer-friendly API, excellent deliverability, modern React-email templates." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Global reach, ultra-reliable delivery for automated text alerts." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "API-first solution aggregating hundreds of carriers with built-in address verification." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Industry standard for SMS and WhatsApp messaging globally." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Industry standard video conferencing. High user familiarity." }
   ];
 
