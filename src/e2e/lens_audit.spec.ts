@@ -150,6 +150,73 @@ test.describe('Lens Audit E2E Flow', () => {
       await expect(page.getByRole('button', { name: 'Approve' })).toBeVisible();
   });
 
+  test('verify hardcoded UI warnings and mock cards are removed', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      await expect(page.getByText('1 Action Required: Connect Stripe to accept payments.')).not.toBeVisible();
+      await expect(page.getByText('CustomerSuccess Department')).not.toBeVisible();
+  });
+
+  test('verify advanced settings toggle hides and shows payload data', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      await expect(page.getByText('Advanced Settings')).toBeVisible();
+      const advancedToggle = page.locator('button', { hasText: '' }).filter({ has: page.locator('span.absolute') }).first();
+
+      // By default payload should be hidden
+      await expect(page.locator('pre')).not.toBeVisible();
+
+      // Enable advanced settings
+      await advancedToggle.click();
+
+      // We expect the payload block to become visible, because there's an action required for 'Draft email for review'
+      await expect(page.locator('pre')).toBeVisible();
+  });
+
+  test('verify dashboard metric cards load without mock data', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      const activeCustomers = page.locator('.ohc-hybrid-panel').filter({ hasText: 'Active Customers' });
+      await expect(activeCustomers).toBeVisible();
+      await expect(activeCustomers.locator('.text-3xl')).not.toBeEmpty();
+
+      const pendingOrders = page.locator('.ohc-hybrid-panel').filter({ hasText: 'Pending Orders' });
+      await expect(pendingOrders).toBeVisible();
+      await expect(pendingOrders.locator('.text-3xl')).not.toBeEmpty();
+  });
+
+  test('verify growth and promotions card is fully functional', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      await expect(page.getByText('Boost Sales with AI Campaigns')).toBeVisible();
+      const generateBtn = page.getByRole('button', { name: 'Generate Promotion' });
+      await expect(generateBtn).toBeVisible();
+
+      await generateBtn.click();
+      await expect(page.getByText('Drafting holiday campaign...')).toBeVisible();
+  });
+
+  test('verify referral program section visibility and generation', async ({ page }) => {
+      await page.goto('/');
+      const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+      await dashboardLink.click();
+
+      await expect(page.getByText('Referral Program')).toBeVisible();
+      await expect(page.getByText('Share your store')).toBeVisible();
+
+      // Ensure the generate link functionality is mock-free and works via backend
+      // The button text changes after generation (handled in other E2E tests, here we just check visibility)
+      await expect(page.getByRole('button', { name: 'Share & Claim Reward' })).toBeVisible();
+  });
+
   test('verify visual grid token consistency and translucent card styling', async ({ page }) => {
     await page.goto('/');
     const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();

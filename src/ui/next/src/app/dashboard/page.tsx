@@ -35,24 +35,9 @@ export default function Dashboard() {
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
-  // Growth Loop: Automated Review Request State
   const [isReviewGenerating, setIsReviewGenerating] = useState<boolean>(false);
   const [reviewCampaignSent, setReviewCampaignSent] = useState<boolean>(false);
   const [reviewEmailsSent, setReviewEmailsSent] = useState<number>(0);
-  const [showReviewRequestCard, setShowReviewRequestCard] = useState<boolean>(true);
-
-  const handleApproveReviewRequest = () => {
-    setIsReviewGenerating(true);
-    setTimeout(() => {
-      setIsReviewGenerating(false);
-      setReviewCampaignSent(true);
-      setReviewEmailsSent(3);
-      setTimeout(() => {
-        setShowReviewRequestCard(false);
-      }, 3000);
-    }, 2000);
-  };
-
 
   useEffect(() => {
     async function checkMilestones() {
@@ -243,7 +228,7 @@ export default function Dashboard() {
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Action Required (Approvals) */}
-         {(approvals.length > 0 || showReviewRequestCard) && (
+         {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
@@ -258,54 +243,6 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <div className="flex flex-col gap-4">
-                    {/* Hardcoded Automated Review Request Card based on mockup */}
-                    {showReviewRequestCard && (
-                        <div className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                                        🤝
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-lg font-outfit text-gray-900">
-                                            CustomerSuccess Department
-                                        </h3>
-                                        <p className="text-gray-600 font-inter text-sm">3 customers haven't reviewed their orders. Request reviews?</p>
-                                    </div>
-                                </div>
-
-                                {isReviewGenerating ? (
-                                    <div className="flex items-center gap-2 text-sm text-blue-600 font-medium whitespace-nowrap px-4 py-2 bg-blue-50 rounded-lg">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                                        AI generating personalized review requests...
-                                    </div>
-                                ) : reviewCampaignSent ? (
-                                    <div className="flex items-center gap-2 text-sm text-green-600 font-medium whitespace-nowrap px-4 py-2 bg-green-50 rounded-lg">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        Sent to 3 customers!
-                                    </div>
-                                ) : (
-                                    <div className="flex gap-2 shrink-0">
-                                        <button
-                                            onClick={() => setShowReviewRequestCard(false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-transparent hover:bg-red-50 transition-colors"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={handleApproveReviewRequest}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
-                                        >
-                                            Approve
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     {approvals.map(approval => {
                         // Extract plain english message and payload
                         let plainMessage = approval.description;
@@ -395,21 +332,7 @@ export default function Dashboard() {
              </section>
          )}
 
-         {/* Top Action Banner (Stripe Setup) */}
-         <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
-                 <div className="flex items-center gap-4">
-                     <div>
-                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
-                     </div>
-                 </div>
-                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
-                     Complete Stripe Setup
-                 </button>
-             </div>
-         </section>
-
-         {approvals.length === 0 && !showReviewRequestCard && (
+         {approvals.length === 0 && (
 <>
 {/* Business Snapshot */}
          <section>
