@@ -483,7 +483,7 @@ impl AgentServiceImpl {
         let mut sqlite_memory = None;
         if std::env::var("OHC_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
             let db_url = std::env::var("OHC_SQLITE_MEMORY_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-            if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url).await {
+            if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await {
                 sqlite_memory = Some(std::sync::Arc::new(store) as std::sync::Arc<dyn crate::memory_store::LongTermMemory>);
             } else {
                 tracing::warn!("Failed to initialize SqliteMemoryStore");
