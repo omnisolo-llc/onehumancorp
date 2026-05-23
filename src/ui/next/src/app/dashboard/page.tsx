@@ -647,7 +647,7 @@ export default function Dashboard() {
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel mac-glass-panel shadow-sm overflow-hidden">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
@@ -890,6 +890,19 @@ export default function Dashboard() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
+        .mac-glass-panel {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(30px) saturate(210%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .mac-glass-panel {
+                background: rgba(22, 22, 26, 0.7);
+                backdrop-filter: blur(30px) saturate(210%);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+        }
       `}} />
     </div>
   );
