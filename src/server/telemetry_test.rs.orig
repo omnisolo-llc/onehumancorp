@@ -420,11 +420,11 @@ mod tests {
         if checked_files == 0 {
             panic!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
         }
-        // assert!(
-        //     violations.is_empty(),
-        //     "Found PII logging violations in the following lines:\n{:#?}",
-        //     violations
-        // );
+        assert!(
+            violations.is_empty(),
+            "Found PII logging violations in the following lines:\n{:#?}",
+            violations
+        );
     }
 
     #[test]

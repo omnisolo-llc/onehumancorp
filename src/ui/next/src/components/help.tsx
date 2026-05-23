@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
+import { InteractiveWalkthrough } from './Walkthrough';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -104,94 +105,32 @@ const WalkthroughContext = createContext<WalkthroughContextType | undefined>(und
 
 export function WalkthroughProvider({ children }: { children: ReactNode }) {
   const [steps, setSteps] = useState<Step[]>([]);
-  const [currentStepIndex, setCurrentStepIndex] = useState(-1);
+  const [isOpen, setIsOpen] = useState(false);
 
   const startWalkthrough = (newSteps: Step[]) => {
     setSteps(newSteps);
-    setCurrentStepIndex(0);
+    setIsOpen(true);
   };
 
   const nextStep = () => {
-    if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
-    } else {
-      endWalkthrough();
-    }
+    // Left for compatibility if called externally, but InteractiveWalkthrough handles its own internal index
   };
 
   const endWalkthrough = () => {
+    setIsOpen(false);
     setSteps([]);
-    setCurrentStepIndex(-1);
   };
-
-  useEffect(() => {
-    if (currentStepIndex >= 0 && currentStepIndex < steps.length) {
-      const step = steps[currentStepIndex];
-      const el = document.getElementById(step.targetId);
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }
-  }, [currentStepIndex, steps]);
-
-  const activeStep = currentStepIndex >= 0 ? steps[currentStepIndex] : null;
-
-  const [highlightStyle, setHighlightStyle] = useState({});
-
-  useEffect(() => {
-    if (activeStep) {
-      const el = document.getElementById(activeStep.targetId);
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        setHighlightStyle({
-          top: rect.top - 8,
-          left: rect.left - 8,
-          width: rect.width + 16,
-          height: rect.height + 16,
-        });
-      }
-    }
-  }, [activeStep]);
 
   return (
     <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough }}>
       {children}
-      {activeStep && (
-        <div className="fixed inset-0 z-[100] pointer-events-none flex flex-col">
-          <div className="absolute inset-0 bg-transparent pointer-events-auto" onClick={endWalkthrough} />
-
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Highlight box */}
-            <div
-              className="absolute border-4 border-blue-500 rounded-xl transition-all duration-300 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] z-[100]"
-              style={{ ...highlightStyle, position: 'absolute' }}
-            />
-
-            <div className="pointer-events-auto fixed bottom-24 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-[101]">
-               <div className="flex justify-between items-start mb-2">
-                 <h3 className="font-bold text-gray-900 text-lg">Quick Guide</h3>
-                 <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                   {currentStepIndex + 1} of {steps.length}
-                 </span>
-               </div>
-               <p className="text-gray-700 mb-6 leading-relaxed text-sm">{activeStep.message}</p>
-               <div className="flex justify-between items-center">
-                 <button
-                   onClick={endWalkthrough}
-                   className="text-gray-500 text-sm font-medium hover:text-gray-700 px-2 py-1"
-                 >
-                   Skip
-                 </button>
-                 <button
-                   onClick={nextStep}
-                   className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all"
-                 >
-                   {currentStepIndex < steps.length - 1 ? "Next" : "Got it"}
-                 </button>
-               </div>
-            </div>
-          </div>
-        </div>
+      {isOpen && steps.length > 0 && (
+        <InteractiveWalkthrough
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message }))}
+          isOpen={isOpen}
+          onClose={endWalkthrough}
+          onComplete={endWalkthrough}
+        />
       )}
     </WalkthroughContext.Provider>
   );
