@@ -3454,7 +3454,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- My Plan Page -->
                     <div id="my-plan-screen" class="screen">
-                        <h1>My Current Plan</h1>
+                        <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
                         <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
