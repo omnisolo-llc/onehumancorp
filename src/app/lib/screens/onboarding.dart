@@ -19,29 +19,30 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  String bio = '';
+  String businessType = '';
   int _currentInputStep = 0;
   String businessName = '';
+  String niche = '';
   String selectedTemplate = 'Modern';
-  OnboardingState _state = OnboardingState.welcome;
+  OnboardingState _state = OnboardingState.input;
   bool isAdvancedMode = false;
   String domainChoice = 'subdomain';
   late final http.Client _client;
-  late final TextEditingController _bioController;
+  late final TextEditingController _typeController;
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _client = widget.httpClient ?? http.Client();
-    _bioController = TextEditingController();
+    _typeController = TextEditingController();
     _loadBio();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _bioController.dispose();
+    _typeController.dispose();
     super.dispose();
   }
 
@@ -51,14 +52,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['bio'] != null) {
+        if (data['businessType'] != null) {
           setState(() {
-            bio = data['bio'];
-            _bioController.text = bio;
+            businessType = data['businessType'];
+            _typeController.text = businessType;
           });
         }
         if (data['businessName'] != null) {
           setState(() => businessName = data['businessName']);
+        }
+        if (data['niche'] != null) {
+          setState(() => niche = data['niche']);
         }
         if (data['selectedTemplate'] != null) {
           setState(() => selectedTemplate = data['selectedTemplate']);
@@ -69,13 +73,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _saveDraft(String text) async {
+  Future<void> _saveDraft() async {
     try {
       final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
+        body: jsonEncode({
+          'businessType': businessType,
+          'businessName': businessName,
+          'niche': niche,
+          'selectedTemplate': selectedTemplate,
+        }),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -85,7 +94,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      await _saveDraft(bio);
+      await _saveDraft();
       setState(() => _state = OnboardingState.generating);
 
       try {
@@ -94,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
-            'bio': bio,
+            'bio': '$businessType - Niche: $niche',
             'company_name': businessName.isEmpty ? 'AI Generated Store' : businessName,
             'business_type': 'Auto',
             'selling_categories': ['food', 'physical'],
@@ -111,7 +120,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         );
 
         if (response.statusCode == 200) {
-          if (mounted) setState(() => _state = OnboardingState.dashboard);
+          if (mounted) setState(() => _state = OnboardingState.draft);
         } else {
           // If error occurs, go back to input.
           if (mounted) {
@@ -301,14 +310,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-          'Welcome to OHC Smart Builder',
+          'What do you do?',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'Tell us about your business, and AI will build it.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: 32),
@@ -317,17 +320,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: TextFormField(
-              key: Key('bio-input'),
-              controller: _bioController,
+              key: Key('type-input'),
+              controller: _typeController,
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
-              keyboardType: TextInputType.multiline,
-              autofocus: true,
-              maxLines: 4,
+              keyboardType: TextInputType.text,
+              maxLines: 1,
               decoration: InputDecoration(
-                labelText: 'Business Bio',
-                hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
+                labelText: 'Business Type',
+                hintText: 'e.g. Sell cakes, plumbing',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -335,14 +337,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               style: TextStyle(fontFamily: 'Inter', fontSize: 16),
               onChanged: (value) {
-                bio = value;
+                businessType = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              onSaved: (value) => bio = value!,
+              onSaved: (value) => businessType = value!,
             ),
           ),
         ),
@@ -385,14 +387,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-          'Name your business',
+          'What\'s the name of your business?',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 16),
-        Text(
-          'What should we call your storefront?',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: 32),
@@ -406,10 +402,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
-              autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Business Name',
-                hintText: 'e.g., Maya\'s Cakes',
+                hintText: 'e.g. Maya\'s Cakes',
                 filled: true,
                 fillColor: Colors.white.withOpacity(0.5),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
@@ -420,7 +415,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 businessName = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(bio);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -474,24 +469,42 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-          'Choose a look',
+          'What\'s your niche?',
           style: TextStyle(fontFamily: 'Outfit', fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1D1D1F), letterSpacing: -0.5),
           textAlign: TextAlign.center,
         ),
-        SizedBox(height: 16),
-        Text(
-          'Select a starting template for your AI to use.',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.grey[600]),
-          textAlign: TextAlign.center,
-        ),
         SizedBox(height: 32),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            _buildTemplateChoice('Modern', Icons.auto_awesome),
-            _buildTemplateChoice('Classic', Icons.account_balance),
-            _buildTemplateChoice('Bold', Icons.flash_on),
-          ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: TextFormField(
+              key: Key('niche-input'),
+              initialValue: niche,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                labelText: 'Niche',
+                hintText: 'e.g. I bake custom wedding cakes',
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.5),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                contentPadding: EdgeInsets.all(20),
+              ),
+              style: TextStyle(fontFamily: 'Inter', fontSize: 16),
+              onChanged: (value) {
+                niche = value;
+                if (_debounce?.isActive ?? false) _debounce!.cancel();
+                _debounce = Timer(const Duration(milliseconds: 500), () {
+                  _saveDraft();
+                });
+              },
+              validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+              onSaved: (value) => niche = value!,
+              onFieldSubmitted: (_) => submit(),
+            ),
+          ),
         ),
         SizedBox(height: 32),
         ClipRRect(
@@ -508,7 +521,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Advanced Mode', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+                  Text('Advanced Options', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
                   Switch(
                     key: Key('advanced-mode-toggle'),
                     value: isAdvancedMode,
@@ -523,6 +536,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         if (isAdvancedMode) ...[
+          SizedBox(height: 16),
+          Text('Template Selection', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
+          SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildTemplateChoice('Modern', Icons.auto_awesome),
+              _buildTemplateChoice('Classic', Icons.account_balance),
+              _buildTemplateChoice('Bold', Icons.flash_on),
+            ],
+          ),
           SizedBox(height: 16),
           Text('Domain Choice', style: TextStyle(fontFamily: 'Inter', fontSize: 16)),
           SizedBox(height: 8),
@@ -550,7 +574,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => domainChoice = val);
-                    _saveDraft(bio);
+                    _saveDraft();
                   },
                 ),
               ),
@@ -567,7 +591,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 0,
           ),
-          child: Text('Build My Storefront', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+          child: Text('Generate Draft', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
         ),
         SizedBox(height: 16),
         TextButton(
@@ -591,7 +615,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onTap: () {
         setState(() {
           selectedTemplate = name;
-          _saveDraft(bio);
+          _saveDraft();
         });
       },
       child: Container(
@@ -773,7 +797,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Preview Mode',
+                'Looks Great!',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -853,7 +877,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  '1-Tap Launch',
+                  'Publish Now',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 16,
@@ -934,28 +958,30 @@ class StoreLiveScreen extends StatelessWidget {
                       SizedBox(height: 48),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => AgentDashboard()),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey[100],
-                            foregroundColor: Color(0xFF1D1D1F),
-                            padding: EdgeInsets.symmetric(vertical: 18),
-                            minimumSize: Size(double.infinity, 50),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
+                        child: Semantics(
+                          link: true,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(builder: (_) => AgentDashboard()),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.grey[100],
+                              foregroundColor: Color(0xFF1D1D1F),
+                              padding: EdgeInsets.symmetric(vertical: 18),
+                              minimumSize: Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                             ),
-                            elevation: 0,
-                          ),
-                          child: Text(
-                            'Go to Dashboard',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                            child: Text(
+                              'Go to Dashboard',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
