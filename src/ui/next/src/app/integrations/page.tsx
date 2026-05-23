@@ -10,9 +10,11 @@ export default function Integrations() {
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Developer-friendly API, excellent deliverability, modern React-email templates." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "razorpay", name: "Razorpay", category: "finance", status: "disconnected", icon: "💳", description: "Accept payments, send payouts, and manage your business finances in India." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Global reach, ultra-reliable delivery for automated text alerts." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Industry standard video conferencing. High user familiarity." }
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Industry standard video conferencing. High user familiarity." },
+    { id: "dailyco", name: "Daily.co", category: "operations", status: "disconnected", icon: "🎥", description: "Embedded video calls for developers." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);

@@ -26,6 +26,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Razorpay' })).toBeVisible();
     await expect(page.getByText('Multi-carrier support (USPS, UPS, FedEx, DHL) through a single unified API.')).toBeVisible();
     await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
   });
@@ -33,6 +34,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('displays email marketing and automated video links cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Daily.co' })).toBeVisible();
     await expect(page.getByText('Developer-friendly API, excellent deliverability, modern React-email templates.')).toBeVisible();
     await expect(page.getByText('Industry standard video conferencing. High user familiarity.')).toBeVisible();
   });

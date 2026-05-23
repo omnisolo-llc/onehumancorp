@@ -1,0 +1,13 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "razorpay",
+    srcs = glob(["*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/integrations/catalog:catalog",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:tokio",
+    ],
+)

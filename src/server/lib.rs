@@ -3250,6 +3250,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
+                            <!-- Razorpay Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Razorpay</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept payments, send payouts, and manage your business finances in India.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Razorpay...')">Connect</button>
+                            </div>
+
+
                             <!-- ShipStation Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -3279,6 +3290,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard video conferencing. High user familiarity.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
+
+                            <!-- Daily.co Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Daily.co</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🎥</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded video calls for developers.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Daily.co...')">Connect</button>
+                            </div>
+
                         </div>
 
                         <!-- Elements Required by E2E test -->

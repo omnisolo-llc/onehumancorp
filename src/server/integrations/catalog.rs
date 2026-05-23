@@ -81,6 +81,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
     catalog.push(easypost_provider.to_integration_provider());
 
+    let razorpay_provider = crate::integrations::razorpay::provider::RazorpayProvider::new("dummy_token".to_string());
+    catalog.push(razorpay_provider.to_integration_provider());
+
+    let dailyco_provider = crate::integrations::dailyco::provider::DailycoProvider::new("dummy_token".to_string());
+    catalog.push(dailyco_provider.to_integration_provider());
+
     let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 

@@ -26,3 +26,5 @@ pub mod ayrshare;
 pub mod listmonk;
 pub mod easypost;
 pub mod jitsi;
+pub mod razorpay;
+pub mod dailyco;
