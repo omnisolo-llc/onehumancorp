@@ -157,6 +157,6 @@ mod tests {
         let result = sandbox.wrap_command("rm -rf /").await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Command execution denied by sandbox policy");
+        assert_eq!(result.unwrap_err(), "Dangerous command detected: rm -rf /");
     }
 }
