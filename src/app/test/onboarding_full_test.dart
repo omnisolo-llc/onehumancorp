@@ -12,7 +12,7 @@ void main() {
       } else if (request.url.path == '/api/onboarding/launch') {
         return http.Response('{"status": "ok"}', 200);
       } else if (request.url.path == '/api/onboarding/draft') {
-        return http.Response('{"bio": "saved bio test"}', 200);
+        return http.Response('{"bio": "saved bio test", "business_name": "Maya\'s Cakes", "selected_template": "Classic"}', 200);
       }
       return http.Response('Not Found', 404);
     });

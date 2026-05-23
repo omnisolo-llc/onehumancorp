@@ -42,15 +42,16 @@ async fn get_draft(
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
     match agent.get_onboarding_state(tenant_id).await {
         Ok(state) => {
-            // For now, extract the bio field if we store it as a general state document
-            // If there's no state or bio, returning an empty json is fine
-            if let Some(bio) = state.get("bio") {
-                Ok(Json(serde_json::json!({ "bio": bio })))
-            } else {
-                Ok(Json(serde_json::json!({ "bio": "" })))
-            }
+            let bio = state.get("bio").unwrap_or(&serde_json::json!("")).clone();
+            let business_name = state.get("business_name").unwrap_or(&serde_json::json!("")).clone();
+            let selected_template = state.get("selected_template").unwrap_or(&serde_json::json!("")).clone();
+            Ok(Json(serde_json::json!({
+                "bio": bio,
+                "business_name": business_name,
+                "selected_template": selected_template
+            })))
         },
-        Err(_) => Ok(Json(serde_json::json!({ "bio": "" }))), // fallback
+        Err(_) => Ok(Json(serde_json::json!({ "bio": "", "business_name": "", "selected_template": "" }))), // fallback
     }
 }
 

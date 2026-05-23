@@ -49,25 +49,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['bio'] != null) {
-          setState(() {
+        setState(() {
+          if (data['bio'] != null) {
             bio = data['bio'];
             _bioController.text = bio;
-          });
-        }
+          }
+          if (data['business_name'] != null) {
+            businessName = data['business_name'];
+          }
+          if (data['selected_template'] != null) {
+            selectedTemplate = data['selected_template'];
+          }
+        });
       }
     } catch (e) {
       print('Failed to load draft: $e');
     }
   }
 
-  Future<void> _saveDraft(String text) async {
+  Future<void> _saveDraft() async {
     try {
       final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text}),
+        body: jsonEncode({
+          'bio': bio,
+          'business_name': businessName,
+          'selected_template': selectedTemplate,
+        }),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -77,7 +87,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      await _saveDraft(bio);
+      await _saveDraft();
       setState(() => _state = OnboardingState.generating);
 
       try {
@@ -295,7 +305,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: TextFormField(
               key: Key('bio-input'),
               controller: _bioController,
-              textInputAction: TextInputAction.next,
+              textInputAction: TextInputAction.done,
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.text,
               maxLines: 4,
@@ -312,7 +322,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 bio = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
