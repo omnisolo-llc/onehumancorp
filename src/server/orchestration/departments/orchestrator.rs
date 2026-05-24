@@ -428,7 +428,7 @@ impl DepartmentOrchestrator {
 
         let opt_department = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, description")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -438,14 +438,14 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        Some((r.get::<String, _>("department"), r.get::<String, _>("description")))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, description")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -455,7 +455,7 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        Some((r.get::<String, _>("department"), r.get::<String, _>("description")))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
@@ -464,14 +464,22 @@ impl DepartmentOrchestrator {
         };
 
         if approved {
-            if let Some(dep) = opt_department {
-                let payload = serde_json::json!({
-                    "request_id": request_id,
-                    "tenant_id": tenant_id
-                });
-                let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
-                let topic = format!("agent:{}:approved", dep);
-                let _ = self.mesh.publish(&topic, payload_bytes).await;
+            if let Some((dep, description)) = opt_department {
+                let mut payload_val = serde_json::json!({});
+                if let Some(idx) = description.find(" | Payload: ") {
+                    let payload_str = &description[idx + " | Payload: ".len()..];
+                    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(payload_str) {
+                        payload_val = parsed;
+                    }
+                }
+
+                let event = DepartmentEvent {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    tenant_id: tenant_id.to_string(),
+                    event_type: format!("agent:{}:approved", dep),
+                    payload: payload_val,
+                };
+                let _ = self.dispatch_event(event).await;
             }
         }
 
