@@ -65,4 +65,27 @@ mod tests {
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "mercadopago");
     }
+
+    #[tokio::test]
+    async fn test_mercadopago_provider_create_checkout_preference() {
+        let provider = MercadoPagoProvider::new("test_token".to_string());
+        let result = provider.create_checkout_preference("price_123", "tenant_123").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123");
+    }
+
+    #[tokio::test]
+    async fn test_mercadopago_provider_create_payment() {
+        let provider = MercadoPagoProvider::new("test_token".to_string());
+        let result = provider.create_payment(100.0, "Test payment", "test@example.com").await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "mock_txn_123");
+    }
+
+    #[tokio::test]
+    async fn test_mercadopago_provider_handle_webhook() {
+        let provider = MercadoPagoProvider::new("test_token".to_string());
+        let result = provider.handle_webhook("{}").await;
+        assert!(result.is_ok());
+    }
 }
