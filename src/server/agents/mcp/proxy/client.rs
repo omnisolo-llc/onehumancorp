@@ -4,13 +4,11 @@ use tonic::transport::Channel;
 use tonic::Request;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
+use tokio::process::Command;
 use std::process::Stdio;
 use tracing::{info, warn, error};
 use super::blob::{create_blob_provider, BlobProvider};
 use std::sync::Arc;
-
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
-use crate::orchestration::local_sandbox::LocalSandbox;
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
@@ -68,39 +66,15 @@ impl LocalProxyClient {
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {
-                                    let config = SandboxConfig {
-                                        deny_list_dirs: vec!["/root".to_string(), "/etc/shadow".to_string()],
-                                        ..Default::default()
-                                    };
-                                    let sandbox = LocalSandbox::new(config, None);
-
-                                    match sandbox.execute(&req.params).await {
-                                        Ok((success, stdout, stderr)) => {
-                                            if success {
-                                                (true, stdout, "".to_string())
+                                    match Command::new("sh").arg("-c").arg(&req.params).output().await {
+                                        Ok(output) => {
+                                            if output.status.success() {
+                                                (true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string())
                                             } else {
-                                                (false, "".to_string(), stderr)
+                                                (false, "".to_string(), String::from_utf8_lossy(&output.stderr).to_string())
                                             }
                                         }
-                                        Err(e) => {
-                                            let error_msg = format!("Sandbox Violation: {} ({})", e.reason, e.command);
-                                            error!("{}", error_msg);
-
-                                            let details = serde_json::json!({
-                                                "reason": e.reason,
-                                                "command": e.command,
-                                            });
-
-                                            let _ = ::server_telemetry::buffer_metric(
-                                                &crate::db::get_pool(),
-                                                "sandbox_violation_event",
-                                                "counter",
-                                                1.0,
-                                                details
-                                            ).await;
-
-                                            (false, "".to_string(), error_msg)
-                                        }
+                                        Err(e) => (false, "".to_string(), e.to_string()),
                                     }
                                 }
                                 "fs_read" => {

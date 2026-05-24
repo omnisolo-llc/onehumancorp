@@ -32,9 +32,6 @@ export default function Dashboard() {
 
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
-  const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
-  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
-
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -223,10 +220,7 @@ export default function Dashboard() {
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-         <nav className="flex items-center gap-3">
-             <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
-               Inbox
-             </Link>
+         <div className="flex items-center gap-3">
              <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
                Review Campaigns ⭐️
              </Link>
@@ -242,7 +236,7 @@ export default function Dashboard() {
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
-         </nav>
+         </div>
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
@@ -439,33 +433,11 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
                     <button
-                        onClick={async () => {
-                            setShowPromoModal(true);
-                            setIsGeneratingPromo(true);
-                            try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-                                const response = await fetch("/api/v1/growth/promotions/generate", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ tenant })
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    if (data.message) {
-                                        setPromoMessage(data.message);
-                                    }
-                                }
-                            } catch (e) {
-                                console.error("Failed to generate promotion", e);
-                            } finally {
-                                setIsGeneratingPromo(false);
-                            }
-                        }}
-                        disabled={isGeneratingPromo}
-                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
+                        onClick={() => setShowPromoModal(true)}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
+                        Generate Promotion
                     </button>
                 </div>
                 <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
@@ -542,7 +514,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Interactive Trial Extension */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
@@ -634,6 +605,48 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Hub Section */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Growth Hub</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Trial Extension Loop */}
+                <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col justify-between border border-blue-100 bg-blue-50/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -z-10"></div>
+                    <div>
+                        <h3 className="font-bold text-lg font-outfit text-gray-900 mb-2">Pro Trial Active</h3>
+                        <p className="text-sm text-gray-600 mb-4">You have <strong className="text-gray-900">{trialDaysLeft} days left</strong> on your trial.</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (!twitterConnected) {
+                                setTwitterConnected(true);
+                                setTrialDaysLeft(trialDaysLeft + 7);
+                            }
+                        }}
+                        disabled={twitterConnected}
+                        className={`w-full py-2 px-4 rounded-xl text-sm font-semibold transition-all ${twitterConnected ? 'bg-gray-200 text-gray-500' : 'bg-black text-white hover:bg-gray-800 shadow-md'}`}
+                    >
+                        {twitterConnected ? 'Trial Extended +7 Days!' : 'Connect X (Twitter) for +7 Days'}
+                    </button>
+                </div>
+
+                {/* Referral Loop */}
+                <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col justify-between border border-indigo-100 bg-indigo-50/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100 rounded-bl-full -z-10"></div>
+                    <div>
+                        <h3 className="font-bold text-lg font-outfit text-gray-900 mb-2">Refer & Earn</h3>
+                        <p className="text-sm text-gray-600 mb-4">Give a business owner priority AI setup and earn <strong className="text-gray-900">$50 credit</strong>.</p>
+                    </div>
+                    <button
+                        onClick={() => setShowReferralModal(true)}
+                        className="w-full py-2 px-4 rounded-xl text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
+                    >
+                        Share Invite Link
+                    </button>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -678,6 +691,7 @@ export default function Dashboard() {
 
          </>
 )}
+
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
@@ -847,35 +861,26 @@ export default function Dashboard() {
             </p>
 
             <div className="space-y-4">
-              {isGeneratingPromo ? (
-                 <div className="flex flex-col items-center justify-center py-8">
-                     <div className="inline-block w-8 h-8 rounded-full border-2 border-purple-200 border-t-purple-600 animate-spin mb-3"></div>
-                     <span className="text-sm text-gray-500">Generating the perfect message...</span>
-                 </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Generated Message</label>
-                    <textarea
-                      readOnly
-                      rows={4}
-                      value={promoMessage}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none"
-                    />
-                  </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Generated Message</label>
+                <textarea
+                  readOnly
+                  rows={4}
+                  value="Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none"
+                />
+              </div>
 
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(promoMessage);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
-                  >
-                    {copied ? 'Copied!' : 'Copy to Clipboard'}
-                  </button>
-                </>
-              )}
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+              >
+                {copied ? 'Message Copied!' : 'Copy Message'}
+              </button>
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
@@ -943,7 +948,7 @@ export default function Dashboard() {
                 }}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
               >
-                Upgrade Now - $29/mo
+                Upgrade Now - $9/mo
               </button>
 
               <button
