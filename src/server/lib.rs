@@ -2232,7 +2232,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
     let content = match path {
-        "/api/v1/health" => "{"status":"ok"}",
+        "/api/v1/health" => "{\"status\":\"ok\"}",
         _ => r#"
             <!DOCTYPE html>
             <html>
