@@ -1734,3 +1734,18 @@ def go_repositories():
         sum = "h1:blXXJkSxSSfBVBlC76pxqeO+LN3aDfLQo+309xJstO0=",
         version = "v1.11.0",
     )
+
+    go_repository(
+        name = "com_github_go_redsync_redsync_v4",
+        build_file_generation = "on",
+        importpath = "github.com/go-redsync/redsync/v4",
+        sum = "h1:09PjW+uA6T+xN7C57/w9uG67dO3j7oO5lSThY1O0E/c=",
+        version = "v4.16.0",
+    )
+    go_repository(
+        name = "com_github_redis_go_redis_v9",
+        build_file_generation = "on",
+        importpath = "github.com/redis/go-redis/v9",
+        sum = "h1:pMkxYPkEbMPwRdenAzUNyFNrDgHx9U+DrBabWNfSRQs=",
+        version = "v9.18.0",
+    )

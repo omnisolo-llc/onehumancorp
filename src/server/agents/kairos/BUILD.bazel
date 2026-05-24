@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "kairos",
+    srcs = [
+        "mesh.go",
+        "models.go",
+        "repository.go",
+    ],
+    importpath = "github.com/onehumancorp/mono/src/server/agents/kairos",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_go_redsync_redsync_v4//:redsync",
+        "@com_github_go_redsync_redsync_v4//redis/goredis/v9:goredis",
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
+
+go_test(
+    name = "kairos_test",
+    srcs = [
+        "mesh_test.go",
+        "repository_test.go",
+    ],
+    embed = [":kairos"],
+    deps = [
+        "@com_github_alicebob_miniredis_v2//:miniredis",
+        "@com_github_data_dog_go_sqlmock//:go-sqlmock",
+        "@com_github_redis_go_redis_v9//:go-redis",
+    ],
+)
