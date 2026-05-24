@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'approvals'>('departments');
@@ -67,9 +68,11 @@ export default function AgentsPage() {
         {/* Header */}
         <header className="px-5 pt-8 pb-4 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-20 border-b border-gray-100">
           <div className="flex justify-between items-center mb-4">
-            <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-            </Link>
+            <WithTooltip id="nav-dashboard-tooltip" defaultText="Check your sales, recent orders, and how your store is doing.">
+              <Link href="/dashboard" className="text-gray-400 hover:text-gray-600">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+              </Link>
+            </WithTooltip>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Advanced</span>
               <button
