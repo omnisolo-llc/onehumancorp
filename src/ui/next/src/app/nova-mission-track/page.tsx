@@ -18,14 +18,26 @@ const MISSIONS: Mission[] = [
   { id: '3', title: 'Multimodal LLM Endpoints', status: 'active', progress: 65, agent: 'Backend SWE Agent', department: 'Engineering' },
   { id: '4', title: 'Hierarchical Task Delegation', status: 'active', progress: 40, agent: 'Manager Agent', department: 'Operations' },
   { id: '5', title: 'Semantic Distillation Worker', status: 'pending', progress: 0, agent: 'Research Agent', department: 'Data Science' },
+  { id: '6', title: 'Codebase Maintainability', status: 'active', progress: 15, agent: 'Backend SWE Agent', department: 'Engineering' },
+  { id: '7', title: 'Multi-Tenant Safety Validations', status: 'pending', progress: 0, agent: 'Security Agent', department: 'Security' },
+  { id: '8', title: 'Observability Baseline', status: 'pending', progress: 0, agent: 'DevOps Agent', department: 'Engineering' },
 ];
 
 export default function MissionTrackPage() {
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed' | 'pending'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredMissions = MISSIONS.filter(m => {
+    const matchesSearch =
+      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.agent.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.department.toLowerCase().includes(searchQuery.toLowerCase());
+
+    if (!matchesSearch) return false;
+
     if (activeTab === 'active') return m.status === 'active';
     if (activeTab === 'completed') return m.status === 'completed';
+    if (activeTab === 'pending') return m.status === 'pending';
     return true;
   });
 
@@ -44,9 +56,20 @@ export default function MissionTrackPage() {
           <p className="text-sm text-gray-500 mt-1 font-medium">Tracking autonomous epic progress.</p>
         </header>
 
+        {/* Search Bar */}
+        <div className="px-5 pt-2 pb-2 sticky top-[108px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
+          <input
+            type="text"
+            placeholder="Search missions, agents..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 rounded-xl text-sm border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+          />
+        </div>
+
         {/* Tabs */}
-        <div className="flex px-5 pt-4 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[108px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
-          {['all', 'active', 'completed'].map((tab) => (
+        <div className="flex px-5 pt-2 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[156px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
+          {['all', 'active', 'completed', 'pending'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
