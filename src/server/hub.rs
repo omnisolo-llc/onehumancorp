@@ -1068,3 +1068,7 @@ mod tests {
         assert!(health.get("local_to_cloud_sync_queue").is_some());
     }
 }
+
+pub mod rag_sync;
+#[cfg(test)]
+pub mod rag_sync_test;
