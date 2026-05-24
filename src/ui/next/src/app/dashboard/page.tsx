@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
+  const [productAdded, setProductAdded] = useState<boolean>(false);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -503,6 +504,10 @@ export default function Dashboard() {
                             setShowPaywallModal(true);
                         } else {
                             setProductCount(prev => prev + 1);
+                            if (!productAdded) {
+                                setProductAdded(true);
+                                setTrialDaysLeft(prev => prev + 7);
+                            }
                         }
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
@@ -621,6 +626,24 @@ export default function Dashboard() {
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${reviewLeft ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                             >
                                 {reviewLeft ? 'Done' : 'Review'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">Add First Product</h4>
+                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                </div>
+                            </div>
+                            <button
+                                disabled={true}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${productAdded ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                            >
+                                {productAdded ? 'Done' : 'Pending'}
                             </button>
                         </div>
                     </div>
