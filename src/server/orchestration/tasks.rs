@@ -99,6 +99,8 @@ impl TaskDecompositionService {
         let mut attempt = 0;
         let max_attempts = 3;
 
+        let start_time = std::time::Instant::now();
+
         loop {
             attempt += 1;
             let now = Utc::now();
@@ -106,6 +108,9 @@ impl TaskDecompositionService {
             match tokio::time::timeout(std::time::Duration::from_secs(60), claim_future).await {
                 Ok(res) => return res,
                 Err(_) => {
+                    if start_time.elapsed() > std::time::Duration::from_millis(100) {
+                        ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                    }
                     if attempt >= max_attempts {
                         return Err("Timeout claiming task (ML-Resilience 60s boundary)".to_string());
                     }
