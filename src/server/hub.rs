@@ -701,6 +701,12 @@ impl Hub {
             "cloud"
         };
 
+        let health_category = if mode == "standalone" {
+            "Local Workmode"
+        } else {
+            "Cloud Inframode"
+        };
+
         let status = if db_ping > 0 { "healthy" } else { "degraded" };
         let mesh_active = db_ping > 0;
         let cloud_connected = mode != "standalone";
@@ -724,6 +730,7 @@ impl Hub {
 
         Ok(serde_json::json!({
             "mode": mode,
+            "health_category": health_category,
             "status": status,
             "db_ping_ms": db_ping,
             "mesh_active": mesh_active,
@@ -731,6 +738,10 @@ impl Hub {
             "hybrid_mode_ready": hybrid_mode_ready,
             "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
             "sync_error_count": sync_error_count,
+            "mission_sync_telemetry": {
+                "local_to_cloud_sync_queue": local_to_cloud_sync_queue,
+                "sync_error_count": sync_error_count,
+            },
             "checklist": checklist,
         }))
     }
