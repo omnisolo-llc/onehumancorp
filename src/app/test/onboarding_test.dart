@@ -224,4 +224,51 @@ void main() {
     // Verify the bio input field has the expected text
     expect(find.text('I bake custom vegan cakes in Seattle. Maya\'s Cakes.'), findsOneWidget);
   });
+
+  testWidgets('Onboarding Screen - Generates and transitions to Draft state on form submit', (WidgetTester tester) async {
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/draft' && request.method == 'GET') {
+        return http.Response('{}', 200);
+      }
+      if (request.url.path == '/api/onboarding/draft' && request.method == 'POST') {
+        return http.Response('{"status": "ok"}', 200);
+      }
+      if (request.url.path == '/api/onboarding/start') {
+        return http.Response('{"status": "ok"}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
+    await tester.pumpAndSettle();
+
+    // Start a Business
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    // Bio
+    await tester.enterText(find.byKey(Key('bio-input')), 'Test generating state');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(Key('next-step-1')));
+    await tester.tap(find.byKey(Key('next-step-1')));
+    await tester.pumpAndSettle();
+
+    // Name
+    await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(Key('next-step-2')));
+    await tester.tap(find.byKey(Key('next-step-2')));
+    await tester.pumpAndSettle();
+
+    // Submit
+    await tester.tap(find.text('Build My Storefront'));
+
+    // Wait for transition to complete
+    await tester.pumpAndSettle(const Duration(seconds: 1));
+
+    // Should transition directly to Draft Preview Mode
+    expect(find.text('Preview Mode'), findsOneWidget);
+    expect(find.text('My Test Business'), findsOneWidget);
+    expect(find.text('1-Tap Launch'), findsOneWidget);
+  });
 }
