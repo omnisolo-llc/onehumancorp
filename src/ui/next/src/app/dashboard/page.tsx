@@ -30,6 +30,10 @@ export default function Dashboard() {
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
 
+  const [loyaltyEnabled, setLoyaltyEnabled] = useState<boolean>(false);
+  const [enablingLoyalty, setEnablingLoyalty] = useState<boolean>(false);
+  const [loyaltyLink, setLoyaltyLink] = useState<string>("");
+
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
@@ -507,6 +511,80 @@ export default function Dashboard() {
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💻</div>
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Customer Loyalty Program */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Customer Loyalty Program</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Merchant Delight</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Buyers Into Fans</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Boost repeat purchases by letting customers earn points. Launch your own branded loyalty program in one click.</p>
+
+                    {!loyaltyEnabled ? (
+                        <button
+                            onClick={async () => {
+                                setEnablingLoyalty(true);
+                                try {
+                                    const response = await fetch("/api/v1/growth/loyalty/enable", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" }
+                                    });
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        setLoyaltyEnabled(data.enabled);
+                                        setLoyaltyLink(data.loyalty_link);
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to enable loyalty program", e);
+                                } finally {
+                                    setEnablingLoyalty(false);
+                                }
+                            }}
+                            disabled={enablingLoyalty}
+                            className={`px-6 py-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${enablingLoyalty ? "opacity-75 cursor-not-allowed" : ""}`}
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                            {enablingLoyalty ? "Activating..." : "Enable Loyalty Program"}
+                        </button>
+                    ) : (
+                        <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
+                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                                    Active!
+                                </span>
+                                <span className="text-sm text-gray-600">Share your invite link:</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <input type="text" readOnly value={loyaltyLink} className="flex-1 bg-gray-50 text-sm text-gray-500 outline-none p-2 font-mono border rounded-lg" />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(loyaltyLink);
+                                        alert("Link copied!");
+                                    }}
+                                    className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    Copy Link
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
+                   <div className="absolute inset-0 bg-gradient-to-br from-pink-400 to-rose-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
+                   <div className="relative w-20 h-20 bg-gradient-to-tr from-pink-500 to-rose-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
+                        <span className="text-3xl">💝</span>
+                   </div>
                 </div>
             </div>
          </section>
