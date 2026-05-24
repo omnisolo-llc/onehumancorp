@@ -2021,6 +2021,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -2120,7 +2121,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
+    let store = std::sync::Arc::new(crate::auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
@@ -3226,10 +3227,75 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function updateApprovalSetting(deptId, isChecked) {
 
-                            alert(`Settings updated for ${deptId}.`);
+                        function updateApprovalSetting(deptId, isChecked) {
+                            const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                            fetch(`/api/agents/settings/${deptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ auto_approve_limits: isChecked ? 0.0 : 100.0, tone_of_voice: "professional" })
+                            }).then(() => {
+                                alert(`Settings updated for ${deptId}: auto-execute is now ${!isChecked}.`);
+                            }).catch(e => {
+                                console.error('Failed to update settings', e);
+                            });
                         }
+
+                        async function fetchApprovals() {
+                            try {
+                                const res = await fetch('/api/agents/approvals', {
+                                    method: 'GET',
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    const container = document.getElementById('approval-inbox');
+                                    if (!container) return;
+
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        data.pending_approvals.forEach(approval => {
+                                            container.innerHTML += `
+                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
+                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                </div>
+                                            `;
+                                        });
+                                    } else {
+                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error fetching approvals:', e);
+                            }
+                        }
+
+                        async function decideApproval(id, approved) {
+                            try {
+                                const res = await fetch('/api/agents/approvals/' + id, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ approved })
+                                });
+                                if (res.ok) {
+                                    fetchApprovals();
+                                } else {
+                                    alert('Failed to process approval.');
+                                }
+                            } catch (e) {
+                                console.error('Error processing approval:', e);
+                            }
+                        }
+
                     </script>
 
 
@@ -4381,12 +4447,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            if (stepId === 3 && currentStep === 2) {
+                                let valid = false;
+                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
+                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
+                                });
+                                if (!valid) {
+                                    alert('Please select a business type');
+                                    return false;
+                                }
+                            }
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -4694,11 +4770,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             banner.classList.add('hidden');
                                         }
                                     }
+
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
+                                fetchApprovals();
                             }
 
                             if (id === 'my-plan-screen') {
+
                                 fetch('/api/billing/my-plan')
                                     .then(res => res.json())
                                     .then(data => {
@@ -4782,9 +4861,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: {
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            currentStep = stateData.step;
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
+
                             showScreen(screenId);
-
-
                         };
                     </script>
                 </body>
