@@ -62,7 +62,6 @@ graph TD;
 |-----------|----------|---------|
 | `src/ui/tauri/` | **Rust/HTML/JSON** | Canonical Tauri v2 desktop UI and packaged static frontend |
 | `src/ui/next/` | **React/TypeScript** | Legacy/prototype Next.js web client retained until route and asset references are fully audited |
-| `src/app/` | **Rust** | Backend agent client (formerly Slint UI, deprecated) |
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
@@ -258,8 +257,6 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 
 `src/ui/next/` remains in the repository while references to its routes and assets are audited. It is not the canonical UI, and new provider flows should be implemented in the Tauri app.
 
-### Slint UI (Deprecated)
+### Slint and Flutter UI (Removed)
 
-The `src/app/slint_deprecated/` directory contains 72 legacy `.slint` files that were part of the old Slint-based UI. These files are no longer used - the UI has been migrated to Tauri v2.
-
-Historical Slint components included: dashboard, login, wizard flows, agents, chat, channels, integrations, security, meetings, logs, pricing, scaling, swarm memory, website builder, setup wizard, task list, help center, release notes, tutorials, and API docs.
+The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
