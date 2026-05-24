@@ -593,6 +593,7 @@ export default function Dashboard() {
                     </div>
                 </div>
                 <button
+                    name="Referrals"
                     onClick={openReferralModal}
                     disabled={isGeneratingReferral}
                     className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
