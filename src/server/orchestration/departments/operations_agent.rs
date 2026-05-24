@@ -19,7 +19,10 @@ impl Department for OperationsAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.quote.accepted".to_string()]
+        vec![
+            "tenant.quote.accepted".to_string(),
+            "tenant.order.created".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -34,9 +37,15 @@ impl Department for OperationsAgent {
             ActionRisk::DraftForReview
         };
 
+        let action_description = if event.event_type == "tenant.order.created" {
+            "Process Order & Update Inventory".to_string()
+        } else {
+            "Create order and booking".to_string()
+        };
+
         self.orchestrator.execute_action(
             DepartmentType::Operations,
-            "Create order and booking".to_string(),
+            action_description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
