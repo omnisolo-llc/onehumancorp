@@ -3531,7 +3531,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" style="display: none;">
@@ -4339,6 +4339,72 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         let currentStep = 1;
+
+                        let saveTimeout = null;
+                        function saveWizardState() {
+                            clearTimeout(saveTimeout);
+                            saveTimeout = setTimeout(() => {
+                                const stateData = { step: currentStep };
+                                document.querySelectorAll('#setup-screen input').forEach(input => {
+                                    if (input.placeholder && input.value) {
+                                        stateData[input.placeholder] = input.type === 'checkbox' ? input.checked : input.value;
+                                    }
+                                });
+                                localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
+
+                                const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                const userId = localStorage.getItem('user_id') || 'test-user';
+                                fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Tenant-ID': tenantId,
+                                        'X-User-ID': userId
+                                    },
+                                    body: JSON.stringify(stateData)
+                                }).catch(console.error);
+                            }, 500);
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const savedState = localStorage.getItem('ohc_wizard_state');
+                            if (savedState) {
+                                try {
+                                    const stateData = JSON.parse(savedState);
+                                    if (stateData.step && stateData.step > 1 && stateData.step <= 8) {
+                                        currentStep = stateData.step;
+                                        document.querySelectorAll('#setup-screen > div').forEach(el => {
+                                            el.classList.add('hidden');
+                                            setTimeout(() => el.style.display = 'none', 250);
+                                        });
+                                        const nextEl = document.getElementById('step-' + currentStep);
+                                        if (nextEl) {
+                                            setTimeout(() => {
+                                                nextEl.style.display = 'block';
+                                                setTimeout(() => nextEl.classList.remove('hidden'), 50);
+                                            }, 250);
+                                        }
+                                    }
+                                    document.querySelectorAll('#setup-screen input').forEach(input => {
+                                        if (input.placeholder && stateData[input.placeholder] !== undefined) {
+                                            if (input.type === 'checkbox') {
+                                                input.checked = stateData[input.placeholder];
+                                            } else {
+                                                input.value = stateData[input.placeholder];
+                                            }
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to restore wizard state:', e);
+                                }
+                            }
+
+                            document.querySelectorAll('#setup-screen input').forEach(input => {
+                                input.addEventListener('input', saveWizardState);
+                                input.addEventListener('change', saveWizardState);
+                            });
+                        });
+
 
 
                         function validateInputs(stepId) {
