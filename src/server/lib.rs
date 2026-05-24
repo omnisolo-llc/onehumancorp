@@ -4826,20 +4826,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (id === 'dashboard-screen') {
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
                                 Promise.all([
-                                    fetch('/api/v1/dashboard/sales', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                        body: JSON.stringify({ tenant_id: tenant })
-                                    }).then(res => res.json()),
                                     fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                         body: JSON.stringify({ tenant_id: tenant })
                                     }).then(res => res.json())
                                 ])
-                                .then(([salesData, metricsData]) => {
+                                .then(([metricsData]) => {
                                     const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
+                                    if (salesEl) salesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
 
                                     const banner = document.getElementById('milestone-share-banner');
                                     const countEl = document.getElementById('milestone-customers-count');
