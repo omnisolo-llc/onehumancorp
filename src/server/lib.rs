@@ -25,6 +25,8 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
     m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     RwLock::new(m)
     })
 }
@@ -2857,6 +2859,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>💬 WhatsApp</h3>
                             <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
+                        <!-- Business Analytics Widget with Soft Paywall -->
+                        <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Analytics</h3>
+                            </div>
+
+                            <!-- Basic Metrics (Free) -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Total Sales</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">$1,240</p>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Visitors</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">342</p>
+                                </div>
+                            </div>
+
+                            <!-- Advanced AI Insights (Locked / Soft Paywall) -->
+                            <div style="position: relative; padding: 24px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: linear-gradient(135deg, rgba(240,249,255,0.8) 0%, rgba(255,255,255,0.8) 100%);">
+                                <h4 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 18px;">✨</span> Advanced AI Insights
+                                </h4>
+
+                                <div style="filter: blur(4px); opacity: 0.7; pointer-events: none; user-select: none;">
+                                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1D1D1F;">Customer retention dropped by 12% this week. We recommend launching a re-engagement email campaign.</p>
+                                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='60'><path d='M0,50 Q25,10 50,30 T100,10' fill='none' stroke='%230066ff' stroke-width='4'/></svg>" style="width: 100%; height: 60px; display: block;" />
+                                </div>
+
+                                <!-- CTA Overlay -->
+                                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
+                                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
+                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card glass">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
