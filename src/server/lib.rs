@@ -1846,6 +1846,36 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/mercadopago", axum::routing::post(api::billing_webhook::mercadopago_webhook_handler))
         .with_state(webhook_state);
 
+    let manychat_router = axum::Router::new()
+        .route("/api/v1/webhooks/manychat", axum::routing::post(|| async {
+            tracing::info!("Mocking Manychat webhook received...");
+            axum::Json(serde_json::json!({ "success": true, "message_id": "mc_msg_123" }))
+        }));
+
+    let broadcast_router = axum::Router::new()
+        .route("/api/v1/broadcast", axum::routing::post(|| async {
+            tracing::info!("Mocking Resend email broadcast sending...");
+            axum::Json(serde_json::json!({ "success": true }))
+        }));
+
+    let shippo_router = axum::Router::new()
+        .route("/api/v1/shippo/label", axum::routing::post(|| async {
+            tracing::info!("Mocking Shippo label purchase and tracking generation...");
+            axum::Json(serde_json::json!({ "success": true, "tracking": "SHP923485" }))
+        }));
+
+    let twilio_router = axum::Router::new()
+        .route("/api/v1/twilio/settings", axum::routing::post(|| async {
+            tracing::info!("Mocking Twilio SMS settings updated...");
+            axum::Json(serde_json::json!({ "success": true }))
+        }));
+
+    let daily_router = axum::Router::new()
+        .route("/api/v1/daily/room", axum::routing::post(|| async {
+            tracing::info!("Mocking Daily.co room generation...");
+            axum::Json(serde_json::json!({ "success": true, "url": "https://ohc.daily.co/mock-room-123" }))
+        }));
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -1900,6 +1930,11 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let app = axum::Router::new()
+        .merge(manychat_router)
+        .merge(broadcast_router)
+        .merge(shippo_router)
+        .merge(twilio_router)
+        .merge(daily_router)
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
@@ -2848,6 +2883,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
                             <button onclick="showScreen('team-screen')">Your Team</button>
                         </div>
+
+                        <!-- Storefront Booking Widget Mock -->
+                        <div class="card glass">
+                            <h3>Storefront Booking</h3>
+                            <p style="font-size: 14px; color: var(--text-secondary);">Your customers see this widget on your storefront.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;" onclick="alert('Redirecting to booking portal...')">Book Now</button>
+                        </div>
                         <div class="card glass">
                             <h3>Business Snapshot</h3>
                             <p>Orders to Ship</p>
@@ -2977,10 +3019,47 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
                             <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
-                            <button class="nav-item">Orders</button>
+                            <button class="nav-item" onclick="showScreen('orders-screen')">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                        </div>
+                    </div>
+
+                    <!-- Orders Screen -->
+                    <div id="orders-screen" class="screen glass" style="margin-bottom: 80px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1>Orders</h1>
+                            <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
+                        </div>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage fulfillment and shipping labels.</p>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px; border-left: 4px solid var(--accent-orange);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Order #1042</h3>
+                                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Pending Fulfillment</p>
+                                </div>
+                                <span style="font-weight: bold; color: var(--text);">$45.00</span>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                                <p style="margin: 0; font-size: 14px; font-weight: 500;">Ship to:</p>
+                                <p style="margin: 4px 0 0 0; font-size: 14px; color: var(--text-secondary);">Alice Smith<br>123 Main St, New York, NY 10001</p>
+                            </div>
+                            <div id="shippo-fulfillment-1042">
+                                <button onclick="fetch('/api/v1/shippo/label', {method: 'POST'}).then(() => { document.getElementById('shippo-fulfillment-1042').innerHTML = '<p style=\'color: var(--accent-green); font-weight: bold;\'>✓ Fulfilled - Tracking: SHP923485</p><a href=\'#\' style=\'font-size: 14px; color: var(--primary);\'>Download PDF Label</a>'; });" style="width: 100%; background: #1D1D1F; color: white; border-radius: 8px; border: none; padding: 12px; font-weight: bold; cursor: pointer;">Purchase Shipping Label ($4.50)</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass" style="border-radius: 16px; padding: 16px; border-left: 4px solid var(--accent-green);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Order #1041</h3>
+                                    <p style="font-size: 14px; color: var(--accent-green); margin-top: 4px;">Fulfilled</p>
+                                </div>
+                                <span style="font-weight: bold; color: var(--text);">$22.00</span>
+                            </div>
+                            <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">Tracking: SHP923484</p>
                         </div>
                     </div>
 
@@ -3150,9 +3229,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Booking Hours</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Set your availability for clients to book. Syncs with your personal calendar.</p>
+                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <label>Mon - Fri</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="time" value="09:00" style="border-radius: 8px; border: 1px solid var(--border); padding: 4px 8px;">
+                                        <span>to</span>
+                                        <input type="time" value="17:00" style="border-radius: 8px; border: 1px solid var(--border); padding: 4px 8px;">
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="save-cal-hours" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Availability saved!'); this.innerText = 'Saved!'; setTimeout(() => this.innerText = 'Save Hours', 2000);">Save Hours</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3167,6 +3256,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
                                 <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
+                            </div>
+                        </div>
+
+                        <div class="card glass meeting" style="border-radius: 16px; padding: 16px; margin-bottom: 16px; border-left: 4px solid var(--primary);">
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Virtual Consultation (Leo)</h3>
+                            <p>Online Lesson - 16:00</p>
+                            <p style="color: var(--primary); font-weight: 500;">Virtual Service Booking</p>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                <button id="daily-co-join-btn" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none;" onclick="fetch('/api/v1/daily/room', {method: 'POST'}).then(r => r.json()).then(data => alert(`Joining Virtual Meeting via ${data.url}`));">Join Meeting</button>
                             </div>
                         </div>
 
@@ -3228,6 +3326,25 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
                                     </label>
+                                </div>
+                            </div>
+
+                            <div class="card glass" style="margin-top: 15px;">
+                                <h3 class="outfit">Email Broadcast</h3>
+                                <p style="font-size: 14px; margin-top: 8px;">Send an AI-powered email campaign to your customers using Resend.</p>
+                                <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+                                    <select id="email-audience" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
+                                        <option value="all">All Customers</option>
+                                        <option value="past">Past Buyers</option>
+                                        <option value="newsletter">Newsletter Subscribers</option>
+                                    </select>
+                                    <textarea id="email-prompt" placeholder="What should the email be about? (e.g. New summer collection is here!)" style="min-height: 80px; border-radius: 8px; padding: 12px; border: 1px solid var(--border); resize: vertical;"></textarea>
+                                    <button onclick="document.getElementById('email-draft').style.display='block'; document.getElementById('email-subject').value='Subject: Check out our New Summer Collection!'; document.getElementById('email-body').value='Hi there,\n\nWe are excited to announce our new summer collection is finally here! Check it out online.\n\nBest,\nYour Store';" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #eef2ff; color: #0066FF; border: 1px solid #0066FF;">✨ Generate AI Draft</button>
+                                </div>
+                                <div id="email-draft" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border);">
+                                    <input id="email-subject" type="text" style="width: 100%; min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+                                    <textarea id="email-body" style="width: 100%; min-height: 120px; border-radius: 8px; padding: 12px; border: 1px solid var(--border); margin-bottom: 12px;"></textarea>
+                                    <button onclick="fetch('/api/v1/broadcast', {method: 'POST', body: JSON.stringify({audience: document.getElementById('email-audience').value, subject: document.getElementById('email-subject').value, body: document.getElementById('email-body').value})}).then(()=>alert('Sent via Resend!')); document.getElementById('email-draft').style.display='none'; document.getElementById('email-prompt').value='';" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;">Send</button>
                                 </div>
                             </div>
 
@@ -3441,11 +3558,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
+
+                        <div class="card glass" style="margin-bottom: 24px;">
+                            <h2>Notification Preferences</h2>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                                <input type="checkbox"> Enable Email Notifications
+                            </label>
+
+                            <h3 style="margin-top: 16px;">Twilio SMS Alerts</h3>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                                <input id="twilio-sms-orders" type="checkbox" onchange="if(this.checked){ fetch('/api/v1/twilio/settings', {method: 'POST'}); }">
+                                <span style="font-weight: 500;">Receive SMS for new orders</span>
+                            </label>
+
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; cursor: pointer;">
+                                <input type="checkbox"> Enable SMS Reminders
+                            </label>
+                            <p style="font-size: 14px; color: var(--text-secondary);">Sent 24h before appointment: "Hi, this is a reminder for your upcoming appointment tomorrow."</p>
+                        </div>
+
                         <h2>General</h2>
-                        <label><input type="checkbox"> Enable Email Notifications</label>
-                        <label><input type="checkbox"> Enable SMS Reminders</label>
-                        <p>SMS Content</p>
-                        <p style="font-size: 14px; color: var(--text-secondary);">Sent 24h before appointment: "Hi, this is a reminder for your upcoming appointment tomorrow."</p>
                         <p>Closing Greeting</p>
                         <input type="text" placeholder="e.g. See you soon!" />
                         <label><input type="checkbox"> Enable Push Notifications</label>
@@ -3590,9 +3722,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+
+                             <div style="margin-top: 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px;">
+                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--primary); border-radius: 8px; cursor: pointer; background: var(--primary-soft);">
+                                     <input type="radio" name="payment_method" value="stripe" checked>
+                                     <span style="font-weight: 600;">Credit Card (Stripe)</span>
+                                 </label>
+                                 <label id="mercado-pago-option" style="display: none; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                     <input type="radio" name="payment_method" value="mercadopago">
+                                     <span style="font-weight: 600;">Mercado Pago (Local Payment)</span>
+                                 </label>
+                             </div>
+
+                             <button onclick="const method = document.querySelector('input[name=\'payment_method\']:checked').value; alert(`Payment successful via ${method}!`); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
+                         <script>
+                             // Mock checking LATAM region and enabling Mercado Pago
+                             setTimeout(() => {
+                                 const tenantRegion = localStorage.getItem('tenant_region') || 'LATAM'; // default mock to LATAM to show option
+                                 if (tenantRegion === 'LATAM') {
+                                     const mpOption = document.getElementById('mercado-pago-option');
+                                     if (mpOption) {
+                                         mpOption.style.display = 'flex';
+                                     }
+                                 }
+                             }, 100);
+                         </script>
                      </div>
 
                      <!-- Diagnostics Page -->

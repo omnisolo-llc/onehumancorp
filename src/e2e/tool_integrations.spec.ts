@@ -82,3 +82,108 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await zoomBtn.click();
   });
 });
+
+test.describe('Tool Integrations E2E Workflows', () => {
+  test('Cal.com integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button.nav-item', { hasText: 'Meetings' }).click();
+    await expect(page.locator('h1', { hasText: 'AI Service Booking' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Cal.com Booking Hours' })).toBeVisible();
+
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Availability saved!');
+      dialog.accept();
+    });
+    const saveBtn = page.locator('button#save-cal-hours');
+    await saveBtn.click();
+    await expect(saveBtn).toHaveText('Saved!');
+  });
+
+  test('ManyChat integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Check Messages' }).click();
+    await expect(page.locator('h1', { hasText: 'Customer Inbox' })).toBeVisible();
+
+    const draftBtn = page.locator('button', { hasText: '✨ AI Draft' }).first();
+    await draftBtn.click();
+
+    await expect(page.locator('#reply-input')).not.toHaveValue('');
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.locator('#messages-list')).toContainText(await page.locator('#reply-input').inputValue());
+  });
+
+  test('Resend integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Your Team' }).click();
+    await expect(page.locator('h1', { hasText: 'Agents' })).toBeVisible();
+    await expect(page.locator('h3', { hasText: 'Email Broadcast' })).toBeVisible();
+
+    await page.getByRole('button', { name: '✨ Generate AI Draft' }).click();
+    await expect(page.locator('#email-subject')).toHaveValue('Subject: Check out our New Summer Collection!');
+    await expect(page.locator('#email-body')).toContainText('summer collection');
+
+    const dialogPromise = page.waitForEvent('dialog');
+    await page.getByRole('button', { name: 'Send' }).click();
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('Sent via Resend!');
+    await dialog.accept();
+  });
+
+  test('Mercado Pago integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.setItem('tenant_region', 'LATAM'));
+    await page.evaluate(() => {
+      // @ts-ignore
+      showScreen('checkout-screen');
+    });
+    await expect(page.locator('h1', { hasText: 'Checkout' })).toBeVisible();
+
+    await expect(page.locator('#mercado-pago-option')).toBeVisible();
+
+    await page.locator('input[value="mercadopago"]').click();
+
+    const dialogPromise = page.waitForEvent('dialog');
+    await page.getByRole('button', { name: 'Pay Now' }).click();
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('Payment successful via mercadopago!');
+    await dialog.accept();
+  });
+
+  test('Shippo integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button.nav-item', { hasText: 'Orders' }).click();
+    await expect(page.locator('h1', { hasText: 'Orders' })).toBeVisible();
+
+    const purchaseBtn = page.locator('button', { hasText: 'Purchase Shipping Label ($4.50)' });
+    await expect(purchaseBtn).toBeVisible();
+    await purchaseBtn.click();
+
+    await expect(page.locator('#shippo-fulfillment-1042')).toContainText('Fulfilled - Tracking: SHP923485');
+  });
+
+  test('Twilio SMS integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => {
+      // @ts-ignore
+      showScreen('settings-screen');
+    });
+    await expect(page.locator('h1', { hasText: 'Settings' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: 'Notification Preferences' })).toBeVisible();
+
+    const smsToggle = page.locator('#twilio-sms-orders');
+    await smsToggle.check();
+    await expect(smsToggle).toBeChecked();
+  });
+
+  test('Daily.co virtual meeting integration flow', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('button.nav-item', { hasText: 'Meetings' }).click();
+    await expect(page.locator('h1', { hasText: 'AI Service Booking' })).toBeVisible();
+
+    const dialogPromise = page.waitForEvent('dialog');
+    await page.locator('button#daily-co-join-btn').click();
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('Joining Virtual Meeting via https://ohc.daily.co/mock-room-123');
+    await dialog.accept();
+  });
+});
