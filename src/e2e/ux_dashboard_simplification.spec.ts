@@ -34,6 +34,27 @@ test.describe('Navigation', () => {
 
   test('should show welcome message on dashboard', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('text=Welcome back')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Daily Briefing' })).toBeVisible();
+    await expect(page.locator('text=Welcome back!')).toBeVisible();
+  });
+
+  test('should display daily briefing active customers count', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=active customers')).toBeVisible();
+  });
+
+  test('should display daily briefing sales information', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=Today\'s sales have reached')).toBeVisible();
+  });
+
+  test('should display AI task summary in daily briefing', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=The AI has drafted an Instagram post')).toBeVisible();
+  });
+
+  test('should display pending orders count', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('text=new pending orders')).toBeVisible();
   });
 });
