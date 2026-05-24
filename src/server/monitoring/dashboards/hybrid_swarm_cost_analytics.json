@@ -20,21 +20,6 @@
   "liveNow": false,
   "panels": [
     {
-      "type": "text",
-      "title": "OHC Aesthetic Injector",
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<style>\n  .panel-container {\n    background: rgba(22, 22, 26, 0.7) !important;\n    backdrop-filter: blur(30px) saturate(210%) !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n  @media (prefers-color-scheme: light) {\n    .panel-container {\n      background: rgba(255, 255, 255, 0.65) !important;\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      border: 1px solid rgba(255, 255, 255, 0.4) !important;\n    }\n  }\n</style>\n"
-      },
-      "transparent": true
-    },
-    {
       "title": "Swarm Throughput",
       "type": "timeseries",
       "datasource": "Prometheus",
@@ -42,7 +27,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "targets": [
         {
@@ -61,7 +46,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 0
       },
       "targets": [
         {
@@ -80,7 +65,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 10
+        "y": 8
       },
       "targets": [
         {
@@ -99,7 +84,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 10
+        "y": 8
       },
       "targets": [
         {
