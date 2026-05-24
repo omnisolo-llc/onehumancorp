@@ -59,6 +59,7 @@ rust_library(
         "langgraph.rs",
         "autogen.rs",
         "lib.rs",
+        "ruflo.rs",
         "marketplace.rs",
         "visual_workflow.rs",
         "local_provider.rs",
