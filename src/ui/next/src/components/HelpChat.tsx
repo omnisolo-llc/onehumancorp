@@ -105,7 +105,7 @@ export function HelpChat() {
                   {msg.text}
                 </div>
                 {msg.link && (
-                  <a href={msg.link.url} className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-semibold hover:underline bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm">
+                  <a href={msg.link.url} target="_blank" className="mt-2 ml-1 text-blue-600 hover:text-blue-800 text-xs font-semibold hover:underline bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 flex items-center shadow-sm">
                     {msg.link.title}
                   </a>
                 )}

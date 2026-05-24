@@ -209,7 +209,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, showDocsLink?: boolean}[]>([
+  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, showDocsLink?: boolean, link?: {title: string, url: string}}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -250,9 +250,9 @@ export function HelpWidget() {
       try {
         const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
         const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, showDocsLink: true, link: data.link }]);
       } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now.", showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now.", showDocsLink: false }]);
       }
     }
   };
@@ -342,9 +342,14 @@ export function HelpWidget() {
                     return msg.role === "bot" ? (
                       <div key={idx} className={className}>
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.showDocsLink && (
+                        {msg.link && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href="/api-docs" className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
+                            <a href={msg.link.url} target="_blank" className="text-blue-600 font-medium hover:underline text-xs">{msg.link.title}</a>
+                          </div>
+                        )}
+                        {!msg.link && msg.showDocsLink && (
+                          <div className="mt-2 pt-2 border-t border-blue-100">
+                            <a href="/help" target="_blank" className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
                           </div>
                         )}
                       </div>
