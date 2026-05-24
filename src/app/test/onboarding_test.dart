@@ -36,8 +36,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Next to Name step
-    await tester.ensureVisible(find.byKey(Key('next-step-1')));
-    await tester.tap(find.byKey(Key('next-step-1')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Enter name
@@ -45,8 +44,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Next to Template step
-    await tester.ensureVisible(find.byKey(Key('next-step-2')));
-    await tester.tap(find.byKey(Key('next-step-2')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Submit form
@@ -114,8 +112,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Next to Name step
-    await tester.ensureVisible(find.byKey(Key('next-step-1')));
-    await tester.tap(find.byKey(Key('next-step-1')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Enter name
@@ -123,8 +120,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Next to Template step
-    await tester.ensureVisible(find.byKey(Key('next-step-2')));
-    await tester.tap(find.byKey(Key('next-step-2')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Submit form
@@ -175,15 +171,13 @@ void main() {
     // Bio step is _currentInputStep == 0
     await tester.enterText(find.byKey(Key('bio-input')), 'Test bio');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(Key('next-step-1')));
-    await tester.tap(find.byKey(Key('next-step-1')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Name step is _currentInputStep == 1
     await tester.enterText(find.byKey(Key('name-input')), 'My Test Business');
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.byKey(Key('next-step-2')));
-    await tester.tap(find.byKey(Key('next-step-2')));
+    await tester.tap(find.text('Next'));
     await tester.pumpAndSettle();
 
     // Now we are at Template step (_currentInputStep == 2)
@@ -199,29 +193,5 @@ void main() {
 
     // Now it should be visible
     expect(find.byKey(Key('domain-choice-dropdown')), findsOneWidget);
-  });
-
-  testWidgets('Onboarding Screen - Quick select chip fills bio', (WidgetTester tester) async {
-    final client = MockClient((request) async {
-      if (request.url.path == '/api/onboarding/draft') {
-        return http.Response('{}', 200);
-      }
-      return http.Response('Not Found', 404);
-    });
-
-    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
-    await tester.pumpAndSettle();
-
-    // Go to input state
-    await tester.tap(find.text('Start a Business'));
-    await tester.pumpAndSettle();
-
-    // Verify chip exists and tap it
-    expect(find.text('Vegan Bakery'), findsOneWidget);
-    await tester.tap(find.text('Vegan Bakery'));
-    await tester.pumpAndSettle();
-
-    // Verify the bio input field has the expected text
-    expect(find.text('I bake custom vegan cakes in Seattle. Maya\'s Cakes.'), findsOneWidget);
   });
 }

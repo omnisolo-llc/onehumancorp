@@ -90,6 +90,7 @@ impl Department for DummyDepartment {
                 ActionRisk::DraftForReview => ApprovalStatus::Pending,
             },
             action_risk: risk.clone(),
+            payload: serde_json::json!({}),
         };
         self.orchestrator.add_approval_request(req.clone()).await;
         Ok(req)
