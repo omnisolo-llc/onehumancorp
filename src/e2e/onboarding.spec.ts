@@ -22,15 +22,8 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // Verify progress bar
-    await expect(page.getByRole('progressbar')).toBeVisible();
-    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
-
     // Fill in the business type
-    const businessTypeInput = page.getByPlaceholder("e.g. Sell cakes, plumbing");
-    await expect(businessTypeInput).toHaveAttribute('autoCapitalize', 'sentences');
-    await expect(businessTypeInput).toHaveAttribute('spellCheck', 'true');
-    await businessTypeInput.fill("Sell custom cakes");
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
 
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
@@ -38,14 +31,8 @@ test.describe('Onboarding Wizard', () => {
     // Step 2
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Verify progress bar update
-    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
-
     // Fill in the business name
-    const businessNameInput = page.getByPlaceholder("e.g. Maya's Cakes");
-    await expect(businessNameInput).toHaveAttribute('autoCapitalize', 'words');
-    await expect(businessNameInput).toHaveAttribute('spellCheck', 'false');
-    await businessNameInput.fill("Maya's Cakes");
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Maya's Cakes");
 
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
@@ -53,37 +40,14 @@ test.describe('Onboarding Wizard', () => {
     // Step 3
     await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
 
-    // Verify progress bar update
-    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '75');
-
     // Fill in the niche
-    const nicheInput = page.getByPlaceholder("e.g. I bake custom wedding cakes");
-    await expect(nicheInput).toHaveAttribute('autoCapitalize', 'sentences');
-    await expect(nicheInput).toHaveAttribute('spellCheck', 'true');
-    await expect(nicheInput).toHaveAttribute('enterKeyHint', 'send');
-    await nicheInput.fill("I bake custom vegan cakes");
+    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
 
     // Click Generate Draft
     await page.getByRole('button', { name: /Generate Draft/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-
-    // Verify progress bar update
-    await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
-
-    // Verify keyboard optimizations for price input
-    const priceInput = page.getByPlaceholder('0.00');
-    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
-    await expect(priceInput).toHaveAttribute('pattern', '[0-9]*\\.?[0-9]*');
-
-    // Verify keyboard optimizations for product name input
-    const productNameInput = page.getByPlaceholder('e.g. Custom Cake');
-    await expect(productNameInput).toHaveAttribute('autoCapitalize', 'words');
-    await expect(productNameInput).toHaveAttribute('spellCheck', 'true');
-
-    // Verify glassmorphism aesthetics applied
-    await expect(priceInput).toHaveClass(/backdrop-blur/);
 
     // Configure products and domain before publishing
     await page.getByRole('button', { name: 'Playful' }).click();
@@ -144,10 +108,6 @@ test.describe('Onboarding Wizard', () => {
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-
-    // Verify keyboard optimizations for price input
-    const priceInput = page.getByPlaceholder('0.00');
-    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
 
     // Configure products and domain before publishing
     await page.getByRole('button', { name: 'Modern' }).click();

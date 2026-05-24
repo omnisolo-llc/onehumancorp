@@ -28,7 +28,7 @@ impl MyOrgService {
 impl OrgService for MyOrgService {
     async fn get_domains(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<EmptyRequest>,
     ) -> Result<Response<DomainsResponse>, Status> {
         let domains = vec![
             DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
@@ -40,7 +40,7 @@ impl OrgService for MyOrgService {
 
     async fn get_settings(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<EmptyRequest>,
     ) -> Result<Response<SettingsResponse>, Status> {
         let settings = self.settings.read().unwrap();
         Ok(Response::new(settings.clone()))
@@ -59,7 +59,7 @@ impl OrgService for MyOrgService {
 
     async fn get_marketplace_items(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<EmptyRequest>,
     ) -> Result<Response<MarketplaceItemsResponse>, Status> {
         let items = vec![
             MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
@@ -69,7 +69,7 @@ impl OrgService for MyOrgService {
 
     async fn get_analytics(
         &self,
-        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+        _request: Request<EmptyRequest>,
     ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
@@ -161,14 +161,14 @@ mod tests {
 
         let service = MyOrgService::new(hub);
 
-        let mut request1 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request1 = Request::new(EmptyRequest {});
         request1.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start = std::time::Instant::now();
         let _res1 = service.get_analytics(request1).await.unwrap().into_inner();
         let _elapsed1 = start.elapsed();
 
-        let mut request2 = Request::new(::server_ohc::orchestration::EmptyRequest {});
+        let mut request2 = Request::new(EmptyRequest {});
         request2.metadata_mut().insert("x-spiffe-id", "spiffe://onehumancorp.io/system/test".parse().unwrap());
 
         let start2 = std::time::Instant::now();

@@ -55,7 +55,6 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
-    pub enable_hnsw_memory: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
@@ -113,7 +112,6 @@ enable_llmcompiler_plan_and_execute: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
-            enable_hnsw_memory: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
@@ -1823,13 +1821,7 @@ Summaries:
                 messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
             }
 
-
-
-
-
-        let mut final_messages = messages.clone();
-
-
+            let mut final_messages = messages.clone();
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
@@ -2104,16 +2096,44 @@ Summaries:
 
                 // Inferential/Sensors (LLM-as-judge subagent)
                 if final_cfg.enable_llm_judge {
-                    let mut manager = crate::verification_loops::VerificationManager::new();
-                    let sensor = std::sync::Arc::new(crate::verification_loops::LlmJudgeSensor {
-                        llm: self.llm.clone(),
-                    });
-                    manager.add_inferential(sensor);
+                    #[derive(serde::Deserialize)]
+                    struct JudgeEvaluation {
+                        status: String,
+                        reason: String,
+                        confidence: f32,
+                    }
+                    let judge_req = ChatRequest {
+                        model: final_cfg.model.clone(),
+                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.".to_string(),
+                        messages: vec![Message::user(format!("Evaluate this output:\n{}", last_assistant_content))],
+                        tools: vec![],
+                        max_tokens: 500,
+                        temperature: 0.0,
+                    };
 
-                    if let Err(reason) = manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
-                        let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Please correct your work and use tools if necessary.", reason.replace("FAIL: ", ""));
-                        messages.push(Message::user(err_msg));
-                        continue;
+                    struct ParserClientWrapper {
+                        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
+                    }
+                    #[async_trait::async_trait]
+                    impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
+                        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                            self.llm.chat(req).await
+                        }
+                    }
+                    let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
+                    match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
+                        Ok(eval) => {
+                            if eval.status.to_uppercase() == "REJECT" {
+                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
+                                messages.push(Message::user(err_msg));
+                                continue;
+                            }
+                        },
+                        Err(e) => {
+                            let err = format!("LLM Judge error: {}", e);
+                            on_event(AgentEvent::TaskError { error: err.clone() });
+                            return Err(err.into());
+                        }
                     }
                 }
                 // In a production-grade agent, we might use a separate LLM pass
@@ -4606,9 +4626,20 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("FAIL: The answer is incomplete."),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
@@ -4618,9 +4649,20 @@ mod tests {
                         response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("PASS"),
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: "".to_string(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_2".to_string(),
+                            name: "structured_output".to_string(),
+                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good.", "confidence": 0.95}}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("mock-id".to_string()),
+                        previous_response_id: None,
+                    },
                     usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
+                    stop_reason: "tool_calls".to_string(),
                         response_id: Some("mock-id".to_string()),
                 },
             ]),

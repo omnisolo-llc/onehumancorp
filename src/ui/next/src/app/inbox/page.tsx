@@ -25,12 +25,7 @@ export default function InboxPage() {
         <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
           &lt; Back
         </Link>
-        <h1 className="text-2xl font-bold">Unified Inbox</h1>
-        <div className="ml-auto">
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black inline-block">
-            Audit Dashboard
-          </Link>
-        </div>
+        <h1 className="text-2xl font-bold">Customer Inbox</h1>
       </div>
 
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 h-64 overflow-y-auto text-black">

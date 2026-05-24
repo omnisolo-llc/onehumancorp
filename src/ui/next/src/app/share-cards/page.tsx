@@ -12,6 +12,7 @@ export default function ShareCardsPage() {
   const [shareLink, setShareLink] = useState('');
 
   useEffect(() => {
+    // Generate a mock unique share link
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
     setShareLink(`https://ohc.store/join?ref=${tenant}`);
   }, []);
