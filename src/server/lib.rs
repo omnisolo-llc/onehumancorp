@@ -3575,6 +3575,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
+                    <!-- 💰 Miser: Cost Transparency Dashboard (for business owners) -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
                         <p id="cost-dashboard-total">Total Costs: $0.00</p>
