@@ -49,6 +49,7 @@ rust_library(
         "observation_masking.rs",
         "verification_loops.rs",
         "actor_model.rs",
+        "swarm_topology.rs",
         "agent.rs",
         "checkpointer.rs",
         "tools_gating.rs",
