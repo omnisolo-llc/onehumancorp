@@ -145,7 +145,6 @@
     "https://bcr.bazel.build/modules/gazelle/0.32.0/MODULE.bazel": "b499f58a5d0d3537f3cf5b76d8ada18242f64ec474d8391247438bf04f58c7b8",
     "https://bcr.bazel.build/modules/gazelle/0.33.0/MODULE.bazel": "a13a0f279b462b784fb8dd52a4074526c4a2afe70e114c7d09066097a46b3350",
     "https://bcr.bazel.build/modules/gazelle/0.34.0/MODULE.bazel": "abdd8ce4d70978933209db92e436deb3a8b737859e9354fb5fd11fb5c2004c8a",
-    "https://bcr.bazel.build/modules/gazelle/0.35.0/MODULE.bazel": "bda67986233654255d52d56c2e8d8ce5649fdcf0acd96b1fdd04af4d7e038c36",
     "https://bcr.bazel.build/modules/gazelle/0.36.0/MODULE.bazel": "e375d5d6e9a6ca59b0cb38b0540bc9a05b6aa926d322f2de268ad267a2ee74c0",
     "https://bcr.bazel.build/modules/gazelle/0.37.0/MODULE.bazel": "d1327ba0907d0275ed5103bfbbb13518f6c04955b402213319d0d6c0ce9839d4",
     "https://bcr.bazel.build/modules/gazelle/0.39.1/MODULE.bazel": "1fa3fefad240e535066fd0e6950dfccd627d36dc699ee0034645e51dbde3980f",
@@ -337,14 +336,12 @@
     "https://bcr.bazel.build/modules/rules_go/0.39.1/MODULE.bazel": "d34fb2a249403a5f4339c754f1e63dc9e5ad70b47c5e97faee1441fc6636cd61",
     "https://bcr.bazel.build/modules/rules_go/0.41.0/MODULE.bazel": "55861d8e8bb0e62cbd2896f60ff303f62ffcb0eddb74ecb0e5c0cbe36fc292c8",
     "https://bcr.bazel.build/modules/rules_go/0.42.0/MODULE.bazel": "8cfa875b9aa8c6fce2b2e5925e73c1388173ea3c32a0db4d2b4804b453c14270",
-    "https://bcr.bazel.build/modules/rules_go/0.44.0/MODULE.bazel": "55b2d9e775d7881dbe9a2fc68440442cd6ba32730170c782f1f0e6023a6d8db6",
     "https://bcr.bazel.build/modules/rules_go/0.45.1/MODULE.bazel": "6d7884f0edf890024eba8ab31a621faa98714df0ec9d512389519f0edff0281a",
     "https://bcr.bazel.build/modules/rules_go/0.46.0/MODULE.bazel": "3477df8bdcc49e698b9d25f734c4f3a9f5931ff34ee48a2c662be168f5f2d3fd",
     "https://bcr.bazel.build/modules/rules_go/0.48.0/MODULE.bazel": "d00ebcae0908ee3f5e6d53f68677a303d6d59a77beef879598700049c3980a03",
     "https://bcr.bazel.build/modules/rules_go/0.50.1/MODULE.bazel": "b91a308dc5782bb0a8021ad4330c81fea5bda77f96b9e4c117b9b9c8f6665ee0",
     "https://bcr.bazel.build/modules/rules_go/0.51.0-rc2/MODULE.bazel": "edfc3a9cea7bedb0eaaff37b0d7817c1a4bf72b3c615580b0ffcee6c52690fd4",
     "https://bcr.bazel.build/modules/rules_go/0.53.0/MODULE.bazel": "a4ed760d3ac0dbc0d7b967631a9a3fd9100d28f7d9fcf214b4df87d4bfff5f9a",
-    "https://bcr.bazel.build/modules/rules_go/0.57.0/MODULE.bazel": "bee44028b527cd6d1b7699a2c78714bba237b40ee21f90a83b472c94bc53159d",
     "https://bcr.bazel.build/modules/rules_go/0.58.3/MODULE.bazel": "5582119a4a39558d8d1b1634bcae46043d4f43a31415e861c3551b2860040b5e",
     "https://bcr.bazel.build/modules/rules_go/0.59.0/MODULE.bazel": "b7e43e7414a3139a7547d1b4909b29085fbe5182b6c58cbe1ed4c6272815aeae",
     "https://bcr.bazel.build/modules/rules_go/0.60.0/MODULE.bazel": "4a57ff2ffc2a3570e3c5646575c5a4b07287e91bcdac5d1f72383d51502b48cb",
@@ -510,28 +507,6 @@
   },
   "selectedYankedVersions": {},
   "moduleExtensions": {
-    "//bazel/rules:extensions.bzl%proto_deps_extension": {
-      "general": {
-        "bzlTransitiveDigest": "dT/cKtXRfZtxQ48vsOJmeSMAAHSK5f2d62klO41LMQQ=",
-        "usagesDigest": "vDPCvQBUmPBfath8AxbVFccZ0xhFVTiZPJf+eXcQe3o=",
-        "recordedInputs": [
-          "REPO_MAPPING:,bazel_tools bazel_tools"
-        ],
-        "generatedRepoSpecs": {
-          "google_protobuf_dart": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
-            "attributes": {
-              "sha256": "cae253935cb6d372a3df34bbbe82c3044f067e088d5216ac1f645c36b596a6ad",
-              "strip_prefix": "protobuf.dart-protoc_plugin-v25.0.0/protoc_plugin",
-              "urls": [
-                "https://github.com/google/protobuf.dart/archive/refs/tags/protoc_plugin-v25.0.0.tar.gz"
-              ],
-              "build_file_content": "package(default_visibility = [\"//visibility:public\"])\n\nfilegroup(\n    name = \"protoc_plugin_srcs\",\n    srcs = glob([\"**\"]),\n)\n\n# Compile the protoc-gen-dart plugin using the hermetic Dart SDK from\n# @flutter_sdk//:dart.  The formatter stub avoids pulling dart_style and\n# pub_semver into the sandbox while still producing valid generated code.\ngenrule(\n    name = \"protoc_plugin_bin\",\n    srcs = [\n        \":protoc_plugin_srcs\",\n        \"bin/protoc_plugin.dart\",\n        \"@pub_collection//:collection_files\",\n        \"@pub_fixnum//:fixnum_files\",\n        \"@pub_meta//:meta_files\",\n        \"@pub_path//:path_files\",\n        \"@pub_protobuf_v6//:protobuf_files\",\n    ],\n    outs = [\"protoc-gen-dart\"],\n    cmd = \"export HOME=/tmp && \" +\n          \"SRC_REPO=external/+proto_deps_extension+google_protobuf_dart && \" +\n          \"WORK_REPO=google_protobuf_dart.work && \" +\n          \"rm -rf $$WORK_REPO && cp -LR $$SRC_REPO $$WORK_REPO && chmod -R u+w $$WORK_REPO && \" +\n          \"mkdir -p $$WORK_REPO/.dart_tool && \" +\n          \"printf 'String format(String source) => source;\\n' > $$WORK_REPO/lib/src/formatter.dart && \" +\n          \"echo '{\\\"configVersion\\\": 2,\\\"packages\\\": [\" +\n          \"{\\\"name\\\": \\\"protoc_plugin\\\", \\\"rootUri\\\": \\\"../\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"collection\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_collection\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"fixnum\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_fixnum\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"meta\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_meta\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"path\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_path\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"},\" +\n          \"{\\\"name\\\": \\\"protobuf\\\", \\\"rootUri\\\": \\\"../../external/rules_flutter++pub+pub_protobuf_v6\\\", \\\"packageUri\\\": \\\"lib/\\\", \\\"languageVersion\\\": \\\"3.7\\\"}\" +\n          \"]}' > $$WORK_REPO/.dart_tool/package_config.json && \" +\n          \"$(location @flutter_sdk//:dart) compile exe $$WORK_REPO/bin/protoc_plugin.dart -o $@\",\n    executable = True,\n    tools = [\"@flutter_sdk//:dart\"],\n)"
-            }
-          }
-        }
-      }
-    },
     "@@aspect_tools_telemetry+//:extension.bzl%telemetry": {
       "general": {
         "bzlTransitiveDigest": "cl5A2O84vDL6Tt+Qga8FCj1DUDGqn+e7ly5rZ+4xvcc=",
@@ -672,85 +647,6 @@
           "androidsdk": {
             "repoRuleId": "@@rules_android+//rules/android_sdk_repository:rule.bzl%_android_sdk_repository",
             "attributes": {}
-          }
-        }
-      }
-    },
-    "@@rules_flutter+//flutter:extensions.bzl%flutter": {
-      "general": {
-        "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
-        "usagesDigest": "2z5OjNn6qL/xhTuij9uITB+5P9ZMJrKXhaKncmgRSCw=",
-        "recordedInputs": [],
-        "generatedRepoSpecs": {
-          "flutter_macos": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
-            "attributes": {
-              "platform": "macos",
-              "flutter_version": "3.29.3"
-            }
-          },
-          "flutter_linux": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
-            "attributes": {
-              "platform": "linux",
-              "flutter_version": "3.29.3"
-            }
-          },
-          "flutter_windows": {
-            "repoRuleId": "@@rules_flutter+//flutter:repositories.bzl%flutter_repositories",
-            "attributes": {
-              "platform": "windows",
-              "flutter_version": "3.29.3"
-            }
-          },
-          "flutter_toolchains": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:toolchains_repo.bzl%toolchains_repo",
-            "attributes": {
-              "user_repository_name": "flutter"
-            }
-          },
-          "flutter_sdk": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:sdk_repo.bzl%flutter_sdk_repo",
-            "attributes": {
-              "user_repository_name": "flutter"
-            }
-          }
-        }
-      }
-    },
-    "@@rules_flutter+//flutter:extensions.bzl%pub": {
-      "general": {
-        "bzlTransitiveDigest": "yEZVxv7vZRafxjfcsnAXXLLUTd6kAL7/4QnInr7y+bk=",
-        "usagesDigest": "qwizEAr4whBHH6cGYpiHmjnikoXOjxPBYa/8Vyz/4Lk=",
-        "recordedInputs": [],
-        "generatedRepoSpecs": {
-          "pub_fixnum": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "fixnum",
-              "version": "1.1.1"
-            }
-          },
-          "pub_protobuf": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "protobuf",
-              "version": "3.1.0"
-            }
-          },
-          "pub_protobuf_v6": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "protobuf",
-              "version": "6.0.0"
-            }
-          },
-          "pub_protoc_plugin": {
-            "repoRuleId": "@@rules_flutter+//flutter/private:pub_repository.bzl%pub_dev_repository",
-            "attributes": {
-              "package": "protoc_plugin",
-              "version": "21.1.1"
-            }
           }
         }
       }

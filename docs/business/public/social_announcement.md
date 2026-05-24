@@ -19,6 +19,6 @@ Our agents don't ask for permission. They propose and execute based on your Visi
 
 Are you ready to build the future? Check out the new OHC Swarm.
 
-#OneHumanCorp #AI #AgenticOS #Bazel #Kubernetes #GoLang #Flutter #MachineLearning #AIAgents
+#OneHumanCorp #AI #AgenticOS #Bazel #Kubernetes #Rust #MachineLearning #AIAgents
 
 </div>

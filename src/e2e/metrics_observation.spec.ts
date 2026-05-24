@@ -7,5 +7,6 @@ test('verify Swarm metrics observation flow', async ({ page }) => {
   const html = await page.content();
   console.log("App load content length:", html.length);
 
-  expect(html).toContain('<script src="flutter_bootstrap.js" async=""></script>');
+  expect(html).toContain('OHC Builder');
+  await expect(page.locator('body')).toBeVisible();
 });
