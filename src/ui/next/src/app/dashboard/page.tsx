@@ -30,6 +30,10 @@ export default function Dashboard() {
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
 
+  // Growth Loop: Whitelabel Paywall State
+  const [brandingEnabled, setBrandingEnabled] = useState<boolean>(true);
+  const [showBrandingPaywall, setShowBrandingPaywall] = useState<boolean>(false);
+
   const [loyaltyEnabled, setLoyaltyEnabled] = useState<boolean>(false);
   const [enablingLoyalty, setEnablingLoyalty] = useState<boolean>(false);
   const [loyaltyLink, setLoyaltyLink] = useState<string>("");
@@ -495,6 +499,54 @@ export default function Dashboard() {
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💻</div>
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Whitelabel & Branding Upsell */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Brand Customization</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Premium Feature</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2">Remove "Powered by OHC" Badge</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Establish full brand credibility. Upgrade to remove our branding from your storefront footer and checkout pages.</p>
+
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                        <div>
+                            <div className="text-sm font-semibold text-gray-800">Show OHC Branding</div>
+                            <div className="text-xs text-gray-500">Helps us grow, but you can turn it off on Pro.</div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                if (brandingEnabled) {
+                                    setShowBrandingPaywall(true);
+                                } else {
+                                    setBrandingEnabled(true);
+                                }
+                            }}
+                            className={`w-12 h-6 rounded-full transition-colors duration-300 relative ${brandingEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}
+                        >
+                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${brandingEnabled ? 'translate-x-6' : 'translate-x-0'}`}></span>
+                        </button>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-900 rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-inner relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 rounded-bl-full opacity-10 -z-0"></div>
+                    <div className="text-white font-mono text-xs opacity-50 mb-2 relative z-10">Store Footer Preview</div>
+                    <div className="bg-white/10 px-4 py-2 rounded-lg border border-white/20 relative z-10">
+                        {brandingEnabled ? (
+                            <span className="text-sm font-semibold text-white">⚡ Powered by OHC</span>
+                        ) : (
+                            <span className="text-sm font-semibold text-white">© {typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'Your Brand' : 'Your Brand'}</span>
+                        )}
+                    </div>
                 </div>
             </div>
          </section>
@@ -1061,6 +1113,53 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Whitelabel Branding Paywall Modal */}
+      {showBrandingPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-purple-100 rounded-full blur-3xl -z-10"></div>
+            <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-indigo-100 rounded-full blur-3xl -z-10"></div>
+
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg text-white">
+                ✨
+              </div>
+              <button
+                onClick={() => setShowBrandingPaywall(false)}
+                className="p-2 text-gray-400 hover:text-gray-700 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-3xl font-bold font-outfit text-gray-900 mb-3 tracking-tight">Unlock Whitelabel</h2>
+            <p className="text-gray-600 mb-8 text-base leading-relaxed">
+              Remove all OHC branding and build full customer trust. Included in the Pro plan along with custom domains and advanced analytics.
+            </p>
+
+            <div className="space-y-4">
+              <button
+                onClick={() => {
+                  alert("Upgrade successful! Branding removed.");
+                  setBrandingEnabled(false);
+                  setShowBrandingPaywall(false);
+                }}
+                className="w-full py-3.5 rounded-xl text-base font-semibold transition-all bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+              >
+                Upgrade to Pro - $29/mo
+              </button>
+
+              <button
+                onClick={() => setShowBrandingPaywall(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                Keep free plan branding
+              </button>
             </div>
           </div>
         </div>
