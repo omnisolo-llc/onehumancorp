@@ -188,35 +188,68 @@ async fn handle_track_visitor(
     Json(TrackVisitorResponse { tracked: true })
 }
 
-async fn handle_storefront_embed() -> impl IntoResponse {
-    let html = r##"
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StorefrontEmbedQuery {
+    pub tenant: Option<String>,
+    pub product_name: Option<String>,
+    pub price: Option<String>,
+    pub theme: Option<String>,
+}
+
+async fn handle_storefront_embed(
+    axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
+) -> impl IntoResponse {
+    let tenant = query.tenant.as_deref().unwrap_or("my-store");
+    let name = query.product_name.as_deref().unwrap_or("Premium Product");
+    let price = query.price.as_deref().unwrap_or("$49.99");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
+    let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
+    let price_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#555" };
+    let link_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#333" };
+
+    // Basic HTML escaping
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_name = escape_html(name);
+    let safe_price = escape_html(price);
+    // Note: URL encode tenant for the href
+    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+
+    let html = format!(r##"
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        .card { border: 1px solid #eaeaea; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .title { font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }
-        .price { color: #555; font-size: 1rem; margin: 0 0 16px 0; }
-        .btn { display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }
-        .footer { text-align: center; margin-top: 16px; font-size: 0.85rem; }
-        .footer a { color: #333; text-decoration: none; font-weight: bold; }
+        body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {bg_color}; color: {text_color}; }}
+        .card {{ border: 1px solid {border_color}; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
+        .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }}
+        .price {{ color: {price_color}; font-size: 1rem; margin: 0 0 16px 0; }}
+        .btn {{ display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }}
+        .footer {{ text-align: center; margin-top: 16px; font-size: 0.85rem; }}
+        .footer a {{ color: {link_color}; text-decoration: none; font-weight: bold; }}
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 class="title">Premium Product</h2>
-        <p class="price">$49.99</p>
+        <h2 class="title">{safe_name}</h2>
+        <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="ohc://join?ref=embed">⚡ Powered by OHC</a>
+            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
 </html>
-"##;
+"##);
     axum::response::Html(html)
 }
 
