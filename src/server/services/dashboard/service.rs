@@ -65,9 +65,9 @@ impl DashboardService for MyDashboardService {
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::spawn(async move {
+            async move {
                 Ok::<_, String>(hub1.get_agents().await)
-            }),
+            },
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub2.get_meetings())
             }),
@@ -79,7 +79,7 @@ impl DashboardService for MyDashboardService {
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
             }),
-            tokio::spawn(async move {
+            async move {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
                 let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
@@ -152,8 +152,8 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(results)
-            }),
-            tokio::spawn(async move {
+            },
+            async move {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
                 let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
@@ -206,8 +206,8 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(results)
-            }),
-            tokio::spawn(async move {
+            },
+            async move {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
                 let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
@@ -260,11 +260,10 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(org)
-            })
+            }
         );
 
         let agents = agents_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
@@ -274,13 +273,10 @@ impl DashboardService for MyDashboardService {
                 .map_err(|e| Status::internal(e.to_string()))?
                 .map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let orders = orders_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let org = org_res
-            .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
 
         let products = if req.mobile_optimized {
