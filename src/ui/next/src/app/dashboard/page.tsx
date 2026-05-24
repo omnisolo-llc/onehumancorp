@@ -263,11 +263,11 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
-                                            {approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'Operations' ? '⚙️' : '🤖'}
+                                            {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'operations' || approval.department === 'Operations' ? '⚙️' : '🤖'}
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-lg font-outfit text-gray-900">
-                                                {approval.department} Department
+                                            <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
+                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
