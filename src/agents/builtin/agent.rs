@@ -79,6 +79,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_tencent_expert_team: bool,
+    pub expert_team_roles: Vec<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -134,6 +136,8 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            enable_tencent_expert_team: false,
+            expert_team_roles: vec![],
         }
     }
 }
@@ -318,7 +322,117 @@ pub struct Agent {
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
 }
 
+
+use ohc_builtin_agent_core::expert_team::{DomainExpert, ExpertTeamManager, QualityGates, ExpertTeamLlmClient, SkillTrace};
+
+struct ExpertTeamLlmClientAdapter {
+    llm: Arc<dyn LlmClient>,
+}
+
+#[async_trait::async_trait]
+impl ExpertTeamLlmClient for ExpertTeamLlmClientAdapter {
+    async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.llm.chat(req).await
+    }
+}
+
 impl Agent {
+    pub async fn run_expert_team<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+
+        let adapter = Arc::new(ExpertTeamLlmClientAdapter {
+            llm: self.llm.clone(),
+        });
+
+        let experts: Vec<DomainExpert> = cfg
+            .expert_team_roles
+            .iter()
+            .map(|role| DomainExpert {
+                role: role.clone(),
+                llm: adapter.clone(),
+            })
+            .collect();
+
+        let lead_agent_name = "Lead Project Director";
+        let manager = ExpertTeamManager::new(lead_agent_name, experts);
+
+        if let Err(e) = QualityGates::pre_flight(&manager, initial_message) {
+            let err_msg = format!("Pre-flight gate failed: {}", e);
+            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+            return Err(err_msg.into());
+        }
+
+        let mut trace = SkillTrace::new();
+        let summaries = match manager.execute_parallel_tasks(initial_message, &mut trace).await {
+            Ok(s) => s,
+            Err(e) => {
+                let err_msg = format!("Expert team execution failed: {}", e);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
+        };
+
+        if let Err(e) = QualityGates::pre_merge(&summaries) {
+            let err_msg = format!("Pre-merge gate failed: {}", e);
+            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+            return Err(err_msg.into());
+        }
+
+        let lead_system_prompt = format!(
+            "You are the {}. Your task is to combine the following condensed summaries from your domain experts into a cohesive, comprehensive final output.
+
+Task: {}
+
+Summaries:
+{}",
+            lead_agent_name,
+            initial_message,
+            summaries.join("
+
+---
+
+")
+        );
+
+        let req = crate::types::ChatRequest {
+            model: cfg.model.clone(),
+            system: lead_system_prompt,
+            messages: vec![crate::types::Message::user("Please synthesize the summaries into the final deliverable.")],
+            tools: vec![],
+            max_tokens: cfg.max_tokens,
+            temperature: cfg.temperature,
+        };
+
+        let final_resp = match self.llm.chat(req).await {
+            Ok(resp) => resp,
+            Err(e) => {
+                let err_msg = format!("Lead agent synthesis failed: {}", e);
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(err_msg.into());
+            }
+        };
+
+        let final_content = final_resp.message.content;
+
+        if let Err(e) = QualityGates::pre_deliver(&final_content, &trace) {
+            let err_msg = format!("Pre-deliver gate failed: {}", e);
+            on_event(AgentEvent::TaskError { error: err_msg.clone() });
+            return Err(err_msg.into());
+        }
+
+        on_event(AgentEvent::TaskComplete { content: final_content.clone() });
+        Ok(final_content)
+    }
+
+
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
@@ -1362,7 +1476,9 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+
         let mut final_cfg = cfg.clone();
+
 
         // Append instruction to force the use of the structured output tool
         final_cfg.server_system_message = format!(
@@ -1482,7 +1598,13 @@ impl Agent {
 
         let session_tools = self_with_memory.tools.clone();
 
+
         let mut final_cfg = cfg.clone();
+
+        if final_cfg.enable_tencent_expert_team {
+            return self.run_expert_team(&final_cfg, initial_message, on_event).await;
+        }
+
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
@@ -6204,4 +6326,71 @@ async fn test_stripe_retry_limit() {
     let lock = client.call_count.lock().await;
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
+
+    struct ExpertTeamMockLlmClient {
+        responses: tokio::sync::Mutex<Vec<crate::types::ChatResponse>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for ExpertTeamMockLlmClient {
+        async fn chat(&self, _req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().await;
+            if !resps.is_empty() {
+                Ok(resps.remove(0))
+            } else {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Final fallback"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("fallback-id".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tencent_expert_team_mechanic() {
+        let client = std::sync::Arc::new(ExpertTeamMockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Expert analysis output that is sufficiently long enough to pass the fifty character length requirement for the pre-merge quality gate check."),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-expert-1".to_string()),
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Expert review output that is also sufficiently long enough to pass the fifty character length requirement for the pre-merge quality gate check."),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-expert-2".to_string()),
+                },
+                crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Final synthesized deliverable output with Chart: Required and Analysis: Deep. Words: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-lead".to_string()),
+                },
+            ]),
+        });
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_tencent_expert_team = true;
+        cfg.expert_team_roles = vec!["Analyst".to_string(), "Reviewer".to_string()];
+
+        let agent = Agent::new(client, vec![]);
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result = agent.run(&cfg, "Complex task", &mut on_event).await;
+
+        assert!(result.is_ok(), "Expected expert team execution to succeed");
+        let content = result.unwrap();
+        assert!(content.contains("Final synthesized deliverable"), "Did not get expected lead output");
+        assert!(content.contains("Chart:"), "Did not pass pre_deliver validation");
+
+        let has_task_complete = events.iter().any(|e| matches!(e, AgentEvent::TaskComplete { .. }));
+        assert!(has_task_complete, "Should eventually emit TaskComplete event");
+    }
+
 }
