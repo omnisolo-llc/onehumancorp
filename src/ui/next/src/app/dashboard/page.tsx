@@ -24,6 +24,8 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+  const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
+  const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
@@ -228,11 +230,9 @@ export default function Dashboard() {
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
-             <WithTooltip id="nav-agents-tooltip" defaultText="See your AI team, give them tasks, or hire new helpers.">
-               <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-                 <span>🤖</span> AI Departments
-               </Link>
-             </WithTooltip>
+             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+               <span>🤖</span> AI Departments
+             </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -465,23 +465,15 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
-                        <pre className="text-xs text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap">
-{`<div id="ohc-embed-root"></div>
-<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>
-<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
-  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
-</div>`}
-                        </pre>
-                        <button
-                            onClick={() => {
-                                const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
-                                navigator.clipboard.writeText(code);
-                                alert('Copied embed code to clipboard!');
-                            }}
-                            className="absolute top-2 right-2 bg-white text-gray-700 border border-gray-200 px-3 py-1 rounded-md text-xs font-semibold hover:bg-gray-50 transition-colors"
-                        >
-                            Copy Code
-                        </button>
+                        <div className="flex gap-2 items-center">
+                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
+                            <button
+                                onClick={() => setShowEmbedModal(true)}
+                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                Get Widget
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
@@ -965,6 +957,56 @@ export default function Dashboard() {
               >
                 Maybe later
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Embed Modal */}
+      {showEmbedModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
+                🌐
+              </div>
+              <button
+                onClick={() => {
+                  setShowEmbedModal(false);
+                  setEmbedCopied(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Embed Storefront</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Copy this widget code and paste it on your blog, personal website, or partner pages to let customers buy directly from you.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Widget HTML snippet</label>
+                <div className="flex flex-col gap-2">
+                  <textarea
+                    readOnly
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
+                    rows={4}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      setEmbedCopied(true);
+                      setTimeout(() => setEmbedCopied(false), 2000);
+                    }}
+                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${embedCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                  >
+                    {embedCopied ? 'Copied!' : 'Copy Code'}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
