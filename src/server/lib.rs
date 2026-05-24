@@ -2703,7 +2703,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
-            max-width: 600px;
+            max-width: 375px;
             margin: 40px auto;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
@@ -2714,8 +2714,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
 
         #setup-screen > div {
@@ -4558,14 +4556,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     alert('Please enter a product or service name');
                                     return false;
                                 }
-                                if (!priceInput || priceInput.value.trim().length === 0 || isNaN(parseFloat(priceInput.value))) {
-                                    alert('Please enter a valid price');
+                                if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
+                                    alert('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
-                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
                                     alert('Please enter a valid email address');
                                     return false;
                                 }
@@ -4966,6 +4965,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                     input.value = stateData[input.placeholder];
                                                 }
                                             });
+                                            if (stateData.step > 1) {
+                                                // Wait for display updates before fast-forwarding to currentStep
+                                                setTimeout(() => nextStep(stateData.step), 100);
+                                            }
                                         }
                                     }
                                 } catch (e) {
