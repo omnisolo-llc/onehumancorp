@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
@@ -12,11 +12,12 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
-    isLoading, setIsLoading,
-    error, setError,
     intakeData, setIntakeData,
     startResult, setStartResult
   } = useOnboardingStore();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isInitialMount = useRef(true);
 
@@ -259,8 +260,6 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                enterKeyHint="next"
                 placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -282,8 +281,6 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                enterKeyHint="next"
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
@@ -313,8 +310,6 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
-                enterKeyHint="done"
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
