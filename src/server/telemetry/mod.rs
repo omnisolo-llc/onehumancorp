@@ -20,6 +20,10 @@ static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
+static AUTODREAM_INGESTION_ERROR_COUNTER: OnceLock<Counter<u64>> = OnceLock::new();
+static AUTODREAM_COMPRESSION_ERROR_COUNTER: OnceLock<Counter<u64>> = OnceLock::new();
+static AUTODREAM_MEMORIES_COMPRESSED_COUNTER: OnceLock<Counter<u64>> = OnceLock::new();
+
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_FAILURE_RATE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
@@ -59,6 +63,33 @@ pub fn get_agent_execution_traces_total() -> &'static Counter<u64> {
         let meter = global::meter("ohc.agent");
         meter.u64_counter("ohc_agent_execution_traces_total")
             .with_description("Total number of agent execution traces")
+            .build()
+    })
+}
+
+pub fn get_autodream_ingestion_error_counter() -> &'static Counter<u64> {
+    AUTODREAM_INGESTION_ERROR_COUNTER.get_or_init(|| {
+        let meter = global::meter("ohc.autodream");
+        meter.u64_counter("AutoDreamIngestionErrorCounter")
+            .with_description("Tracks total number of ingestion errors")
+            .build()
+    })
+}
+
+pub fn get_autodream_compression_error_counter() -> &'static Counter<u64> {
+    AUTODREAM_COMPRESSION_ERROR_COUNTER.get_or_init(|| {
+        let meter = global::meter("ohc.autodream");
+        meter.u64_counter("AutoDreamCompressionErrorCounter")
+            .with_description("Tracks total number of compression errors")
+            .build()
+    })
+}
+
+pub fn get_autodream_memories_compressed_counter() -> &'static Counter<u64> {
+    AUTODREAM_MEMORIES_COMPRESSED_COUNTER.get_or_init(|| {
+        let meter = global::meter("ohc.autodream");
+        meter.u64_counter("AutoDreamMemoriesCompressedCounter")
+            .with_description("Tracks total number of agent sessions compressed into AutoDream memories")
             .build()
     })
 }
@@ -169,11 +200,27 @@ pub async fn record_autodream_sync_error(pool: &PgPool, count: f32, error_type: 
 }
 
 pub async fn record_autodream_ingestion_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let counter = get_autodream_ingestion_error_counter();
+    counter.add(count as u64, &[
+        opentelemetry::KeyValue::new("error_type", error_type.to_string()),
+    ]);
     buffer_metric(pool, "ohc_autodream_ingestion_error_total", "counter", count, serde_json::json!({ "error": error_type })).await
 }
 
 pub async fn record_autodream_compression_error(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let counter = get_autodream_compression_error_counter();
+    counter.add(count as u64, &[
+        opentelemetry::KeyValue::new("error_type", error_type.to_string()),
+    ]);
     buffer_metric(pool, "ohc_autodream_compression_error_total", "counter", count, serde_json::json!({ "error": error_type })).await
+}
+
+pub async fn record_autodream_memory_compressed(pool: &PgPool, count: f32, agent_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let counter = get_autodream_memories_compressed_counter();
+    counter.add(count as u64, &[
+        opentelemetry::KeyValue::new("agent_id", agent_id.to_string()),
+    ]);
+    buffer_metric(pool, "ohc_autodream_memories_compressed_total", "counter", count, serde_json::json!({ "agent_id": agent_id })).await
 }
 
 pub async fn record_autodream_consolidation(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
@@ -415,8 +462,6 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
-    k.contains("jwt") ||
-    k.contains("bearer") ||
 
     k.contains("session_id") ||
     k.contains("payload") ||
