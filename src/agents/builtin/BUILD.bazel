@@ -76,6 +76,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "service.rs",
+        "ruflo.rs",
         "consolidation_worker.rs",
     ],
     crate_name = "ohc_builtin_agent",
@@ -212,6 +213,7 @@ rust_binary(
         "pubsub",
         "registry",
         "local_provider",
+        "ruflo",
     ]
 ]
 
