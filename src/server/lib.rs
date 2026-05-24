@@ -2069,7 +2069,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let mut link_title = "Read the full article →";
+            let link_title = "Read the full article →";
             let mut link_url = "/help";
 
             for (kw, desc) in help_articles {
