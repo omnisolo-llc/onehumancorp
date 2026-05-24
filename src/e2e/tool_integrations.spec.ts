@@ -2,6 +2,8 @@ import { test, expect } from './fixtures';
 
 test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test.beforeEach(async ({ page }) => {
+    // Dismiss the upgrade modal if it appears
+    page.on('dialog', dialog => dialog.accept());
     await page.goto('/');
     await page.getByText('Connect Tools').click();
     await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
@@ -40,5 +42,43 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('displays global sms notifications card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
     await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
+  });
+
+  test('can connect Ayrshare', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Ayrshare' }).getByRole('button', { name: 'Connect' });
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Connecting to Ayrshare...');
+      dialog.accept();
+    });
+    await connectButton.click();
+  });
+
+  test('can connect Cal.com', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Cal.com' }).getByRole('button', { name: 'Connect' });
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Connecting to Cal.com...');
+      dialog.accept();
+    });
+    await connectButton.click();
+  });
+
+  test('can connect Listmonk and Mercado Pago', async ({ page }) => {
+    const listmonkBtn = page.locator('div.card.glass').filter({ hasText: 'Listmonk' }).getByRole('button', { name: 'Connect' });
+    page.once('dialog', dialog => dialog.accept());
+    await listmonkBtn.click();
+
+    const mercadoBtn = page.locator('div.card.glass').filter({ hasText: 'Mercado Pago' }).getByRole('button', { name: 'Connect' });
+    page.once('dialog', dialog => dialog.accept());
+    await mercadoBtn.click();
+  });
+
+  test('can connect EasyPost, Twilio, and Jitsi', async ({ page }) => {
+    page.on('dialog', dialog => dialog.accept());
+    const epBtn = page.locator('div.card.glass').filter({ hasText: 'EasyPost' }).getByRole('button', { name: 'Connect' });
+    await epBtn.click();
+    const twBtn = page.locator('div.card.glass').filter({ hasText: 'Twilio' }).getByRole('button', { name: 'Connect' });
+    await twBtn.click();
+    const jitsiBtn = page.locator('div.card.glass').filter({ hasText: 'Jitsi Meet' }).getByRole('button', { name: 'Connect' });
+    await jitsiBtn.click();
   });
 });
