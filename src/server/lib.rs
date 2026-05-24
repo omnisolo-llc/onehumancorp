@@ -3679,6 +3679,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Embed Setup Bottom Sheet -->
+                        <!-- Soft Paywall Modal -->
+                        <div id="soft-paywall-modal" class="bottom-sheet glass" style="padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto; z-index: 2000;">
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="background: transparent; border: none; font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
+                            <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+
+                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
+
+                            <div style="margin: 16px 0; color: var(--text-secondary); font-size: 14px;">OR</div>
+
+                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2;">
+                                🐦 Share on X to get 7 Days Free
+                            </button>
+                        </div>
+
                         <div id="embed-setup-sheet" class="bottom-sheet glass">
                             <div class="bottom-sheet-header">
                                 <h2>Embed Storefront</h2>
@@ -3961,11 +3979,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.add('open');
                         }
 
+                        function closeSoftPaywall() {
+                            document.getElementById('soft-paywall-modal').classList.remove('open');
+                        }
+
+                        function claimTrialExtension() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+                            localStorage.setItem('has_pro', 'true');
+                            closeSoftPaywall();
+                            alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+                            // Re-run the campaign now that they have pro
+                            sendReviewCampaign();
+                        }
+
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         async function sendReviewCampaign() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const btn = document.getElementById('send-review-campaign-btn');
                             btn.textContent = 'Generating...';
                             btn.disabled = true;
