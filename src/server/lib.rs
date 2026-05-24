@@ -2529,6 +2529,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             pointer-events: none;
                             position: absolute;
                             visibility: hidden;
+                            transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1), visibility 150ms step-end;
                         }
 
                         @media (max-width: 375px) {
@@ -2728,6 +2729,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         #setup-screen > div {
             transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+            position: relative;
+        }
+
+        #setup-screen > div.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+            transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1), visibility 150ms step-end;
         }
 
         #setup-screen button, #setup-screen input {
