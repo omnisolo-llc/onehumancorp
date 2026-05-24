@@ -183,6 +183,28 @@ impl TaskQueue for PostgresTaskQueue {
 
         let mut current_depths = std::collections::HashMap::new();
 
+        let mut org_ids: std::collections::HashSet<String> = std::collections::HashSet::new();
+        for job in &jobs {
+            let org_id = if job.tenant_id.is_empty() {
+                let payload_map: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or_else(|_| serde_json::json!({}));
+                payload_map["tenant_id"].as_str().unwrap_or("").to_string()
+            } else {
+                job.tenant_id.clone()
+            };
+            org_ids.insert(org_id);
+        }
+
+        let org_ids_vec: Vec<String> = org_ids.into_iter().collect();
+        let counts: Vec<(String, i64)> = sqlx::query_as("SELECT tenant_id, COUNT(*) FROM sub_agent_queue WHERE tenant_id = ANY($1) AND status = 'PENDING' GROUP BY tenant_id")
+            .bind(&org_ids_vec)
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap_or_default();
+
+        for (tenant_id, count) in counts {
+            current_depths.insert(tenant_id, count);
+        }
+
         let mut builder = sqlx::QueryBuilder::new("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) ");
 
         let mut prepared_jobs = Vec::new();
@@ -202,13 +224,8 @@ impl TaskQueue for PostgresTaskQueue {
             let depth = match current_depths.get(&org_id) {
                 Some(&d) => d,
                 None => {
-                    let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_queue WHERE tenant_id = $1 AND status = 'PENDING'")
-                        .bind(&org_id)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .unwrap_or((0,));
-                    current_depths.insert(org_id.clone(), count_row.0);
-                    count_row.0
+                    current_depths.insert(org_id.clone(), 0);
+                    0
                 }
             };
 
