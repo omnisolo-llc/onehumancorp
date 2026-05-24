@@ -55,7 +55,9 @@ impl DummyDepartment {
             received_events: Mutex::new(Vec::new()),
         }
     }
+
 }
+
 
 #[async_trait::async_trait]
 impl Department for DummyDepartment {
@@ -102,7 +104,9 @@ impl Department for DummyDepartment {
     fn set_config(&mut self, tenant_id: String, config: DepartmentConfig) {
         self.configs.insert(tenant_id, config);
     }
+
 }
+
 
 pub struct DepartmentOrchestrator {
     db: Arc<crate::db::DB>,
@@ -480,10 +484,31 @@ impl DepartmentOrchestrator {
         Ok(records.into_iter().map(|r| r.content).collect())
     }
 
+
     pub async fn write_long_term_memory(&self, record: ohc_builtin_agent::memory_store::EmbeddingRecord) -> Result<(), String> {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
+
+    pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
+        let deps = self.departments.read().await;
+        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+        if let Some(dep_lock) = deps.get(&dep_type) {
+            let mut dep = dep_lock.write().await;
+            dep.set_config(tenant_id.to_string(), config);
+            Ok(())
+        } else {
+            Err("Department not found".to_string())
+        }
+    }
+
+
+
+
+
+
+
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -510,5 +535,8 @@ mod tests {
         let _ = dummy;
         assert!(true);
     }
+
 }
+
 // Resolves #13871
+// Resolves #15384
