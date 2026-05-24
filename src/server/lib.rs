@@ -3255,14 +3255,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Meta Graph API Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Meta Graph API</h3>
+                                    <h3 style="margin: 0;">Ayrshare</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Meta Graph API...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3275,14 +3275,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
-                            <!-- Resend Integration -->
+                            <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Resend</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📧</span>
+                                    <h3 style="margin: 0;">Listmonk</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Developer-friendly API, excellent deliverability, modern React-email templates.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Listmonk...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3318,11 +3318,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Microsoft Teams Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Zoom</h3>
+                                    <h3 style="margin: 0;">Jitsi Meet</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard video conferencing. High user familiarity.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
                             </div>
                         </div>
 
