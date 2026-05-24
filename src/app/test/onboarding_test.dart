@@ -90,6 +90,47 @@ void main() {
     expect(draftSaved, isTrue);
   });
 
+  testWidgets('Onboarding Screen - Debounce on business name triggers draft save', (WidgetTester tester) async {
+    bool draftSaved = false;
+    final client = MockClient((request) async {
+      if (request.url.path == '/api/onboarding/draft' && request.method == 'POST') {
+        draftSaved = true;
+        return http.Response('{"status": "ok"}', 200);
+      }
+      if (request.url.path == '/api/onboarding/draft') {
+        return http.Response('{}', 200);
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    await tester.pumpWidget(MaterialApp(home: OnboardingScreen(httpClient: client)));
+
+    // Go to input state
+    await tester.tap(find.text('Start a Business'));
+    await tester.pumpAndSettle();
+
+    // Must enter bio first because the form will not validate otherwise? No, just tapping next
+    // The bio field is required. So we must enter something to pass validation on next step.
+    await tester.enterText(find.byKey(Key('bio-input')), 'A bio');
+    await tester.pumpAndSettle();
+
+    // Next to Name step
+    await tester.ensureVisible(find.byKey(Key('next-step-1')));
+    await tester.tap(find.byKey(Key('next-step-1')));
+    await tester.pumpAndSettle();
+
+    // Reset draftSaved boolean before typing the business name
+    draftSaved = false;
+
+    // Enter text in name input (this should trigger debounce)
+    await tester.enterText(find.byKey(Key('name-input')), 'Test business name for debounce');
+
+    // Wait for debounce timer (500ms)
+    await tester.pump(Duration(milliseconds: 600));
+
+    expect(draftSaved, isTrue);
+  });
+
   testWidgets('Onboarding Screen - Transitions to Generating state on form submit', (WidgetTester tester) async {
     final client = MockClient((request) async {
       if (request.url.path == '/api/onboarding/draft') {

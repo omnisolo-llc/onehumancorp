@@ -69,13 +69,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  Future<void> _saveDraft(String text) async {
+  Future<void> _saveDraft() async {
     try {
       final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'bio': text, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
+        body: jsonEncode({'bio': bio, 'businessName': businessName, 'selectedTemplate': selectedTemplate}),
       );
     } catch (e) {
       print('Failed to save draft: $e');
@@ -85,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> submit() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      await _saveDraft(bio);
+      await _saveDraft();
       setState(() => _state = OnboardingState.generating);
 
       try {
@@ -206,57 +206,71 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _buildWelcomeState() {
     return Padding(
       padding: EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
-          SizedBox(height: 32),
-          Text(
-            'OneHumanCorp',
-            style: TextStyle(
-              fontFamily: 'Outfit',
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1D1D1F),
-              letterSpacing: -0.5,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+          child: Container(
+            padding: EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.65),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.4), width: 1),
             ),
-            textAlign: TextAlign.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Icon(Icons.storefront, size: 80, color: Color(0xFF0066FF)),
+                SizedBox(height: 32),
+                Text(
+                  'OneHumanCorp',
+                  style: TextStyle(
+                    fontFamily: 'Outfit',
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1D1D1F),
+                    letterSpacing: -0.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'The universal operating system for small business.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 48),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() => _state = OnboardingState.input);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Start a Business',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          SizedBox(height: 16),
-          Text(
-            'The universal operating system for small business.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 48),
-          ElevatedButton(
-            onPressed: () {
-              setState(() => _state = OnboardingState.input);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF0066FF), // OHC Accent Blue
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 18),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              'Start a Business',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -337,7 +351,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 bio = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(value);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -357,7 +371,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _bioController.text = 'I bake custom vegan cakes in Seattle. Maya\'s Cakes.';
                   bio = _bioController.text;
                 });
-                _saveDraft(bio);
+                _saveDraft();
               },
             ),
             ActionChip(
@@ -367,7 +381,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _bioController.text = 'I offer freelance graphic design services for local businesses.';
                   bio = _bioController.text;
                 });
-                _saveDraft(bio);
+                _saveDraft();
               },
             ),
             ActionChip(
@@ -377,7 +391,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _bioController.text = 'A cozy neighborhood cafe serving artisanal coffee and pastries.';
                   bio = _bioController.text;
                 });
-                _saveDraft(bio);
+                _saveDraft();
               },
             ),
           ],
@@ -443,6 +457,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
+              keyboardType: TextInputType.name,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Cakes',
@@ -456,7 +471,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 businessName = value;
                 if (_debounce?.isActive ?? false) _debounce!.cancel();
                 _debounce = Timer(const Duration(milliseconds: 500), () {
-                  _saveDraft(bio);
+                  _saveDraft();
                 });
               },
               validator: (value) => value == null || value.isEmpty ? 'Required' : null,
@@ -587,7 +602,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ],
                   onChanged: (val) {
                     if (val != null) setState(() => domainChoice = val);
-                    _saveDraft(bio);
+                    _saveDraft();
                   },
                 ),
               ),
@@ -628,7 +643,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       onTap: () {
         setState(() {
           selectedTemplate = name;
-          _saveDraft(bio);
+          _saveDraft();
         });
       },
       child: Container(
