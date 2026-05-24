@@ -49,3 +49,10 @@ def go_deps():
         sum = "h1:bTLqdHv7xrGlFbvf5/TXNxy/iUwwdkjhqQTJDjW7aj0=",
         version = "v0.0.0-20260209163413-e7419c687ee4",
     )
+
+    go_repository(
+        name = "com_github_go_redsync_redsync_v4",
+        importpath = "github.com/go-redsync/redsync/v4",
+        sum = "h1:09PjW+uA6T+xN7C57/w9uG67dO3j7oO5lSThY1O0E/c=",
+        version = "v4.16.0",
+    )

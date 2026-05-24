@@ -16,11 +16,11 @@ bazel_dep(name = "gazelle", version = "0.50.0")
 bazel_dep(name = "hermetic_cc_toolchain", version = "4.1.0")
 single_version_override(
     module_name = "hermetic_cc_toolchain",
+    patch_strip = 1,
     patches = [
         "//bazel/patches:hermetic_cc_toolchain_zig_windows_linker_args.patch",
         "//bazel/patches:hermetic_cc_toolchain_zig_windows_msvc_link_args.patch",
     ],
-    patch_strip = 1,
 )
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
@@ -59,9 +59,10 @@ register_toolchains("@go_sdk//:all")
 bazel_dep(name = "rules_rust", version = "0.70.0")
 single_version_override(
     module_name = "rules_rust",
-    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
     patch_strip = 1,
+    patches = ["//bazel/patches:rules_rust_windows_gnullvm_platforms.patch"],
 )
+
 bazel_dep(name = "rules_rust_wasm_bindgen", version = "0.70.0")
 bazel_dep(name = "rules_rust_prost", version = "0.70.0")
 
@@ -206,6 +207,7 @@ crate.annotation(
     crate = "tauri-cli",
     gen_binaries = ["cargo-tauri"],
 )
+
 # wasm-bindgen crate version must match what the toolchain provides
 # rules_rust_wasm_bindgen 0.70.0 ships with wasm-bindgen-cli 0.2.105
 # We accept this mismatch and the user will need to update rules_rust_wasm_bindgen
@@ -327,3 +329,13 @@ use_repo(oci, "distroless_cc", "distroless_cc_linux_amd64", "distroless_cc_linux
 # ── Proto dependencies (Hermetic Dart Plugin) ────────────────────────────────
 proto_deps = use_extension("//bazel/rules:extensions.bzl", "proto_deps_extension")
 use_repo(proto_deps, "google_protobuf_dart")
+
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
+use_repo(
+    go_deps,
+    "com_github_alicebob_miniredis_v2",
+    "com_github_data_dog_go_sqlmock",
+    "com_github_go_redsync_redsync_v4",
+    "com_github_redis_go_redis_v9",
+)

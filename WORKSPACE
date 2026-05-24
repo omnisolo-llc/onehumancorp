@@ -123,3 +123,19 @@ go_repository(
     sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
     version = "v1.8.4",
 )
+
+go_repository(
+    name = "com_github_go_redsync_redsync_v4",
+    build_file_generation = "on",
+    importpath = "github.com/go-redsync/redsync/v4",
+    sum = "h1:09PjW+uA6T+xN7C57/w9uG67dO3j7oO5lSThY1O0E/c=",
+    version = "v4.16.0",
+)
+
+go_repository(
+    name = "com_github_data_dog_go_sqlmock",
+    build_file_generation = "on",
+    importpath = "github.com/DATA-DOG/go-sqlmock",
+    sum = "h1:0D0w5o3dM7m9Gj1nJ5u4G/w3w3Yw3m0tZ5gX1/aN+rA=",
+    version = "v1.5.2",
+)
