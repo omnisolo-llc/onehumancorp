@@ -1,9 +1,0 @@
-filegroup(
-    name = "srcs",
-    srcs = [
-        "mod.rs",
-        "provider.rs",
-        "provider_test.rs",
-    ],
-    visibility = ["//src/server/integrations:__pkg__"],
-)
