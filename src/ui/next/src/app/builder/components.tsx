@@ -127,8 +127,9 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
         <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center">
           <h2 className="text-lg font-bold font-outfit text-blue-900 mb-2">{props.title}</h2>
           <p className="text-sm text-blue-700 mb-4">{props.availability}</p>
-          <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform">
-            Select Time
+          <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform flex items-center justify-center gap-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+            Book via Cal.com
           </button>
         </div>
       </div>

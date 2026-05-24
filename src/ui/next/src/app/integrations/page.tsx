@@ -4,10 +4,12 @@ import { useState } from "react";
 
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
+  const [showCalComAuth, setShowCalComAuth] = useState(false);
+  const [calComConnected, setCalComConnected] = useState(false);
 
   const integrations = [
     { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: calComConnected ? "connected" : "disconnected", icon: "📅", description: "Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "Developer-friendly API, excellent deliverability, modern React-email templates." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "API-first solution aggregating hundreds of carriers with built-in address verification." },
@@ -72,7 +74,13 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-xl font-semibold text-sm transition-transform active:scale-[0.98] ${
+              <button
+                onClick={() => {
+                  if (integration.id === 'cal_com' && integration.status === 'disconnected') {
+                    setShowCalComAuth(true);
+                  }
+                }}
+                className={`w-full py-3 rounded-xl font-semibold text-sm transition-transform active:scale-[0.98] ${
                 integration.status === 'connected'
                   ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                   : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
@@ -84,6 +92,65 @@ export default function Integrations() {
         </div>
 
       </main>
+
+      {/* Cal.com Connect Modal */}
+      {showCalComAuth && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCalComAuth(false)}></div>
+          <div className="relative bg-white dark:bg-[#16161A]/95 dark:backdrop-blur-[30px] w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden transform transition-all">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gray-50 dark:bg-white/5 rounded-xl flex items-center justify-center text-xl border border-gray-100 dark:border-white/10">📅</div>
+                  <h3 className="text-xl font-bold font-outfit text-gray-900 dark:text-[#F5F5F7]">Connect Cal.com</h3>
+                </div>
+                <button onClick={() => setShowCalComAuth(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+
+              <div className="space-y-5 mb-8">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-[#F5F5F7] mb-2">Weekly Availability</label>
+                  <select className="w-full bg-gray-50 dark:bg-[#1D1D1F] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-[#F5F5F7] focus:ring-2 focus:ring-[#0066FF] outline-none transition-shadow">
+                    <option>Mon-Fri, 9:00 AM - 5:00 PM</option>
+                    <option>Mon-Fri, 10:00 AM - 6:00 PM</option>
+                    <option>Custom Schedule</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-[#F5F5F7] mb-2">Minimum Notice Period</label>
+                  <select className="w-full bg-gray-50 dark:bg-[#1D1D1F] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-[#F5F5F7] focus:ring-2 focus:ring-[#0066FF] outline-none transition-shadow">
+                    <option>2 hours</option>
+                    <option>4 hours</option>
+                    <option>24 hours (1 day)</option>
+                    <option>48 hours (2 days)</option>
+                  </select>
+                </div>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                  You will be securely redirected to Cal.com to authorize OHC to manage your calendar and bookings.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  // Simulate OAuth flow completion
+                  setTimeout(() => {
+                    setCalComConnected(true);
+                    setShowCalComAuth(false);
+                  }, 800);
+                }}
+                className="w-full bg-[#0066FF] text-white py-3.5 rounded-xl font-semibold text-sm transition-transform hover:bg-blue-700 active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+              >
+                Continue to Cal.com
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
