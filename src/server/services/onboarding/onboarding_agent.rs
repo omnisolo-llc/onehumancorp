@@ -74,15 +74,14 @@ impl OnboardingAgent {
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
-        .bind(tenant_id) // using tenant_id as organization_id for simplicity as auth_utils expect it
         .bind(user_id)
         .bind(current_step)
         .bind(state_json)
@@ -95,15 +94,16 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    pub async fn get_onboarding_state(&self, tenant_id: &str) -> Result<serde_json::Value, String> {
+    pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         use sqlx::Row;
         let row = sqlx::query(
-            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1"
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(tenant_id)
+        .bind(user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -312,9 +312,8 @@ impl OnboardingAgent {
         let flags_json = serde_json::Value::Object(flags);
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4)"
         )
-        .bind(&org_id)
         .bind(&org_id)
         .bind(&user_id)
         .bind(1)
@@ -2572,7 +2571,7 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_service)
             .fetch_one(&db.pool)
             .await
@@ -2608,7 +2607,7 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_food)
             .fetch_one(&db.pool)
             .await

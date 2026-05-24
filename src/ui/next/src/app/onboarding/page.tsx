@@ -280,6 +280,8 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
+                inputMode="text"
+                autoCapitalize="words"
               />
               <button
                 onClick={handleNext}
@@ -304,6 +306,8 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
+                inputMode="text"
+                autoCapitalize="words"
               />
               <div className="flex gap-3">
                 <button
@@ -334,8 +338,10 @@ export default function OnboardingWizard() {
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
-                enterKeyHint="next"
+                enterKeyHint="done"
                 autoComplete="off"
+                inputMode="text"
+                autoCapitalize="sentences"
               />
               <div className="flex gap-3">
                 <button
@@ -378,8 +384,12 @@ export default function OnboardingWizard() {
                          type="text"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === 'Enter') handleStartOnboarding(); }}
                          className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
                          placeholder="e.g. Custom Cake"
+                         inputMode="text"
+                         autoCapitalize="words"
+                         autoComplete="off"
                        />
                      </div>
                      <div className="w-24">
@@ -388,8 +398,11 @@ export default function OnboardingWizard() {
                          type="text"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === 'Enter') handleStartOnboarding(); }}
                          className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
                          placeholder="0.00"
+                         inputMode="decimal"
+                         autoComplete="off"
                        />
                      </div>
                    </div>
