@@ -12,6 +12,10 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
+    firstProductName, setFirstProductName,
+    firstProductPrice, setFirstProductPrice,
+    template, setTemplate,
+    domain, setDomain,
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
@@ -36,6 +40,10 @@ export default function OnboardingWizard() {
             if (data.businessType) setBusinessType(data.businessType);
             if (data.businessName) setBusinessName(data.businessName);
             if (data.businessCategory) setBusinessCategory(data.businessCategory);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.template) setTemplate(data.template);
+            if (data.domain) setDomain(data.domain);
             if (data.intakeData) setIntakeData(data.intakeData);
             if (data.startResult) setStartResult(data.startResult);
           }
@@ -45,7 +53,7 @@ export default function OnboardingWizard() {
       }
     };
     loadState();
-  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setIntakeData, setStartResult]);
+  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
@@ -66,6 +74,10 @@ export default function OnboardingWizard() {
             businessType,
             businessName,
             businessCategory,
+            firstProductName,
+            firstProductPrice,
+            template,
+            domain,
             intakeData,
             startResult
           })
@@ -77,7 +89,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 500); // Debounce sync
     return () => clearTimeout(timer);
-  }, [step, businessType, businessName, businessCategory, intakeData, startResult]);
+  }, [step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -176,9 +188,10 @@ export default function OnboardingWizard() {
         admin_email: "admin@example.com",
         admin_name: "Admin",
         admin_password: "password123",
-        website_template: "modern",
-        first_product_name: intakeData.initial_products?.[0]?.name || "Sample Product",
-        first_product_price: intakeData.initial_products?.[0]?.price || "10.00",
+        website_template: template,
+        domain: domain,
+        first_product_name: firstProductName || intakeData.initial_products?.[0]?.name || "Sample Product",
+        first_product_price: firstProductPrice || intakeData.initial_products?.[0]?.price || "10.00",
       };
 
       const response = await fetch('/api/onboarding/start', {
@@ -205,14 +218,16 @@ export default function OnboardingWizard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.45);
+          backdrop-filter: blur(40px) saturate(250%);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
             background: rgba(22, 22, 26, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
           }
           .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
             color: #F5F5F7;
@@ -259,9 +274,12 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+                enterKeyHint="next"
+                autoComplete="off"
               />
               <button
                 onClick={handleNext}
@@ -280,9 +298,12 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+                enterKeyHint="next"
+                autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
@@ -309,9 +330,12 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
+                enterKeyHint="next"
+                autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
@@ -336,29 +360,76 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && intakeData && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto">
+            <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
+              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
                 <span className="text-3xl text-[#0066FF]">✨</span>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center">Looks Great!</h2>
-              <p className="text-gray-500 text-sm mb-6 text-center">Here is what our AI extracted. Ready to publish?</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center shrink-0">Ready to Launch!</h2>
+              <p className="text-gray-500 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
 
-              <div className="bg-white/80 p-5 rounded-[16px] border border-gray-100 shadow-sm mb-6 space-y-3">
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Business Name</span>
-                  <div className="font-medium text-gray-900">{intakeData.business_name}</div>
+              <div className="space-y-6 flex-1 overflow-visible">
+                {/* Product Section */}
+                <div className="bg-white/80 p-5 rounded-[16px] border border-gray-100 shadow-sm space-y-3">
+                   <h3 className="font-bold text-gray-900 font-outfit">First Product/Service</h3>
+                   <div className="flex gap-3">
+                     <div className="flex-1">
+                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Name</label>
+                       <input
+                         type="text"
+                         value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
+                         onChange={(e) => setFirstProductName(e.target.value)}
+                         className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
+                         placeholder="e.g. Custom Cake"
+                       />
+                     </div>
+                     <div className="w-24">
+                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Price</label>
+                       <input
+                         type="text"
+                         value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
+                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                         className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
+                         placeholder="0.00"
+                       />
+                     </div>
+                   </div>
                 </div>
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</span>
-                  <div className="font-medium text-gray-900">{intakeData.business_type}</div>
+
+                {/* Template Selection */}
+                <div className="space-y-3">
+                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Choose a Template</h3>
+                   <div className="grid grid-cols-2 gap-3">
+                     {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
+                       <button
+                         key={t}
+                         onClick={() => setTemplate(t)}
+                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
+                       >
+                         {t}
+                       </button>
+                     ))}
+                   </div>
                 </div>
-                <div>
-                  <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Products</span>
-                  <ul className="list-disc pl-4 text-sm text-gray-700 mt-1">
-                    {intakeData.initial_products?.map((p: any, i: number) => (
-                      <li key={i}>{p.name} - ${p.price}</li>
-                    ))}
-                  </ul>
+
+                {/* Domain Selection */}
+                <div className="space-y-3">
+                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Domain Name</h3>
+                   <div className="flex flex-col gap-3">
+                     <button
+                       onClick={() => setDomain('free')}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
+                     >
+                       <span>Free OHC Domain</span>
+                       <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
+                     </button>
+                     <button
+                       onClick={() => setDomain('custom')}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
+                     >
+                       <span>Connect Custom Domain</span>
+                       <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
+                     </button>
+                   </div>
                 </div>
               </div>
 
