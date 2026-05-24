@@ -116,7 +116,6 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
-});
 
   test('Keyboard interactions and debounced state saving', async ({ page }) => {
     // 0. Start from UI Login
@@ -163,3 +162,5 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Looks Great!' })).toBeVisible({ timeout: 15000 });
 
   });
+
+});
