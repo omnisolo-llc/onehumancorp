@@ -15,8 +15,8 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
-    await expect(page.getByText('Unified Social Media Inbox for Instagram, Facebook, and WhatsApp.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
+    await expect(page.getByText('Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
@@ -44,10 +44,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
   });
 
-  test('can connect Manychat', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
+  test('can connect Meta Graph API', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Meta Graph API' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Manychat...');
+      expect(dialog.message()).toContain('Connecting to Meta Graph API...');
       dialog.accept();
     });
     await connectButton.click();
