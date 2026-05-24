@@ -79,6 +79,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub enable_sona_neural_patterns: bool,
+    pub sona_memory: Option<Arc<crate::ruflo::SonaMemory>>,
 }
 
 impl Default for AgentRunConfig {
@@ -134,6 +136,8 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            enable_sona_neural_patterns: false,
+            sona_memory: None,
         }
     }
 }
@@ -1649,6 +1653,7 @@ impl Agent {
         let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
 
         let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
+        let mut tool_trajectory = Vec::new();
 
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
@@ -1678,6 +1683,14 @@ impl Agent {
                     combined_system.push_str("\n\n[Lightweight Memory Index]\n");
                     combined_system.push_str("Agent must treat memory as a 'hint' and verify against actual state before acting.\n");
                     combined_system.push_str(&index_content);
+                }
+            }
+        }
+
+        if final_cfg.enable_sona_neural_patterns {
+            if let Some(ref sona_memory) = final_cfg.sona_memory {
+                if let Ok(Some(pattern)) = sona_memory.retrieve_pattern(initial_message).await {
+                    combined_system.push_str(&format!("\n\n[SONA Neural Pattern: Recommend executing tools in this sequence: {}]\n", pattern.join(" -> ")));
                 }
             }
         }
@@ -1897,6 +1910,10 @@ impl Agent {
 
             let tool_calls = resp.message.tool_calls.clone();
 
+            for tc in &tool_calls {
+                tool_trajectory.push(tc.name.clone());
+            }
+
             // Add assistant message to history (including tool calls).
             messages.push(resp.message.clone());
 
@@ -2023,6 +2040,12 @@ impl Agent {
                     if let Err(e) = guard_cfg.check_output(&last_assistant_content) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
                         return Err(e.into());
+                    }
+                }
+
+                if final_cfg.enable_sona_neural_patterns {
+                    if let Some(ref sona_memory) = final_cfg.sona_memory {
+                        let _ = sona_memory.record_trajectory(initial_message, tool_trajectory.clone()).await;
                     }
                 }
 
@@ -5807,6 +5830,97 @@ mod stream_tests {
         async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
             Ok("read".to_string())
         }
+    }
+
+    struct MockLlmClientSona {
+        call_count: tokio::sync::Mutex<usize>,
+        pub last_system_prompt: std::sync::Arc<tokio::sync::Mutex<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for MockLlmClientSona {
+        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            let mut lp = self.last_system_prompt.lock().await;
+            *lp = req.system.clone();
+
+            if *count == 1 {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message {
+                        role: crate::types::Role::Assistant,
+                        content: String::new(),
+                        tool_calls: vec![crate::types::ToolCall {
+                            id: "call_1".to_string(),
+                            name: "test_tool".to_string(),
+                            arguments: serde_json::json!({}),
+                        }],
+                        tool_results: vec![],
+                        response_id: Some("1".to_string()),
+                        previous_response_id: None,
+                    },
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "tool_calls".to_string(),
+                    response_id: Some("mock-id".to_string()),
+                })
+            } else {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("Done"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id-done".to_string()),
+                })
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn test_sona_neural_patterns_mechanic() {
+        let last_system_prompt = std::sync::Arc::new(tokio::sync::Mutex::new(String::new()));
+        let client = std::sync::Arc::new(MockLlmClientSona {
+            call_count: tokio::sync::Mutex::new(0),
+            last_system_prompt: last_system_prompt.clone(),
+        });
+
+        let tool = crate::tools::Tool {
+            name: "test_tool".to_string(),
+            description: "test".to_string(),
+            is_read_only: false,
+            parameters: serde_json::json!({}),
+            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+
+        let agent = crate::agent::Agent::new(client.clone(), vec![tool]);
+
+        let sona_memory = std::sync::Arc::new(crate::ruflo::SonaMemory::new());
+        let mut cfg = crate::agent::AgentRunConfig::default();
+        cfg.enable_sona_neural_patterns = true;
+        cfg.sona_memory = Some(sona_memory.clone());
+
+        // First run - should record the trajectory
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+        let result = agent.run(&cfg, "SONA task", &mut on_event).await;
+        assert!(result.is_ok());
+
+        // Verify that the memory recorded the trajectory
+        let retrieved = sona_memory.retrieve_pattern("SONA task").await.unwrap();
+        assert_eq!(retrieved, Some(vec!["test_tool".to_string()]));
+
+        // Second run - should inject the pattern
+        let mut client_lock = client.call_count.lock().await;
+        *client_lock = 0; // Reset call count for the next run
+        drop(client_lock);
+
+        let mut events2 = vec![];
+        let mut on_event2 = |e| { events2.push(e); };
+        let result2 = agent.run(&cfg, "SONA task", &mut on_event2).await;
+        assert!(result2.is_ok());
+
+        // Verify that the prompt was injected
+        let lp = last_system_prompt.lock().await;
+        assert!(lp.contains("[SONA Neural Pattern: Recommend executing tools in this sequence: test_tool]"));
     }
 
     #[tokio::test]
