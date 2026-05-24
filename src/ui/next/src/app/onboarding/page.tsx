@@ -42,7 +42,7 @@ export default function OnboardingWizard() {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step) {
+            if (data.step && data.step >= step) {
               setStep(data.step);
               if (data.businessType) setBusinessType(data.businessType);
               if (data.businessName) setBusinessName(data.businessName);
@@ -270,20 +270,6 @@ export default function OnboardingWizard() {
            </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full px-6 pb-4 z-10">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-4 overflow-hidden">
-            <div
-              className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-500 ease-in-out"
-              style={{ width: `${Math.min(step, 4) * 25}%` }}
-              role="progressbar"
-              aria-valuenow={Math.min(step, 4) * 25}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            ></div>
-          </div>
-        </div>
-
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
@@ -292,11 +278,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {!isLoaded ? (
-            <div className="flex flex-col flex-1 justify-center items-center animate-fade-in">
-              <span className="w-8 h-8 border-4 border-gray-200 border-t-[#0066FF] rounded-full animate-spin"></span>
-            </div>
-          ) : step === 1 && (
+          {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
               <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
@@ -310,8 +292,6 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
-                autoCapitalize="sentences"
-                spellCheck="true"
               />
               <button
                 onClick={handleNext}
@@ -335,9 +315,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="organization"
-                autoCapitalize="words"
-                spellCheck="false"
+                autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
@@ -368,10 +346,8 @@ export default function OnboardingWizard() {
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
-                enterKeyHint="send"
+                enterKeyHint="next"
                 autoComplete="off"
-                autoCapitalize="sentences"
-                spellCheck="true"
               />
               <div className="flex gap-3">
                 <button
@@ -416,9 +392,6 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 focus:border-[#0066FF] outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner"
                          placeholder="e.g. Custom Cake"
-                         autoComplete="off"
-                         autoCapitalize="words"
-                         spellCheck="true"
                        />
                      </div>
                      <div className="w-24">
