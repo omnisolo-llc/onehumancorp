@@ -22,7 +22,7 @@ const swaggerSpec = {
     "/api/orgs/register": {
       post: {
         summary: "Register an Organization",
-        description: "Registers a new tenant organization in the multi-tenant OHC environment.",
+        description: "Registers a new tenant organization in the OneHumanCorp platform.",
         tags: ["Tenants"],
         requestBody: {
           required: true,
@@ -61,7 +61,7 @@ const swaggerSpec = {
     "/api/agents/task": {
       post: {
         summary: "Dispatch a task",
-        description: "Dispatches a new task to the AI Swarm Orchestrator.",
+        description: "Creates a new task for your AI team.",
         tags: ["Agents"],
         requestBody: {
           required: true,
