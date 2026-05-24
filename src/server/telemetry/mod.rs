@@ -415,6 +415,8 @@ pub fn is_sensitive_key(key: &str) -> bool {
     k.contains("address") ||
     k.contains("name") ||
     k.contains("pii") ||
+    k.contains("jwt") ||
+    k.contains("bearer") ||
 
     k.contains("session_id") ||
     k.contains("payload") ||
