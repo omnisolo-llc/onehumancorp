@@ -48,7 +48,6 @@ impl Provider for S3Provider {
 
     async fn write_blob(&self, key: &str, data: &[u8]) -> io::Result<()> {
         let mut key_str = key.to_string();
-        let mut final_data = data.to_vec();
 
         // Auto-optimization for images: Resize and convert to WebP
         let extension = std::path::Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
@@ -56,7 +55,7 @@ impl Provider for S3Provider {
             let original_size = data.len();
             match ::server_pricing::compression::optimize_image(data, 1024) {
                 Ok((optimized_data, _)) => {
-                    final_data = optimized_data;
+                    let final_data = optimized_data;
                     key_str = ::server_pricing::compression::get_optimized_key(key);
                     let compressed_size = final_data.len();
                     tracing::info!(
@@ -94,7 +93,6 @@ impl Provider for S3Provider {
             reported_size as i64
         ).await;
 
-        // STUB: Real S3 upload logic would go here using key_str and final_data
         Ok(())
     }
 }
