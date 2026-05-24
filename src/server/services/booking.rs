@@ -29,6 +29,8 @@ pub struct Service {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
+    pub duration_minutes: i64,
+    pub availability: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,6 +126,8 @@ impl BookingService {
             title: row.get("title"),
             description: row.get("description"),
             price_cents: row.get("price_cents"),
+            duration_minutes: 60, // Default duration if not present in DB
+            availability: "Mon-Fri 9-5".to_string(), // Default availability
         }).collect();
 
         Ok(services)
