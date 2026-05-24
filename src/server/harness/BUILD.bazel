@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_harness",
@@ -13,13 +13,8 @@ rust_library(
         "sandbox/permissions.rs",
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
-        "sandbox/harness.rs",
-        "sandbox/proxy.rs",
-    ] + select({
-        "@platforms//os:linux": ["sandbox/linux_sandbox.rs"],
-        "@platforms//os:macos": ["sandbox/macos_sandbox.rs"],
-        "//conditions:default": [],
-    }),
+        "sandbox/macos_sandbox.rs",
+    ],
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
@@ -40,6 +35,8 @@ rust_library(
         "@crates//:async-trait",
     ],
 )
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
 
 rust_test(
     name = "server_harness_test",
