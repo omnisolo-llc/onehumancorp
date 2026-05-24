@@ -180,10 +180,30 @@ impl TaskManager {
         }
     }
 
+    pub fn request_approval(&self, task_id: &str, agent_id: &str, proposed_content: String, risk: ActionRisk) -> Result<(), String> {
+        let mut tasks = self.tasks.write().unwrap();
+        if let Some(task) = tasks.get_mut(task_id) {
+            if task.assigned_agent_id.as_deref() != Some(agent_id) {
+                return Err("task not assigned to this agent".to_string());
+            }
+            task.status = "PENDING_APPROVAL".to_string();
+            task.approval_status = Some("PENDING".to_string());
+            task.proposed_content = Some(proposed_content);
+            task.action_risk = Some(risk);
+            task.updated_at = Utc::now();
+            Ok(())
+        } else {
+            Err("task not found".to_string())
+        }
+    }
+
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
-            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
+            let is_claimable = (task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING"))
+                || task.status == "APPROVED";
+
+            if is_claimable {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
@@ -273,9 +293,9 @@ impl TaskManager {
                 let mut task_clone = task.clone();
                 task_clone.approval_status = Some(if is_approved { "APPROVED".to_string() } else { "REJECTED".to_string() });
                 if is_approved {
-                    task_clone.status = "IN_PROGRESS".to_string();
+                    task_clone.status = "APPROVED".to_string();
                 } else {
-                    task_clone.status = "FAILED".to_string();
+                    task_clone.status = "REJECTED".to_string();
 
                     let mut payload_map: serde_json::Value = if task_clone.payload.is_empty() {
                         serde_json::json!({})
@@ -358,7 +378,10 @@ impl TaskManager {
         let mut claimed_tasks = Vec::new();
         
         for task in tasks.values_mut() {
-            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
+            let is_claimable = (task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING"))
+                || task.status == "APPROVED";
+
+            if is_claimable {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id.to_string());
                 task.updated_at = Utc::now();
@@ -488,7 +511,7 @@ mod tests {
 
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.approval_status, Some("APPROVED".to_string()));
-        assert_eq!(fetched.status, "IN_PROGRESS");
+        assert_eq!(fetched.status, "APPROVED");
     }
 
     #[tokio::test]
@@ -502,9 +525,38 @@ mod tests {
 
         let fetched = tm.get_task(&task.id).unwrap();
         assert_eq!(fetched.approval_status, Some("REJECTED".to_string()));
-        assert_eq!(fetched.status, "FAILED");
+        assert_eq!(fetched.status, "REJECTED");
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["error"], "Task was rejected by user");
+    }
+
+    #[test]
+    fn test_request_approval() {
+        let tm = TaskManager::new();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
+
+        tm.request_approval(&task.id, "agent1", "proposed".to_string(), ActionRisk::High).unwrap();
+
+        let fetched = tm.get_task(&task.id).unwrap();
+        assert_eq!(fetched.status, "PENDING_APPROVAL");
+        assert_eq!(fetched.approval_status, Some("PENDING".to_string()));
+        assert_eq!(fetched.proposed_content, Some("proposed".to_string()));
+        assert_eq!(fetched.action_risk, Some(ActionRisk::High));
+    }
+
+    #[tokio::test]
+    async fn test_claim_approved_task() {
+        let tm = TaskManager::new();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        tm.claim_task(&task.id, "agent1".to_string()).unwrap();
+        tm.request_approval(&task.id, "agent1", "proposed".to_string(), ActionRisk::High).unwrap();
+
+        tm.approve_task(&task.id, true, "org1").await.unwrap();
+
+        let claimed = tm.claim_task(&task.id, "agent2".to_string()).unwrap();
+        assert!(claimed.is_some());
+        assert_eq!(claimed.unwrap().status, "IN_PROGRESS");
     }
     #[tokio::test]
     async fn test_approve_task_integration() {

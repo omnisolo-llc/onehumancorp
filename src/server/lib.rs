@@ -51,6 +51,8 @@ pub mod domain;
 pub use ::server_pricing as pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
+#[cfg(test)]
+pub mod approval_test;
 pub mod chaos;
 pub mod integrations;
 pub use ::server_utils as utils;
@@ -1136,9 +1138,9 @@ impl HubService for MyHubService {
             created_at_unix: task.created_at.timestamp(),
             updated_at_unix: task.updated_at.timestamp(),
             action_risk: match task.action_risk {
-                Some(crate::tasks::ActionRisk::Low) => 1,
-                Some(crate::tasks::ActionRisk::High) => 2,
-                _ => 0,
+                Some(crate::tasks::ActionRisk::Low) => ::server_ohc::orchestration::ActionRisk::Low as i32,
+                Some(crate::tasks::ActionRisk::High) => ::server_ohc::orchestration::ActionRisk::High as i32,
+                _ => ::server_ohc::orchestration::ActionRisk::Unspecified as i32,
             },
             approval_status: task.approval_status.unwrap_or_default(),
             proposed_content: task.proposed_content.unwrap_or_default(),
@@ -1170,9 +1172,9 @@ impl HubService for MyHubService {
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
                 action_risk: match task.action_risk {
-                    Some(crate::tasks::ActionRisk::Low) => 1,
-                    Some(crate::tasks::ActionRisk::High) => 2,
-                    _ => 0,
+                    Some(crate::tasks::ActionRisk::Low) => ::server_ohc::orchestration::ActionRisk::Low as i32,
+                    Some(crate::tasks::ActionRisk::High) => ::server_ohc::orchestration::ActionRisk::High as i32,
+                    _ => ::server_ohc::orchestration::ActionRisk::Unspecified as i32,
                 },
                 approval_status: task.approval_status.unwrap_or_default(),
                 proposed_content: task.proposed_content.unwrap_or_default(),
@@ -1196,6 +1198,17 @@ impl HubService for MyHubService {
             }
             "COMPLETED" => {
                 self.hub.task_manager().complete_task(&req.task_id, &req.agent_id, req.result)
+                    .map_err(|e| Status::internal(e))?;
+            }
+            "PENDING_APPROVAL" => {
+                let risk = if req.action_risk == ::server_ohc::orchestration::ActionRisk::Low as i32 {
+                    crate::tasks::ActionRisk::Low
+                } else if req.action_risk == ::server_ohc::orchestration::ActionRisk::High as i32 {
+                    crate::tasks::ActionRisk::High
+                } else {
+                    crate::tasks::ActionRisk::Unspecified
+                };
+                self.hub.task_manager().request_approval(&req.task_id, &req.agent_id, req.proposed_content, risk)
                     .map_err(|e| Status::internal(e))?;
             }
             _ => {
@@ -1250,9 +1263,9 @@ impl HubService for MyHubService {
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
                 action_risk: match task.action_risk {
-                    Some(crate::tasks::ActionRisk::Low) => 1,
-                    Some(crate::tasks::ActionRisk::High) => 2,
-                    _ => 0,
+                    Some(crate::tasks::ActionRisk::Low) => ::server_ohc::orchestration::ActionRisk::Low as i32,
+                    Some(crate::tasks::ActionRisk::High) => ::server_ohc::orchestration::ActionRisk::High as i32,
+                    _ => ::server_ohc::orchestration::ActionRisk::Unspecified as i32,
                 },
                 approval_status: task.approval_status.unwrap_or_default(),
                 proposed_content: task.proposed_content.unwrap_or_default(),

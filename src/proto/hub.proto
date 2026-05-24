@@ -162,6 +162,8 @@ message UpdateTaskStatusRequest {
   string status = 2;
   string agent_id = 3;
   string result = 4;
+  string proposed_content = 5;
+  ActionRisk action_risk = 6;
 }
 
 message UpdateTaskStatusResponse {
