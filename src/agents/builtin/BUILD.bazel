@@ -61,6 +61,7 @@ rust_library(
         "lib.rs",
         "marketplace.rs",
         "visual_workflow.rs",
+        "ruflo_swarm.rs",
         "local_provider.rs",
         "json_store.rs",
         "memory_store.rs",
