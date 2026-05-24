@@ -1108,7 +1108,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<SharedTask>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -1118,7 +1118,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(SharedTask {
+        Ok(Response::new(::server_ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -1142,7 +1142,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -1151,8 +1151,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(SharedTask {
+        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -1231,8 +1231,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
 
-        let mapped_tasks: Vec<SharedTask> = tasks.into_iter().map(|task| {
-            SharedTask {
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = tasks.into_iter().map(|task| {
+            ::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -4760,3 +4760,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     axum::response::Html(content)
 }
 pub mod crypto;
+// resolves #9690
