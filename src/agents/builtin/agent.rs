@@ -26,7 +26,7 @@ pub enum AgentEvent {
 }
 
 /// Configuration for a single agent run.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
@@ -6248,8 +6248,20 @@ async fn test_agent_observability_dispatch() {
     let mut cfg = AgentRunConfig::default();
     cfg.observers.push(observer as std::sync::Arc<dyn crate::observability::Observer>);
 
-    // Use MockLlmClient which simply returns a stop message.
-    let agent = Agent::new(std::sync::Arc::new(MockLlmClient), vec![]);
+    struct ObservabilityMockLlmClient;
+    #[async_trait::async_trait]
+    impl crate::llm::LlmClient for ObservabilityMockLlmClient {
+        async fn chat(&self, _req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(crate::types::ChatResponse {
+                message: crate::types::Message::assistant("Hello"),
+                usage: crate::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            })
+        }
+    }
+
+    let agent = Agent::new(std::sync::Arc::new(ObservabilityMockLlmClient), vec![]);
 
     let mut callback_events = Vec::new();
     let _ = agent.run(&cfg, "Test message", &mut |e| callback_events.push(e)).await;
