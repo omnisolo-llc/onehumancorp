@@ -79,6 +79,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub observers: Vec<Arc<dyn crate::observability::Observer>>,
 }
 
 impl Default for AgentRunConfig {
@@ -134,6 +135,7 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observers: vec![],
         }
     }
 }
@@ -1466,6 +1468,16 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Wrap the provided on_event to also dispatch to observers
+        let observers = cfg.observers.clone();
+        let mut dispatching_on_event = |event: AgentEvent| {
+            for observer in &observers {
+                observer.observe(&event);
+            }
+            on_event(event);
+        };
+        let on_event = &mut dispatching_on_event;
+
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -6204,4 +6216,45 @@ async fn test_stripe_retry_limit() {
     let lock = client.call_count.lock().await;
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
+}
+
+struct MockObserver {
+    events: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+}
+
+impl crate::observability::Observer for MockObserver {
+    fn observe(&self, event: &AgentEvent) {
+        let event_name = match event {
+            AgentEvent::RunStarted { .. } => "RunStarted",
+            AgentEvent::TextChunk { .. } => "TextChunk",
+            AgentEvent::ToolCall { .. } => "ToolCall",
+            AgentEvent::TaskComplete { .. } => "TaskComplete",
+            AgentEvent::TaskError { .. } => "TaskError",
+            AgentEvent::UserInterventionRequired { .. } => "UserInterventionRequired",
+            AgentEvent::IterationStarted { .. } => "IterationStarted",
+            AgentEvent::CheckpointSaved { .. } => "CheckpointSaved",
+            AgentEvent::Handoff { .. } => "Handoff",
+            AgentEvent::RewindOccurred { .. } => "RewindOccurred",
+        };
+        self.events.lock().unwrap().push(event_name.to_string());
+    }
+}
+
+#[tokio::test]
+async fn test_agent_observability_dispatch() {
+    let events = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let observer = std::sync::Arc::new(MockObserver { events: events.clone() });
+
+    let mut cfg = AgentRunConfig::default();
+    cfg.observers.push(observer as std::sync::Arc<dyn crate::observability::Observer>);
+
+    // Use MockLlmClient which simply returns a stop message.
+    let agent = Agent::new(std::sync::Arc::new(MockLlmClient), vec![]);
+
+    let mut callback_events = Vec::new();
+    let _ = agent.run(&cfg, "Test message", &mut |e| callback_events.push(e)).await;
+
+    let recorded_events = events.lock().unwrap();
+    assert!(!recorded_events.is_empty(), "Observer should have received events");
+    assert!(recorded_events.contains(&"RunStarted".to_string()));
 }

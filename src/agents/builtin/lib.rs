@@ -34,6 +34,7 @@ pub mod json_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
 pub mod ralph_loop;
+pub mod observability;
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;

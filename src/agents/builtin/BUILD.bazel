@@ -62,6 +62,7 @@ rust_library(
         "marketplace.rs",
         "visual_workflow.rs",
         "local_provider.rs",
+        "observability.rs",
         "json_store.rs",
         "memory_store.rs",
         "sqlite_memory.rs",
@@ -212,6 +213,7 @@ rust_binary(
         "pubsub",
         "registry",
         "local_provider",
+        "observability",
     ]
 ]
 
