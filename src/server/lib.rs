@@ -63,7 +63,6 @@ pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub mod builder;
 pub mod tools;
-
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -84,7 +83,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2020,7 +2018,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/v1/booking", api::booking::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
