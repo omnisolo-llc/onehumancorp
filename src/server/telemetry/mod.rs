@@ -183,7 +183,10 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
 
 pub fn record_sub_agent_queue_delay(delay: f64) {
     let histogram = get_sub_agent_queue_delay_histogram();
-    histogram.record(delay, &[]);
+    let deployment_mode = get_deployment_mode();
+    histogram.record(delay, &[
+        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+    ]);
 }
 
 pub fn record_task_claim_contention(mode: &str) {
