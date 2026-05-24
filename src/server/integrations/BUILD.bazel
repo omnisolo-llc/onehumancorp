@@ -19,6 +19,7 @@ filegroup(
         "//src/server/integrations/pubsub:srcs",
         "//src/server/integrations/task_scheduler:srcs",
         "//src/server/integrations/chromadb:srcs",
+        "//src/server/integrations/powersync:srcs",
         "//src/server/integrations/meta:srcs",
         "//src/server/integrations/google_calendar:srcs",
         "//src/server/integrations/cal_com:srcs",

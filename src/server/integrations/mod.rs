@@ -13,6 +13,7 @@ pub mod twilio;
 pub mod mcp_gateway;
 pub mod mercadopago;
 pub mod chromadb;
+pub mod powersync;
 pub mod meta;
 pub mod google_calendar;
 pub mod cal_com;

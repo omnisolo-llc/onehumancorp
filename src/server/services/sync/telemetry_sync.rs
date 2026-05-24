@@ -140,6 +140,7 @@ impl TelemetrySyncDaemon {
             .unwrap_or_else(|_| reqwest::Client::new());
 
         let res = client.post(format!("{}/api/telemetry/sync", self.cloud_url))
+            .header("X-OHC-Conflict-Resolution", "force-local")
             .json(&batch)
             .send()
             .await;
@@ -199,7 +200,13 @@ mod tests {
 
         // Start a dummy mock server to accept telemetry and return 200 OK
         let mock_server = axum::Router::new()
-            .route("/api/telemetry/sync", axum::routing::post(|| async { axum::http::StatusCode::OK }));
+            .route("/api/telemetry/sync", axum::routing::post(|headers: axum::http::HeaderMap| async move {
+                if headers.get("X-OHC-Conflict-Resolution").map(|v| v.to_str().unwrap_or("")) == Some("force-local") {
+                    axum::http::StatusCode::OK
+                } else {
+                    axum::http::StatusCode::BAD_REQUEST
+                }
+            }));
 
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
