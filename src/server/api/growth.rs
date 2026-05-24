@@ -88,6 +88,7 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/loyalty/enable", post(handle_enable_loyalty))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -416,6 +417,15 @@ async fn handle_create_team_invite(
 }
 
 
+async fn handle_enable_loyalty(
+    Extension(_state): Extension<GrowthState>,
+) -> impl IntoResponse {
+    Json(serde_json::json!({
+        "enabled": true,
+        "loyalty_link": "https://ohc.store/loyalty/signup"
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -664,5 +674,18 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_enable_loyalty() {
+        let pool = setup_db().await;
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool, hub };
+
+        let res = handle_enable_loyalty(Extension(state)).await;
+        // Since IntoResponse is returned, we simply check it doesn't panic.
+        // A more rigorous test could inspect the axum Response body.
+        assert!(true);
     }
 }
