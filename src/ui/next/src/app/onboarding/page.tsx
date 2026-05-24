@@ -24,13 +24,8 @@ export default function OnboardingWizard() {
 
   const isInitialMount = useRef(true);
 
-  const [isLoaded, setIsLoaded] = React.useState(false);
-
   // Load state from backend on initial mount
   useEffect(() => {
-    if (isLoaded) return;
-
-    // Zustand's persist middleware automatically loads the state from local storage before this.
     const loadState = async () => {
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
@@ -41,30 +36,24 @@ export default function OnboardingWizard() {
         if (res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
-            // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step && data.step >= step) {
-              setStep(data.step);
-              if (data.businessType) setBusinessType(data.businessType);
-              if (data.businessName) setBusinessName(data.businessName);
-              if (data.businessCategory) setBusinessCategory(data.businessCategory);
-              if (data.firstProductName) setFirstProductName(data.firstProductName);
-              if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
-              if (data.template) setTemplate(data.template);
-              if (data.domain) setDomain(data.domain);
-              if (data.intakeData) setIntakeData(data.intakeData);
-              if (data.startResult) setStartResult(data.startResult);
-            }
+            if (data.step) setStep(data.step);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessCategory) setBusinessCategory(data.businessCategory);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.template) setTemplate(data.template);
+            if (data.domain) setDomain(data.domain);
+            if (data.intakeData) setIntakeData(data.intakeData);
+            if (data.startResult) setStartResult(data.startResult);
           }
         }
       } catch (err) {
         console.error("Failed to load onboarding state", err);
-      } finally {
-        setIsLoaded(true);
       }
     };
-
     loadState();
-  }, [step, isLoaded, setStep, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
+  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
@@ -229,15 +218,14 @@ export default function OnboardingWizard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          background: rgba(255, 255, 255, 0.45);
+          backdrop-filter: blur(40px) saturate(250%);
+          border: 1px solid rgba(255, 255, 255, 0.5);
           box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
             background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
           }
@@ -270,20 +258,6 @@ export default function OnboardingWizard() {
            </div>
         </div>
 
-        {/* Progress Bar */}
-        <div className="w-full px-6 pb-4 z-10">
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-4 overflow-hidden">
-            <div
-              className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-500 ease-in-out"
-              style={{ width: `${Math.min(step, 4) * 25}%` }}
-              role="progressbar"
-              aria-valuenow={Math.min(step, 4) * 25}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            ></div>
-          </div>
-        </div>
-
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
@@ -306,8 +280,6 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
-                autoCapitalize="sentences"
-                spellCheck="true"
               />
               <button
                 onClick={handleNext}
@@ -331,9 +303,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="organization"
-                autoCapitalize="words"
-                spellCheck="false"
+                autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
@@ -364,10 +334,8 @@ export default function OnboardingWizard() {
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
-                enterKeyHint="send"
+                enterKeyHint="next"
                 autoComplete="off"
-                autoCapitalize="sentences"
-                spellCheck="true"
               />
               <div className="flex gap-3">
                 <button
@@ -412,9 +380,6 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 focus:border-[#0066FF] outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner"
                          placeholder="e.g. Custom Cake"
-                         autoComplete="off"
-                         autoCapitalize="words"
-                         spellCheck="true"
                        />
                      </div>
                      <div className="w-24">
