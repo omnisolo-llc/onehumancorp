@@ -29,6 +29,8 @@ pub struct Service {
     pub title: String,
     pub description: Option<String>,
     pub price_cents: i64,
+    pub duration_minutes: i64,
+    pub availability: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
