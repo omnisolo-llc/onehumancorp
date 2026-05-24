@@ -52,7 +52,27 @@ fn save_ai_provider(config: AiProviderConfig) -> Result<AiProviderView, String> 
     }
 
     let json = serde_json::to_string_pretty(&next).map_err(|err| err.to_string())?;
-    std::fs::write(path, format!("{json}\n")).map_err(|err| err.to_string())?;
+
+    #[cfg(unix)]
+    {
+        use std::fs::OpenOptions;
+        use std::os::unix::fs::OpenOptionsExt;
+        use std::io::Write;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .mode(0o600)
+            .open(&path)
+            .map_err(|err| err.to_string())?;
+        file.write_all(format!("{json}\n").as_bytes())
+            .map_err(|err| err.to_string())?;
+    }
+    #[cfg(not(unix))]
+    {
+        std::fs::write(&path, format!("{json}\n")).map_err(|err| err.to_string())?;
+    }
+
     Ok(to_provider_view(next))
 }
 
