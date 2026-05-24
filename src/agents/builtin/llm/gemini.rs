@@ -182,17 +182,9 @@ impl LlmClient for GeminiClient {
             None
         };
 
-        let clamped_max_tokens = if req.max_tokens == 0 {
-            2048
-        } else if req.max_tokens > 4096 {
-            4096
-        } else {
-            req.max_tokens
-        };
-
         let generation_config = Some(GeminiGenerationConfig {
             temperature: Some(req.temperature),
-            max_output_tokens: Some(clamped_max_tokens),
+            max_output_tokens: Some(req.max_tokens),
         });
 
         let payload = GeminiRequest {
