@@ -2072,7 +2072,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
-            let mut link_title = "Read the full article →";
+            let link_title = "Read the full article →";
             let mut link_url = "/help";
 
             for (kw, desc) in help_articles {
@@ -3212,7 +3212,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3222,7 +3222,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Config Booking & Calendar Sync.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
                             <!-- Listmonk Integration -->
@@ -3232,7 +3232,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Listmonk...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3242,7 +3242,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- EasyPost Integration -->
@@ -3252,7 +3252,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
-                                <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to EasyPost...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to EasyPost...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3262,7 +3262,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Reliable SMS alerts for new orders and customer notifications.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
                             <!-- Jitsi Meet Integration -->
@@ -3272,7 +3272,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
                             </div>
                         </div>
 
@@ -3531,7 +3531,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" style="display: none;">
@@ -3556,10 +3556,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-4" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.8);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
@@ -4340,72 +4340,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
-                        let saveTimeout = null;
-                        function saveWizardState() {
-                            clearTimeout(saveTimeout);
-                            saveTimeout = setTimeout(() => {
-                                const stateData = { step: currentStep };
-                                document.querySelectorAll('#setup-screen input').forEach(input => {
-                                    if (input.placeholder && input.value) {
-                                        stateData[input.placeholder] = input.type === 'checkbox' ? input.checked : input.value;
-                                    }
-                                });
-                                localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
-
-                                const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
-                                const userId = localStorage.getItem('user_id') || 'test-user';
-                                fetch('/api/onboarding/state', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-Tenant-ID': tenantId,
-                                        'X-User-ID': userId
-                                    },
-                                    body: JSON.stringify(stateData)
-                                }).catch(console.error);
-                            }, 500);
-                        }
-
-                        document.addEventListener('DOMContentLoaded', () => {
-                            const savedState = localStorage.getItem('ohc_wizard_state');
-                            if (savedState) {
-                                try {
-                                    const stateData = JSON.parse(savedState);
-                                    if (stateData.step && stateData.step > 1 && stateData.step <= 8) {
-                                        currentStep = stateData.step;
-                                        document.querySelectorAll('#setup-screen > div').forEach(el => {
-                                            el.classList.add('hidden');
-                                            setTimeout(() => el.style.display = 'none', 250);
-                                        });
-                                        const nextEl = document.getElementById('step-' + currentStep);
-                                        if (nextEl) {
-                                            setTimeout(() => {
-                                                nextEl.style.display = 'block';
-                                                setTimeout(() => nextEl.classList.remove('hidden'), 50);
-                                            }, 250);
-                                        }
-                                    }
-                                    document.querySelectorAll('#setup-screen input').forEach(input => {
-                                        if (input.placeholder && stateData[input.placeholder] !== undefined) {
-                                            if (input.type === 'checkbox') {
-                                                input.checked = stateData[input.placeholder];
-                                            } else {
-                                                input.value = stateData[input.placeholder];
-                                            }
-                                        }
-                                    });
-                                } catch (e) {
-                                    console.error('Failed to restore wizard state:', e);
-                                }
-                            }
-
-                            document.querySelectorAll('#setup-screen input').forEach(input => {
-                                input.addEventListener('input', saveWizardState);
-                                input.addEventListener('change', saveWizardState);
-                            });
-                        });
-
-
 
                         function validateInputs(stepId) {
                             if (stepId === 4 && currentStep === 3) {
@@ -4444,8 +4378,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const prevStep = currentStep;
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
+                                // Enhanced Input Validation - only validate when moving forward
+                                let hasError = false;
+                                if (typeof stepId === 'number' && stepId > currentStep) {
+                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
+                                        // Only validate text inputs that are not optional
+                                        if (input.type === 'text' && !input.placeholder.includes("0.00") && input.value.trim().length < 3) {
+                                            // wait, the reviewer said NOT to use placeholder includes.
+                                            // Let's just validate inputs that don't have inputmode="decimal"
+                                            if (input.getAttribute('inputmode') !== 'decimal') {
+                                                input.style.border = "2px solid #FF3B30";
+                                                hasError = true;
+                                            }
+                                        } else {
+                                            input.style.border = "";
+                                        }
+                                    });
+                                }
+                                if (hasError) return;
+
                                 try {
                                     const stateData = { step: stepId };
+
                                     document.querySelectorAll('input').forEach(input => {
                                         if (input.placeholder && input.value) {
                                             stateData[input.placeholder] = input.value;

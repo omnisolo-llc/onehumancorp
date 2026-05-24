@@ -1,8 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@rules_python//python:defs.bzl", "py_binary")
 
 exports_files([
-    "gen_dart_yaml.py",
     "msvc_lib_ar_wrapper.sh",
     "protoc-gen-es.js",
     "ts_proto_wrapper.js",
@@ -18,19 +16,6 @@ js_binary(
     name = "ts_proto_wrapper",
     data = ["//:node_modules/ts-proto"],
     entry_point = ":ts_proto_wrapper.js",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    visibility = ["//visibility:public"],
-)
-
-# Python script that generates .pbyaml.dart YAML helper extensions.
-py_binary(
-    name = "gen_dart_yaml",
-    srcs = ["gen_dart_yaml.py"],
-    main = "gen_dart_yaml.py",
-    python_version = "PY3",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

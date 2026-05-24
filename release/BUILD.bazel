@@ -122,8 +122,5 @@ filegroup(
             ":ohc_windows_archive",
         ],
         "//conditions:default": [],
-    }) + select({
-        ":linux_with_rpmbuild": [":ohc_rpm"],
-        "//conditions:default": [],
     }),
 )

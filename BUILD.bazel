@@ -21,7 +21,6 @@ filegroup(
 exports_files([
     "Cargo.lock",
     "Cargo.toml",
-    "pubspec.yaml",
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
