@@ -87,14 +87,14 @@ export function QRCode({ value }: { value: string }) {
 export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Hero") {
     return (
-      <div className="relative w-full overflow-hidden bg-white">
+      <div className="relative w-full overflow-hidden bg-white min-w-[375px]">
         <div
           className="absolute inset-0 bg-cover bg-center opacity-90"
           style={{ backgroundImage: `url(${props.image})` }}
         >
           <div className="absolute inset-0 bg-black bg-opacity-40" />
         </div>
-        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white  glassmorphism">
+        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 rounded-[16px] backdrop-blur-[30px] saturate-[210%] bg-white/20 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)]">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
           <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
         </div>
@@ -104,11 +104,11 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Catalog") {
     return (
-      <div className="p-6 bg-gray-50 font-inter">
-        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b pb-2">Our Services</h2>
-        <div className="space-y-4">
+      <div className="p-6 bg-gray-50 font-inter min-w-[375px]">
+        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b border-gray-200 pb-2">Our Services</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
-            <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+            <div key={i} className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] p-4 rounded-xl flex flex-col">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-gray-900">{item.name}</h3>
                 <span className="font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-md text-sm">{item.price}</span>
@@ -123,8 +123,8 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Booking") {
     return (
-      <div className="p-6 bg-white font-inter">
-        <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center">
+      <div className="p-6 bg-white font-inter min-w-[375px]">
+        <div className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] p-5 rounded-xl text-center">
           <h2 className="text-lg font-bold font-outfit text-blue-900 mb-2">{props.title}</h2>
           <p className="text-sm text-blue-700 mb-4">{props.availability}</p>
           <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform">
