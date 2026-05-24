@@ -42,7 +42,7 @@ export default function OnboardingWizard() {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step && data.step >= step) {
+            if (data.step) {
               setStep(data.step);
               if (data.businessType) setBusinessType(data.businessType);
               if (data.businessName) setBusinessName(data.businessName);
@@ -278,7 +278,11 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 1 && (
+          {!isLoaded ? (
+            <div className="flex flex-col flex-1 justify-center items-center animate-fade-in">
+              <span className="w-8 h-8 border-4 border-gray-200 border-t-[#0066FF] rounded-full animate-spin"></span>
+            </div>
+          ) : step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
               <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
