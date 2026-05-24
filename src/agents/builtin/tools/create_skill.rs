@@ -17,8 +17,8 @@ impl ToolExecutor for CreateSkillExecutor {
         let description = args["description"].as_str().unwrap_or("");
         let instruction = args["instruction"].as_str().unwrap_or("");
 
-        let _content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
-        let _tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.to_string()];
+        let content = format!("Skill: {}\nDescription: {}\nInstruction: {}", skill_name, description, instruction);
+        let tags = vec!["skill".to_string(), "autonomous".to_string(), skill_name.to_string()];
 
         if false {
 

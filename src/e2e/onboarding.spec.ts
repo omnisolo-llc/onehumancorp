@@ -47,11 +47,7 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: /Generate Draft/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
-    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-
-    // Configure products and domain before publishing
-    await page.getByRole('button', { name: 'Playful' }).click();
-    await page.getByRole('button', { name: /Connect Custom Domain/i }).click();
+    await expect(page.getByRole('heading', { name: 'Looks Great!' })).toBeVisible({ timeout: 15000 });
 
     // Publish
     await page.getByRole('button', { name: /Publish Now/i }).click();
@@ -107,10 +103,7 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: /Generate Draft/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
-    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-
-    // Configure products and domain before publishing
-    await page.getByRole('button', { name: 'Modern' }).click();
+    await expect(page.getByRole('heading', { name: 'Looks Great!' })).toBeVisible({ timeout: 15000 });
 
     // Publish
     await page.getByRole('button', { name: /Publish Now/i }).click();

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
+use chrono::Utc;
 use crate::db::get_pool;
 
 #[derive(Deserialize)]
@@ -78,9 +79,9 @@ async fn handle_webhook(
     let pool = get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
     };
-    if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
+    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
         return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
     }
     let _ = sqlx::query(

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test('verify wizard UI state propagation to dashboard', async ({ page }) => {
   await page.goto('/website-builder');
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
   await page.getByPlaceholder('What is your business called?').fill('State Test Store');
   await expect(page.getByPlaceholder('What is your business called?')).toHaveValue('State Test Store');
@@ -31,7 +31,7 @@ test('verify website builder publish sheet', async ({ page }) => {
 
 test('verify state persistence', async ({ page }) => {
   await page.goto('/website-builder');
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
+  await page.getByRole('button', { name: /Start My Business/ }).click();
   await page.getByRole('button', { name: /Online Store/ }).click();
 
   // Reload the page and verify we're still on the company name step

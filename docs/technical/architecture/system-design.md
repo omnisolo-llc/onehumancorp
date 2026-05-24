@@ -34,8 +34,8 @@ When the CEO defines a goal, the organisation works collaboratively. Agents ente
 ```mermaid
 graph TD
     subgraph "Thin Client Mode (UI-Only)"
-        Desktop[Tauri Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
-        Web[Static Web Client] -->|API/OAuth| BE
+        Desktop[Slint Desktop Client] -->|API/OAuth| BE[OHC Backend Server]
+        Web[Slint Web Client] -->|API/OAuth| BE
     end
     
     subgraph "Cloud-Native Mode (Multi-Tenant)"
@@ -74,7 +74,7 @@ graph TD
 - **Cloud-native shared service**: the Rust API tier runs in Kubernetes, scales horizontally, and relies on Postgres as the consistency boundary.
 - **Headless remote-service mode**: the backend runs with UI serving disabled so mobile and desktop clients use it as an API-only service.
 - **Desktop standalone mode**: the desktop shell manages a local backend lifecycle, local SQLite-backed state, and optional public integrations.
-- **Remote client mode**: the Tauri app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
+- **Remote client mode**: the Slint app behaves mainly as a UI, points at a configured backend URL, and authenticates against the remote deployment.
 
 ### 3.2 Hybrid Parity and Graceful Degradation
 - **Standalone Wrapper Spec**: The desktop wrapper must instantiate the Rust backend as a child process, utilizing SQLite instead of Postgres and relying on local process boundaries rather than strict multi-tenant container isolation.

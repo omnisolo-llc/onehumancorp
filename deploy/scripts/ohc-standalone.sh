@@ -56,7 +56,7 @@ echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 # Build optimized binaries instead of running through Bazelisk repeatedly
 echo -e "${DIM}  Compiling optimized binaries...${RESET}"
 # Optimize caching
-npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
+npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/app:app > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
@@ -81,7 +81,7 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
+./bazel-bin/src/app/app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 

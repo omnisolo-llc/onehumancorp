@@ -2,18 +2,18 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    "bio-input-tooltip": "Tell us what you sell and who your customers are. Keep it simple!",
-    "generate-btn-tooltip": "Click here to have our AI build your ready-to-launch store.",
-    "launch-btn-tooltip": "Make your store live on the internet so customers can visit.",
-    "team-activity-tooltip": "See exactly what your AI helpers are doing right now.",
-    "referral-tooltip": "Share this link with friends. You earn credits if they sign up!",
-    "swarm-online-tooltip": "Your AI helpers are working hard on your tasks right now.",
-    "department-card-tooltip": "Click here to see tasks that need your approval.",
-    "nav-dashboard-tooltip": "Check your sales, recent orders, and how your store is doing.",
-    "nav-agents-tooltip": "See your AI team, give them tasks, or hire new helpers.",
-    "nav-setup-tooltip": "Set up your business info, logo, and how you get paid.",
-    "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
-    "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
-    "changelog-nav-tooltip": "See the latest updates and new features we just added."
+    "bio-input-tooltip": "Describe what you sell, your target audience, and the vibe of your brand.",
+    "generate-btn-tooltip": "Our AI agents will analyze your description and build a ready-to-launch store for you.",
+    "launch-btn-tooltip": "Launch your storefront immediately to a live URL.",
+    "team-activity-tooltip": "Monitor the real-time actions and tasks being performed by your AI workforce.",
+    "referral-tooltip": "Share your unique link to earn credits when friends join OHC.",
+    "swarm-online-tooltip": "Your AI workforce is currently active and processing tasks in the background.",
+    "department-card-tooltip": "Click to view and manage pending approvals for this department.",
+    "nav-dashboard-tooltip": "View your store metrics, recent orders, and overall performance.",
+    "nav-agents-tooltip": "Manage your AI workforce, check their tasks, and hire new agents.",
+    "nav-setup-tooltip": "Configure your business details, branding, and payment settings.",
+    "credit-tooltip": "Earn credits to use on premium tools when you refer a friend.",
+    "help-btn-tooltip": "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.",
+    "changelog-nav-tooltip": "See what's new in the latest OneHumanCorp updates."
   });
 }

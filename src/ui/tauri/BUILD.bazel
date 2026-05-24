@@ -24,9 +24,7 @@ genrule(
     srcs = [
         "tauri.conf.json",
         "capabilities/default.json",
-        "next_out/404.html",
-        "next_out/builder.html",
-        "next_out/dashboard.html",
+        "next_out/index.html",
     ],
     outs = [
         "tauri_out/acl-manifests.json",
@@ -35,16 +33,14 @@ genrule(
         "tauri-build-context.rs",
         "tauri_config.json",
     ],
+    target_compatible_with = select({
+        ":tauri_enabled": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     cmd = """
 mkdir -p $(@D)/tauri_out $(@D)/context
 cp $(location capabilities/default.json) $(@D)/tauri_out/capabilities.json
-if [ -s "$(location next_out/dashboard.html)" ]; then
-  cp $(location next_out/dashboard.html) $(@D)/context/index.html
-elif [ -s "$(location next_out/builder.html)" ]; then
-  cp $(location next_out/builder.html) $(@D)/context/index.html
-else
-  cp $(location next_out/404.html) $(@D)/context/index.html
-fi
+cp $(location next_out/index.html) $(@D)/context/index.html
 cp $(location tauri.conf.json) $(@D)/tauri_config.json
 cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
 {
@@ -68,6 +64,7 @@ cat > $(@D)/tauri_out/acl-manifests.json << 'ACL_EOF'
 ACL_EOF
 cat > $(@D)/tauri-build-context.rs << 'CTX_EOF'
 use tauri::Context;
+use tauri::utils::acl::manifest::Manifest;
 use tauri::utils::config::Config;
 use std::collections::BTreeMap;
 use std::borrow::Cow;
@@ -101,7 +98,7 @@ pub fn tauri_context() -> Context<tauri::Wry> {
 
 struct TauriAssets;
 impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
-    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<'_, [u8]>> {
+    fn get(&self, key: &tauri::utils::assets::AssetKey) -> Option<Cow<[u8]>> {
         if key.as_ref() == "index.html" {
             Some(Cow::Owned(include_bytes!("context/index.html").to_vec()))
         } else {
@@ -119,19 +116,22 @@ impl<R: tauri::Runtime> tauri::Assets<R> for TauriAssets {
 }
 CTX_EOF
 """,
-    target_compatible_with = select({
-        ":tauri_enabled": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
 
 rust_library(
     name = "app_lib",
     srcs = ["src/lib.rs"],
+    edition = "2024",
     compile_data = [
         ":tauri_context",
     ],
-    edition = "2024",
+    deps = [
+        "@crates//:tauri",
+        "@crates//:tauri-plugin-shell",
+        "@crates//:reqwest",
+        "@crates//:serde",
+        "@crates//:serde_json",
+    ],
     rustc_env = {
         "TAURI_ENV_TARGET_TRIPLE": "x86_64-unknown-linux-gnu",
         "OUT_DIR": "bazel-out/k8-fastbuild/bin/src/ui/tauri",
@@ -144,27 +144,20 @@ rust_library(
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
-    deps = [
-        "@crates//:reqwest",
-        "@crates//:serde",
-        "@crates//:serde_json",
-        "@crates//:tauri",
-        "@crates//:tauri-plugin-shell",
-    ],
 )
 
 rust_binary(
     name = "app",
     srcs = ["src/main.rs"],
     edition = "2024",
+    deps = [
+        ":app_lib",
+    ],
     target_compatible_with = select({
         ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
-    deps = [
-        ":app_lib",
-    ],
 )
 
 TAURI_MOBILE_SRCS = glob([
@@ -181,11 +174,11 @@ TAURI_MOBILE_SRCS = glob([
 
 tauri_mobile_package(
     name = "tauri_android_apk",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.apk",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    out = "ohc-android-aarch64.apk",
     package_type = "apk",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -195,11 +188,11 @@ tauri_mobile_package(
 
 tauri_mobile_package(
     name = "tauri_android_aab",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-android-aarch64.aab",
     android_sdk = "@tauri_android_sdk//:sdk",
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
+    out = "ohc-android-aarch64.aab",
     package_type = "aab",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -209,10 +202,10 @@ tauri_mobile_package(
 
 tauri_mobile_package(
     name = "tauri_ios_ipa",
-    srcs = TAURI_MOBILE_SRCS,
-    out = "ohc-ios-aarch64.ipa",
     ios_export_method = "app-store-connect",
+    out = "ohc-ios-aarch64.ipa",
     package_type = "ipa",
+    srcs = TAURI_MOBILE_SRCS,
     target_compatible_with = select({
         "//:macos": [],
         "//conditions:default": ["@platforms//:incompatible"],

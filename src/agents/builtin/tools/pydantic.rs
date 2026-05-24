@@ -2,6 +2,7 @@ use ohc_builtin_agent_core::types::ToolError;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use super::ToolExecutor;
 
 /// SOTA Harness Pattern: Pydantic-first tool schema validation.
