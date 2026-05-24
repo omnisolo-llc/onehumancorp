@@ -2,7 +2,8 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
-  step: number;
+  step: number | string;
+  bio: string;
   businessType: string;
   businessName: string;
   businessCategory: string;
@@ -14,7 +15,8 @@ interface OnboardingState {
   error: string;
   intakeData: any;
   startResult: any;
-  setStep: (step: number) => void;
+  setStep: (step: number | string) => void;
+  setBio: (bio: string) => void;
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
   setBusinessCategory: (category: string) => void;
@@ -32,6 +34,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
+  bio: '',
   businessType: '',
   businessName: '',
   businessCategory: '',
@@ -44,6 +47,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   intakeData: null,
   startResult: null,
   setStep: (step) => set({ step }),
+  setBio: (bio) => set({ bio }),
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
   setBusinessCategory: (businessCategory) => set({ businessCategory }),

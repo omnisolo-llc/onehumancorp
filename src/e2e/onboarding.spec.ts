@@ -3,6 +3,45 @@ import { test, expect } from './fixtures';
 test.describe('Onboarding Wizard', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
+  test('Instant Build (AI) onboarding flow', async ({ page }) => {
+    // 0. Start from UI Login
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('ai_user@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
+
+    // Wait for Dashboard
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // 1. Acquisition & Onboarding start
+    await page.goto('/onboarding');
+
+    // Wait for the Smart Builder welcome screen (Step 1)
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+
+    // Click Instant Build (AI) button
+    await page.locator('button:has-text("Instant Build (AI) ⚡")').click();
+
+    // Verify AI step is shown
+    await expect(page.getByRole('heading', { name: "Describe your business in a sentence" })).toBeVisible();
+
+    // Fill in the bio
+    await page.getByPlaceholder("e.g. I run a local bakery called Maya's Cakes...").fill("I run a modern coffee shop called Bean AI serving organic espresso.");
+
+    // Click Generate Storefront
+    await page.getByRole('button', { name: 'Generate Storefront \u2192' }).click();
+
+    // Wait for generation to finish
+    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
+
+    // Publish
+    await page.getByRole('button', { name: /Publish Now/i }).click();
+
+    // 3. Activation
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+  });
+
   test('Maya (The Home Baker) onboarding flow', async ({ page }) => {
     // 0. Start from UI Login
     await page.goto('/login');

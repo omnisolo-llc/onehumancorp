@@ -9,6 +9,7 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
+    bio, setBio,
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
@@ -37,6 +38,7 @@ export default function OnboardingWizard() {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             if (data.step) setStep(data.step);
+            if (data.bio) setBio(data.bio);
             if (data.businessType) setBusinessType(data.businessType);
             if (data.businessName) setBusinessName(data.businessName);
             if (data.businessCategory) setBusinessCategory(data.businessCategory);
@@ -53,7 +55,7 @@ export default function OnboardingWizard() {
       }
     };
     loadState();
-  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
+  }, [setStep, setBio, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
@@ -71,6 +73,7 @@ export default function OnboardingWizard() {
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
           body: JSON.stringify({
             step,
+            bio,
             businessType,
             businessName,
             businessCategory,
@@ -89,7 +92,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 500); // Debounce sync
     return () => clearTimeout(timer);
-  }, [step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [step, bio, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -135,23 +138,38 @@ export default function OnboardingWizard() {
       }
     }
     setError("");
-    setStep(step + 1);
+    if (typeof step === 'number') {
+      setStep(step + 1);
+    }
   };
 
-  const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
-      return;
+  const handleIntakeSubmit = async (isInstantBuild: boolean = false) => {
+    if (!isInstantBuild) {
+      if (!businessCategory.trim()) {
+        setError("Please describe your niche.");
+        return;
+      }
+      if (businessCategory.trim().length < 5) {
+        setError("Niche description must be at least 5 characters.");
+        return;
+      }
+    } else {
+      if (!bio.trim()) {
+        setError("Please describe your business.");
+        return;
+      }
+      if (bio.trim().length < 10) {
+        setError("Business description must be at least 10 characters.");
+        return;
+      }
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = isInstantBuild
+      ? bio
+      : `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -217,30 +235,6 @@ export default function OnboardingWizard() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
-        .glass-container {
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(40px) saturate(250%);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        }
-        @media (prefers-color-scheme: dark) {
-          .glass-container {
-            background: rgba(22, 22, 26, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-          }
-          .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
-            color: #F5F5F7;
-          }
-          .glass-container p, .glass-container .text-gray-500 {
-            color: #A1A1A6;
-          }
-          .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.3);
-            color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.2);
-          }
-        }
         .animate-fade-in {
           animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -249,12 +243,12 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:bg-[#16161a]/70 dark:border-white/10">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
-           <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
+           <h1 className="text-xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7]">OHC Setup</h1>
+           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-[#0066FF] dark:text-[#0071E3] rounded-full">
+             Step {typeof step === 'number' ? Math.min(step, 4) : 'AI'} of 4
            </div>
         </div>
 
@@ -268,8 +262,8 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What do you do?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Tell us what you sell or the services you provide.</p>
               <input
                 type="text"
                 value={businessType}
@@ -281,19 +275,61 @@ export default function OnboardingWizard() {
                 enterKeyHint="next"
                 autoComplete="off"
               />
-              <button
-                onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleNext}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
+                >
+                  Next
+                </button>
+                <button
+                  onClick={() => setStep('ai')}
+                  className="px-4 py-4 rounded-[8px] font-bold bg-white/70 backdrop-blur-md text-[#0066FF] border border-white/50 hover:bg-white/90 transition-all text-sm whitespace-nowrap shadow-sm"
+                >
+                  Instant Build (AI) ⚡
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 'ai' && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Describe your business in a sentence</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Our AI will do the heavy lifting to generate your storefront.</p>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                placeholder="e.g. I run a local bakery called Maya's Cakes..."
+                className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm resize-none"
+                rows={4}
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(1)}
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={() => handleIntakeSubmit(true)}
+                  disabled={isLoading}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                >
+                  {isLoading ? (
+                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                  ) : (
+                    "Generate Storefront →"
+                  )}
+                </button>
+              </div>
             </div>
           )}
 
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What's the name of your business?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Don't worry, you can change this later.</p>
               <input
                 type="text"
                 value={businessName}
@@ -324,13 +360,13 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">What's your niche?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Products, services, or bookings.</p>
               <input
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(false); }}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
@@ -345,7 +381,7 @@ export default function OnboardingWizard() {
                   Back
                 </button>
                 <button
-                  onClick={handleIntakeSubmit}
+                  onClick={() => handleIntakeSubmit(false)}
                   disabled={isLoading}
                   className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
@@ -364,8 +400,8 @@ export default function OnboardingWizard() {
               <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
                 <span className="text-3xl text-[#0066FF]">✨</span>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center shrink-0">Ready to Launch!</h2>
-              <p className="text-gray-500 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2 text-center shrink-0">Ready to Launch!</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
@@ -465,8 +501,8 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h2>
-              <p className="text-gray-500 text-sm mb-8 px-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
 
