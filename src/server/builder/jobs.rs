@@ -35,10 +35,22 @@ async fn execute_publish_site_job(
     info!("Starting publish process for site {}", site_id);
 
     // 1. Fetch site and pages
-    let _pages = super::db::list_pages(pool, tenant_id, site_id).await?;
+    let pages = super::db::list_pages(pool, tenant_id, site_id).await?;
 
-    // 2. Mock Site Compilation & Edge Delivery
+    // 2. Site Compilation & Static Asset Generation
     info!("Compiling site {} to static PWA/SSR...", site_id);
+    for page in pages {
+        let blocks = super::db::list_blocks(pool, tenant_id, page.id).await?;
+        let mut blocks_html = String::new();
+        for block in blocks {
+            blocks_html.push_str(&super::templates::render_block(&block.block_type, &block.content));
+        }
+        let full_html = super::templates::render_page(&page.title, &blocks_html);
+
+        // In a real implementation, we would upload full_html to GCS/CDN.
+        // For now we log a snippet of the generated HTML.
+        info!("Generated HTML for page {}: {}...", page.path, &full_html[..100.min(full_html.len())]);
+    }
     info!("Deploying structure for site {}...", site_id);
 
     // 3. Mock SEO Metadata Generation (via Marketing AI Agent)

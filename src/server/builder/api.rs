@@ -371,8 +371,15 @@ async fn generate_storefront(
 
     let prompt = format!(
         r#"You are The AI Architect. Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
-First, extract entities from the user's business description (company_name, business_type, product_name, product_price, company_description).
-Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
+Focus on these scenarios:
+- BAKER: Custom orders, products, and testimonials.
+- HANDYMAN: Service descriptions, booking options, and contact info.
+- BOUTIQUE: Product catalog with variants and pricing.
+- FOOD CART: Menu items and instant order options.
+- TUTOR: Scheduling, lesson packages, and about me.
+
+First, extract entities from the user's business description (company_name, business_type, product/service list, target audience).
+Then, instantly generate a structural layout draft that optimizes for a 375px viewport. Use a curated "Vibe" (Professional, Friendly, Energetic, Minimalist).
 
 User Description: "{}"
 
@@ -386,7 +393,7 @@ The JSON must exactly match this structure:
       "blocks": [
         {{
           "block_type": "HeroBlock",
-          "content": {{ "headline": "...", "subtitle": "..." }},
+          "content": {{ "headline": "...", "subtitle": "...", "image": "..." }},
           "sort_order": 0
         }},
         {{
@@ -396,19 +403,31 @@ The JSON must exactly match this structure:
         }},
         {{
           "block_type": "ServiceBookingBlock",
-          "content": {{ "title": "...", "availability": "..." }},
+          "content": {{ "title": "...", "availability": "...", "pricing_info": "..." }},
           "sort_order": 2
+        }},
+        {{
+          "block_type": "TestimonialBlock",
+          "content": {{ "quotes": [{{ "text": "...", "author": "..." }}] }},
+          "sort_order": 3
+        }},
+        {{
+          "block_type": "ContactFormBlock",
+          "content": {{ "title": "...", "fields": ["name", "email", "message"] }},
+          "sort_order": 4
         }}
       ],
       "seo_metadata": {{
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
-        "name": "..."
+        "name": "...",
+        "description": "...",
+        "image": "..."
       }}
     }}
   ]
 }}
-Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
+Only return the JSON. No markdown formatting, no explanations. Select the most relevant blocks for the business type. Ensure copy is high-conversion and reflects the business vibe."#,
         payload.description
     );
 

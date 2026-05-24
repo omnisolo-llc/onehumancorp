@@ -6,7 +6,7 @@ filegroup(
         "db.rs",
         "jobs.rs",
         "mod.rs",
-
+        "templates.rs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

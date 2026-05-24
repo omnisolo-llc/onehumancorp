@@ -611,21 +611,40 @@ export default function BuilderPage() {
           onClose={() => setIsActionSheetOpen(false)}
           title={`Edit ${blocks[selectedBlockIndex || 0]?.type} Block`}
         >
-          <div className="space-y-4 font-inter">
+          <div className="space-y-4 font-inter max-h-[60vh] overflow-y-auto pr-2">
             {blocks[selectedBlockIndex || 0]?.type === 'Hero' && (
-              <>
-                <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
-                <input
-                  type="text"
-                  className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  value={blocks[selectedBlockIndex || 0]?.props.headline}
-                  onChange={(e) => {
-                    const newBlocks = [...blocks];
-                    newBlocks[selectedBlockIndex || 0].props.headline = e.target.value;
-                    setBlocks(newBlocks);
-                  }}
-                />
-                <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
+                  <input
+                    type="text"
+                    className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-800"
+                    value={blocks[selectedBlockIndex || 0]?.props.headline}
+                    onChange={(e) => {
+                      const newBlocks = [...blocks];
+                      newBlocks[selectedBlockIndex || 0].props.headline = e.target.value;
+                      setBlocks(newBlocks);
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Subtitle</label>
+                  <textarea
+                    className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-800 resize-none"
+                    rows={3}
+                    value={blocks[selectedBlockIndex || 0]?.props.subtitle || blocks[selectedBlockIndex || 0]?.props.copy}
+                    onChange={(e) => {
+                      const newBlocks = [...blocks];
+                      if (newBlocks[selectedBlockIndex || 0].props.subtitle !== undefined) {
+                        newBlocks[selectedBlockIndex || 0].props.subtitle = e.target.value;
+                      } else {
+                        newBlocks[selectedBlockIndex || 0].props.copy = e.target.value;
+                      }
+                      setBlocks(newBlocks);
+                    }}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <button className="p-4 glassmorphism text-sm font-bold flex flex-col items-center gap-2">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
@@ -635,14 +654,110 @@ export default function BuilderPage() {
                     <span>AI Generate</span>
                   </button>
                 </div>
-              </>
+              </div>
             )}
-            {blocks[selectedBlockIndex || 0]?.type !== 'Hero' && (
-              <p className="text-sm text-gray-500 italic">Context-aware editing for {blocks[selectedBlockIndex || 0]?.type} coming soon...</p>
+            {blocks[selectedBlockIndex || 0]?.type === 'Catalog' && (
+              <div className="space-y-4">
+                {blocks[selectedBlockIndex || 0]?.props.items?.map((item: any, idx: number) => (
+                  <div key={idx} className="p-4 bg-gray-50 rounded-2xl space-y-3">
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 p-2 bg-white rounded-lg border-none text-sm font-bold"
+                        value={item.name}
+                        onChange={(e) => {
+                          const newBlocks = [...blocks];
+                          newBlocks[selectedBlockIndex || 0].props.items[idx].name = e.target.value;
+                          setBlocks(newBlocks);
+                        }}
+                      />
+                      <input
+                        className="w-20 p-2 bg-white rounded-lg border-none text-sm font-black text-blue-600"
+                        value={item.price}
+                        onChange={(e) => {
+                          const newBlocks = [...blocks];
+                          newBlocks[selectedBlockIndex || 0].props.items[idx].price = e.target.value;
+                          setBlocks(newBlocks);
+                        }}
+                      />
+                    </div>
+                    <textarea
+                      className="w-full p-2 bg-white rounded-lg border-none text-xs text-gray-500 resize-none"
+                      rows={2}
+                      value={item.description}
+                      onChange={(e) => {
+                        const newBlocks = [...blocks];
+                        newBlocks[selectedBlockIndex || 0].props.items[idx].description = e.target.value;
+                        setBlocks(newBlocks);
+                      }}
+                    />
+                  </div>
+                ))}
+                <button className="w-full p-3 border-2 border-dashed border-gray-200 rounded-xl text-xs font-bold text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-all">
+                  + Add Item
+                </button>
+              </div>
+            )}
+            {blocks[selectedBlockIndex || 0]?.type === 'Booking' && (
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Service Title</label>
+                  <input
+                    className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-800"
+                    value={blocks[selectedBlockIndex || 0]?.props.title}
+                    onChange={(e) => {
+                      const newBlocks = [...blocks];
+                      newBlocks[selectedBlockIndex || 0].props.title = e.target.value;
+                      setBlocks(newBlocks);
+                    }}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-400 uppercase">Availability Info</label>
+                  <input
+                    className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all text-gray-800"
+                    value={blocks[selectedBlockIndex || 0]?.props.availability}
+                    onChange={(e) => {
+                      const newBlocks = [...blocks];
+                      newBlocks[selectedBlockIndex || 0].props.availability = e.target.value;
+                      setBlocks(newBlocks);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+            {blocks[selectedBlockIndex || 0]?.type === 'Testimonials' && (
+              <div className="space-y-4">
+                {blocks[selectedBlockIndex || 0]?.props.quotes?.map((q: any, idx: number) => (
+                  <div key={idx} className="p-4 bg-gray-50 rounded-2xl space-y-2">
+                    <textarea
+                      className="w-full p-2 bg-white rounded-lg border-none text-xs italic text-gray-600 resize-none"
+                      rows={2}
+                      value={q.text}
+                      onChange={(e) => {
+                        const newBlocks = [...blocks];
+                        newBlocks[selectedBlockIndex || 0].props.quotes[idx].text = e.target.value;
+                        setBlocks(newBlocks);
+                      }}
+                    />
+                    <input
+                      className="w-full p-2 bg-white rounded-lg border-none text-[10px] font-bold text-gray-400 uppercase tracking-widest"
+                      value={q.author}
+                      onChange={(e) => {
+                        const newBlocks = [...blocks];
+                        newBlocks[selectedBlockIndex || 0].props.quotes[idx].author = e.target.value;
+                        setBlocks(newBlocks);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            {!['Hero', 'Catalog', 'Booking', 'Testimonials'].includes(blocks[selectedBlockIndex || 0]?.type) && (
+              <p className="text-sm text-gray-500 italic">Advanced editing for {blocks[selectedBlockIndex || 0]?.type} is handled by the AI Agent.</p>
             )}
             <button
               onClick={() => setIsActionSheetOpen(false)}
-              className="w-full bg-gray-900 text-white p-4 rounded-xl font-bold mt-4"
+              className="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold mt-4 shadow-lg shadow-blue-200 active:scale-[0.98] transition-all"
             >
               Save Changes
             </button>

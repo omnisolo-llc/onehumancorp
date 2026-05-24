@@ -89,14 +89,16 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="relative w-full overflow-hidden bg-white">
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-90"
-          style={{ backgroundImage: `url(${props.image})` }}
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+          style={{ backgroundImage: `url(${props.image || 'https://images.unsplash.com/photo-1497366216548-37526070297c'})` }}
         >
-          <div className="absolute inset-0 bg-black bg-opacity-40" />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
-        <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white  glassmorphism">
-          <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
-          <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
+        <div className="relative z-10 p-8 flex flex-col items-center justify-center min-h-[400px] text-center text-white">
+          <div className="glassmorphism p-6 rounded-2xl animate-fade-in">
+            <h1 className="text-4xl font-black font-outfit mb-3 tracking-tight leading-tight">{props.headline}</h1>
+            <p className="text-base font-inter opacity-90 max-w-[280px] mx-auto">{props.subtitle || props.copy}</p>
+          </div>
         </div>
       </div>
     );
@@ -104,14 +106,14 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Catalog") {
     return (
-      <div className="p-6 bg-gray-50 font-inter">
-        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b pb-2">Our Services</h2>
+      <div className="p-6 bg-white font-inter">
+        <h2 className="text-2xl font-black font-outfit mb-6 text-gray-900 tracking-tight">Our Collection</h2>
         <div className="space-y-4">
-          {props.items.map((item: any, i: number) => (
-            <div key={i} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                <span className="font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-md text-sm">{item.price}</span>
+          {props.items?.map((item: any, i: number) => (
+            <div key={i} className="group bg-gray-50 p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col transition-all hover:shadow-md hover:border-blue-100">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">{item.name}</h3>
+                <span className="font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-sm">{item.price}</span>
               </div>
               <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
             </div>
@@ -123,12 +125,16 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Booking") {
     return (
-      <div className="p-6 bg-white font-inter">
-        <div className="bg-blue-50 border border-blue-100 p-5 rounded-xl text-center">
-          <h2 className="text-lg font-bold font-outfit text-blue-900 mb-2">{props.title}</h2>
-          <p className="text-sm text-blue-700 mb-4">{props.availability}</p>
-          <button className="w-full bg-blue-600 text-white font-semibold py-3 rounded-lg shadow-sm active:scale-[0.98] transition-transform">
-            Select Time
+      <div className="p-6 bg-gray-50 font-inter">
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 text-center">
+          <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">
+            📅
+          </div>
+          <h2 className="text-xl font-black font-outfit text-gray-900 mb-2">{props.title}</h2>
+          <p className="text-sm text-gray-500 mb-6">{props.availability}</p>
+          {props.pricing_info && <p className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-6">{props.pricing_info}</p>}
+          <button className="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 active:scale-[0.98] transition-all hover:bg-blue-700">
+            Schedule a Session
           </button>
         </div>
       </div>
@@ -167,11 +173,46 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
 
   if (type === "Contact") {
     return (
-      <div className="p-6 bg-gray-900 text-white font-inter text-center">
-        <h2 className="text-lg font-bold font-outfit mb-4">Get in Touch</h2>
-        <div className="space-y-2 text-sm text-gray-300">
-          <p>Email: <a href={`mailto:${props.email}`} className="text-blue-400">{props.email}</a></p>
-          <p>Phone: <a href={`tel:${props.phone}`} className="text-blue-400">{props.phone}</a></p>
+      <div className="p-8 bg-gray-900 text-white font-inter">
+        <h2 className="text-2xl font-black font-outfit mb-8 text-center tracking-tight">Get in Touch</h2>
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Your Name</label>
+            <input type="text" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="Jane Doe" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Email Address</label>
+            <input type="email" className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all" placeholder="jane@example.com" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest ml-1">Message</label>
+            <textarea className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" rows={4} placeholder="How can we help?"></textarea>
+          </div>
+          <button className="w-full bg-white text-gray-900 font-bold py-4 rounded-2xl shadow-xl active:scale-[0.98] transition-all mt-4">
+            Send Message
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "Testimonials") {
+    return (
+      <div className="p-6 bg-white font-inter">
+        <h2 className="text-2xl font-black font-outfit mb-6 text-gray-900 tracking-tight text-center">Loved by Clients</h2>
+        <div className="space-y-4">
+          {props.quotes?.map((q: any, i: number) => (
+            <div key={i} className="p-6 bg-blue-50/50 rounded-3xl border border-blue-100/50 relative">
+              <span className="absolute top-4 left-4 text-4xl text-blue-200 font-serif leading-none">“</span>
+              <p className="text-sm text-blue-900 leading-relaxed mb-4 relative z-10 italic">{q.text}</p>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700">
+                  {q.author?.charAt(0)}
+                </div>
+                <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">{q.author}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
