@@ -35,18 +35,10 @@ struct OllamaMessage {
 }
 
 #[derive(Serialize)]
-struct OllamaOptions {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    num_predict: Option<i32>,
-}
-
-#[derive(Serialize)]
 struct OllamaRequest {
     model: String,
     messages: Vec<OllamaMessage>,
     stream: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    options: Option<OllamaOptions>,
 }
 
 #[derive(Deserialize)]
@@ -95,9 +87,6 @@ impl LlmClient for OllamaClient {
             model: req.model.clone(),
             messages,
             stream: false,
-            options: Some(OllamaOptions {
-                num_predict: Some(req.max_tokens),
-            }),
         };
 
         let resp = self

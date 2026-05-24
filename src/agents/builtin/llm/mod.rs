@@ -45,13 +45,6 @@ pub fn minify_chat_request(mut req: ChatRequest) -> ChatRequest {
             tr.content = minify_json_string(&tr.content);
         }
     }
-
-    if req.max_tokens <= 0 {
-        req.max_tokens = 2048;
-    } else if req.max_tokens > 4096 {
-        req.max_tokens = 4096;
-    }
-
     req
 }
 
@@ -143,33 +136,6 @@ mod tests {
             "key": "value",
         }"#;
         assert_eq!(minify_json_string(invalid_json), invalid_json);
-    }
-
-    #[test]
-    fn test_clamp_max_tokens() {
-        let mut req = ChatRequest {
-            model: "test".to_string(),
-            system: "".to_string(),
-            messages: vec![],
-            tools: vec![],
-            max_tokens: 0,
-            temperature: 0.0,
-        };
-
-        let req1 = minify_chat_request(req.clone());
-        assert_eq!(req1.max_tokens, 2048);
-
-        req.max_tokens = 5000;
-        let req2 = minify_chat_request(req.clone());
-        assert_eq!(req2.max_tokens, 4096);
-
-        req.max_tokens = 3000;
-        let req3 = minify_chat_request(req.clone());
-        assert_eq!(req3.max_tokens, 3000);
-
-        req.max_tokens = -50;
-        let req4 = minify_chat_request(req.clone());
-        assert_eq!(req4.max_tokens, 2048);
     }
 
     #[test]
