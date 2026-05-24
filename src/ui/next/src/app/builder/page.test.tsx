@@ -38,7 +38,7 @@ describe('BuilderPage V2', () => {
 
     // Onboarding
     fireEvent.click(screen.getByText('Selling Products'));
-    await waitFor(() => expect(screen.queryByText('What are you building today?')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
 
     // Step 1
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Maya Cakes' } });
@@ -78,7 +78,7 @@ describe('BuilderPage V2', () => {
      render(<BuilderPage />);
      // Fast forward to selection (would be better with state injection if possible, but we'll follow the flow)
      fireEvent.click(screen.getByText('Showcasing Work'));
-     await waitFor(() => expect(screen.queryByText('What are you building today?')).not.toBeInTheDocument());
+     await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
 
      fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Test' } });
      fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'Test' } });
@@ -105,7 +105,7 @@ describe('BuilderPage V2', () => {
     // We'll skip the full flow for brevity if we can, but let's just finish it.
     render(<BuilderPage />);
     fireEvent.click(screen.getByText('Offering Services'));
-    await waitFor(() => expect(screen.queryByText('What are you building today?')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
 
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'T' } });
     fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'T' } });

@@ -19,6 +19,7 @@ export default function Dashboard() {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
+  const [productAdded, setProductAdded] = useState<boolean>(false);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
@@ -218,6 +219,9 @@ export default function Dashboard() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
          <div className="flex items-center gap-3">
+             <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
+               Review Campaigns ⭐️
+             </Link>
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
@@ -503,6 +507,10 @@ export default function Dashboard() {
                             setShowPaywallModal(true);
                         } else {
                             setProductCount(prev => prev + 1);
+                            if (!productAdded) {
+                                setProductAdded(true);
+                                setTrialDaysLeft(prev => prev + 7);
+                            }
                         }
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
@@ -573,6 +581,24 @@ export default function Dashboard() {
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${reviewLeft ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                             >
                                 {reviewLeft ? 'Done' : 'Review'}
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">Add First Product</h4>
+                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                </div>
+                            </div>
+                            <button
+                                disabled={true}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${productAdded ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                            >
+                                {productAdded ? 'Done' : 'Pending'}
                             </button>
                         </div>
                     </div>
@@ -886,7 +912,7 @@ export default function Dashboard() {
                 }}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
               >
-                Upgrade Now - $29/mo
+                Upgrade Now - $9/mo
               </button>
 
               <button
