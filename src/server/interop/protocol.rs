@@ -7,7 +7,7 @@ use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
 
 pub mod proto {
-    pub use interop_proto::ohc::interop::*;
+    pub use ::server_ohc::interop::*;
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
@@ -58,7 +58,7 @@ impl InteropProtocol {
             return Ok(());
         }
 
-        let handoff_msg = proto::StateHandoff {
+        let handoff_msg = ::server_ohc::interop::StateHandoff {
             source_mode: 0,
             target_mode: 0,
             mission_id: mission_id.to_string(),
@@ -112,11 +112,11 @@ impl InteropProtocol {
     }
 
     /// Listens for state handoff updates
-    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(proto::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_state_handoff(&self, handler: Box<dyn Fn(::server_ohc::interop::StateHandoff) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::StateHandoff::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -133,8 +133,8 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::HealthPing::decode(&msg.payload[..]) {
-                    let ack = proto::HealthAck {
+                if let Ok(decoded) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
+                    let ack = ::server_ohc::interop::HealthAck {
                         source_node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
                         target_node_id: decoded.source_node_id.clone(),
@@ -183,7 +183,7 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:health_ack:{}", self.node_id), handler).await?;
 
-        let ping = proto::HealthPing {
+        let ping = ::server_ohc::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: self.node_id.clone(),
@@ -229,7 +229,7 @@ impl InteropProtocol {
 
         let cancel = self.bus.subscribe(format!("system:job_ack:{}", job_id), handler).await?;
 
-        let dispatch = proto::JobDispatch {
+        let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             action_name: action_name.to_string(),
@@ -285,10 +285,10 @@ impl InteropProtocol {
         let handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_dispatch:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobDispatch::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_ohc::interop::JobDispatch::decode(&msg.payload[..]) {
                     // In a real implementation, we would process the job here or send it to a worker pool
                     // Here, we just acknowledge receipt
-                    let ack = proto::JobAck {
+                    let ack = ::server_ohc::interop::JobAck {
                         job_id: decoded.job_id.clone(),
                         node_id: node_id.clone(),
                         timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -325,7 +325,7 @@ impl InteropProtocol {
     pub async fn report_job_status(&self, job_id: &str, tenant_id: &str, status: &str, details: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
-        let update = proto::JobStatusUpdate {
+        let update = ::server_ohc::interop::JobStatusUpdate {
             job_id: job_id.to_string(),
             tenant_id: tenant_id.to_string(),
             status: status.to_string(),
@@ -360,11 +360,11 @@ impl InteropProtocol {
     }
 
     /// Listens for job status updates for a specific job
-    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(proto::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_job_status(&self, job_id: &str, handler: Box<dyn Fn(::server_ohc::interop::JobStatusUpdate) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:job_status:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::JobStatusUpdate::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_ohc::interop::JobStatusUpdate::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -374,7 +374,7 @@ impl InteropProtocol {
     }
 
     /// Synchronizes a QueueJob across modes idempotently
-    pub async fn sync_queue_job(&self, job: proto::QueueJob) -> Result<(), String> {
+    pub async fn sync_queue_job(&self, job: ::server_ohc::interop::QueueJob) -> Result<(), String> {
         use prost::Message as ProstMessage;
 
         // Idempotency check: ensure we don't duplicate syncing the EXACT same state transition
@@ -422,11 +422,11 @@ impl InteropProtocol {
     }
 
     /// Listens for queue job synchronizations
-    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(proto::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+    pub async fn listen_for_queue_jobs(&self, tenant_id: &str, handler: Box<dyn Fn(::server_ohc::interop::QueueJob) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         let bus_handler = Box::new(move |msg: Message| {
             if msg.topic.starts_with("system:queue_job_sync:") {
                 use prost::Message as ProstMessage;
-                if let Ok(decoded) = proto::QueueJob::decode(&msg.payload[..]) {
+                if let Ok(decoded) = ::server_ohc::interop::QueueJob::decode(&msg.payload[..]) {
                     handler(decoded);
                 }
             }
@@ -455,7 +455,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -516,7 +516,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                let decoded = proto::StateHandoff::decode(&msg.payload[..]).unwrap();
+                let decoded = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]).unwrap();
                 if decoded.mission_id == "mission_resume_1" {
                     rx.store(true, Ordering::SeqCst);
                 }
@@ -572,7 +572,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |msg: proto::StateHandoff| {
+        let handler = Box::new(move |msg: ::server_ohc::interop::StateHandoff| {
             if msg.mission_id == "mission_2" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -621,7 +621,7 @@ mod tests {
 
         // Publish a ping
         use prost::Message as ProstMessage;
-        let ping = proto::HealthPing {
+        let ping = ::server_ohc::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: "sender_node".to_string(),
@@ -665,7 +665,7 @@ mod tests {
 
         // Publish a job
         use prost::Message as ProstMessage;
-        let dispatch = proto::JobDispatch {
+        let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: "job_123".to_string(),
             tenant_id: "tenant_x".to_string(),
             action_name: "test_action".to_string(),
@@ -717,7 +717,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |update: proto::JobStatusUpdate| {
+        let handler = Box::new(move |update: ::server_ohc::interop::JobStatusUpdate| {
             if update.job_id == "job_status_123" && update.status == "COMPLETED" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -849,7 +849,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_msg: proto::StateHandoff| {
+        let handler = Box::new(move |_msg: ::server_ohc::interop::StateHandoff| {
             rx.store(true, Ordering::SeqCst);
         });
 
@@ -938,7 +938,7 @@ mod tests {
         let received = Arc::new(AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |_update: proto::JobStatusUpdate| {
+        let handler = Box::new(move |_update: ::server_ohc::interop::JobStatusUpdate| {
             rx.store(true, Ordering::SeqCst);
         });
 
@@ -968,7 +968,7 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let handler = Box::new(move |handoff: proto::StateHandoff| {
+        let handler = Box::new(move |handoff: ::server_ohc::interop::StateHandoff| {
             if handoff.mission_id == "m1" && handoff.tenant_id == "t1" {
                 rx.store(true, Ordering::SeqCst);
             }
@@ -976,7 +976,7 @@ mod tests {
 
         let _cancel = protocol.listen_for_state_handoff(handler).await.unwrap();
 
-        let handoff = proto::StateHandoff {
+        let handoff = ::server_ohc::interop::StateHandoff {
             mission_id: "m1".to_string(),
             tenant_id: "t1".to_string(),
             source_mode: 0,
@@ -1010,14 +1010,14 @@ mod tests {
 
         let _cancel_ack = bus.subscribe("system:health_ack:sender_node".to_string(), Box::new(move |msg| {
             use prost::Message as ProstMessage;
-            if let Ok(ack) = proto::HealthAck::decode(&msg.payload[..]) {
+            if let Ok(ack) = ::server_ohc::interop::HealthAck::decode(&msg.payload[..]) {
                 if ack.source_node_id == "node1" && ack.target_node_id == "sender_node" {
                     rx.store(true, Ordering::SeqCst);
                 }
             }
         })).await.unwrap();
 
-        let ping = proto::HealthPing {
+        let ping = ::server_ohc::interop::HealthPing {
             source_node_id: "sender_node".to_string(),
             current_mode: 0,
             timestamp_ms: 1000,
@@ -1048,14 +1048,14 @@ mod tests {
 
         let _cancel_ack = bus.subscribe("system:job_ack:job1".to_string(), Box::new(move |msg| {
             use prost::Message as ProstMessage;
-            if let Ok(ack) = proto::JobAck::decode(&msg.payload[..]) {
+            if let Ok(ack) = ::server_ohc::interop::JobAck::decode(&msg.payload[..]) {
                 if ack.job_id == "job1" && ack.node_id == "node1" {
                     rx.store(true, Ordering::SeqCst);
                 }
             }
         })).await.unwrap();
 
-        let dispatch = proto::JobDispatch {
+        let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: "job1".to_string(),
             tenant_id: "t1".to_string(),
             action_name: "act".to_string(),
@@ -1084,8 +1084,8 @@ mod tests {
         let bus_clone = bus.clone();
         let _cancel = bus.subscribe("system:health_ping".to_string(), Box::new(move |msg| {
             use prost::Message as ProstMessage;
-            if let Ok(ping) = proto::HealthPing::decode(&msg.payload[..]) {
-                let ack = proto::HealthAck {
+            if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
+                let ack = ::server_ohc::interop::HealthAck {
                     source_node_id: "responder".to_string(),
                     target_node_id: ping.source_node_id.clone(),
                     timestamp_ms: 1000,
@@ -1115,8 +1115,8 @@ mod tests {
         let bus_clone = bus.clone();
         let _cancel = bus.subscribe("system:job_dispatch:t1".to_string(), Box::new(move |msg| {
             use prost::Message as ProstMessage;
-            if let Ok(dispatch) = proto::JobDispatch::decode(&msg.payload[..]) {
-                let ack = proto::JobAck {
+            if let Ok(dispatch) = ::server_ohc::interop::JobDispatch::decode(&msg.payload[..]) {
+                let ack = ::server_ohc::interop::JobAck {
                     job_id: dispatch.job_id.clone(),
                     node_id: "responder".to_string(),
                     timestamp_ms: 1000,
@@ -1166,13 +1166,13 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |job: proto::QueueJob| {
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |job: ::server_ohc::interop::QueueJob| {
             if job.id == "job1" && job.tenant_id == "t1" {
                 rx.store(true, Ordering::SeqCst);
             }
         })).await.unwrap();
 
-        let job = proto::QueueJob {
+        let job = ::server_ohc::interop::QueueJob {
             id: "job1".to_string(),
             tenant_id: "t1".to_string(),
             parent_task_id: "".to_string(),
@@ -1210,7 +1210,7 @@ mod tests {
         let received = Arc::new(std::sync::atomic::AtomicBool::new(false));
         let rx = received.clone();
 
-        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |_job: proto::QueueJob| {
+        let _cancel = protocol.listen_for_queue_jobs("t1", Box::new(move |_job: ::server_ohc::interop::QueueJob| {
             rx.store(true, Ordering::SeqCst);
         })).await.unwrap();
 
