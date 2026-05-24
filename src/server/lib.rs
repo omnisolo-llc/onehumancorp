@@ -2023,6 +2023,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
         .nest("/api/v1/booking", api::booking::router())
+        .nest("/api/sync", api::sync::router(db.pool.clone(), std::sync::Arc::new(crate::auth::Store::new())))
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
