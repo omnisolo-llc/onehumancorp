@@ -362,3 +362,7 @@ CREATE POLICY tenant_isolation_meeting_rooms ON meeting_rooms USING (tenant_id::
 
 ALTER TABLE meeting_transcripts ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_meeting_transcripts ON meeting_transcripts USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE INDEX IF NOT EXISTS swarm_truth_embeddings_embedding_hnsw_idx ON swarm_truth_embeddings USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS autodream_memories_embedding_hnsw_idx ON autodream_memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS memories_embedding_hnsw_idx ON memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS consolidated_memory_embedding_hnsw_idx ON consolidated_memory USING hnsw (embedding vector_cosine_ops);
