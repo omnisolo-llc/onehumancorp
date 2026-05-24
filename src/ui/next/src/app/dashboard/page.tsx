@@ -514,7 +514,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Interactive Trial Extension */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
@@ -606,6 +605,48 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Hub Section */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Growth Hub</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Trial Extension Loop */}
+                <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col justify-between border border-blue-100 bg-blue-50/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-100 rounded-bl-full -z-10"></div>
+                    <div>
+                        <h3 className="font-bold text-lg font-outfit text-gray-900 mb-2">Pro Trial Active</h3>
+                        <p className="text-sm text-gray-600 mb-4">You have <strong className="text-gray-900">{trialDaysLeft} days left</strong> on your trial.</p>
+                    </div>
+                    <button
+                        onClick={() => {
+                            if (!twitterConnected) {
+                                setTwitterConnected(true);
+                                setTrialDaysLeft(trialDaysLeft + 7);
+                            }
+                        }}
+                        disabled={twitterConnected}
+                        className={`w-full py-2 px-4 rounded-xl text-sm font-semibold transition-all ${twitterConnected ? 'bg-gray-200 text-gray-500' : 'bg-black text-white hover:bg-gray-800 shadow-md'}`}
+                    >
+                        {twitterConnected ? 'Trial Extended +7 Days!' : 'Connect X (Twitter) for +7 Days'}
+                    </button>
+                </div>
+
+                {/* Referral Loop */}
+                <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col justify-between border border-indigo-100 bg-indigo-50/30 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100 rounded-bl-full -z-10"></div>
+                    <div>
+                        <h3 className="font-bold text-lg font-outfit text-gray-900 mb-2">Refer & Earn</h3>
+                        <p className="text-sm text-gray-600 mb-4">Give a business owner priority AI setup and earn <strong className="text-gray-900">$50 credit</strong>.</p>
+                    </div>
+                    <button
+                        onClick={() => setShowReferralModal(true)}
+                        className="w-full py-2 px-4 rounded-xl text-sm font-semibold transition-all bg-indigo-600 text-white hover:bg-indigo-700 shadow-md"
+                    >
+                        Share Invite Link
+                    </button>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Referral Program Snapshot */}
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -650,6 +691,7 @@ export default function Dashboard() {
 
          </>
 )}
+
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
