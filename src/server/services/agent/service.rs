@@ -30,9 +30,10 @@ impl MyAgentManagerService {
         }
 
         let hub_cost = self.hub.clone();
+        let hub_meetings = self.hub.clone();
         let (agents, meetings, cost_res) = tokio::join!(
             async { self.hub.get_agents().await },
-            async { self.hub.get_meetings() },
+            async { tokio::task::spawn_blocking(move || hub_meetings.get_meetings()).await.unwrap() },
             async {
                 tokio::task::spawn_blocking(move || {
                     let cost_auditor = hub_cost.get_cost_auditor();
