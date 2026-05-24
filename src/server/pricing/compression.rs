@@ -91,6 +91,8 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
     let mut cursor = Cursor::new(&mut webp_data);
 
     // We use a default quality for WebP encoding
+    // 💰 Miser: Implement image auto-resizing and WebP conversion for product photos
+    // This reduces storage compression and CDN transit costs significantly.
     resized.write_to(&mut cursor, image::ImageFormat::WebP).map_err(|e| e.to_string())?;
 
     Ok((webp_data, "image/webp".to_string()))

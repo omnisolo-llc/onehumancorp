@@ -11,6 +11,8 @@ mod tests {
         props.insert("ip_address".to_string(), "10.0.0.1".to_string());
         props.insert("mac_address".to_string(), "FF:FF:FF:FF:FF:FF".to_string());
         props.insert("geolocation".to_string(), "0,0".to_string());
+        props.insert("auth_jwt".to_string(), "eyJhbGci...".to_string());
+        props.insert("authorization_bearer".to_string(), "Bearer xyz123".to_string());
 
         let mut sanitized_props = props;
         for (k, v) in sanitized_props.iter_mut() {
@@ -28,6 +30,8 @@ mod tests {
         assert_eq!(sanitized_props.get("ip_address").unwrap(), "[REDACTED]");
         assert_eq!(sanitized_props.get("mac_address").unwrap(), "[REDACTED]");
         assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("auth_jwt").unwrap(), "[REDACTED]");
+        assert_eq!(sanitized_props.get("authorization_bearer").unwrap(), "[REDACTED]");
     }
 
 
@@ -616,4 +620,10 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_init_latency(1.23);
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
+}
+
+#[test]
+fn test_record_sub_agent_queue_delay() {
+    // Ensures the function completes without panicking
+    ::server_telemetry::record_sub_agent_queue_delay(42.0);
 }

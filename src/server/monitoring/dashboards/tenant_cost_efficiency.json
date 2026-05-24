@@ -24,7 +24,7 @@
       },
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<style>\n  .panel-container {\n    background: rgba(22, 22, 26, 0.7) !important;\n    backdrop-filter: blur(30px) saturate(210%) !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n  }\n  @media (prefers-color-scheme: light) {\n    .panel-container {\n      background: rgba(255, 255, 255, 0.65) !important;\n      backdrop-filter: blur(30px) saturate(210%) !important;\n      border: 1px solid rgba(255, 255, 255, 0.4) !important;\n    }\n  }\n</style>\n"
       },
       "transparent": true
     },
