@@ -1,9 +1,9 @@
 filegroup(
     name = "srcs",
     srcs = [
-        "client.rs",
         "mod.rs",
         "provider.rs",
+        "provider_test.rs",
     ],
     visibility = ["//src/server/integrations:__pkg__"],
 )

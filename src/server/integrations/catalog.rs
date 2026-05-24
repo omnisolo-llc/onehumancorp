@@ -42,6 +42,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
+    let powersync_provider = crate::integrations::powersync::provider::PowerSyncProvider::new();
+    catalog.push(powersync_provider.to_integration_provider());
+
     let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
     catalog.push(meta_provider.to_integration_provider());
 
@@ -66,8 +69,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
     catalog.push(alipay_provider.to_integration_provider());
 
-    let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
-    catalog.push(manychat_provider.to_integration_provider());
 
     let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
     catalog.push(calendly_provider.to_integration_provider());
