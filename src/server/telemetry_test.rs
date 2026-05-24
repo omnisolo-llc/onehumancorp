@@ -274,7 +274,8 @@ mod tests {
         let mut violations = Vec::new();
 
         let mut search_dirs = vec![PathBuf::from(".")];
-        search_dirs.push(PathBuf::from("/app/src/server")); // Robust fallback
+        search_dirs.push(PathBuf::from("/app/src/server"));
+        search_dirs.push(PathBuf::from("../../src/server"));
         if let Ok(runfiles_dir) = std::env::var("RUNFILES_DIR") {
             search_dirs.push(PathBuf::from(runfiles_dir.clone()).join("ohc/src/server"));
             search_dirs.push(PathBuf::from(runfiles_dir).join("ohc/src"));
