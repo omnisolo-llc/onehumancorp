@@ -67,8 +67,8 @@ pub async fn bench_api_response_time() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-        let _hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
-        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), _hub_cloud.clone());
+        let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+        let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
         let mut cloud_times = Vec::new();
         for _ in 0..iterations {
@@ -93,8 +93,8 @@ pub async fn bench_api_response_time() {
 
     let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
     let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
-    let _hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
-    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), _hub_standalone.clone());
+    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
+    let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
     let mut standalone_times = Vec::new();
     for _ in 0..iterations {
@@ -136,13 +136,13 @@ pub async fn bench_dashboard_snapshot() {
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
-    let _hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
-    _hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
+    hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
     for i in 0..50 {
         let msg = ::server_ohc::orchestration::Message {
             id: format!("msg-{}", i),
@@ -153,7 +153,7 @@ pub async fn bench_dashboard_snapshot() {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: meeting_id.clone(),
         };
-        let _ = _hub.clone().publish(::server_ohc::orchestration::Message {
+        let _ = hub.clone().publish(::server_ohc::orchestration::Message {
             id: msg.id,
             from_agent: msg.from_agent,
             to_agent: msg.to_agent,
@@ -165,7 +165,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for i in 0..50 {
-        _hub.register_agent(::server_ohc::orchestration::Agent {
+        hub.register_agent(::server_ohc::orchestration::Agent {
             id: format!("agent-{}", i),
             name: format!("Agent {}", i),
             role: "test".to_string(),
@@ -181,7 +181,7 @@ pub async fn bench_dashboard_snapshot() {
         let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
         let db_arc = std::sync::Arc::new(db.clone());
-        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, _hub.clone());
+        let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
         let mut request = tonic::Request::new(req_desktop);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
@@ -202,7 +202,7 @@ pub async fn bench_dashboard_snapshot() {
 
 
     let db_arc = std::sync::Arc::new(db.clone());
-    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, _hub.clone());
+    let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
 
     let mut req_mobile_t = tonic::Request::new(req_mobile);
     req_mobile_t.extensions_mut().insert(::server_auth::orchestration::AuthInfo {

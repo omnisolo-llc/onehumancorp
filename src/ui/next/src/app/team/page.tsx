@@ -15,13 +15,13 @@ export type ApprovalRequest = {
 };
 
 const DEPARTMENTS = [
-  { id: 'Operations', name: 'The Manager' },
-  { id: 'Marketing', name: 'The Promoter' },
-  { id: 'Sales', name: 'The Salesperson' },
-  { id: 'CustomerSuccess', name: 'The Ambassador' },
-  { id: 'Finance', name: 'The Accountant' },
-  { id: 'Legal', name: 'The Protector' },
-  { id: 'BusinessAdvisory', name: 'The Advisor' },
+  { id: 'operations', name: 'The Manager' },
+  { id: 'marketing', name: 'The Promoter' },
+  { id: 'sales', name: 'The Salesperson' },
+  { id: 'customer_success', name: 'The Ambassador' },
+  { id: 'finance', name: 'The Accountant' },
+  { id: 'legal', name: 'The Protector' },
+  { id: 'business_advisory', name: 'The Advisor' },
 ];
 
 export default function TeamPage() {

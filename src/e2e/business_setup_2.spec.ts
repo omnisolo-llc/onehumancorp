@@ -12,7 +12,7 @@ test.describe('Business Setup Wizard - Part 2', () => {
 
   test('captures product details in the guided setup', async ({ page }) => {
     await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business/ }).click();
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Restaurant/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Maya Cakes');
     await page.getByRole('button', { name: /Next/ }).click();
@@ -27,7 +27,7 @@ test.describe('Business Setup Wizard - Part 2', () => {
 
   test('shows domain choices before launch', async ({ page }) => {
     await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business/ }).click();
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Store');
     await page.getByRole('button', { name: /Next/ }).click();

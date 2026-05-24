@@ -4,7 +4,7 @@ test.describe('Wizard Refinement E2E', () => {
   test('keeps the setup flow plain-language and reversible', async ({ page }) => {
     await page.goto('/website-builder');
     await expect(page.getByText('Zero tech skills needed. We do the heavy lifting.')).toBeVisible();
-    await page.getByRole('button', { name: /Start My Business/ }).click();
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
     await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();

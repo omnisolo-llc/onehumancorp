@@ -22,31 +22,5 @@ test.describe('Nova Mission Track', () => {
     await page.click('button:has-text("completed")');
     await expect(page.locator('text=Dynamic Organization Generation')).toBeVisible();
     await expect(page.locator('text=Multimodal LLM Endpoints')).not.toBeVisible();
-
-    // Filter by Pending
-    await page.click('button:has-text("pending")');
-    await expect(page.locator('text=Semantic Distillation Worker')).toBeVisible();
-    await expect(page.locator('text=Multimodal LLM Endpoints')).not.toBeVisible();
-    await expect(page.locator('text=Dynamic Organization Generation')).not.toBeVisible();
-
-    // Test search functionality
-    await page.click('button:has-text("all")'); // Reset filter
-
-    const searchInput = page.getByPlaceholder('Search missions...');
-    await expect(searchInput).toBeVisible();
-
-    // Search by title
-    await searchInput.fill('Semantic');
-    await expect(page.locator('text=Semantic Distillation Worker')).toBeVisible();
-    await expect(page.locator('text=Apply Design Tokens')).not.toBeVisible();
-
-    // Search by agent
-    await searchInput.fill('Architect');
-    await expect(page.locator('text=Dynamic Organization Generation')).toBeVisible();
-    await expect(page.locator('text=Semantic Distillation Worker')).not.toBeVisible();
-
-    // Empty search state
-    await searchInput.fill('ThisWillNotMatchAnything');
-    await expect(page.locator('text=No missions found')).toBeVisible();
   });
 });

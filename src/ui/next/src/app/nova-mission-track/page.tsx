@@ -21,16 +21,12 @@ const MISSIONS: Mission[] = [
 ];
 
 export default function MissionTrackPage() {
-  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed' | 'pending'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
 
   const filteredMissions = MISSIONS.filter(m => {
-    const matchesTab = activeTab === 'all' || m.status === activeTab;
-    const matchesSearch =
-      m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.agent.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesTab && matchesSearch;
+    if (activeTab === 'active') return m.status === 'active';
+    if (activeTab === 'completed') return m.status === 'completed';
+    return true;
   });
 
   return (
@@ -45,20 +41,12 @@ export default function MissionTrackPage() {
             <span className="text-xs font-bold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2.5 py-1 rounded-full">Nova Track</span>
           </div>
           <h1 className="text-3xl font-extrabold font-outfit text-gray-900 tracking-tight">Mission Control</h1>
-          <p className="text-sm text-gray-500 mt-1 font-medium mb-4">Tracking autonomous epic progress.</p>
-
-          <input
-            type="text"
-            placeholder="Search missions..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white/80 placeholder-gray-400"
-          />
+          <p className="text-sm text-gray-500 mt-1 font-medium">Tracking autonomous epic progress.</p>
         </header>
 
         {/* Tabs */}
-        <div className="flex px-5 pt-4 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[162px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
-          {['all', 'active', 'completed', 'pending'].map((tab) => (
+        <div className="flex px-5 pt-4 pb-2 gap-2 overflow-x-auto hide-scrollbar sticky top-[108px] z-10 bg-[#F5F5F7]/90 backdrop-blur-md">
+          {['all', 'active', 'completed'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
@@ -75,11 +63,6 @@ export default function MissionTrackPage() {
 
         {/* Mission List */}
         <main className="flex-1 p-5 overflow-y-auto pb-24 space-y-4">
-          {filteredMissions.length === 0 && (
-            <div className="text-center text-gray-500 py-10 text-sm font-medium">
-              No missions found
-            </div>
-          )}
           {filteredMissions.map(mission => (
             <div key={mission.id} className="bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
               <div className="flex justify-between items-start mb-3">
