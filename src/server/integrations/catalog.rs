@@ -63,9 +63,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
     catalog.push(mercadopago_provider.to_integration_provider());
 
-    let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
-    catalog.push(alipay_provider.to_integration_provider());
-
     let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
     catalog.push(manychat_provider.to_integration_provider());
 

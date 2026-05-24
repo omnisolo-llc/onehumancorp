@@ -26,54 +26,6 @@ pub trait TeammateMesh: Send + Sync {
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
-
-pub struct LocalTeammateMesh {
-    hub: Arc<crate::hub::Hub>,
-    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
-}
-
-impl LocalTeammateMesh {
-    pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
-        Self {
-            hub,
-            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
-        }
-    }
-}
-
-#[async_trait]
-impl MeshTransport for LocalTeammateMesh {
-    async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
-        let _ = self.hub.publish_teammate_event(topic.to_string(), message.clone());
-        self.inner.publish(topic, message).await
-    }
-
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        // Also subscribe to hub events? Wait, hub events are broadcasted to websocket clients.
-        // The transport is used for agent communication.
-        // LocalTeammateMesh is a transport for the agent to receive events, but it also broadcasts to the hub.
-        // But what about messages from the hub? Usually the hub doesn't receive teammate mesh events from websockets,
-        // it just broadcasts them. So we only need to subscribe to `inner`.
-        self.inner.subscribe(topic, handler).await
-    }
-
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
-        self.inner.acquire_lock(resource, owner, ttl_seconds).await
-    }
-
-    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
-        self.inner.release_lock(resource, owner).await
-    }
-
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
-    }
-
-    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
-        self.inner.get_active_agents().await
-    }
-}
-
 pub struct CentrifugeNode {
     transport: Arc<dyn MeshTransport>,
     publish_counter: Counter<u64>,
@@ -137,7 +89,7 @@ impl TeammateMesh for CentrifugeNode {
 
         tokio::task::yield_now().await;
 
-        let dispatch = ::server_ohc::interop::JobDispatch {
+        let dispatch = crate::interop::protocol::proto::JobDispatch {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
@@ -191,7 +143,7 @@ impl TeammateMesh for CentrifugeNode {
     async fn ping(&self) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let node_id = uuid::Uuid::new_v4().to_string();
-        let ping = ::server_ohc::interop::HealthPing {
+        let ping = crate::interop::protocol::proto::HealthPing {
             source_node_id: node_id.clone(),
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -230,10 +182,10 @@ impl TeammateMesh for CentrifugeNode {
 
         self.transport.subscribe("system:health_ping", Box::new(move |msg: Message| {
             use prost::Message as ProstMessage;
-            if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
+            if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
                 let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
-                let ack = ::server_ohc::interop::HealthAck {
+                let ack = crate::interop::protocol::proto::HealthAck {
                     source_node_id: "sys".to_string(),
                     target_node_id: ping.source_node_id.clone(),
                     timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -271,54 +223,6 @@ mod tests {
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::atomic::{AtomicBool, Ordering};
     use tokio::time::{sleep, Duration};
-
-
-    #[tokio::test]
-    async fn test_local_teammate_mesh_pubsub() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .connect_lazy(&db_url)
-            .unwrap();
-        let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
-
-        let mesh = LocalTeammateMesh::new(hub.clone());
-
-        let received = Arc::new(AtomicBool::new(false));
-        let received_clone = received.clone();
-
-        let _cancel = mesh.subscribe("test_topic", Box::new(move |msg: Message| {
-            if msg.payload == b"hello world" {
-                received_clone.store(true, Ordering::SeqCst);
-            }
-        })).await.unwrap();
-
-        // Also verify that the hub has the message
-        let mut hub_rx = hub.subscribe_teammate_mesh("test_topic".to_string());
-
-        let event = TeammateMeshEvent {
-            agent_id: "test_agent".to_string(),
-            action: "test_action".to_string(),
-            status: "ok".to_string(),
-            payload: b"hello world".to_vec(),
-            msg_id: "msg_123".to_string(),
-        };
-
-        mesh.publish("test_topic", event.clone()).await.unwrap();
-
-        sleep(Duration::from_millis(50)).await;
-
-        assert!(received.load(Ordering::SeqCst), "Should receive message published via LocalTeammateMesh");
-
-        if let Ok(hub_msg) = hub_rx.try_recv() {
-            assert_eq!(hub_msg.msg_id, "msg_123");
-        } else {
-            panic!("Hub did not receive the event");
-        }
-    }
 
     #[tokio::test]
     async fn test_centrifuge_node_pubsub() {

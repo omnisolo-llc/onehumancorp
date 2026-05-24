@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use crate::llm::LlmClient;
 use crate::agent::{Agent, AgentRunConfig};
 use crate::autogen::ChatAgent;
@@ -150,7 +150,7 @@ impl DeerFlowOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{ChatResponse, Usage, ToolError};
+    use crate::types::{ChatResponse, Usage};
 
     struct MockDeerFlowLlmClient {
         // We'll return decomposition json, then synthesis.
@@ -159,7 +159,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockDeerFlowLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
             let mut resps = self.responses.lock().await;
             let content = if !resps.is_empty() {
                 resps.remove(0)
