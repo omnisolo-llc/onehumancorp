@@ -218,3 +218,5 @@ CREATE POLICY tenant_isolation_agent_status ON agent_status USING (tenant_id::te
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_order_items ON order_items USING (tenant_id::text = current_setting('app.current_tenant', true));
+CREATE INDEX IF NOT EXISTS agent_memories_embedding_hnsw_idx ON agent_memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS knowledge_embeddings_embedding_hnsw_idx ON knowledge_embeddings USING hnsw (embedding vector_cosine_ops);

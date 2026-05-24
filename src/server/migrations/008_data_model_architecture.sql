@@ -194,3 +194,4 @@ BEGIN
     END LOOP;
 END
 $$;
+CREATE INDEX IF NOT EXISTS interactions_embedding_hnsw_idx ON interactions USING hnsw (embedding vector_cosine_ops);
