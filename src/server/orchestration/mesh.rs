@@ -89,7 +89,7 @@ impl TeammateMesh for CentrifugeNode {
 
         tokio::task::yield_now().await;
 
-        let dispatch = crate::interop::protocol::proto::JobDispatch {
+        let dispatch = ::server_ohc::interop::JobDispatch {
             job_id: job_id.clone(),
             tenant_id: "default".to_string(),
             action_name: topic.to_string(),
@@ -143,7 +143,7 @@ impl TeammateMesh for CentrifugeNode {
     async fn ping(&self) -> Result<(), String> {
         use prost::Message as ProstMessage;
         let node_id = uuid::Uuid::new_v4().to_string();
-        let ping = crate::interop::protocol::proto::HealthPing {
+        let ping = ::server_ohc::interop::HealthPing {
             source_node_id: node_id.clone(),
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
@@ -182,10 +182,10 @@ impl TeammateMesh for CentrifugeNode {
 
         self.transport.subscribe("system:health_ping", Box::new(move |msg: Message| {
             use prost::Message as ProstMessage;
-            if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+            if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
                 let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
 
-                let ack = crate::interop::protocol::proto::HealthAck {
+                let ack = ::server_ohc::interop::HealthAck {
                     source_node_id: "sys".to_string(),
                     target_node_id: ping.source_node_id.clone(),
                     timestamp_ms: chrono::Utc::now().timestamp_millis(),

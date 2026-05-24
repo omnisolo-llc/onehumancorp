@@ -560,7 +560,7 @@ impl StateHandoffManager {
 
     pub async fn trigger_handoff(&self, mission_id: &str, tenant_id: &str, payload: Vec<u8>) -> Result<(), String> {
         use prost::Message as ProstMessage;
-        let handoff = crate::interop::protocol::proto::StateHandoff {
+        let handoff = ::server_ohc::interop::StateHandoff {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
             source_mode: 0,
@@ -608,7 +608,7 @@ impl HealthMonitor {
 
         let cancel = self.bus.subscribe(ack_topic, handler).await?;
 
-        let ping = crate::interop::protocol::proto::HealthPing {
+        let ping = ::server_ohc::interop::HealthPing {
             current_mode: 0,
             timestamp_ms: chrono::Utc::now().timestamp_millis(),
             source_node_id: node_id.clone(),
@@ -760,7 +760,7 @@ mod tests {
                 received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
 
                 use prost::Message as ProstMessage;
-                if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
                     let bus_inner = bus_clone.clone();
                     tokio::spawn(async move {
@@ -795,7 +795,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
                 use prost::Message as ProstMessage;
-                if let Ok(handoff) = crate::interop::protocol::proto::StateHandoff::decode(&msg.payload[..]) {
+                if let Ok(handoff) = ::server_ohc::interop::StateHandoff::decode(&msg.payload[..]) {
                     if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot == vec![1, 2, 3, 4] {
                         received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
                     }
@@ -827,7 +827,7 @@ mod tests {
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
                 use prost::Message as ProstMessage;
-                if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
+                if let Ok(ping) = ::server_ohc::interop::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
                     let ack_msg = Message {
                         topic: ack_topic,

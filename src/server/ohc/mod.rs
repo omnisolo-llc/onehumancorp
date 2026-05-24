@@ -1,8 +1,8 @@
 pub mod interop {
-    pub use interop_proto as interop;
+    pub use interop_proto::ohc::interop::*;
 }
 pub mod mcp_proxy {
-    pub use mcp_proxy_proto as mcp_proxy;
+    pub use mcp_proxy_proto::ohc::mcp_proxy::*;
 }
 pub mod orchestration {
     pub use hub_proto::ohc::orchestration::*;
