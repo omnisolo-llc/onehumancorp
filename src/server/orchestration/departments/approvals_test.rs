@@ -38,19 +38,22 @@ mod tests {
         let orchestrator = DepartmentOrchestrator::new(db, mesh);
 
         let description = "Draft email for review".to_string();
+        let payload = serde_json::json!({"test": "payload"});
 
         let _ = orchestrator.execute_action(
             DepartmentType::CustomerSuccess,
             description.clone(),
             tenant_id.clone(),
             ActionRisk::DraftForReview,
-            serde_json::json!({"test": "payload"}),
+            payload.clone(),
         ).await;
 
         let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
         if pending.is_empty() {
              return; // allow gracefully failure if schema not fully ready locally.
         }
+
+        assert_eq!(pending[0].payload, payload);
 
         let request_id = pending[0].id.clone();
 

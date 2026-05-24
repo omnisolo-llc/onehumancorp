@@ -1,0 +1,1 @@
+ALTER TABLE agent_approvals ADD COLUMN IF NOT EXISTS payload TEXT DEFAULT '{}';

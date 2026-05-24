@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS agent_approvals (
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     action_risk TEXT NOT NULL,
+    payload TEXT DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     _sync_status TEXT DEFAULT 'pending',
