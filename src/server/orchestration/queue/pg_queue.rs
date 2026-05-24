@@ -127,21 +127,11 @@ impl TaskQueue for PgTaskQueue {
             query = query.bind(role);
         }
 
-        let start_poll = std::time::Instant::now();
         let job_opt = query.fetch_optional(&mut *tx).await.map_err(|e| e.to_string())?;
-
-        if start_poll.elapsed() > std::time::Duration::from_millis(100) {
-            ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
-        }
 
         if let Some(row) = job_opt {
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
-
-            let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
-            let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency);
-
             let job = Job {
                 id: row.get("id"),
                 parent_task_id: row.try_get("parent_task_id").unwrap_or_default(),
@@ -152,7 +142,7 @@ impl TaskQueue for PgTaskQueue {
                 max_attempts: row.try_get("max_attempts").unwrap_or(3),
                 run_after: row.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now()),
                 locked_until: row.try_get("locked_until").unwrap_or(None),
-                created_at,
+                created_at: row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now()),
                 updated_at: row.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now()),
                 tenant_id: row.try_get("organization_id").unwrap_or_default(),
             };

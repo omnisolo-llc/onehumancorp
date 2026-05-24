@@ -6,10 +6,6 @@ interface OnboardingState {
   businessType: string;
   businessName: string;
   businessCategory: string;
-  firstProductName: string;
-  firstProductPrice: string;
-  template: string;
-  domain: string;
   isLoading: boolean;
   error: string;
   intakeData: any;
@@ -18,10 +14,6 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
   setBusinessCategory: (category: string) => void;
-  setFirstProductName: (name: string) => void;
-  setFirstProductPrice: (price: string) => void;
-  setTemplate: (template: string) => void;
-  setDomain: (domain: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
@@ -35,10 +27,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   businessType: '',
   businessName: '',
   businessCategory: '',
-  firstProductName: '',
-  firstProductPrice: '',
-  template: 'Modern',
-  domain: 'free',
   isLoading: false,
   error: '',
   intakeData: null,
@@ -47,10 +35,6 @@ export const useOnboardingStore = create<OnboardingState>()(
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
   setBusinessCategory: (businessCategory) => set({ businessCategory }),
-  setFirstProductName: (firstProductName) => set({ firstProductName }),
-  setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-  setTemplate: (template) => set({ template }),
-  setDomain: (domain) => set({ domain }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),

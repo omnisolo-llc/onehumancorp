@@ -9,10 +9,6 @@ describe('useOnboardingStore', () => {
       businessType: '',
       businessName: '',
       businessCategory: '',
-      firstProductName: '',
-      firstProductPrice: '',
-      template: 'Modern',
-      domain: 'free',
       isLoading: false,
       error: '',
       intakeData: null,
@@ -25,10 +21,6 @@ describe('useOnboardingStore', () => {
     expect(state.step).toBe(1);
     expect(state.businessName).toBe('');
     expect(state.businessCategory).toBe('');
-    expect(state.firstProductName).toBe('');
-    expect(state.firstProductPrice).toBe('');
-    expect(state.template).toBe('Modern');
-    expect(state.domain).toBe('free');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
@@ -48,26 +40,6 @@ describe('useOnboardingStore', () => {
   it('should update businessCategory', () => {
     useOnboardingStore.getState().setBusinessCategory('Test Category');
     expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
-  });
-
-  it('should update firstProductName', () => {
-    useOnboardingStore.getState().setFirstProductName('Test Product');
-    expect(useOnboardingStore.getState().firstProductName).toBe('Test Product');
-  });
-
-  it('should update firstProductPrice', () => {
-    useOnboardingStore.getState().setFirstProductPrice('100');
-    expect(useOnboardingStore.getState().firstProductPrice).toBe('100');
-  });
-
-  it('should update template', () => {
-    useOnboardingStore.getState().setTemplate('Elegant');
-    expect(useOnboardingStore.getState().template).toBe('Elegant');
-  });
-
-  it('should update domain', () => {
-    useOnboardingStore.getState().setDomain('custom');
-    expect(useOnboardingStore.getState().domain).toBe('custom');
   });
 
   it('should update isLoading', () => {

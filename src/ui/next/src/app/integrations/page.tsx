@@ -58,10 +58,7 @@ export default function Integrations() {
         {/* Integration Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredIntegrations.map(integration => (
-            <div key={integration.id}
-                 className="rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md"
-                 style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
-            >
+            <div key={integration.id} className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col transition-shadow hover:shadow-md">
               <div className="flex justify-between items-start mb-4">
                 <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-2xl border border-gray-100">
                   {integration.icon}
@@ -75,11 +72,11 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+              <button className={`w-full py-3 rounded-xl font-semibold text-sm transition-transform active:scale-[0.98] ${
                 integration.status === 'connected'
                   ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
-                  : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
-              }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
+                  : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+              }`}>
                 {integration.status === 'connected' ? 'Manage' : 'Connect'}
               </button>
             </div>

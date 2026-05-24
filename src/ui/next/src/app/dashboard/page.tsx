@@ -19,13 +19,10 @@ export default function Dashboard() {
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
-  const [productAdded, setProductAdded] = useState<boolean>(false);
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
-  const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
-  const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
@@ -221,9 +218,6 @@ export default function Dashboard() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
          <div className="flex items-center gap-3">
-             <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
-               Review Campaigns ⭐️
-             </Link>
              <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
@@ -465,15 +459,23 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
-                        <div className="flex gap-2 items-center">
-                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
-                            <button
-                                onClick={() => setShowEmbedModal(true)}
-                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Get Widget
-                            </button>
-                        </div>
+                        <pre className="text-xs text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap">
+{`<div id="ohc-embed-root"></div>
+<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>
+<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
+  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>
+</div>`}
+                        </pre>
+                        <button
+                            onClick={() => {
+                                const code = `<div id="ohc-embed-root"></div>\n<script src="https://ohc.store/embed.js" data-store="${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}"></script>\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">\n  <a href="https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}" target="_blank" style="color: #646b78; text-decoration: none;">Powered by <b>OHC</b></a>\n</div>`;
+                                navigator.clipboard.writeText(code);
+                                alert('Copied embed code to clipboard!');
+                            }}
+                            className="absolute top-2 right-2 bg-white text-gray-700 border border-gray-200 px-3 py-1 rounded-md text-xs font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                            Copy Code
+                        </button>
                     </div>
                 </div>
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
@@ -501,10 +503,6 @@ export default function Dashboard() {
                             setShowPaywallModal(true);
                         } else {
                             setProductCount(prev => prev + 1);
-                            if (!productAdded) {
-                                setProductAdded(true);
-                                setTrialDaysLeft(prev => prev + 7);
-                            }
                         }
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
@@ -575,24 +573,6 @@ export default function Dashboard() {
                                 className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${reviewLeft ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                             >
                                 {reviewLeft ? 'Done' : 'Review'}
-                            </button>
-                        </div>
-
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Add First Product</h4>
-                                    <p className="text-xs text-gray-500">+7 Days</p>
-                                </div>
-                            </div>
-                            <button
-                                disabled={true}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${productAdded ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
-                            >
-                                {productAdded ? 'Done' : 'Pending'}
                             </button>
                         </div>
                     </div>
@@ -906,7 +886,7 @@ export default function Dashboard() {
                 }}
                 className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
               >
-                Upgrade Now - $9/mo
+                Upgrade Now - $29/mo
               </button>
 
               <button
@@ -915,56 +895,6 @@ export default function Dashboard() {
               >
                 Maybe later
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Embed Modal */}
-      {showEmbedModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-green-100">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
-                🌐
-              </div>
-              <button
-                onClick={() => {
-                  setShowEmbedModal(false);
-                  setEmbedCopied(false);
-                }}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Embed Storefront</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Copy this widget code and paste it on your blog, personal website, or partner pages to let customers buy directly from you.
-            </p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Widget HTML snippet</label>
-                <div className="flex flex-col gap-2">
-                  <textarea
-                    readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
-                    rows={4}
-                  />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
-                      setEmbedCopied(true);
-                      setTimeout(() => setEmbedCopied(false), 2000);
-                    }}
-                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${embedCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
-                  >
-                    {embedCopied ? 'Copied!' : 'Copy Code'}
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>

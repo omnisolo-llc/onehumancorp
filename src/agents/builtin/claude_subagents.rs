@@ -115,30 +115,63 @@ impl ClaudeSubagentSpawner {
     ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut on_event = |_| {};
 
-        let mut retry_count = 0;
-        let mut backoff = 1;
-        let max_retries = 3;
-
-        let start_time = std::time::Instant::now();
-        let raw_output = loop {
-            match self.subagent.run(config, task, &mut on_event).await {
-                Ok(res) => break res,
-                Err(e) => {
-                    retry_count += 1;
-                    if retry_count >= max_retries {
-                        ::server_telemetry::record_ohc_sub_agent_failures_total();
-                        return Err(e);
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
-                    backoff *= 2;
-                }
-            }
-        };
-        let duration = start_time.elapsed().as_secs_f64();
-        ::server_telemetry::record_ohc_sub_agent_execution_duration_seconds(duration);
+        // Execute the subagent
+        let raw_output = self.subagent.run(config, task, &mut on_event).await?;
 
         // Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         self.summarize_output(&raw_output, config).await
+    }
+
+    async fn summarize_output(
+        &self,
+        raw_output: &str,
+        config: &AgentRunConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        // Use the parent agent (or an internal summarize call) to condense the output
+        let summary_prompt = format!(
+            "Please condense the following subagent output into a 1k-2k token summary, focusing only on actions taken, results, and critical information. Raw output:\n\n{}",
+            raw_output
+        );
+
+        let mut on_event = |_| {};
+        let mut summary_config = config.clone();
+        summary_config.injected_context = None; // clear context for summary
+
+        let summary = self.parent_agent.run(&summary_config, &summary_prompt, &mut on_event).await?;
+        Ok(summary)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Usage};
+    use tempfile::tempdir;
+
+    struct MockLlmClient {
+        responses: std::sync::Mutex<Vec<String>>,
+    }
+
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut resps = self.responses.lock().unwrap();
+
+            // Just pop the next mock response
+            let content = if !resps.is_empty() {
+                resps.remove(0)
+            } else {
+                "Default mock response".to_string()
+            };
+
+            Ok(ChatResponse {
+                message: Message::assistant(content),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            })
+        }
     }
 
     #[tokio::test]

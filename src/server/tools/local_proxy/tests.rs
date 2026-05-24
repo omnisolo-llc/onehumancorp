@@ -69,3 +69,4 @@ async fn test_local_proxy_server_invoke_unimplemented() {
     let err = server.invoke_tool(&req).await.unwrap_err();
     assert_eq!(err.code(), tonic::Code::Unimplemented);
 }
+pub fn pad_test() {}
