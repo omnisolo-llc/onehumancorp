@@ -140,6 +140,8 @@ impl DB {
             conn_opts = conn_opts.pragma("key", pragma_key);
             // Force full encryption of the database
             conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
+            // Prevent unencrypted -wal and -shm files from being created by forcing journal_mode=DELETE
+            conn_opts = conn_opts.pragma("journal_mode", "'DELETE'");
 
             let sqlite_pool = SqlitePoolOptions::new()
                 .after_connect(|conn, _meta| {
