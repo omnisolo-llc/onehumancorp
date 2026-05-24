@@ -9,6 +9,8 @@ pub struct IntakeData {
     pub business_type: String,
     pub categories: Vec<String>,
     pub initial_products: Vec<IntakeProduct>,
+    pub website_template: Option<String>,
+    pub domain_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -37,7 +39,7 @@ impl OnboardingAgent {
 
         let prompt = format!(
             "Extract structured business information from the following user description.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string), website_template (string, choose from Modern, Classic, Bold), domain_choice (string, choose from subdomain, custom).
 
             Description: \"{}\"
 
@@ -46,6 +48,8 @@ impl OnboardingAgent {
               \"business_name\": \"Maya's Cakes\",
               \"business_type\": \"Bakery\",
               \"categories\": [\"food\", \"physical\"],
+              \"website_template\": \"Modern\",
+              \"domain_choice\": \"subdomain\",
               \"initial_products\": [
                 {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\"}},
                 {{\"name\": \"Vanilla Cupcake\", \"price\": \"3.50\"}}

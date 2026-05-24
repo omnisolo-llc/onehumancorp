@@ -13,6 +13,8 @@ void main() {
         return http.Response('{"status": "ok"}', 200);
       } else if (request.url.path == '/api/onboarding/draft') {
         return http.Response('{"bio": "saved bio test"}', 200);
+      } else if (request.url.path == '/api/onboarding/intake') {
+        return http.Response('{"business_name": "Test"}', 200);
       }
       return http.Response('Not Found', 404);
     });
@@ -32,7 +34,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Tap without entering text to trigger validation
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.byType(ElevatedButton).last);
     await tester.pumpAndSettle();
 
     // Expect the validator message 'Required' for the bio field
@@ -42,38 +44,8 @@ void main() {
     await tester.enterText(find.byKey(Key('bio-input')), "I bake custom vegan cakes in Seattle. Maya's Cakes.");
     await tester.pumpAndSettle();
 
-    // Tap Next to go to Name step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Name your business'), findsOneWidget);
-
-    // Fill out the name form
-    await tester.enterText(find.byKey(Key('name-input')), "Maya's Cakes");
-    await tester.pumpAndSettle();
-
-    // Tap Next to go to Template step
-    await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Choose a look'), findsOneWidget);
-
-    // Select 'Classic' Template
-    await tester.tap(find.text('Classic'));
-    await tester.pumpAndSettle();
-
-    // Toggle advanced mode
-    await tester.tap(find.byKey(Key('advanced-mode-toggle')));
-    await tester.pumpAndSettle();
-
-    // Choose custom domain
-    await tester.tap(find.byKey(Key('domain-choice-dropdown')));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Custom Domain').last);
-    await tester.pumpAndSettle();
-
     // Tap to build my storefront
-    await tester.tap(find.text('Build My Storefront'));
+    await tester.tap(find.byType(ElevatedButton).last);
     await tester.pumpAndSettle();
 
     // Expect to be on Dashboard state
