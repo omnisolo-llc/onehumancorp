@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
     await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await page.getByRole('button', { name: /Start My Business/ }).click();
     await page.getByRole('button', { name: /Creative/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Alex Art');
     await page.getByRole('button', { name: /Next/ }).click();
