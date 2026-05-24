@@ -3210,34 +3210,64 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Ayrshare</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
+                                    <h3 style="margin: 0;">ManyChat</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automates initial inquiries and routes critical leads directly to your phone.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect</button>
                             </div>
 
-                            <!-- Cal.com Integration -->
+                            <!-- Sprout Social Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Cal.com</h3>
+                                    <h3 style="margin: 0;">Sprout Social</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌱</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified inbox, allowing you to schedule posts and respond to clients across platforms.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Sprout Social...')">Connect</button>
+                            </div>
+
+                            <!-- Calendly Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Calendly</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Config Booking & Calendar Sync.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Lets clients book consultations directly on your website, automatically syncing with your calendar.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Calendly...')">Connect</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- Acuity Scheduling Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Listmonk</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
+                                    <h3 style="margin: 0;">Acuity Scheduling</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🕒</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Handles custom bookings, allowing you to collect intake forms and deposits.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Acuity Scheduling...')">Connect</button>
+                            </div>
+
+                            <!-- Mailchimp Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Mailchimp</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📧</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Easily send out a monthly newsletter with photos and discount codes.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mailchimp...')">Connect</button>
+                            </div>
+
+                            <!-- Sendinblue (Brevo) Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Sendinblue (Brevo)</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">✉️</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Maintain a massive customer list without paying exorbitant fees.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Sendinblue (Brevo)...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3247,17 +3277,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mercado Pago...')">Connect</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Alipay Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">EasyPost</h3>
+                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Capture the Chinese market by supporting domestic digital wallets.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Alipay...')">Connect</button>
+                            </div>
+
+                            <!-- ShipStation Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">ShipStation</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to EasyPost...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automatically pulls orders and prints labels in bulk, saving you hours daily.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ShipStation...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3270,14 +3310,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Jitsi Meet</h3>
+                                    <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automatically generates a unique meeting link the moment a client books a slot.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
                         </div>
 

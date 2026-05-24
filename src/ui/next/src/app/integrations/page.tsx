@@ -6,13 +6,17 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
+    { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Automates initial inquiries and routes critical leads directly to your phone." },
+    { id: "sprout_social", name: "Sprout Social", category: "marketing", status: "disconnected", icon: "🌱", description: "Unified inbox, allowing you to schedule posts and respond to clients across platforms." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Lets clients book consultations directly on your website, automatically syncing with your calendar." },
+    { id: "acuity", name: "Acuity Scheduling", category: "operations", status: "disconnected", icon: "🕒", description: "Handles custom bookings, allowing you to collect intake forms and deposits." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📧", description: "Easily send out a monthly newsletter with photos and discount codes." },
+    { id: "sendinblue", name: "Sendinblue (Brevo)", category: "marketing", status: "disconnected", icon: "✉️", description: "Maintain a massive customer list without paying exorbitant fees." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
+    { id: "alipay", name: "Alipay", category: "finance", status: "disconnected", icon: "💳", description: "Capture the Chinese market by supporting domestic digital wallets." },
+    { id: "shipstation", name: "ShipStation", category: "operations", status: "disconnected", icon: "📦", description: "Automatically pulls orders and prints labels in bulk, saving you hours daily." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automatically generates a unique meeting link the moment a client books a slot." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
