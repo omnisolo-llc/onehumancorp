@@ -127,19 +127,19 @@ export default function OnboardingWizard() {
   };
 
   const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
+    if (!businessType.trim()) {
+      setError("Please tell us about your business.");
       return;
     }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
+    if (businessType.trim().length < 10) {
+      setError("Please provide a little more detail (at least 10 characters).");
       return;
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = businessType; // Directly use the single textarea
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -253,73 +253,16 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Tell us about your business</h2>
+              <p className="text-gray-500 text-sm mb-6">Describe what you do, what you sell, or what services you provide in a few sentences.</p>
+              <textarea
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
-              <button
-                onClick={handleNext}
-                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
-              <input
-                type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
+                placeholder="e.g. I run a custom bakery called Maya's Cakes, specializing in vegan wedding cakes."
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80 min-h-[150px] resize-y"
                 autoFocus
               />
               <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
-              <input
-                type="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
-                autoFocus
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
-                >
-                  Back
-                </button>
                 <button
                   onClick={handleIntakeSubmit}
                   disabled={isLoading}

@@ -14,34 +14,14 @@ test.describe('Onboarding Wizard', () => {
     // Wait for Dashboard
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    // 1. Acquisition & Onboarding start (assuming a "Start Business Setup" or similar button is on dashboard,
-    // or direct navigation if that's the only way from an empty dashboard)
-    // For now we'll navigate directly to onboarding after login as a user starting the wizard
+    // 1. Acquisition & Onboarding start
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-
-    // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Maya's Cakes");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 3
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
-
-    // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
+    // Fill in the single paragraph description
+    await page.getByPlaceholder("e.g. I run a custom bakery called Maya's Cakes, specializing in vegan wedding cakes.").fill("I run a custom bakery called Maya's Cakes, specializing in vegan wedding cakes.");
 
     // Click Generate Draft
     await page.getByRole('button', { name: /Generate Draft/i }).click();
@@ -76,28 +56,10 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
-
-    // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Carlos Plumbing");
-
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 3
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
-
-    // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I fix pipes and leaks");
+    // Fill in the single paragraph description
+    await page.getByPlaceholder("e.g. I run a custom bakery called Maya's Cakes, specializing in vegan wedding cakes.").fill("I am a handyman named Carlos Plumbing, and I fix pipes and leaks.");
 
     // Click Generate Draft
     await page.getByRole('button', { name: /Generate Draft/i }).click();
