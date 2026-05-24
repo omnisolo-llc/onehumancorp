@@ -234,4 +234,14 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
   });
+
+  test('verify Stripe Setup mock data is removed', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+
+    // Ensure the hardcoded Stripe Setup mock text is not visible.
+    const hardcodedText = page.getByText('1 Action Required: Connect Stripe to accept payments.');
+    await expect(hardcodedText).not.toBeVisible();
+  });
 });
