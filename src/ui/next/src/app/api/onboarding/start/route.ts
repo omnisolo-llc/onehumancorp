@@ -22,16 +22,8 @@ export async function POST(request: Request) {
         return NextResponse.json(data);
     }
 
-    // Fallback for E2E tests when backend is down
-    if (process.env.NODE_ENV !== 'production') {
-      return NextResponse.json({ message: "Your business has been successfully launched." });
-    }
-
     return NextResponse.json({ error: 'Failed to start onboarding' }, { status: res.status });
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
-      return NextResponse.json({ message: "Your business has been successfully launched." });
-    }
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }
