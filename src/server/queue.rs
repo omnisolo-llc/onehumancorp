@@ -1020,7 +1020,7 @@ impl TaskQueue for RedisTaskQueue {
         let mut conn = self.get_connection().await?;
         let mut pipe = redis::pipe();
         for job in jobs {
-            let queue_job = crate::interop::protocol::proto::QueueJob {
+            let queue_job = ::server_ohc::interop::QueueJob {
                 id: job.id,
                 tenant_id: job.tenant_id,
                 parent_task_id: job.parent_task_id,
@@ -1043,7 +1043,7 @@ impl TaskQueue for RedisTaskQueue {
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
         let mut conn = self.get_connection().await?;
-        let queue_job = crate::interop::protocol::proto::QueueJob {
+        let queue_job = ::server_ohc::interop::QueueJob {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
@@ -1081,7 +1081,7 @@ impl TaskQueue for RedisTaskQueue {
             .map_err(|e| e.to_string())?;
             
         if let Some((_, payload_bytes)) = result {
-            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 let job = Job {
                     id: queue_job.id.clone(),
                     tenant_id: queue_job.tenant_id,
@@ -1113,7 +1113,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
-            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -1129,7 +1129,7 @@ impl TaskQueue for RedisTaskQueue {
         let processing_key = format!("{}_processing", self.queue_name);
         let result: Option<Vec<u8>> = redis::cmd("HGET").arg(&processing_key).arg(job_id).query_async(&mut conn).await.map_err(|e| e.to_string())?;
         if let Some(payload_bytes) = result {
-            if let Ok(queue_job) = <crate::interop::protocol::proto::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
+            if let Ok(queue_job) = <::server_ohc::interop::QueueJob as prost::Message>::decode(&payload_bytes[..]) {
                 if queue_job.tenant_id != tenant_id {
                     return Err("tenant mismatch".to_string());
                 }
@@ -1141,7 +1141,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn requeue(&self, job: Job) -> Result<(), String> {
-        let queue_job = crate::interop::protocol::proto::QueueJob {
+        let queue_job = ::server_ohc::interop::QueueJob {
             id: job.id,
             tenant_id: job.tenant_id,
             parent_task_id: job.parent_task_id,
