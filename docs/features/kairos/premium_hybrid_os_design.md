@@ -47,7 +47,7 @@ sequenceDiagram
 | **Concurrency Control** | `SELECT FOR UPDATE SKIP LOCKED` | Local DB file locks |
 | **IPC / Messaging** | Redis Pub/Sub (`redis`) | In-memory Event Bus |
 | **Memory Storage** | Managed `pgvector` Database | Local Vector DB / SQLite VSS |
-| **Target Environment** | Distributed Kubernetes Cluster | Mobile / Desktop App (Flutter) |
+| **Target Environment** | Distributed Kubernetes Cluster | Tauri Desktop App |
 | **Latency Profile** | ~10-50ms network overhead | < 1ms local memory access |
 
 </div>
