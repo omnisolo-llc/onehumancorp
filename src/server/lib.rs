@@ -4342,12 +4342,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            if (stepId === 3 && currentStep === 2) {
+                                let valid = false;
+                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
+                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
+                                });
+                                if (!valid) {
+                                    alert('Please select a business type');
+                                    return false;
+                                }
+                            }
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -4723,9 +4733,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: {
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            currentStep = stateData.step;
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
+
                             showScreen(screenId);
-
-
                         };
                     </script>
                 </body>
