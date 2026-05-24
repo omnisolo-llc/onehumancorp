@@ -6,7 +6,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SharedTask {
+pub struct LocalSharedTask {
     pub id: String,
     pub organization_id: String,
     pub parent_plan_id: Option<String>,
@@ -29,7 +29,7 @@ impl TasksDB {
         Self { db, sqlite_mutex: Mutex::new(()) }
     }
 
-    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, String> {
+    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<LocalSharedTask>, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -65,7 +65,7 @@ impl TasksDB {
 
                     tx.commit().await.map_err(|e| e.to_string())?;
 
-                    Ok(Some(SharedTask {
+                    Ok(Some(LocalSharedTask {
                         id: task_id,
                         organization_id: row.get("organization_id"),
                         parent_plan_id: row.get("parent_plan_id"),
@@ -123,7 +123,7 @@ impl TasksDB {
                         .unwrap_or_else(|_| chrono::Utc::now());
 
 
-                    Ok(Some(SharedTask {
+                    Ok(Some(LocalSharedTask {
                         id: task_id,
                         organization_id: row.get("organization_id"),
                         parent_plan_id: row.get("parent_plan_id"),
