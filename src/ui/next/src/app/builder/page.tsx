@@ -162,7 +162,7 @@ export default function BuilderPage() {
   if (status === "selection") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
+        <div className="relative w-[375px] h-[812px] shadow-2xl overflow-hidden flex flex-col border-x border-gray-200" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
               <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
@@ -197,7 +197,7 @@ export default function BuilderPage() {
            <div className="absolute bottom-0 w-full p-6 bg-white/90 backdrop-blur-md border-t border-gray-200">
               <button
                 onClick={() => setStatus("draft")}
-                className="w-full bg-[#0071E3] text-white p-4 rounded-xl font-bold font-outfit shadow-lg active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold font-outfit shadow-lg active:scale-[0.98] transition-all"
               >
                 Customize Selected Draft
               </button>
@@ -210,14 +210,14 @@ export default function BuilderPage() {
   if (status === "onboarding") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
+        <div className="relative w-[375px] h-[812px] shadow-2xl overflow-hidden flex flex-col border-x border-gray-200" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div className="glassmorphism p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <div className="glassmorphism p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6 leading-tight">
                 What are you building today?
               </h1>
@@ -252,12 +252,12 @@ export default function BuilderPage() {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
         <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
-             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+             >
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
                {[1, 2, 3].map(step => (
-                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0066FF]' : 'bg-gray-200'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
                ))}
              </div>
           </div>
@@ -273,7 +273,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
@@ -283,7 +283,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all text-gray-800"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
@@ -296,7 +296,7 @@ export default function BuilderPage() {
                       ? "text-white shadow-md active:scale-[0.98]"
                       : "bg-gray-100 text-gray-400 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0071E3' : '' }}
+                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0066FF' : '' }}
                   onClick={() => setWizardStep(2)}
                   disabled={!businessName.trim() || !businessCategory.trim()}
                 >
@@ -318,7 +318,7 @@ export default function BuilderPage() {
                       key={v}
                       onClick={() => setVibe(v)}
                       className={`p-4 border text-left transition-all font-semibold ${
-                        vibe === v ? "border-[#0071E3] bg-blue-50 text-[#0071E3]" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                        vibe === v ? "border-[#0066FF] bg-blue-50 text-[#0066FF]" : "border-gray-200 text-gray-700 hover:border-gray-300"
                       }`}
                       style={{ borderRadius: '8px' }}
                     >
@@ -341,7 +341,7 @@ export default function BuilderPage() {
                         ? "text-white shadow-md active:scale-[0.98]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '8px', background: vibe ? '#0071E3' : '' }}
+                    style={{ borderRadius: '8px', background: vibe ? '#0066FF' : '' }}
                     onClick={() => {
                        // Pre-fill bio based on earlier steps if empty
                        if (!bio.trim()) {
@@ -368,7 +368,7 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
+                    className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0066FF] focus:border-[#0066FF] outline-none transition-all resize-none text-gray-800"
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -393,7 +393,7 @@ export default function BuilderPage() {
                           ? "text-white shadow-md active:scale-[0.98]"
                           : "bg-gray-100 text-gray-400 cursor-not-allowed"
                       }`}
-                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0066FF' : '' }}
                       onClick={handleGenerate}
                       disabled={bio.trim().length <= 5}
                     >
@@ -412,7 +412,7 @@ export default function BuilderPage() {
   if (status === "generating") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col border-x border-gray-200 overflow-hidden relative">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col border-x border-gray-200 overflow-hidden relative" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
               <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
@@ -432,7 +432,7 @@ export default function BuilderPage() {
   if (status === "live") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col items-center border-x border-gray-200 text-center px-6 relative overflow-y-auto hide-scrollbar pt-12 pb-8">
+        <div className="w-[375px] h-[812px] shadow-2xl flex flex-col items-center border-x border-gray-200 text-center px-6 relative overflow-y-auto hide-scrollbar pt-12 pb-8" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
@@ -448,10 +448,10 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full bg-white rounded-[16px] border border-gray-200 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-gray-900 mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+            <div className="bg-gray-50 border border-gray-200 rounded-[8px] p-3 relative">
                 <pre className="text-[10px] text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
@@ -472,13 +472,13 @@ export default function BuilderPage() {
             </div>
           </div>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full bg-gray-50 p-3 rounded-[8px] border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
-          <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full bg-white rounded-[16px] border border-gray-200 shadow-sm p-5 mb-4 text-left">
             <h2 className="text-lg font-bold font-outfit text-gray-900 mb-1">Get your first customer 🚀</h2>
             <p className="text-xs text-gray-500 mb-4">Share your new store with friends and family to get early sales.</p>
 
@@ -487,7 +487,7 @@ export default function BuilderPage() {
                 href={`https://wa.me/?text=${encodeURIComponent(`Check out my new store: ${liveUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-[#25D366] text-white flex items-center justify-center gap-2 p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
+                className="flex-1 bg-[#25D366] text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                 WhatsApp
@@ -496,7 +496,7 @@ export default function BuilderPage() {
                 href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just launched my new business on OHC! Check it out: ${liveUrl}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-black text-white flex items-center justify-center gap-2 p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
+                className="flex-1 bg-black text-white flex items-center justify-center gap-2 p-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                 Share
@@ -506,14 +506,14 @@ export default function BuilderPage() {
 
 
           {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50 border border-blue-200 shadow-sm p-5 mb-6 text-left rounded-2xl">
+          <div className="w-full bg-blue-50 border border-blue-200 shadow-sm p-5 mb-6 text-left rounded-[16px]">
             <h2 className="text-lg font-bold font-outfit text-blue-900 mb-1">Generative Visibility Score (GEO)</h2>
             <p className="text-xs text-blue-700 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
 
             {geoScore === null ? (
               <button
                 onClick={handleGeoAnalysis}
-                className="w-full bg-blue-600 text-white font-semibold py-2 rounded-xl text-sm shadow-sm hover:bg-blue-700 transition-all"
+                className="w-full bg-blue-600 text-white font-semibold py-2 rounded-[8px] text-sm shadow-sm hover:bg-blue-700 transition-all"
               >
                 Analyze Visibility
               </button>
@@ -531,7 +531,7 @@ export default function BuilderPage() {
                 <button
                   onClick={handleAutoSeo}
                   disabled={seoApplied}
-                  className={`w-full font-semibold py-2 rounded-xl text-sm shadow-sm transition-all ${
+                  className={`w-full font-semibold py-2 rounded-[8px] text-sm shadow-sm transition-all ${
                     seoApplied
                     ? "bg-green-100 text-green-700 cursor-not-allowed border border-green-200"
                     : "bg-blue-600 text-white hover:bg-blue-700"
@@ -544,7 +544,7 @@ export default function BuilderPage() {
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 font-bold p-4 rounded-xl active:scale-[0.98] transition-all hover:bg-gray-200"
+            className="w-full bg-gray-100 text-gray-800 font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-gray-200"
             onClick={() => setStatus("idle")}
           >
             Go to Dashboard
@@ -556,7 +556,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
+      <div className="w-[375px] h-[812px] shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden glass-container" style={{ background: "rgba(255, 255, 255, 0.65)", backdropFilter: "blur(30px) saturate(210%)", border: "1px solid rgba(255, 255, 255, 0.4)", borderRadius: "16px" }}>
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
@@ -617,7 +617,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  className="w-full p-4 bg-gray-50 rounded-[8px] border-none focus:ring-2 focus:ring-blue-500 transition-all"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -642,7 +642,7 @@ export default function BuilderPage() {
             )}
             <button
               onClick={() => setIsActionSheetOpen(false)}
-              className="w-full bg-gray-900 text-white p-4 rounded-xl font-bold mt-4"
+              className="w-full bg-gray-900 text-white p-4 rounded-[8px] font-bold mt-4"
             >
               Save Changes
             </button>
@@ -652,10 +652,10 @@ export default function BuilderPage() {
         {/* Bottom Action Bar */}
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
           <div className="flex gap-3 mb-2">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Change Vibe</button>
+            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-[8px]">Change Vibe</button>
             {!isPremium && (
               <button
-                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg border border-blue-100"
+                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-[8px] border border-blue-100"
                 onClick={() => setShowUpgradeModal(true)}
               >
                 Remove Branding ✨
@@ -665,7 +665,7 @@ export default function BuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-blue-600 text-white p-4 rounded-[8px] font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -679,7 +679,7 @@ export default function BuilderPage() {
           <div className="absolute inset-0 bg-black/60 z-[60] flex flex-col justify-end">
             <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-slide-up pb-10">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center text-2xl shadow-inner">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner">
                   👑
                 </div>
                 <button
@@ -714,7 +714,7 @@ export default function BuilderPage() {
                   setIsPremium(true);
                   setShowUpgradeModal(false);
                 }}
-                className="w-full bg-gradient-to-r from-gray-900 to-black text-white font-bold p-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
+                className="w-full bg-gradient-to-r from-gray-900 to-black text-white font-bold p-4 rounded-[8px] shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
               >
                 <span>Upgrade Now</span>
                 <span className="font-normal opacity-80">$15 / mo</span>
@@ -724,22 +724,6 @@ export default function BuilderPage() {
         )}
       </div>
 
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slideUp {
-          from { transform: translateY(100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
-        .font-inter { font-family: 'Inter', sans-serif; }
-        .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
-        @media (prefers-color-scheme: dark) {
-          .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
-        }
-      `}} />
     </div>
   );
 }

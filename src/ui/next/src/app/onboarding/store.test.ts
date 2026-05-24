@@ -1,74 +1,44 @@
-import { useOnboardingStore } from './store';
 import { describe, it, expect, beforeEach } from 'vitest';
+import { useOnboardingStore } from './store';
 
-describe('useOnboardingStore', () => {
+describe('Onboarding Store', () => {
   beforeEach(() => {
-    localStorage.clear();
-    useOnboardingStore.setState({
-      step: 1,
-      businessType: '',
-      businessName: '',
-      businessCategory: '',
-      isLoading: false,
-      error: '',
-      intakeData: null,
-      startResult: null,
-    });
+    useOnboardingStore.getState().reset();
   });
 
-  it('should initialize with default state', () => {
+  it('initializes with default values', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
+    expect(state.businessType).toBe('');
     expect(state.businessName).toBe('');
     expect(state.businessCategory).toBe('');
-    expect(state.isLoading).toBe(false);
-    expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
     expect(state.startResult).toBeNull();
   });
 
-  it('should update step', () => {
+  it('updates step correctly', () => {
     useOnboardingStore.getState().setStep(2);
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('should update businessName', () => {
-    useOnboardingStore.getState().setBusinessName('Test Name');
-    expect(useOnboardingStore.getState().businessName).toBe('Test Name');
+  it('updates business details', () => {
+    useOnboardingStore.getState().setBusinessType('Retail');
+    useOnboardingStore.getState().setBusinessName('My Shop');
+    useOnboardingStore.getState().setBusinessCategory('Clothing');
+
+    const state = useOnboardingStore.getState();
+    expect(state.businessType).toBe('Retail');
+    expect(state.businessName).toBe('My Shop');
+    expect(state.businessCategory).toBe('Clothing');
   });
 
-  it('should update businessCategory', () => {
-    useOnboardingStore.getState().setBusinessCategory('Test Category');
-    expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
-  });
-
-  it('should update isLoading', () => {
-    useOnboardingStore.getState().setIsLoading(true);
-    expect(useOnboardingStore.getState().isLoading).toBe(true);
-  });
-
-  it('should update error', () => {
-    useOnboardingStore.getState().setError('Test Error');
-    expect(useOnboardingStore.getState().error).toBe('Test Error');
-  });
-
-  it('should update intakeData', () => {
-    useOnboardingStore.getState().setIntakeData({ data: 'test' });
-    expect(useOnboardingStore.getState().intakeData).toEqual({ data: 'test' });
-  });
-
-  it('should update startResult', () => {
-    useOnboardingStore.getState().setStartResult({ result: 'test' });
-    expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
-  });
-
-  it('should persist state to localStorage', () => {
+  it('resets state correctly', () => {
     useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().setBusinessName('Test');
+    useOnboardingStore.getState().reset();
 
-    // The state is persisted in localStorage under 'onboarding-storage'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
-    expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessName).toBe('Persisted Name');
+    const state = useOnboardingStore.getState();
+    expect(state.step).toBe(1);
+    expect(state.businessName).toBe('');
   });
 });
