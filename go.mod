@@ -8,6 +8,7 @@ require (
 	github.com/go-redsync/redsync/v4 v4.16.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-sqlite3 v1.14.44 // indirect
 	github.com/redis/go-redis/v9 v9.19.0 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
