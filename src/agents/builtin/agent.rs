@@ -55,6 +55,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
+    pub enable_hnsw_memory: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
@@ -110,6 +111,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
+            enable_hnsw_memory: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
@@ -1699,7 +1701,13 @@ impl Agent {
                 messages.push(Message::system("Periodic Nudge: You have completed several complex steps. Consider using a `CreateSkill` tool to curate your recent trajectory into a reusable skill."));
             }
 
-            let mut final_messages = messages.clone();
+
+
+
+
+        let mut final_messages = messages.clone();
+
+
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
