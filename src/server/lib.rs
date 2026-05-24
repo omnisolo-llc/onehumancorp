@@ -65,7 +65,6 @@ pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub mod builder;
 pub mod tools;
-
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -86,7 +85,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -641,6 +639,7 @@ impl HubService for MyHubService {
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -655,8 +654,11 @@ impl HubService for MyHubService {
             tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
+        let is_china = req.plan_id.ends_with("_china");
         let is_latam = req.plan_id.ends_with("_latam");
-        let url = if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
+        let url = if let Some(alipay_client) = alipay_client.filter(|_| is_china) {
+            alipay_client.create_checkout_preference(&req.plan_id, &tenant_id).await
+        } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
             client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
@@ -678,6 +680,7 @@ impl HubService for MyHubService {
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let _alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -1108,7 +1111,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<SharedTask>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -1118,7 +1121,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(SharedTask {
+        Ok(Response::new(::server_ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -1142,7 +1145,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -1151,8 +1154,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(SharedTask {
+        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -1231,8 +1234,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
 
-        let mapped_tasks: Vec<SharedTask> = tasks.into_iter().map(|task| {
-            SharedTask {
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = tasks.into_iter().map(|task| {
+            ::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -2022,8 +2025,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/v1/booking", api::booking::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -2123,7 +2126,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
+    let store = std::sync::Arc::new(crate::auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
@@ -2862,6 +2865,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>💬 WhatsApp</h3>
                             <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
+                        <!-- Business Analytics Widget with Soft Paywall -->
+                        <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Analytics</h3>
+                            </div>
+
+                            <!-- Basic Metrics (Free) -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Total Sales</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">$1,240</p>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Visitors</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">342</p>
+                                </div>
+                            </div>
+
+                            <!-- Advanced AI Insights (Locked / Soft Paywall) -->
+                            <div style="position: relative; padding: 24px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: linear-gradient(135deg, rgba(240,249,255,0.8) 0%, rgba(255,255,255,0.8) 100%);">
+                                <h4 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 18px;">✨</span> Advanced AI Insights
+                                </h4>
+
+                                <div style="filter: blur(4px); opacity: 0.7; pointer-events: none; user-select: none;">
+                                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1D1D1F;">Customer retention dropped by 12% this week. We recommend launching a re-engagement email campaign.</p>
+                                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='60'><path d='M0,50 Q25,10 50,30 T100,10' fill='none' stroke='%230066ff' stroke-width='4'/></svg>" style="width: 100%; height: 60px; display: block;" />
+                                </div>
+
+                                <!-- CTA Overlay -->
+                                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
+                                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
+                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card glass">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
@@ -3192,10 +3232,75 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function updateApprovalSetting(deptId, isChecked) {
 
-                            alert(`Settings updated for ${deptId}.`);
+                        function updateApprovalSetting(deptId, isChecked) {
+                            const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                            fetch(`/api/agents/settings/${deptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ auto_approve_limits: isChecked ? 0.0 : 100.0, tone_of_voice: "professional" })
+                            }).then(() => {
+                                alert(`Settings updated for ${deptId}: auto-execute is now ${!isChecked}.`);
+                            }).catch(e => {
+                                console.error('Failed to update settings', e);
+                            });
                         }
+
+                        async function fetchApprovals() {
+                            try {
+                                const res = await fetch('/api/agents/approvals', {
+                                    method: 'GET',
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    const container = document.getElementById('approval-inbox');
+                                    if (!container) return;
+
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        data.pending_approvals.forEach(approval => {
+                                            container.innerHTML += `
+                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
+                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                </div>
+                                            `;
+                                        });
+                                    } else {
+                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error fetching approvals:', e);
+                            }
+                        }
+
+                        async function decideApproval(id, approved) {
+                            try {
+                                const res = await fetch('/api/agents/approvals/' + id, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ approved })
+                                });
+                                if (res.ok) {
+                                    fetchApprovals();
+                                } else {
+                                    alert('Failed to process approval.');
+                                }
+                            } catch (e) {
+                                console.error('Error processing approval:', e);
+                            }
+                        }
+
                     </script>
 
 
@@ -3210,14 +3315,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- Manychat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Ayrshare</h3>
+                                    <h3 style="margin: 0;">Manychat</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Social Media Inbox for Instagram, Facebook, and WhatsApp.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Manychat...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3230,14 +3335,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- Resend Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Listmonk</h3>
+                                    <h3 style="margin: 0;">Resend</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">AI-Powered Email Marketing and simple customer newsletters.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Resend...')">Connect</button>
+                            </div>
+
+                            <!-- Mercado Pago Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌏</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept payments from customers in China using Alipay.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Alipay...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3250,14 +3365,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Shippo Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">EasyPost</h3>
+                                    <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to EasyPost...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Label Generation and real-time shipping rates.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3270,14 +3385,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Jitsi Meet</h3>
+                                    <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Auto-Generated Meeting Links for online services.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Connect</button>
                             </div>
                         </div>
 
@@ -3679,6 +3794,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Embed Setup Bottom Sheet -->
+                        <!-- Soft Paywall Modal -->
+                        <div id="soft-paywall-modal" class="bottom-sheet glass" style="padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto; z-index: 2000;">
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="background: transparent; border: none; font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
+                            <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+
+                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
+
+                            <div style="margin: 16px 0; color: var(--text-secondary); font-size: 14px;">OR</div>
+
+                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2;">
+                                🐦 Share on X to get 7 Days Free
+                            </button>
+                        </div>
+
                         <div id="embed-setup-sheet" class="bottom-sheet glass">
                             <div class="bottom-sheet-header">
                                 <h2>Embed Storefront</h2>
@@ -3961,11 +4094,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.add('open');
                         }
 
+                        function closeSoftPaywall() {
+                            document.getElementById('soft-paywall-modal').classList.remove('open');
+                        }
+
+                        function claimTrialExtension() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+                            localStorage.setItem('has_pro', 'true');
+                            closeSoftPaywall();
+                            alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+                            // Re-run the campaign now that they have pro
+                            sendReviewCampaign();
+                        }
+
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         async function sendReviewCampaign() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const btn = document.getElementById('send-review-campaign-btn');
                             btn.textContent = 'Generating...';
                             btn.disabled = true;
@@ -4347,12 +4499,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            if (stepId === 3 && currentStep === 2) {
+                                let valid = false;
+                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
+                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
+                                });
+                                if (!valid) {
+                                    alert('Please select a business type');
+                                    return false;
+                                }
+                            }
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -4660,11 +4822,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             banner.classList.add('hidden');
                                         }
                                     }
+
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
+                                fetchApprovals();
                             }
 
                             if (id === 'my-plan-screen') {
+
                                 fetch('/api/billing/my-plan')
                                     .then(res => res.json())
                                     .then(data => {
@@ -4748,9 +4913,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: {
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            currentStep = stateData.step;
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
+
                             showScreen(screenId);
-
-
                         };
                     </script>
                 </body>
@@ -4760,3 +4950,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     axum::response::Html(content)
 }
 pub mod crypto;
+// resolves #9690
