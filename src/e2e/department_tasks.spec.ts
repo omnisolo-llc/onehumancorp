@@ -161,4 +161,89 @@ test.describe("AI Agent Department UI Mocks", () => {
     await approvalCard.getByRole("button", { name: "Approve" }).click();
     await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
   });
+
+  test("UI: End-to-End CUJ - Marketing draft generation and approval", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await expect(promoterCard).toContainText("awaiting approval");
+    await promoterCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Promoter");
+    const approvalCard = page.locator("div", { hasText: "Generated 7-day social media plan for Vegan Celebration Cake" }).first();
+    await expect(approvalCard).toBeVisible();
+
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("UI: End-to-End CUJ - Sales abandoned cart recovery approval", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const salesCard = page.locator("button", { hasText: "The Salesperson" });
+    await expect(salesCard).toContainText("awaiting approval");
+    await salesCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Salesperson");
+    const approvalCard = page.locator("div", { hasText: "Abandoned cart recovery: 10% discount for Sarah" }).first();
+    await expect(approvalCard).toBeVisible();
+
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("UI: End-to-End CUJ - Legal compliance draft approval", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const legalCard = page.locator("button", { hasText: "The Protector" });
+    await expect(legalCard).toContainText("awaiting approval");
+    await legalCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Protector");
+    const approvalCard = page.locator("div", { hasText: "Compliance warning: Drafting updated European privacy policy" }).first();
+    await expect(approvalCard).toBeVisible();
+
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("UI: End-to-End CUJ - Finance invoice reminder approval", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const financeCard = page.locator("button", { hasText: "The Accountant" });
+    await expect(financeCard).toContainText("awaiting approval");
+    await financeCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Accountant");
+    const approvalCard = page.locator("div", { hasText: "Invoice reminder for upcoming subscription" }).first();
+    await expect(approvalCard).toBeVisible();
+
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+  });
+
+  test("UI: End-to-End CUJ - Business Advisory insights approval", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const advisoryCard = page.locator("button", { hasText: "The Advisor" });
+    await expect(advisoryCard).toContainText("awaiting approval");
+    await advisoryCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Advisor");
+    const approvalCard = page.locator("div", { hasText: "Weekly business insights and recommendations" }).first();
+    await expect(approvalCard).toBeVisible();
+
+    await approvalCard.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+  });
 });
