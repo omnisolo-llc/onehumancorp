@@ -270,6 +270,20 @@ export default function OnboardingWizard() {
            </div>
         </div>
 
+        {/* Progress Bar */}
+        <div className="w-full px-6 pb-4 z-10">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-4 overflow-hidden">
+            <div
+              className="bg-[#0066FF] h-1.5 rounded-full transition-all duration-500 ease-in-out"
+              style={{ width: `${Math.min(step, 4) * 25}%` }}
+              role="progressbar"
+              aria-valuenow={Math.min(step, 4) * 25}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            ></div>
+          </div>
+        </div>
+
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
@@ -292,6 +306,8 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
+                autoCapitalize="sentences"
+                spellCheck="true"
               />
               <button
                 onClick={handleNext}
@@ -315,7 +331,9 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="organization"
+                autoCapitalize="words"
+                spellCheck="false"
               />
               <div className="flex gap-3">
                 <button
@@ -346,8 +364,10 @@ export default function OnboardingWizard() {
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
-                enterKeyHint="next"
+                enterKeyHint="send"
                 autoComplete="off"
+                autoCapitalize="sentences"
+                spellCheck="true"
               />
               <div className="flex gap-3">
                 <button
@@ -392,6 +412,9 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 focus:border-[#0066FF] outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner"
                          placeholder="e.g. Custom Cake"
+                         autoComplete="off"
+                         autoCapitalize="words"
+                         spellCheck="true"
                        />
                      </div>
                      <div className="w-24">
