@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use tokio::sync::{Mutex, OwnedMutexGuard};
 use std::collections::HashMap;
-use std::time::Duration;
 
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {

@@ -265,4 +265,59 @@ mod parity_tests {
             tx1.commit().await.unwrap();
         }
     }
+
+    #[tokio::test]
+    async fn test_parity_timezones() {
+        let sqlite_db = setup_sqlite_db().await;
+        let pg_db = setup_postgres_db().await;
+
+        let task_id = uuid::Uuid::new_v4().to_string();
+        let mission_id = "mission_123";
+        let title = "Test Timezone Title";
+
+        // Define a strict UTC timestamp explicitly
+        let dt = chrono::Utc::now();
+
+        if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES (?, ?, ?, 'PENDING', ?)")
+                .bind(&task_id)
+                .bind(mission_id)
+                .bind(title)
+                .bind(dt)
+                .execute(pool)
+                .await
+                .unwrap();
+
+            let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = ?")
+                .bind(&task_id)
+                .fetch_one(pool)
+                .await
+                .unwrap();
+            let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
+
+            // SQLite strips milliseconds to certain precisions based on formatting,
+            // but the timezone itself (UTC) must match.
+            assert_eq!(created_at.timestamp(), dt.timestamp());
+        }
+
+        if let Some(ref db) = pg_db {
+            let parsed_id = uuid::Uuid::parse_str(&task_id).unwrap();
+            sqlx::query("INSERT INTO swarm_tasks (id, mission_id, title, status, created_at) VALUES ($1, $2, $3, 'PENDING', $4)")
+                .bind(parsed_id)
+                .bind(mission_id)
+                .bind(title)
+                .bind(dt)
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
+            let row = sqlx::query("SELECT created_at FROM swarm_tasks WHERE id = $1")
+                .bind(parsed_id)
+                .fetch_one(&db.pool)
+                .await
+                .unwrap();
+            let created_at: chrono::DateTime<chrono::Utc> = row.get("created_at");
+            assert_eq!(created_at.timestamp(), dt.timestamp());
+        }
+    }
 }
