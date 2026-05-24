@@ -2757,8 +2757,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
-                        <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                        <button class="nav-item" onclick="showSoftPaywall('Product Limit Reached', 'You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products and unlock premium tools.', 'pricing-screen')">Add</button>
+                        <span class="nav-item" onclick="showSoftPaywall('Product Limit Reached', 'You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products and unlock premium tools.', 'pricing-screen')">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
                         <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
@@ -2892,7 +2892,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- CTA Overlay -->
                                 <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
                                     <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
-                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
+                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="showSoftPaywall('Unlock AI Insights', 'Upgrade to Pro to access Advanced AI Insights and automated sales forecasting.', 'pricing-screen')">Upgrade to Pro</button>
                                 </div>
                             </div>
                         </div>
@@ -2940,7 +2940,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                            <span class="nav-item" onclick="showSoftPaywall('Product Limit Reached', 'You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products and unlock premium tools.', 'pricing-screen')">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
@@ -4704,6 +4704,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('promo-result').style.display = 'block';
                         }
 
+                        function showSoftPaywall(title, desc, targetScreen) {
+                            const modal = document.getElementById('soft-paywall-modal');
+                            if (modal) {
+                                document.getElementById('soft-paywall-title').textContent = title || 'Unlock Premium Features';
+                                document.getElementById('soft-paywall-desc').textContent = desc || "You've discovered a premium feature! Upgrade your plan to access this and much more.";
+
+                                const upgradeBtn = document.getElementById('soft-paywall-upgrade-btn');
+                                upgradeBtn.onclick = () => {
+                                    closeSoftPaywall();
+                                    showScreen(targetScreen || 'pricing-screen');
+                                };
+
+                                modal.style.display = 'flex';
+                            }
+                        }
+
+                        function closeSoftPaywall() {
+                            const modal = document.getElementById('soft-paywall-modal');
+                            if (modal) {
+                                modal.style.display = 'none';
+                            }
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -4891,6 +4914,36 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             showScreen(screenId);
                         };
                     </script>
+
+                    <!-- Soft Paywall Modal -->
+                    <div id="soft-paywall-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;">
+                        <div style="background: white; border-radius: 24px; max-width: 400px; width: 100%; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center; position: relative; overflow: hidden;">
+                            <div style="position: absolute; top: -50px; left: -50px; right: -50px; height: 150px; background: linear-gradient(135deg, #0066FF 0%, #3b82f6 100%); z-index: 0; border-radius: 50%; opacity: 0.1;"></div>
+                            <div style="position: relative; z-index: 1;">
+                                <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
+                                <h2 id="soft-paywall-title" style="margin: 0 0 12px 0; font-size: 24px; font-weight: 800; color: #1D1D1F; font-family: 'Outfit', sans-serif;">Unlock Premium Features</h2>
+                                <p id="soft-paywall-desc" style="margin: 0 0 24px 0; font-size: 16px; color: #657083; line-height: 1.5;">You've discovered a premium feature! Upgrade your plan to access this and much more.</p>
+
+                                <div style="text-align: left; margin-bottom: 32px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                        <span style="color: #10b981; font-weight: bold;">✓</span>
+                                        <span style="font-size: 15px; color: #334155; font-weight: 500;">Unlimited Products</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                                        <span style="color: #10b981; font-weight: bold;">✓</span>
+                                        <span style="font-size: 15px; color: #334155; font-weight: 500;">AI Automation Tools</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <span style="color: #10b981; font-weight: bold;">✓</span>
+                                        <span style="font-size: 15px; color: #334155; font-weight: 500;">Advanced Analytics</span>
+                                    </div>
+                                </div>
+
+                                <button id="soft-paywall-upgrade-btn" style="width: 100%; background: linear-gradient(135deg, #0066FF 0%, #3b82f6 100%); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 14px 0 rgba(0,118,255,0.39);">Upgrade Now</button>
+                                <button onclick="closeSoftPaywall()" style="width: 100%; background: transparent; color: #64748b; border: none; padding: 12px; font-size: 14px; font-weight: 600; cursor: pointer;">Maybe Later</button>
+                            </div>
+                        </div>
+                    </div>
                 </body>
             </html>
         "#,
