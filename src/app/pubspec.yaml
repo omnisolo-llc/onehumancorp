@@ -9,6 +9,7 @@ dependencies:
     sdk: flutter
   http: ^1.2.0
   shared_preferences: ^2.5.5
+  stripe_terminal: ^1.5.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
