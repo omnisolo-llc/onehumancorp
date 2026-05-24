@@ -20,7 +20,7 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
+        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             PaymentMethod::Ach
         } else {
             PaymentMethod::CreditCard
@@ -33,7 +33,7 @@ impl PaymentRouter {
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
-        if ach_fee < card_fee && amount_usd >= Self::ACH_MIN_AMOUNT {
+        let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT); if ach_fee < card_fee && amount_usd >= ach_min {
             let savings = card_fee - ach_fee;
             (savings * 100.0).round() / 100.0
         } else {
