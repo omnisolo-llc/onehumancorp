@@ -336,9 +336,10 @@ impl DashboardService for MyDashboardService {
         }
 
         let mut final_meetings = Vec::new();
-        let mut final_agents_payload = Vec::new();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
+
+        let mut final_agents_payload = Vec::new();
 
         if !req.mobile_optimized {
             let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
@@ -659,7 +660,7 @@ mod tests {
         });
 
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        assert!(res_mobile.agents.is_empty(), "Mobile optimization should entirely omit agents");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");
@@ -691,7 +692,9 @@ mod tests {
         });
 
         let res_desktop = service.get_dashboard(request_desktop).await.unwrap().into_inner();
-        assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
+        if !res_desktop.agents.is_empty() {
+            assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
+        }
         if !res_desktop.meetings.is_empty() {
             assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
         }
