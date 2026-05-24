@@ -16,7 +16,7 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await expect(page1.locator('#setup-screen')).toBeVisible();
 
     // 2. Start flow and type business name
-    await page1.getByRole('button', { name: /Start My Business/ }).click();
+    await page1.getByRole('button', { name: /Start My Business Next/ }).click();
     await page1.getByRole('button', { name: /Online Store/ }).click();
     await page1.getByPlaceholder('What is your business called?').fill('Maya\'s Cross-Device Bakery');
 
