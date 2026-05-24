@@ -756,6 +756,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_claim_task_concurrent_safe() {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
+            .bind("test-concurrent")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let db = Arc::new(crate::db::DB {
+            pool: sqlx::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: crate::db::DbStore::Sqlite(pool),
+        });
+
+        let mesh = Arc::new(crate::orchestration::mesh::MockTeammateMesh::new());
+        let service = Arc::new(TaskDecompositionService::new(db, mesh));
+
+        let mut handles = vec![];
+        for i in 0..10 {
+            let svc_clone = service.clone();
+            let agent_id = format!("agent-{}", i);
+            handles.push(tokio::spawn(async move {
+                svc_clone.claim_task(&agent_id).await
+            }));
+        }
+
+        let mut claim_count = 0;
+        let mut claims = vec![];
+        for h in handles {
+            if let Ok(Ok(Some(t))) = h.await {
+                claims.push(t);
+                claim_count += 1;
+            }
+        }
+
+        assert_eq!(claim_count, 1, "Exactly one agent should have claimed the task");
+    }
+
+    #[tokio::test]
     async fn test_mission_telemetry_metrics() {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
