@@ -14,6 +14,10 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
+    m.insert("checkout-btn-tooltip".to_string(), "Proceed to upgrade your account.".to_string());
+    m.insert("add-product-tooltip".to_string(), "Add a new product or service to your store.".to_string());
+    m.insert("checkout-btn-tooltip".to_string(), "Proceed to upgrade your account.".to_string());
+    m.insert("add-product-tooltip".to_string(), "Add a new product or service to your store.".to_string());
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
@@ -2041,7 +2045,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
+            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "api-docs-screen" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
@@ -2087,7 +2091,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 if query.contains(kw) {
                     reply = format!("Based on our help center: {}", desc);
                     if kw == "api" {
-                        link_url = "/api-docs";
+                        link_url = "api-docs-screen";
                     }
                     break;
                 }
@@ -2751,8 +2755,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             /* Scribe: Documentation Feature Styles */
             .tooltip-box { position: fixed; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; line-height: 1.4; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(4px); max-width: 250px; box-shadow: var(--shadow-md); }
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
-            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
-            #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
+            #global-chat-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
+            #global-chat-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
             #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
@@ -2774,7 +2778,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
             .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
             .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; }
-            .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
+            .video-thumbnail { background: #000; aspect-ratio: 9 / 16; height: auto; min-height: 250px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
             .video-info { padding: 12px; }
             .video-info h4 { margin: 0 0 4px 0; }
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
@@ -2794,10 +2798,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
-                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                        <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }" placeholder="add-product-tooltip">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
-                        <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
+                        <button class="nav-item" onclick="document.getElementById('ai-chat-widget').style.display='flex'">❓<br>Help</button>
                     </div>
 
 
@@ -2813,7 +2817,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
-                        <h1>Dashboard</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1>Dashboard</h1><button class="secondary" onclick="showScreen(&quot;help-screen&quot;)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">?</button></div><button class="secondary" onclick="document.getElementById('ai-chat-widget').style.display='flex'" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">💬</button></div>
 
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
@@ -2976,7 +2980,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Messages</button>
                             <button class="nav-item" onclick="showScreen('inbox-screen')">Chat</button>
                             <button class="nav-item" onclick="showScreen('meetings-screen')">Meetings</button>
-                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
+                            <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }" placeholder="add-product-tooltip">Add Product</span>
                             <button class="nav-item">Orders</button>
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
@@ -3214,7 +3218,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Agents Page (Your Team) -->
                     <div id="team-screen" class="screen">
-                        <h1 class="outfit">Agents</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 class="outfit">Agents</h1><button class="secondary" onclick="showScreen(&quot;help-screen&quot;)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">?</button></div><button class="secondary" onclick="showScreen('help-screen')" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">💬</button></div>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
@@ -3339,7 +3343,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <div style="display: flex; gap: 12px; align-items: center;"><div style="display: flex; gap: 12px; align-items: center;"><h1>Connect Tools</h1><button class="secondary" onclick="showScreen(&quot;help-screen&quot;)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">?</button></div><button class="secondary" onclick="showScreen('help-screen')" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">💬</button></div>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -3440,7 +3444,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
-                        <h1>Settings</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1>Settings</h1><button class="secondary" onclick="showScreen(&quot;help-screen&quot;)" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">?</button></div><button class="secondary" onclick="showScreen('help-screen')" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">💬</button></div>
                         <h2>General</h2>
                         <label><input type="checkbox"> Enable Email Notifications</label>
                         <label><input type="checkbox"> Enable SMS Reminders</label>
@@ -3575,6 +3579,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
+                    <!-- 💰 Miser: Cost Transparency Dashboard (for business owners) -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
                         <p id="cost-dashboard-total">Total Costs: $0.00</p>
@@ -3590,7 +3595,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')" placeholder="checkout-btn-tooltip">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>
@@ -3678,7 +3683,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Setup Wizard -->
                     <div id="setup-screen" class="screen glass">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;"><h1 style="margin-bottom: 0;">OneHuman</h1><button class="secondary" onclick="showScreen('help-screen')" style="border-radius: 50%; width: 36px; height: 36px; padding: 0; display: inline-flex; justify-content: center; align-items: center;" placeholder="help-btn-tooltip">💬</button></div>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
@@ -5035,7 +5040,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href='#' onclick="showScreen('help-screen'); document.getElementById('ai-chat-widget').style.display='none';">' + data.link_text + '</a>';
+                                if(data.link) { aiMsg.innerHTML += '<br><br><a href=&quot;#&quot; onclick="showScreen(&quot;' + data.link + '&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>'; }
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
@@ -5085,7 +5090,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
                             { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
                             { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' },
+                            { id: 'api-docs', title: 'API Documentation (Advanced)', desc: 'Interactive API reference for integrations.', icon: '👩‍💻', link: 'api-docs-screen' }
                         ];
 
                         function renderHelpCenter() {
@@ -5095,20 +5101,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             // Add interactive tour buttons to the top of the help center
                             const toursDiv = document.createElement('div');
                             toursDiv.style.gridColumn = '1 / -1';
-                            toursDiv.innerHTML = `
-                                <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-                                    <button class="secondary" onclick="startWalkthrough('setup-store')">🗺️ Tour: Setup Store</button>
-                                    <button class="secondary" onclick="startWalkthrough('activate-ai')">🗺️ Tour: AI Agents</button>
-                                    <button class="secondary" onclick="startWalkthrough('accept-payment')">🗺️ Tour: Payments</button>
-                                </div>
-                            `;
+                            toursDiv.innerHTML = '<div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">' +
+                                '<button class="secondary" onclick="startWalkthrough(&quot;setup-store&quot;)">🗺️ Tour: Setup Store</button>' +
+                                '<button class="secondary" onclick="startWalkthrough(&quot;activate-ai&quot;)">🗺️ Tour: AI Agents</button>' +
+                                '<button class="secondary" onclick="startWalkthrough(&quot;accept-payment&quot;)">🗺️ Tour: Payments</button>' +
+                                '</div>';
                             container.appendChild(toursDiv);
 
-                            helpTopics.forEach(topic => {
+                                                                                    helpTopics.forEach(topic => {
                                 const card = document.createElement('div');
                                 card.className = 'help-category-card';
-                                card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
-                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                card.innerHTML = '<div style="font-size: 24px; margin-bottom: 12px;">' + topic.icon + '</div><h3>' + topic.title + '</h3><p>' + topic.desc + '</p>';
+                                if (topic.link) {
+                                    card.onclick = () => showScreen(topic.link);
+                                } else {
+                                    card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                }
                                 container.appendChild(card);
                             });
                         }
@@ -5140,7 +5148,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="help-btn-tooltip">💬</button>
 
                     <div id="ai-chat-widget">
                         <div id="ai-chat-header">
@@ -5169,6 +5177,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Help Center Screen -->
                     <div id="help-screen" class="screen">
                         <h1>Help Center</h1>
+                        <h2>Interactive Guides</h2>
+                        <div style="display: flex; gap: 12px; margin-bottom: 32px; overflow-x: auto; padding-bottom: 8px;">
+                            <button class="secondary" onclick="showScreen(&quot;setup-screen&quot;); startWalkthrough(&quot;setup-store&quot;);">Set up your store</button>
+                            <button class="secondary" onclick="showScreen(&quot;setup-screen&quot;); startWalkthrough(&quot;accept-payment&quot;);">Accept your first payment</button>
+                            <button class="secondary" onclick="showScreen(&quot;team-screen&quot;); startWalkthrough(&quot;activate-ai&quot;);">Activate your AI Support Agent</button>
+                        </div>
+
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
                             <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
