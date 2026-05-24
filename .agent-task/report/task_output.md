@@ -47,7 +47,7 @@ issue_description: |
   ```
 
   ### Key Architectural Invariants
-  1. **Zero-Trust Multi-Tenancy**: The event ingestion pipeline and analytical data store MUST strictly isolate data by `tenant_id` at the lowest level (e.g., Row-Level Security in Postgres/ClickHouse). No AI agent or query can cross tenant boundaries.
+  1. **Zero-Trust Multi-Tenancy**: The event ingestion pipeline and analytical data store MUST strictly isolate data by `tenant_id` at the lowest level (e.g., Row-Level Security in Postgres/ClickHouse). No AI agent or query can cross tenant boundaries. Identity and access to the ingestion endpoints must be strictly verified using SPIFFE/SPIRE for inter-service authentication.
   2. **Invisible Intelligence**: The raw event data is NEVER shown to the merchant as a raw chart. It is exclusively consumed by the `AnalyticsEngine` and AI departments to synthesize the `DAILY_BRIEFING` and `PROACTIVE_ACTION` items.
   3. **High-Throughput Ingestion**: Events are ingested asynchronously via the event mesh (NATS) to ensure no performance degradation to the core transactional databases during high traffic (e.g., Maya's Instagram drop).
 
@@ -60,6 +60,10 @@ issue_description: |
     4. A prominent, 1-tap "Do it" button is displayed next to the actionable insight. No charts are visible.
   - **Advanced Settings**: For the rare merchant who wants raw data, an "Export Raw Data (CSV)" button is hidden deep in the "Advanced Settings" menu.
 
+  ### Performance and Offline Targets
+  - **Latency:** The daily briefing payload must be pre-calculated and served to the mobile client in `<100ms` globally. Event ingestion must have a P99 latency of `<50ms` to the NATS mesh.
+  - **Offline Capability:** The daily briefing must be cached locally on the device (e.g., via SQLite/PWA Cache) so it remains instantly readable even if the merchant drops to an offline state (e.g., while riding the subway).
+
   ### AI Agent Integration Points
   - **Finance AI Department**: Continuously monitors the event stream for revenue trends and flags cash-flow risks.
   - **Marketing & CS AI Departments**: Consume the `PROACTIVE_ACTION` triggers. If a customer is flagged as "churning" (e.g., Leo's inactive student), the CS Agent automatically drafts a polite SMS/email and queues it for Leo's 1-tap approval.
@@ -67,11 +71,13 @@ issue_description: |
   ## Implementation Prompt
   **To Implementer Agent:**
   Implement the "Invisible Analytics and Growth Engine".
-  1. Create the `BusinessEvent` ingestion pipeline using our NATS event mesh, ensuring asynchronous, non-blocking writes to the datastore.
+  1. Create the `BusinessEvent` ingestion pipeline using our NATS event mesh, ensuring asynchronous, non-blocking writes to the datastore. Authenticate producers using SPIRE.
   2. Enforce strict `tenant_id` Row-Level Security on the event store.
   3. Build the background job that aggregates daily events for a tenant, passes the summary to the LLM service to generate the `DAILY_BRIEFING` in simple English, and persists it.
-  4. Build the API endpoint to serve the `DAILY_BRIEFING` to the mobile client (375px optimized layout).
+  4. Build the API endpoint to serve the `DAILY_BRIEFING` to the mobile client (375px optimized layout, `<100ms` latency).
   DO NOT implement complex charting libraries or raw data dashboards on the frontend. Focus purely on the ingestion and the generation of plain-language insights.
+
+  **Estimated Scope:** Large
 issue_priority: P0
 issue_category: research
 issue_type: task
