@@ -859,15 +859,14 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
@@ -899,10 +898,9 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         let row = sqlx::query(
-            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -946,10 +944,9 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "DELETE FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2"
+            "DELETE FROM onboarding_state WHERE tenant_id = $1"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .execute(&mut *tx)
         .await
         .map_err(|e| tonic::Status::internal(e.to_string()))?;
@@ -2148,6 +2145,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 }
             }
         });
+    } else {
+        if let crate::db::DbStore::Sqlite(ref sqlite_pool) = db.store {
+            // Need a cloud Postgres connection to push missions & telemetry to
+            let cloud_db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+            let pg_pool = sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                .connect_lazy(&cloud_db_url)
+                .expect("Failed to initialize cloud pg pool for HybridSyncDaemon");
+
+            let hybrid_sync_daemon = Arc::new(crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon::new(
+                sqlite_pool.clone(),
+                pg_pool,
+            ));
+
+            let hybrid_sync_daemon_clone = hybrid_sync_daemon.clone();
+            tokio::spawn(async move {
+                hybrid_sync_daemon_clone.run().await;
+            });
+        }
     }
 
     // Start Scheduler Background Task
@@ -2513,6 +2529,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             pointer-events: none;
                             position: absolute;
                             visibility: hidden;
+                            transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1), visibility 150ms step-end;
                         }
 
                         @media (max-width: 375px) {
@@ -2712,6 +2729,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         #setup-screen > div {
             transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+            position: relative;
+        }
+
+        #setup-screen > div.hidden {
+            opacity: 0;
+            transform: translateY(10px);
+            pointer-events: none;
+            position: absolute;
+            visibility: hidden;
+            transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1), transform 150ms cubic-bezier(0.4, 0, 0.2, 1), visibility 150ms step-end;
         }
 
         #setup-screen button, #setup-screen input {
@@ -3205,14 +3234,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Meta Graph API Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Meta Graph API</h3>
+                                    <h3 style="margin: 0;">Ayrshare</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Inbox for FB, IG, WhatsApp. Single unified inbox within OHC.</p>
-                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Meta Graph API...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
+                                <button style="width: 100%; background: #0071E3; border-radius: 8px;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3221,18 +3250,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin: 0;">Cal.com</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Open Source scheduling infrastructure. Zero-Config Booking & Calendar Sync.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Config Booking & Calendar Sync.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
-                            <!-- Resend Integration -->
+                            <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Resend</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📧</span>
+                                    <h3 style="margin: 0;">Listmonk</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Developer-friendly API, excellent deliverability, modern React-email templates.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Resend...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Setting up Listmonk...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3251,7 +3280,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin: 0;">EasyPost</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">API-first solution aggregating hundreds of carriers with built-in address verification.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
                                 <button style="width: 100%; background: #34C759; border-radius: 8px;" onclick="alert('Connecting to EasyPost...')">Connect</button>
                             </div>
 
@@ -3261,18 +3290,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard for SMS and WhatsApp messaging globally.</p>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Reliable SMS alerts for new orders and customer notifications.</p>
                                 <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
-                            <!-- Microsoft Teams Integration -->
+                            <!-- Jitsi Meet Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Zoom</h3>
+                                    <h3 style="margin: 0;">Jitsi Meet</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Industry standard video conferencing. High user familiarity.</p>
-                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Zoom...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
+                                <button style="width: 100%; border-radius: 8px;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
                             </div>
                         </div>
 
@@ -3531,7 +3560,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-1" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" style="display: none; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 20px;">
@@ -4339,6 +4368,72 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         let currentStep = 1;
+
+                        let saveTimeout = null;
+                        function saveWizardState() {
+                            clearTimeout(saveTimeout);
+                            saveTimeout = setTimeout(() => {
+                                const stateData = { step: currentStep };
+                                document.querySelectorAll('#setup-screen input').forEach(input => {
+                                    if (input.placeholder && input.value) {
+                                        stateData[input.placeholder] = input.type === 'checkbox' ? input.checked : input.value;
+                                    }
+                                });
+                                localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
+
+                                const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                const userId = localStorage.getItem('user_id') || 'test-user';
+                                fetch('/api/onboarding/state', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Tenant-ID': tenantId,
+                                        'X-User-ID': userId
+                                    },
+                                    body: JSON.stringify(stateData)
+                                }).catch(console.error);
+                            }, 500);
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            const savedState = localStorage.getItem('ohc_wizard_state');
+                            if (savedState) {
+                                try {
+                                    const stateData = JSON.parse(savedState);
+                                    if (stateData.step && stateData.step > 1 && stateData.step <= 8) {
+                                        currentStep = stateData.step;
+                                        document.querySelectorAll('#setup-screen > div').forEach(el => {
+                                            el.classList.add('hidden');
+                                            setTimeout(() => el.style.display = 'none', 250);
+                                        });
+                                        const nextEl = document.getElementById('step-' + currentStep);
+                                        if (nextEl) {
+                                            setTimeout(() => {
+                                                nextEl.style.display = 'block';
+                                                setTimeout(() => nextEl.classList.remove('hidden'), 50);
+                                            }, 250);
+                                        }
+                                    }
+                                    document.querySelectorAll('#setup-screen input').forEach(input => {
+                                        if (input.placeholder && stateData[input.placeholder] !== undefined) {
+                                            if (input.type === 'checkbox') {
+                                                input.checked = stateData[input.placeholder];
+                                            } else {
+                                                input.value = stateData[input.placeholder];
+                                            }
+                                        }
+                                    });
+                                } catch (e) {
+                                    console.error('Failed to restore wizard state:', e);
+                                }
+                            }
+
+                            document.querySelectorAll('#setup-screen input').forEach(input => {
+                                input.addEventListener('input', saveWizardState);
+                                input.addEventListener('change', saveWizardState);
+                            });
+                        });
+
 
 
                         function validateInputs(stepId) {
