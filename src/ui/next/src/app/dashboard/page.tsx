@@ -260,7 +260,7 @@ export default function Dashboard() {
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                         >
                             <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
                         </button>
@@ -294,15 +294,15 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
                                         >
                                             Reject
                                         </button>
                                         <button
                                             onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                            style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
                                             Approve
                                         </button>
