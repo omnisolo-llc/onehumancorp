@@ -27,7 +27,7 @@ pub struct CreateBookingRequest {
     pub end_time: Option<DateTime<Utc>>,
 }
 
-pub fn router() -> Router {
+pub fn router<S: Clone + Send + Sync + 'static>() -> Router<S> {
     Router::new()
         .route("/services", get(list_services).post(upsert_service))
         .route("/bookings", get(list_bookings).post(create_booking))
