@@ -53,7 +53,7 @@ mod tests {
         let event = DepartmentEvent {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
-            event_type: "tenant.quote.accepted".to_string(), // Operations agent subscribes to this
+            event_type: "tenant.order.created".to_string(), // Operations agent subscribes to this
             payload: serde_json::json!({"order_id": "12345"}),
         };
 
@@ -67,7 +67,7 @@ mod tests {
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Create order and booking")) {
+            if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
                 has_ops_auto = true;
             }
             if pending.iter().any(|req| req.description.contains("Send personalized thank you")) {
