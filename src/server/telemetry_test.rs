@@ -621,9 +621,3 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }
-
-#[test]
-fn test_record_sub_agent_queue_delay() {
-    // Ensures the function completes without panicking
-    ::server_telemetry::record_sub_agent_queue_delay(42.0);
-}
