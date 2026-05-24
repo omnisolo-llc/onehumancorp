@@ -47,7 +47,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _loadBio() async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       final response = await _client.get(Uri.parse('$baseUrl/api/onboarding/draft'));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -71,7 +71,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _saveDraft(String text) async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       await _client.post(
         Uri.parse('$baseUrl/api/onboarding/draft'),
         headers: {'Content-Type': 'application/json'},
@@ -89,7 +89,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       setState(() => _state = OnboardingState.generating);
 
       try {
-        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+        final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
         final response = await _client.post(
           Uri.parse('$baseUrl/api/onboarding/start'),
           headers: {'Content-Type': 'application/json'},
@@ -135,7 +135,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> launchStore() async {
     try {
-      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8080');
+      final baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:18789');
       final response = await _client.post(
         Uri.parse('$baseUrl/api/onboarding/launch'),
       );
@@ -166,10 +166,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.65),
+                    color: Colors.white.withOpacity(0.55),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.4),
@@ -315,7 +315,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: TextFormField(
               key: Key('bio-input'),
               controller: _bioController,
@@ -323,13 +323,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.sentences,
               keyboardType: TextInputType.multiline,
-              autofocus: true,
               maxLines: 4,
               decoration: InputDecoration(
                 labelText: 'Business Bio',
                 hintText: 'e.g., I bake custom vegan cakes in Seattle. Maya\'s Cakes.',
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
+                fillColor: Colors.white.withOpacity(0.4),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 contentPadding: EdgeInsets.all(20),
               ),
@@ -346,8 +345,46 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
         ),
+        SizedBox(height: 16),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children: [
+            ActionChip(
+              label: Text('Vegan Bakery'),
+              onPressed: () {
+                setState(() {
+                  _bioController.text = 'I bake custom vegan cakes in Seattle. Maya\'s Cakes.';
+                  bio = _bioController.text;
+                });
+                _saveDraft(bio);
+              },
+            ),
+            ActionChip(
+              label: Text('Freelance Design'),
+              onPressed: () {
+                setState(() {
+                  _bioController.text = 'I offer freelance graphic design services for local businesses.';
+                  bio = _bioController.text;
+                });
+                _saveDraft(bio);
+              },
+            ),
+            ActionChip(
+              label: Text('Local Cafe'),
+              onPressed: () {
+                setState(() {
+                  _bioController.text = 'A cozy neighborhood cafe serving artisanal coffee and pastries.';
+                  bio = _bioController.text;
+                });
+                _saveDraft(bio);
+              },
+            ),
+          ],
+        ),
         SizedBox(height: 32),
         ElevatedButton(
+          key: Key('next-step-1'),
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               _formKey.currentState!.save();
@@ -361,8 +398,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 0,
           ),
-                    child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
-                  ),
+          child: Text('Next', style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600)),
+        ),
                 ],
               ),
             ),
@@ -399,19 +436,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ClipRRect(
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
             child: TextFormField(
               key: Key('name-input'),
               initialValue: businessName,
               autofocus: true,
               textInputAction: TextInputAction.next,
               textCapitalization: TextCapitalization.words,
-              autofocus: true,
               decoration: InputDecoration(
                 labelText: 'Business Name',
                 hintText: 'e.g., Maya\'s Cakes',
                 filled: true,
-                fillColor: Colors.white.withOpacity(0.5),
+                fillColor: Colors.white.withOpacity(0.4),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 contentPadding: EdgeInsets.all(20),
               ),
@@ -430,6 +466,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         SizedBox(height: 32),
         ElevatedButton(
+          key: Key('next-step-2'),
           onPressed: () {
             if (_formKey.currentState!.validate()) {
               _formKey.currentState!.save();
