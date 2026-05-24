@@ -86,7 +86,7 @@ export default function ApprovalInbox({
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span
-                    className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                    className={`px-2 py-1 rounded-[8px] text-[10px] font-bold uppercase tracking-wider ${
                       req.action_risk.toLowerCase() === "high"
                         ? "bg-orange-100 text-orange-700"
                         : "bg-blue-100 text-blue-700"
@@ -104,7 +104,7 @@ export default function ApprovalInbox({
                 </p>
 
                 {req.feature_type === "legal_compliance" && (
-                  <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
+                  <div className="mb-6 p-4 rounded-[16px] bg-orange-50 border border-orange-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
                       <svg
                         className="w-5 h-5"
@@ -125,14 +125,14 @@ export default function ApprovalInbox({
                       Sales are approaching €10,000. New tax rules require an
                       updated Privacy Policy.
                     </div>
-                    <div className="bg-white p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
+                    <div className="bg-white p-3 rounded-[8px] border border-orange-100 text-xs text-gray-600">
                       Drafting updated European privacy policy...
                     </div>
                   </div>
                 )}
 
                 {req.feature_type === "global_localization" && (
-                  <div className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
+                  <div className="mb-6 p-4 rounded-[16px] bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
                     <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
                       <div className="flex items-center gap-2">
                         <svg
@@ -180,7 +180,7 @@ export default function ApprovalInbox({
                 )}
 
                 {req.feature_type === "ai_geo" && (
-                  <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
+                  <div className="mb-6 p-4 rounded-[16px] bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
                       <svg
                         className="w-5 h-5"
@@ -216,7 +216,7 @@ export default function ApprovalInbox({
                 )}
 
                 {req.feature_type === "social_calendar" && (
-                  <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
+                  <div className="mb-6 p-4 rounded-[16px] bg-purple-50 border border-purple-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
                       <svg
                         className="w-5 h-5"
@@ -243,7 +243,7 @@ export default function ApprovalInbox({
                         (day, idx) => (
                           <div
                             key={day}
-                            className="flex-shrink-0 w-24 bg-white rounded-lg border border-purple-100 p-2 shadow-sm"
+                            className="flex-shrink-0 w-24 bg-white rounded-[8px] border border-purple-100 p-2 shadow-sm"
                           >
                             <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
                               {day}
@@ -272,7 +272,7 @@ export default function ApprovalInbox({
                 )}
 
                 {req.feature_type === "abandoned_cart" && (
-                  <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-100 flex flex-col gap-3">
+                  <div className="mb-6 p-4 rounded-[16px] bg-rose-50 border border-rose-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-rose-800 font-semibold text-sm">
                       <svg
                         className="w-5 h-5"
@@ -293,7 +293,7 @@ export default function ApprovalInbox({
                       Sarah left a $45 Vegan Chocolate Cake in her cart.
                     </div>
 
-                    <div className="bg-white p-3 rounded-lg border border-rose-100 relative">
+                    <div className="bg-white p-3 rounded-[8px] border border-rose-100 relative">
                       <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 absolute top-2 right-2">
                         AI Draft
                       </div>
@@ -318,13 +318,13 @@ export default function ApprovalInbox({
                 <div className="flex gap-3">
                   <button
                     onClick={() => onReject(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
+                    className="flex-1 py-3 px-4 rounded-[16px] font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
                   >
                     Reject / Edit
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
+                    className="flex-1 py-3 px-4 rounded-[16px] font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                   >
                     Approve
                   </button>

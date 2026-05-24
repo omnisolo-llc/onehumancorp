@@ -43,7 +43,7 @@ export default function ChangelogPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8 font-outfit">Release Notes & Changelog</h1>
         <div className="space-y-8">
           {sections.map((section, idx) => (
-            <div key={idx} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <div key={idx} className="bg-white p-6 rounded-[16px] shadow-sm border border-gray-100">
               <h2 className="text-xl font-bold text-blue-600 mb-4 font-outfit">{section.version}</h2>
               <div className="space-y-2">
                 {section.contentLines.map((line, lidx) => {
@@ -57,7 +57,7 @@ export default function ChangelogPage() {
                 })}
               </div>
               {idx === 0 && (
-                <img src="/dashboard_with_charts.png" alt="Screenshot" className="rounded-xl mt-4 max-w-full" />
+                <img src="/dashboard_with_charts.png" alt="Screenshot" className="rounded-[16px] mt-4 max-w-full" />
               )}
             </div>
           ))}

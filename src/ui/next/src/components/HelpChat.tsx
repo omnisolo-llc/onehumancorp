@@ -121,12 +121,12 @@ export function HelpChat() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask me anything..."
-              className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-inter"
+              className="flex-1 bg-gray-50 border border-gray-200 rounded-[16px] px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-inter"
             />
             <button
               type="submit"
               disabled={!inputValue.trim()}
-              className="bg-blue-600 text-white p-2.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors shadow-sm"
+              className="bg-blue-600 text-white p-2.5 rounded-[16px] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors shadow-sm"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
             </button>

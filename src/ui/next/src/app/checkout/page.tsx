@@ -23,14 +23,14 @@ export default function CheckoutPage() {
               alert('Payment successful!');
               router.push('/dashboard');
             }}
-            className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+            className="w-full px-4 py-3 bg-indigo-600 text-white rounded-[8px] font-medium hover:bg-indigo-700 transition-colors shadow-sm"
           >
             Pay Now
           </button>
 
           <button
             onClick={() => router.push('/pricing')}
-            className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-[8px] font-medium hover:bg-gray-300 transition-colors"
           >
             Cancel
           </button>

@@ -43,10 +43,10 @@ export default function AgentAuditDashboard() {
           <section className="shadow-lg rounded-[16px] p-6 h-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
             <h2 className="text-xl font-bold font-outfit text-red-600 mb-4">Violation Feed</h2>
             <div className="space-y-4">
-              <div className="p-3 bg-red-100 rounded-lg text-sm text-red-800">
+              <div className="p-3 bg-red-100 rounded-[8px] text-sm text-red-800">
                  [10:45 AM] Sandbox memory limit exceeded in Agent #452
               </div>
-              <div className="p-3 bg-red-100 rounded-lg text-sm text-red-800">
+              <div className="p-3 bg-red-100 rounded-[8px] text-sm text-red-800">
                  [09:12 AM] Unauthorized network access attempt blocked
               </div>
             </div>

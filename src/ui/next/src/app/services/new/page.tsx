@@ -122,7 +122,7 @@ export default function NewServicePage() {
         <div className="pt-6">
           <button
             onClick={handleSave}
-            className="w-full bg-black text-white font-medium py-3 rounded-lg hover:bg-gray-800"
+            className="w-full bg-black text-white font-medium py-3 rounded-[8px] hover:bg-gray-800"
           >
             Save Service
           </button>

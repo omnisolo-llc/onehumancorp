@@ -74,10 +74,10 @@ export default function MyPlanPage() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(20px) saturate(200%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>My Plan</h1>
         <div className="flex gap-2">
-            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+            <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[8px] text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to Dashboard
             </button>
-            <button onClick={() => router.push('/pricing')} className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+            <button onClick={() => router.push('/pricing')} className="px-4 py-2 bg-indigo-600 text-white rounded-[8px] text-sm font-medium hover:bg-indigo-700 transition-colors">
             View Upgrade Plans
             </button>
         </div>
@@ -98,7 +98,7 @@ export default function MyPlanPage() {
                     <p className="text-3xl font-bold font-outfit text-gray-900">${planData?.next_bill_estimated.toFixed(2)}</p>
                 </div>
                 <div className="flex flex-col justify-center">
-                    <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors">
+                    <button onClick={() => router.push('/pricing')} className="w-full py-3 bg-indigo-600 text-white font-medium rounded-[8px] hover:bg-indigo-700 transition-colors">
                         Upgrade Plan
                     </button>
                 </div>
@@ -129,7 +129,7 @@ export default function MyPlanPage() {
                         ></div>
                     </div>
                     {planData?.ai_actions_limit && planData.ai_actions_used >= planData.ai_actions_limit && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800 flex items-start gap-2">
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-100 rounded-[8px] text-sm text-blue-800 flex items-start gap-2">
                             <span className="text-lg">💡</span>
                             <p>You've reached your free action limit. While you can still use the app, upgrading to Starter gives you 1,000 actions and faster response times for just $29/mo.</p>
                         </div>
@@ -155,7 +155,7 @@ export default function MyPlanPage() {
                         ></div>
                     </div>
                     {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
-                        <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 flex items-start gap-2">
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-[8px] text-sm text-amber-800 flex items-start gap-2">
                             <span className="text-lg">📦</span>
                             <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
                         </div>
@@ -166,19 +166,19 @@ export default function MyPlanPage() {
 
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <button onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-[16px] hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">View Cost Details</h3>
                 <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
             </button>
-            <button onClick={() => router.push('/pricing')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button onClick={() => router.push('/pricing')} className="p-4 bg-white border border-gray-200 rounded-[16px] hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>
                 <p className="text-sm text-gray-500 mt-1">Upgrade or downgrade your current subscription.</p>
             </button>
-            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button className="p-4 bg-white border border-gray-200 rounded-[16px] hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Download Invoice</h3>
                 <p className="text-sm text-gray-500 mt-1">Get a PDF copy of your recent billing statements.</p>
             </button>
-            <button className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
+            <button className="p-4 bg-white border border-gray-200 rounded-[16px] hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-red-600">Cancel Subscription</h3>
                 <p className="text-sm text-gray-500 mt-1">Cancel your subscription. You will lose access to premium features at the end of your billing cycle.</p>
             </button>

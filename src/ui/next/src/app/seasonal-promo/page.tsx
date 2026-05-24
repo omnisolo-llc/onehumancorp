@@ -23,7 +23,7 @@ export default function SeasonalPromoPage() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Seasonal Promotion Generator ✨</h1>
          <div className="flex items-center gap-3">
-             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+             <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[8px] text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
              </button>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
@@ -44,7 +44,7 @@ export default function SeasonalPromoPage() {
                 value={occasion}
                 onChange={(e) => setOccasion(e.target.value)}
                 placeholder="e.g. Winter Wonderland"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -55,13 +55,13 @@ export default function SeasonalPromoPage() {
                 value={discount}
                 onChange={(e) => setDiscount(e.target.value)}
                 placeholder="e.g. 25"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-[8px] focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <button
               onClick={handleGenerate}
               disabled={!occasion || !discount || isGenerating}
-              className={`w-full py-3 mt-4 text-white font-semibold rounded-xl shadow-lg transition-all ${(!occasion || !discount || isGenerating) ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0'}`}
+              className={`w-full py-3 mt-4 text-white font-semibold rounded-[16px] shadow-lg transition-all ${(!occasion || !discount || isGenerating) ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0'}`}
             >
               {isGenerating ? 'Generating...' : 'Generate Campaign'}
             </button>

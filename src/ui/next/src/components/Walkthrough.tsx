@@ -119,7 +119,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
       {/* Target Highlight Overlay (using box-shadow to punch a hole) */}
       {targetRect && (
         <div
-          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out border-2 border-blue-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
+          className="fixed z-[90] pointer-events-none transition-all duration-300 ease-in-out border-2 border-blue-500 rounded-[8px] shadow-[0_0_0_9999px_rgba(0,0,0,0.5)]"
           style={{
             top: targetRect.top - 4,
             left: targetRect.left - 4,
@@ -131,7 +131,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
 
       {/* Speech Bubble */}
       <div
-        className="fixed z-[1000] bg-white rounded-xl shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
+        className="fixed z-[1000] bg-white rounded-[16px] shadow-2xl p-5 w-[280px] font-inter animate-pop-in"
         style={bubbleStyle}
       >
         {targetRect && (
@@ -153,7 +153,7 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
           </span>
           <button
             onClick={handleNext}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm active:scale-95 transition-transform"
+            className="bg-blue-600 text-white px-4 py-2 rounded-[8px] text-sm font-bold shadow-sm active:scale-95 transition-transform"
           >
             {isLastStep ? 'Finish' : 'Next'}
           </button>

@@ -17,7 +17,7 @@ export default function PricingPage() {
         <WithTooltip id="pricing-tier-tooltip" defaultText="Select the plan that best fits your business needs.">
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Pricing Plans</h1>
         </WithTooltip>
-        <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+        <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-gray-200 rounded-[8px] text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
         </button>
       </header>
@@ -40,7 +40,7 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 10 Products Limit</li>
               </ul>
             </div>
-            <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
+            <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-[8px] font-medium hover:bg-gray-300 transition-colors" disabled>
               Current Plan
             </button>
           </div>
@@ -59,7 +59,7 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> 100 Products Limit</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+            <button onClick={() => handleUpgrade('Starter')} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-[8px] font-medium hover:bg-indigo-700 transition-colors shadow-sm">
               Upgrade to Starter via Stripe
             </button>
           </div>
@@ -76,7 +76,7 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Pro')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
+            <button onClick={() => handleUpgrade('Pro')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-[8px] font-medium hover:bg-gray-900 transition-colors shadow-sm">
               Upgrade to Pro via Stripe
             </button>
           </div>
@@ -93,7 +93,7 @@ export default function PricingPage() {
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Products</li>
               </ul>
             </div>
-            <button onClick={() => handleUpgrade('Business')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
+            <button onClick={() => handleUpgrade('Business')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-[8px] font-medium hover:bg-gray-900 transition-colors shadow-sm">
               Upgrade to Business via Stripe
             </button>
           </div>

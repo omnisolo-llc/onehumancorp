@@ -27,7 +27,7 @@ export default function StorefrontBuilderPage() {
 
       {showPublish && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-sm w-full">
+          <div className="bg-white p-6 rounded-[8px] max-w-sm w-full">
             <h2 className="text-xl font-bold mb-4">Publish Site</h2>
             <button className="bg-gray-100 p-2 rounded w-full text-left font-semibold">Free OHC Subdomain</button>
             <input type="text" placeholder="mybusiness" className="mt-2 border p-2 w-full rounded" />
@@ -38,7 +38,7 @@ export default function StorefrontBuilderPage() {
 
       {showEmbed && (
         <div id="embed-setup-sheet" className="open fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-sm w-full">
+          <div className="bg-white p-6 rounded-[8px] max-w-sm w-full">
             <h2 className="text-xl font-bold mb-4">Embed Storefront</h2>
             <textarea id="embed-code-textarea" readOnly className="w-full h-32 border p-2 text-xs font-mono rounded" value={'<iframe src="https://mybusiness.ohc.store/api/v1/growth/storefront/embed" width="100%" height="600"></iframe>'} />
             <button className="mt-4 w-full bg-blue-600 text-white p-2 rounded" onClick={() => setShowEmbed(false)}>Close</button>

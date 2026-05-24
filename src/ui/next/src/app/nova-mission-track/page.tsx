@@ -66,7 +66,7 @@ export default function MissionTrackPage() {
           {filteredMissions.map(mission => (
             <div key={mission.id} className="bg-white/80 backdrop-blur-[30px] saturate-[210%] border border-white/60 shadow-sm p-4 rounded-2xl hover:shadow-md transition-all active:scale-[0.98] cursor-pointer">
               <div className="flex justify-between items-start mb-3">
-                <span className={`text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider ${
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-[8px] uppercase tracking-wider ${
                   mission.status === 'completed' ? 'bg-green-100 text-green-800' :
                   mission.status === 'active' ? 'bg-blue-100 text-blue-800' :
                   'bg-gray-100 text-gray-600'

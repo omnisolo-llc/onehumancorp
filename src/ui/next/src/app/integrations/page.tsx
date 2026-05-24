@@ -63,10 +63,10 @@ export default function Integrations() {
                  style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
             >
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center text-2xl border border-gray-100">
+                <div className="w-12 h-12 bg-gray-50 rounded-[16px] flex items-center justify-center text-2xl border border-gray-100">
                   {integration.icon}
                 </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase tracking-wide ${
+                <span className={`text-xs font-bold px-2 py-1 rounded-[8px] uppercase tracking-wide ${
                   integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
                 }`}>
                   {integration.status}

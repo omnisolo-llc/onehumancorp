@@ -114,7 +114,7 @@ export default function AgentsPage() {
                   key={dept.id}
                   className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
+                  <div className="w-12 h-12 rounded-[16px] bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
                   </div>
                   <div>
@@ -154,7 +154,7 @@ export default function AgentsPage() {
                   {approvals.map((req) => (
                     <div key={req.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
                       <div className="flex justify-between items-start mb-3">
-                        <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
+                        <span className="bg-orange-100 text-orange-800 text-xs font-bold px-2.5 py-1 rounded-[8px] uppercase tracking-wide">
                           {req.department}
                         </span>
                         <span className="text-xs text-gray-400 font-medium">Draft For Review</span>
@@ -167,14 +167,14 @@ export default function AgentsPage() {
                         <button
                           onClick={() => handleDecision(req.id, false)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                          className={`flex-1 py-3 rounded-[16px] font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                         >
                           {actionLoading === req.id ? '...' : 'Reject'}
                         </button>
                         <button
                           onClick={() => handleDecision(req.id, true)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                          className={`flex-1 py-3 rounded-[16px] font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                         >
                           {actionLoading === req.id ? '...' : 'Approve'}
                         </button>

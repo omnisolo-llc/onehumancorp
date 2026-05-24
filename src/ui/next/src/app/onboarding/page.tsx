@@ -273,7 +273,7 @@ export default function OnboardingWizard() {
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-[16px]">
               {error}
             </div>
           )}
@@ -417,7 +417,7 @@ export default function OnboardingWizard() {
                        <button
                          key={t}
                          onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                         className={`p-3 rounded-[16px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
                        >
                          {t}
                        </button>
@@ -431,14 +431,14 @@ export default function OnboardingWizard() {
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[16px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
                      >
                        <span>Free OHC Domain</span>
                        <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
                      </button>
                      <button
                        onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[16px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
                      >
                        <span>Connect Custom Domain</span>
                        <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
