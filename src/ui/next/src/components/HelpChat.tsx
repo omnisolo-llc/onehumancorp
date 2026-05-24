@@ -63,8 +63,8 @@ export function HelpChat() {
 
   return (
     <div className="help-chat-wrapper">
-      {/* Floating Button */}
-      <div className="fixed bottom-6 right-6 z-50">
+      {/* Floating Button (Repositioned to the left to avoid overlap with HelpWidget) */}
+      <div className="fixed bottom-6 left-6 z-50">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
@@ -78,7 +78,7 @@ export function HelpChat() {
 
       {/* Chat Interface */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 animate-slide-up-chat">
+        <div className="fixed bottom-6 left-6 z-[60] w-[350px] max-w-[calc(100vw-48px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 animate-slide-up-chat">
           {/* Header */}
           <div className="bg-gray-900 text-white p-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -139,7 +139,7 @@ export function HelpChat() {
           0% { opacity: 0; transform: translateY(20px) scale(0.95); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
         }
-        .animate-slide-up-chat { animation: slide-up-chat 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom right; }
+        .animate-slide-up-chat { animation: slide-up-chat 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards; transform-origin: bottom left; }
       `}} />
     </div>
   );

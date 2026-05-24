@@ -14,6 +14,14 @@ export async function GET() {
     "nav-setup-tooltip": "Set up your business info, logo, and how you get paid.",
     "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
-    "changelog-nav-tooltip": "See the latest updates and new features we just added."
+    "changelog-nav-tooltip": "See the latest updates and new features we just added.",
+    "nav-inbox-tooltip": "View and reply to messages from your customers.",
+    "nav-reviews-tooltip": "Manage your customer reviews and run review-gathering campaigns.",
+    "nav-social-tooltip": "Create and share beautiful social media cards for your products.",
+    "nav-promos-tooltip": "Set up special discounts and seasonal sales for your store.",
+    "nav-agents-tooltip": "Hire and manage your AI workforce here.",
+    "metric-sales-tooltip": "Total money earned from sales today.",
+    "metric-customers-tooltip": "Number of people who have bought from your store.",
+    "metric-orders-tooltip": "Orders that need to be packed and shipped."
   });
 }
