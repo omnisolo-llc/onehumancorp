@@ -569,16 +569,40 @@ impl QueueManager {
     pub async fn poll(&self, worker_id: &str) -> Result<Option<SubAgentJob>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
-            .bind(worker_id)
-            .fetch_optional(&mut *tx)
-            .await?;
+
+        let start_poll = std::time::Instant::now();
+        let mut retry_count = 0;
+        let row = loop {
+            match sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING', worker_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND (scheduled_at IS NULL OR scheduled_at <= CURRENT_TIMESTAMP) ORDER BY created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, worker_id, created_at, updated_at")
+                .bind(worker_id)
+                .fetch_optional(&mut *tx)
+                .await {
+                Ok(r) => break r,
+                Err(e) => {
+                    retry_count += 1;
+                    if retry_count > 3 {
+                        ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                        return Err(e);
+                    }
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+                }
+            }
+        };
+
+        if start_poll.elapsed() > std::time::Duration::from_millis(100) {
+            ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+        }
+
         tx.commit().await?;
             
         if let Some(row) = row {
             let payload_str: String = row.get("payload");
             let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+            let created_at: DateTime<Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             
+            let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
+            ::server_telemetry::record_sub_agent_queue_delay(latency);
+
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
                 tenant_id: row.get("tenant_id"),
@@ -586,7 +610,7 @@ impl QueueManager {
                 payload,
                 status: row.get("status"),
                 worker_id: row.get("worker_id"),
-                created_at: row.get("created_at"),
+                created_at,
                 updated_at: row.get("updated_at"),
             }))
         } else {
