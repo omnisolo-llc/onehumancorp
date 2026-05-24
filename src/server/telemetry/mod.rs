@@ -621,10 +621,10 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
     ]);
 }
 
-pub async fn record_rag_records_synced_total(pool: &PgPool, count: f32) -> Result<(), sqlx::Error> {
+pub async fn record_rag_records_synced_total(pool: &PgPool, count: f32) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "rag_records_synced_total", "counter", count, serde_json::json!({})).await
 }
 
-pub async fn record_rag_sync_errors_total(pool: &PgPool, count: f32, error_type: &str) -> Result<(), sqlx::Error> {
+pub async fn record_rag_sync_errors_total(pool: &PgPool, count: f32, error_type: &str) -> Result<(), Box<dyn std::error::Error>> {
     buffer_metric(pool, "rag_sync_errors_total", "counter", count, serde_json::json!({ "error": error_type })).await
 }
