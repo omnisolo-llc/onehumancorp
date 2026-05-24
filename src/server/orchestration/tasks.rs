@@ -774,11 +774,11 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: crate::db::DbStore::Sqlite(pool),
         });
 
-        let mesh = Arc::new(crate::orchestration::mesh::MockTeammateMesh::new());
+        let mesh = Arc::new(crate::orchestration::mesh::LocalTeammateMesh::new());
         let service = Arc::new(TaskDecompositionService::new(db, mesh));
 
         let mut handles = vec![];
