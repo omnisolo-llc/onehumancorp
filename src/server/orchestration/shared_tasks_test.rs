@@ -63,6 +63,62 @@ async fn test_shared_task_orchestrator() {
 }
 
 #[tokio::test]
+async fn test_shared_tasks_master_repo() {
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .connect("sqlite::memory:")
+        .await
+        .unwrap();
+
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_tasks_master (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT NOT NULL,
+            parent_plan_id TEXT,
+            title TEXT NOT NULL,
+            description TEXT,
+            status TEXT NOT NULL DEFAULT 'PENDING',
+            agent_id TEXT,
+            dependencies TEXT,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        );
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    sqlx::query(
+        r#"
+        INSERT INTO shared_tasks_master (id, organization_id, title, status)
+        VALUES ('task_master_1', 'org_123', 'Test Master Task', 'PENDING');
+        "#
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
+        .unwrap();
+
+    let db = std::sync::Arc::new(crate::db::DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) });
+    let repo = crate::domain::repository::task_repo::TaskRepository::new(db);
+
+    let claimed = repo.claim_shared_task_master("task_master_1", "agent_99").await.unwrap();
+    assert!(claimed.is_some());
+    let claimed = claimed.unwrap();
+    assert_eq!(claimed.id, "task_master_1");
+    assert_eq!(claimed.status, "IN_PROGRESS");
+    assert_eq!(claimed.agent_id.unwrap(), "agent_99");
+
+    // Test that claiming again returns None because status is no longer PENDING
+    let double_claim = repo.claim_shared_task_master("task_master_1", "agent_100").await.unwrap();
+    assert!(double_claim.is_none());
+}
+
+#[tokio::test]
 async fn test_shared_task_orchestrator_sqlite() {
     let pool = sqlx::sqlite::SqlitePoolOptions::new()
         .connect("sqlite::memory:")

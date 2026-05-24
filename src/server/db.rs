@@ -719,12 +719,12 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, description FROM shared_tasks_master WHERE status = 'DONE' LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "shared_tasks".to_string()));
+                    let org_id: String = row.get("organization_id");
+                    let payload: String = row.try_get("description").unwrap_or_default();
+                    result.push((id, org_id, payload, "shared_tasks_master".to_string()));
                 }
 
                 let swarm_rows = sqlx::query("SELECT id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
@@ -738,12 +738,12 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, organization_id, description::text FROM shared_tasks_master WHERE status = 'DONE' LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "shared_tasks".to_string()));
+                    let org_id: String = row.get("organization_id");
+                    let payload: String = row.try_get("description").unwrap_or_default();
+                    result.push((id, org_id, payload, "shared_tasks_master".to_string()));
                 }
 
                 let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
@@ -788,11 +788,10 @@ pub async fn insert_autodream_memory(
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
@@ -800,11 +799,10 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
@@ -921,6 +919,8 @@ pub async fn insert_autodream_memory(
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                } else if table == "shared_tasks_master" {
+                    "UPDATE shared_tasks_master SET status = 'AUTO_DREAMED' WHERE id = ?"
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
                 };
@@ -930,6 +930,8 @@ pub async fn insert_autodream_memory(
                 let query = if table == "swarm_tasks" {
                     // swarm_tasks uses UUID primary key
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+                } else if table == "shared_tasks_master" {
+                    "UPDATE shared_tasks_master SET status = 'AUTO_DREAMED' WHERE id = $1"
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };

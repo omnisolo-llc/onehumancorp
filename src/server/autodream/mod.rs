@@ -209,8 +209,31 @@ impl AutoDreamWorker {
             // source_type will identify where the task originated
             let source_type = format!("TASK_{}", table.to_uppercase());
             
-            // Insert into the proper KAIROS knowledge_embeddings table
-            db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            // Insert into the proper KAIROS consolidated_memory table
+            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+
+            if db.is_sqlite() {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                    .bind(&mem_id)
+                    .bind(&org_id)
+                    .bind("system_agent")
+                    .bind(&summary)
+                    .bind(&embedding)
+                    .bind(&source_type)
+                    .execute(&db.pool)
+                    .await?;
+            } else {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                    .bind(&mem_id)
+                    .bind(&org_id)
+                    .bind("system_agent")
+                    .bind(&summary)
+                    .bind(&embedding)
+                    .bind(&source_type)
+                    .execute(&db.pool)
+                    .await?;
+            }
+
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
@@ -235,7 +258,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM consolidated_memory ORDER BY created_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -251,7 +274,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM consolidated_memory ORDER BY embedding <=> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
@@ -568,6 +591,89 @@ mod tests {
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
         }
+    }
+
+    #[tokio::test]
+    async fn test_ingest_completed_tasks_polling() {
+        use sqlx::sqlite::SqlitePoolOptions;
+        let sqlite_url = "sqlite::memory:";
+        let pool = SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect(sqlite_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS shared_tasks_master (
+                id TEXT PRIMARY KEY,
+                organization_id TEXT NOT NULL,
+                parent_plan_id TEXT,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                agent_id TEXT,
+                dependencies TEXT,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Ensure autodream table exists for insert to succeed
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS consolidated_memory (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                agent_id TEXT,
+                content TEXT NOT NULL,
+                embedding BLOB,
+                source_type TEXT NOT NULL,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                last_referenced_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                reference_count INTEGER DEFAULT 0,
+                reliability_score INTEGER DEFAULT 50,
+                owner_override BOOLEAN DEFAULT FALSE,
+                metadata TEXT
+            );"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        // Create a DONE task
+        sqlx::query(
+            "INSERT INTO shared_tasks_master (id, organization_id, title, description, status)
+             VALUES ('task1', 'org1', 'Test', 'Completed task description', 'DONE');"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = Arc::new(DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        // Process the ingest
+        AutoDreamWorker::ingest_completed_tasks(&db, &worker.embedded_counter, &worker.cache).await.unwrap();
+
+        // Ensure task is now marked as AUTO_DREAMED
+        let status: String = sqlx::query_scalar("SELECT status FROM shared_tasks_master WHERE id = 'task1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(status, "AUTO_DREAMED");
+
+        // Ensure memory was inserted
+        let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM consolidated_memory")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 1);
     }
 
     #[tokio::test]
