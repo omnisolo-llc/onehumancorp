@@ -304,7 +304,7 @@ impl TaskQueue for PostgresTaskQueue {
             
             let mut j = Job {
                 id,
-                tenant_id: tenant_id,
+                tenant_id,
                 parent_task_id,
                 agent_role: String::new(),
                 payload: payload.clone(),

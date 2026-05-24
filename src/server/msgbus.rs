@@ -137,7 +137,7 @@ impl RedisBus {
 impl Bus for RedisBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
-        use prost::Message as ProstMessage;
+
         let mut buf = Vec::new();
         msg.encode(&mut buf).unwrap();
 
@@ -174,7 +174,7 @@ impl Bus for RedisBus {
         let worker = tokio::spawn(async move {
             while let Some(msg) = stream.next().await {
                 if let Ok(buf) = msg.get_payload::<Vec<u8>>() {
-                    use prost::Message as ProstMessage;
+
                     let topic_name = msg.get_channel_name().to_string();
                     let m = Message::decode(&buf[..]).unwrap_or_else(|_| Message { topic: topic_name, payload: vec![] });
                     handler(m);
@@ -285,7 +285,7 @@ impl IpcBus {
                         last_id = *id;
                         for (sub_topic, tx) in s.iter() {
                             if topic == sub_topic || (sub_topic.ends_with(':') && topic.starts_with(sub_topic)) {
-                                use prost::Message as ProstMessage;
+
                                 let m = Message::decode(&payload_buf[..]).unwrap_or_else(|_| Message { topic: topic.clone(), payload: vec![] });
                                 let _ = tx.send(m);
                             }
@@ -309,7 +309,7 @@ impl IpcBus {
 #[async_trait]
 impl Bus for IpcBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
         let mut payload = Vec::new();
         msg.encode(&mut payload).unwrap();
 
@@ -385,7 +385,7 @@ impl NatsBus {
 #[async_trait]
 impl Bus for NatsBus {
     async fn publish(&self, msg: Message) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
         let mut buf = Vec::new();
         msg.encode(&mut buf).unwrap();
 
@@ -418,7 +418,7 @@ impl Bus for NatsBus {
 
         let worker = tokio::spawn(async move {
             while let Some(msg) = subscriber.next().await {
-                use prost::Message as ProstMessage;
+
                 let m = Message::decode(&msg.payload[..]).unwrap_or_else(|_| Message { topic: msg.subject.to_string().replace(".", ":"), payload: vec![] });
                 handler(m);
             }
@@ -559,7 +559,7 @@ impl StateHandoffManager {
     }
 
     pub async fn trigger_handoff(&self, mission_id: &str, tenant_id: &str, payload: Vec<u8>) -> Result<(), String> {
-        use prost::Message as ProstMessage;
+
         let handoff = crate::interop::protocol::proto::StateHandoff {
             mission_id: mission_id.to_string(),
             tenant_id: tenant_id.to_string(),
@@ -759,7 +759,7 @@ mod tests {
             if msg.topic == "system:health_ping" {
                 received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
 
-                use prost::Message as ProstMessage;
+
                 if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
                     let bus_inner = bus_clone.clone();
@@ -794,7 +794,7 @@ mod tests {
 
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:state_handoff" {
-                use prost::Message as ProstMessage;
+
                 if let Ok(handoff) = crate::interop::protocol::proto::StateHandoff::decode(&msg.payload[..]) {
                     if handoff.mission_id == "m1" && handoff.tenant_id == "t1" && handoff.state_snapshot == vec![1, 2, 3, 4] {
                         received_clone.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -826,7 +826,7 @@ mod tests {
         let bus_clone = bus.clone();
         let handler = Box::new(move |msg: Message| {
             if msg.topic == "system:health_ping" {
-                use prost::Message as ProstMessage;
+
                 if let Ok(ping) = crate::interop::protocol::proto::HealthPing::decode(&msg.payload[..]) {
                     let ack_topic = format!("system:health_ack:{}", ping.source_node_id);
                     let ack_msg = Message {

@@ -121,7 +121,7 @@ async fn test_redis_unconfigured() {
             agent_id: "".to_string(),
             tool_id: "kv_get".to_string(),
             params: serde_json::json!({"key": "test"}).to_string(),
-            spiffe_id: spiffe_id,
+            spiffe_id,
         };
 
         // This should run the standalone logic because redis_client is None
