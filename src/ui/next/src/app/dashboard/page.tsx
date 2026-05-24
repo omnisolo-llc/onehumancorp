@@ -30,6 +30,9 @@ export default function Dashboard() {
 
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
+  const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
+  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -436,11 +439,33 @@ export default function Dashboard() {
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
                     <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
                     <button
-                        onClick={() => setShowPromoModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                        onClick={async () => {
+                            setShowPromoModal(true);
+                            setIsGeneratingPromo(true);
+                            try {
+                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                const response = await fetch("/api/v1/growth/promotions/generate", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ tenant })
+                                });
+                                if (response.ok) {
+                                    const data = await response.json();
+                                    if (data.message) {
+                                        setPromoMessage(data.message);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Failed to generate promotion", e);
+                            } finally {
+                                setIsGeneratingPromo(false);
+                            }
+                        }}
+                        disabled={isGeneratingPromo}
+                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        Generate Promotion
+                        {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
                     </button>
                 </div>
                 <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
@@ -872,26 +897,35 @@ export default function Dashboard() {
             </p>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Generated Message</label>
-                <textarea
-                  readOnly
-                  rows={4}
-                  value="Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp"
-                  className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none"
-                />
-              </div>
+              {isGeneratingPromo ? (
+                 <div className="flex flex-col items-center justify-center py-8">
+                     <div className="inline-block w-8 h-8 rounded-full border-2 border-purple-200 border-t-purple-600 animate-spin mb-3"></div>
+                     <span className="text-sm text-gray-500">Generating the perfect message...</span>
+                 </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Generated Message</label>
+                    <textarea
+                      readOnly
+                      rows={4}
+                      value={promoMessage}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none resize-none"
+                    />
+                  </div>
 
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
-                  setCopied(true);
-                  setTimeout(() => setCopied(false), 2000);
-                }}
-                className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
-              >
-                {copied ? 'Message Copied!' : 'Copy Message'}
-              </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(promoMessage);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+                  >
+                    {copied ? 'Copied!' : 'Copy to Clipboard'}
+                  </button>
+                </>
+              )}
 
               <div className="relative py-3">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
