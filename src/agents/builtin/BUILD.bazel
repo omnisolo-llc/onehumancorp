@@ -58,6 +58,7 @@ rust_library(
         "hibernation.rs",
         "langgraph.rs",
         "autogen.rs",
+        "ruflo.rs",
         "lib.rs",
         "marketplace.rs",
         "visual_workflow.rs",
