@@ -50,12 +50,12 @@ impl ClaudeSubagentSpawner {
             ClaudeSubagentMode::Teammate { mailbox_dir } => {
                 // Teammate: communicates via file-based mailboxes
                 if !mailbox_dir.exists() {
-                    fs::create_dir_all(mailbox_dir).await?;
+                    tokio::fs::create_dir_all(mailbox_dir).await?;
                 }
                 let in_mbox = mailbox_dir.join("inbox.txt");
                 let out_mbox = mailbox_dir.join("outbox.txt");
 
-                fs::write(&in_mbox, task).await?;
+                tokio::fs::write(&in_mbox, task).await?;
 
                 // Inject mailbox instruction
                 let mut mailbox_instructions = config.developer_instructions.clone();
@@ -68,7 +68,7 @@ impl ClaudeSubagentSpawner {
                 let result = self.execute_and_summarize(task, &sub_config).await?;
 
                 // Save result to outbox
-                fs::write(&out_mbox, &result).await?;
+                tokio::fs::write(&out_mbox, &result).await?;
                 Ok(result)
             }
             ClaudeSubagentMode::Worktree { base_repo_path, branch_name } => {
@@ -76,7 +76,7 @@ impl ClaudeSubagentSpawner {
                 let worktree_dir = base_repo_path.parent().unwrap_or(Path::new("/tmp")).join(format!("worktree_{}", branch_name));
 
                 // Setup worktree
-                let output = Command::new("git")
+                let output = tokio::process::Command::new("git")
                     .arg("worktree")
                     .arg("add")
                     .arg("-b")
@@ -143,14 +143,14 @@ impl ClaudeSubagentSpawner {
 
     #[tokio::test]
     async fn test_claude_subagent_fork() {
-        let parent_client = Arc::new(MockLlmClient {
+        let parent_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Condensed summary of fork".to_string()
             ]),
         });
         let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
-        let sub_client = Arc::new(MockLlmClient {
+        let sub_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Long raw output from subagent in fork mode...".to_string()
             ]),
@@ -163,7 +163,7 @@ impl ClaudeSubagentSpawner {
             ClaudeSubagentMode::Fork,
         );
 
-        let parent_context = vec![Message::user("Parent context message")];
+        let parent_context = vec![ohc_builtin_agent_core::types::Message::user("Parent context message")];
         let config = AgentRunConfig::default();
 
         let result = spawner.run_subagent("Do task", &parent_context, &config).await.unwrap();
@@ -172,14 +172,14 @@ impl ClaudeSubagentSpawner {
 
     #[tokio::test]
     async fn test_claude_subagent_teammate() {
-        let parent_client = Arc::new(MockLlmClient {
+        let parent_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Condensed summary of teammate".to_string()
             ]),
         });
         let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
-        let sub_client = Arc::new(MockLlmClient {
+        let sub_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Long raw output from teammate...".to_string()
             ]),
@@ -202,20 +202,20 @@ impl ClaudeSubagentSpawner {
         assert!(mailbox_dir.join("inbox.txt").exists());
         assert!(mailbox_dir.join("outbox.txt").exists());
 
-        let out_content = fs::read_to_string(mailbox_dir.join("outbox.txt")).await.unwrap();
+        let out_content = tokio::fs::read_to_string(mailbox_dir.join("outbox.txt")).await.unwrap();
         assert_eq!(out_content, "Condensed summary of teammate");
     }
 
     #[tokio::test]
     async fn test_claude_subagent_worktree() {
-        let parent_client = Arc::new(MockLlmClient {
+        let parent_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Condensed summary of worktree".to_string()
             ]),
         });
         let parent_agent = Arc::new(Agent::new(parent_client, vec![]));
 
-        let sub_client = Arc::new(MockLlmClient {
+        let sub_client = Arc::new(LocalMockLlmClient {
             responses: std::sync::Mutex::new(vec![
                 "Long raw output from worktree...".to_string()
             ]),
@@ -225,14 +225,14 @@ impl ClaudeSubagentSpawner {
         // Create a dummy git repo
         let dir = tempdir().unwrap();
         let repo_dir = dir.path().join("test_repo");
-        fs::create_dir_all(&repo_dir).await.unwrap();
+        tokio::fs::create_dir_all(&repo_dir).await.unwrap();
 
-        Command::new("git").arg("init").current_dir(&repo_dir).output().await.unwrap();
-        fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
-        Command::new("git").arg("add").arg(".").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("config").arg("user.email").arg("test@test.com").current_dir(&repo_dir).output().await.unwrap();
-        Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
+        tokio::process::Command::new("git").arg("init").current_dir(&repo_dir).output().await.unwrap();
+        tokio::fs::write(repo_dir.join("test.txt"), "hello").await.unwrap();
+        tokio::process::Command::new("git").arg("add").arg(".").current_dir(&repo_dir).output().await.unwrap();
+        tokio::process::Command::new("git").arg("config").arg("user.name").arg("Test").current_dir(&repo_dir).output().await.unwrap();
+        tokio::process::Command::new("git").arg("config").arg("user.email").arg("test@test.com").current_dir(&repo_dir).output().await.unwrap();
+        tokio::process::Command::new("git").arg("commit").arg("-m").arg("init").current_dir(&repo_dir).output().await.unwrap();
 
         let spawner = ClaudeSubagentSpawner::new(
             parent_agent,
