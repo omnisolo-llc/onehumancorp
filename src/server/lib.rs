@@ -2148,6 +2148,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 }
             }
         });
+    } else {
+        if let crate::db::DbStore::Sqlite(ref sqlite_pool) = db.store {
+            // Need a cloud Postgres connection to push missions & telemetry to
+            let cloud_db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+            let pg_pool = sqlx::postgres::PgPoolOptions::new()
+                .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                .connect_lazy(&cloud_db_url)
+                .expect("Failed to initialize cloud pg pool for HybridSyncDaemon");
+
+            let hybrid_sync_daemon = Arc::new(crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon::new(
+                sqlite_pool.clone(),
+                pg_pool,
+            ));
+
+            let hybrid_sync_daemon_clone = hybrid_sync_daemon.clone();
+            tokio::spawn(async move {
+                hybrid_sync_daemon_clone.run().await;
+            });
+        }
     }
 
     // Start Scheduler Background Task
