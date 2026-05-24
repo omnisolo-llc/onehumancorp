@@ -14,23 +14,21 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
-    m.insert("checkout-btn-tooltip".to_string(), "Proceed to upgrade your account.".to_string());
-    m.insert("add-product-tooltip".to_string(), "Add a new product or service to your store.".to_string());
-    m.insert("checkout-btn-tooltip".to_string(), "Proceed to upgrade your account.".to_string());
-    m.insert("add-product-tooltip".to_string(), "Add a new product or service to your store.".to_string());
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is currently active and processing tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
-    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("checkout-btn-tooltip".to_string(), "Click here to upgrade your plan.".to_string());
+    m.insert("add-product-tooltip".to_string(), "Add a new item or service you want to sell.".to_string());
+    m.insert("bio-input-tooltip".to_string(), "Tell us what you sell and who buys it. We will use this to build your store.".to_string());
+    m.insert("generate-btn-tooltip".to_string(), "Click to let AI build your store. It takes about 30 seconds.".to_string());
+    m.insert("launch-btn-tooltip".to_string(), "Make your store live on the internet. Customers can start buying right away.".to_string());
+    m.insert("team-activity-tooltip".to_string(), "See what your AI helpers are doing right now. They work in the background.".to_string());
+    m.insert("referral-tooltip".to_string(), "Share this link with other business owners. You both get a free month!".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI helpers are online. They are ready to answer customers and do tasks.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click to check tasks that need your okay. You are always in control.".to_string());
+    m.insert("nav-dashboard-tooltip".to_string(), "Check your sales and see how your store is doing today.".to_string());
+    m.insert("nav-agents-tooltip".to_string(), "Manage your AI helpers here. You can hire new ones or check their work.".to_string());
+    m.insert("nav-setup-tooltip".to_string(), "Change your store details, colors, and how you get paid.".to_string());
+    m.insert("credit-tooltip".to_string(), "Earn free months when a friend joins. Sharing is caring!".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Click here if you need help. You can read guides, watch videos, or ask AI.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See the new features we added. We update the app often to help your business.".to_string());
     RwLock::new(m)
     })
 }
@@ -2039,12 +2037,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
+            { "title": "Getting Started", "desc": "Welcome! We help you manage your store easily. You can add items, get paid, and use AI." },
+            { "title": "My Store", "desc": "Go to the 'My Store' tab to add your items. Just upload a photo, write a short description, and set a price." },
+            { "title": "Payments", "desc": "When a customer buys an item, the money goes to your account. We handle the technical details for you." },
+            { "title": "AI Agents", "desc": "Need help? Your AI Support Agent can talk to customers while you sleep. Turn it on in the 'AI Agents' tab." },
+            { "title": "Marketing", "desc": "Let our AI write your social media posts. Just tell it what you sell, and it will give you a great post to share." },
+            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep it simple with no hidden fees." },
             { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "api-docs-screen" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
@@ -2060,30 +2058,30 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "How to add an item to sell", "duration": "1:20" },
+            { "id": 2, "title": "How to get paid by customers", "duration": "1:15" },
+            { "id": 3, "title": "Keeping track of your stock", "duration": "0:50" },
+            { "id": 4, "title": "Adding your staff to the app", "duration": "1:05" },
+            { "id": 5, "title": "Checking what customers ordered", "duration": "1:10" },
+            { "id": 6, "title": "Linking your social media", "duration": "1:25" },
+            { "id": 7, "title": "Changing your store design", "duration": "1:30" },
+            { "id": 8, "title": "Seeing how much you sold", "duration": "1:00" },
+            { "id": 9, "title": "Shipping an order", "duration": "0:45" },
+            { "id": 10, "title": "Giving money back to a customer", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
+                ("getting started", "Welcome! We help you manage your store easily. You can add items, get paid, and use AI."),
+                ("store", "Go to the 'My Store' tab to add your items. Just upload a photo, write a short description, and set a price."),
+                ("payment", "When a customer buys an item, the money goes to your account. We handle the technical details for you."),
+                ("ai agent", "Need help? Your AI Support Agent can talk to customers while you sleep. Turn it on in the 'AI Agents' tab."),
+                ("marketing", "Let our AI write your social media posts. Just tell it what you sell, and it will give you a great post to share."),
+                ("billing", "Your monthly invoice shows exactly what you paid for. We keep it simple with no hidden fees."),
                 ("api", "Interactive API reference for integrations."),
             ];
 
             let query = req.message.to_lowercase();
-            let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
+            let mut reply = "I am your AI Help Agent! I can answer questions about the app to help you run your business. Please check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
             let mut link_url = "/help";
 
@@ -5048,9 +5046,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
-                            'setup-store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
-                            'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'accept-payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'setup-store': [ { target: 'nav-setup', title: 'Step 1: Store Details', text: 'Click here to add your store name and what you sell.' }, { target: 'launch-btn', title: 'Step 2: Go Live', text: 'Click here when you are ready to let customers see your store!' } ],
+                            'activate-ai': [ { target: 'nav-agents', title: 'AI Helpers', text: 'Click here to hire AI helpers that will answer customer emails for you.' } ],
+                            'accept-payment': [ { target: 'nav-setup', title: 'Get Paid', text: 'Click here to set up how you want to get paid by customers.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -5200,22 +5198,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Changelog Screen -->
                     <div id="changelog-screen" class="screen">
                         <h1>What's New</h1>
-                        <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
+                        <p>See the new tools we added to help you run your business. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read all updates →</a></p>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
                             <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
                             <div>
-                                <h3>Version 2.4 - AI Agents Update</h3>
-                                <p>We've supercharged your AI workforce! You can now adjust their autonomy levels and track their real-time activity.</p>
+                                <h3>Version 2.4 - Smarter AI Helpers</h3>
+                                <p>Your AI helpers just got an upgrade! They are now better at talking to your customers and helping you save time.</p>
                                 <ul>
-                                    <li><strong>Approval Inbox:</strong> Review and approve tasks before your agents execute them.</li>
-                                    <li><strong>Autonomy Limits:</strong> Set exactly how much money agents can spend automatically.</li>
-                                    <li><strong>Help Center:</strong> A brand new searchable guide to everything in the app.</li>
+                                    <li><strong>Task Approvals:</strong> You can check your AI's work before it sends a message. You are always in control.</li>
+                                    <li><strong>Spending Limits:</strong> You can set a budget so your AI knows exactly how much it can spend.</li>
+                                    <li><strong>New Help Center:</strong> We added a complete guide inside the app. You can search for any question!</li>
                                 </ul>
                             </div>
                         </div>
                         <div class="card">
-                            <h3>Version 2.3 - Mobile Builder</h3>
-                            <p>Edit your storefront on the go with our completely redesigned mobile experience.</p>
+                            <h3>Version 2.3 - Edit on your phone</h3>
+                            <p>You can now change your store details and add photos right from your phone, wherever you are.</p>
                         </div>
                     </div>
 
