@@ -3,8 +3,13 @@ use tokio::sync::RwLock;
 use std::net::SocketAddr;
 
 use super::manager::{SandboxAdapter, SandboxPolicy};
+
+#[cfg(target_os = "linux")]
 use super::linux_sandbox::LinuxSandbox;
+
+#[cfg(target_os = "macos")]
 use super::macos_sandbox::MacOsSandbox;
+
 use super::proxy::NetworkProxy;
 
 use async_trait::async_trait;
