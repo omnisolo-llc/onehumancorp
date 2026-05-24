@@ -1460,6 +1460,26 @@ Content-Length: 0
     }
 
     #[tokio::test]
+    async fn test_invalid_topic_fallback() {
+        let transport = InProcessTransport::new();
+        let result = transport.subscribe("", Box::new(|_| {})).await;
+        // Our current implementation doesn't strictly reject empty topics,
+        // but ensuring it doesn't panic and returns a valid cancel function
+        assert!(result.is_ok());
+
+        let msg = Message {
+            agent_id: "test".to_string(),
+            action: "".to_string(),
+            status: "ok".to_string(),
+            payload: b"hello".to_vec(),
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+
+        let pub_result = transport.publish("", msg).await;
+        assert!(pub_result.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_create_transport_standalone() {
         let _transport = create_transport(None, false).await.unwrap();
         // Since InProcessTransport isn't easily castable back without Any, we just ensure it didn't err

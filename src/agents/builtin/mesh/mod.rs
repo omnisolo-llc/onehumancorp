@@ -38,9 +38,9 @@ impl TeammateMeshClient {
 #[async_trait]
 impl TeammateMesh for TeammateMeshClient {
     async fn publish_task(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:job_dispatch:mesh", Message {
+        self.transport.publish("mesh:tasks", Message {
             agent_id: "agent".to_string(),
-            action: "system:job_dispatch:mesh".to_string(),
+            action: "mesh:tasks".to_string(),
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
@@ -48,9 +48,9 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
-        self.transport.publish("system:coordination", Message {
+        self.transport.publish("mesh:coordination", Message {
             agent_id: "agent".to_string(),
-            action: "system:coordination".to_string(),
+            action: "mesh:coordination".to_string(),
             status: "ok".to_string(),
             payload,
             msg_id: uuid::Uuid::new_v4().to_string(),
@@ -58,11 +58,11 @@ impl TeammateMesh for TeammateMeshClient {
     }
 
     async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:job_dispatch:mesh", handler).await
+        self.transport.subscribe("mesh:tasks", handler).await
     }
 
     async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.transport.subscribe("system:coordination", handler).await
+        self.transport.subscribe("mesh:coordination", handler).await
     }
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
@@ -242,7 +242,7 @@ mod tests {
     #[tokio::test]
     async fn test_teammate_mesh_client() {
         let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
-        let mesh = TeammateMeshClient::new(transport);
+        let mesh = TeammateMeshClient::new(transport.clone());
 
         let tasks_received = Arc::new(AtomicBool::new(false));
         let coord_received = Arc::new(AtomicBool::new(false));
@@ -251,13 +251,13 @@ mod tests {
         let coord_received_clone = coord_received.clone();
 
         let _task_cancel = mesh.subscribe_tasks(Box::new(move |msg| {
-            if msg.payload == b"task_data" {
+            if msg.payload == b"task_data" && msg.action == "mesh:tasks" {
                 tasks_received_clone.store(true, Ordering::SeqCst);
             }
         })).await.unwrap();
 
         let _coord_cancel = mesh.subscribe_coordination(Box::new(move |msg| {
-            if msg.payload == b"coord_data" {
+            if msg.payload == b"coord_data" && msg.action == "mesh:coordination" {
                 coord_received_clone.store(true, Ordering::SeqCst);
             }
         })).await.unwrap();
@@ -269,6 +269,32 @@ mod tests {
 
         assert!(tasks_received.load(Ordering::SeqCst), "Should receive task message");
         assert!(coord_received.load(Ordering::SeqCst), "Should receive coordination message");
+    }
+
+    #[tokio::test]
+    async fn test_mesh_tasks_and_coordination_topics() {
+        // Double check that the exact topics mesh:tasks and mesh:coordination are published to.
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+        let mesh = TeammateMeshClient::new(transport.clone());
+        let tasks_received = Arc::new(AtomicBool::new(false));
+        let tasks_received_clone = tasks_received.clone();
+        let _ = transport.subscribe("mesh:tasks", Box::new(move |_| {
+            tasks_received_clone.store(true, Ordering::SeqCst);
+        })).await;
+
+        let coord_received = Arc::new(AtomicBool::new(false));
+        let coord_received_clone = coord_received.clone();
+        let _ = transport.subscribe("mesh:coordination", Box::new(move |_| {
+            coord_received_clone.store(true, Ordering::SeqCst);
+        })).await;
+
+        mesh.publish_task(b"test".to_vec()).await.unwrap();
+        mesh.publish_coordination(b"test".to_vec()).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(tasks_received.load(Ordering::SeqCst), "Publish to mesh:tasks failed");
+        assert!(coord_received.load(Ordering::SeqCst), "Publish to mesh:coordination failed");
     }
 
     #[tokio::test]
