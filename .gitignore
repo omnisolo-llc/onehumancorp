@@ -94,7 +94,7 @@ node_modules/
 Chart.lock
 /.claude-code
 /.claude
-/.agent-task
+
 /*.md
 !/README.md
 !/CHANGELOG.md
