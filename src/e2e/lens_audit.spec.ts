@@ -182,4 +182,21 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("Draft email for review")).toBeVisible();
   });
+
+  test('verify upgrade modal redirects to checkout instead of mocking', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Find and click the button that opens the modal
+    const viewInsightsBtn = page.getByRole('button', { name: 'View AI Insights' });
+    await viewInsightsBtn.click();
+
+    // Verify modal is open and find the upgrade button
+    await expect(page.getByText('Upgrade to Pro')).toBeVisible();
+    const upgradeNowBtn = page.getByRole('button', { name: 'Upgrade Now - $29/mo' });
+
+    // Click and expect navigation to checkout
+    await upgradeNowBtn.click();
+    await expect(page).toHaveURL(/.*\/checkout/);
+    await expect(page.getByRole('heading', { name: 'Checkout' })).toBeVisible();
+  });
 });
