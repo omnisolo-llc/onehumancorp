@@ -2779,6 +2779,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info h4 { margin: 0 0 4px 0; }
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
+
+                        /* OHC Premium Design Standards: macOS Glass */
+                        .mac-glass-container {
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
+                            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+                        }
+                        @media (prefers-color-scheme: dark) {
+                            .mac-glass-container {
+                                background: rgba(22, 22, 26, 0.7);
+                                backdrop-filter: blur(30px) saturate(210%);
+                                -webkit-backdrop-filter: blur(30px) saturate(210%);
+                                border: 1px solid rgba(255, 255, 255, 0.1);
+                            }
+                        }
+
+                        .mac-glass-input, .mac-glass-button {
+                            border-radius: 8px !important;
+                            transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+
+                        .animate-fade-in {
+                            animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -2833,14 +2866,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </button>
                         </div>
 
-                        <div class="card glass" style="text-align: center; padding: 40px 20px;">
+                        <div class="card glass mac-glass-container" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
                             <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
                             <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
                         </div>
 
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h2>Welcome back, Human.</h2>
                             <p>Your agents are working on your behalf.</p>
                             <p>Your AI assistants are working on your behalf.</p>
@@ -2848,23 +2881,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" onclick="showScreen('inbox-screen')">Check Messages</button>
                             <button onclick="showScreen('team-screen')">Your Team</button>
                         </div>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Business Snapshot</h3>
                             <p>Orders to Ship</p>
                             <p>Team Members</p>
                             <p>Ongoing Tasks</p>
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
-                            <div id="milestone-card" class="card glass" style="display: none;">
+                            <div id="milestone-card" class="card glass mac-glass-container" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
-                        <div class="card glass" id="approval-inbox">
+                        <div class="card glass mac-glass-container" id="approval-inbox">
                             <h3>Approval Inbox</h3>
                         </div>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
@@ -2884,20 +2917,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'; document.getElementById('instagram-integration').style.display='block'; document.getElementById('whatsapp-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="facebook-integration" class="card glass" style="display: none;">
+                        <div id="facebook-integration" class="card glass mac-glass-container" style="display: none;">
                             <h3>📘 Facebook</h3>
                             <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
                         </div>
-                        <div id="instagram-integration" class="card glass" style="display: none;">
+                        <div id="instagram-integration" class="card glass mac-glass-container" style="display: none;">
                             <h3>📸 Instagram</h3>
                             <button onclick="alert('Configure Instagram'); showScreen('inbox-screen')">Configure</button>
                         </div>
-                        <div id="whatsapp-integration" class="card glass" style="display: none;">
+                        <div id="whatsapp-integration" class="card glass mac-glass-container" style="display: none;">
                             <h3>💬 WhatsApp</h3>
                             <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
-                        <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
+                        <div class="card glass mac-glass-container" style="margin-bottom: 24px; position: relative; overflow: hidden;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Analytics</h3>
                             </div>
@@ -2933,7 +2966,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
                                 <div style="display: flex; align-items: center; gap: 8px; background: rgba(52, 199, 89, 0.1); padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(52, 199, 89, 0.2);">
@@ -2961,9 +2994,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="simulateOrder()">Simulate Activity</button>
                         </div>
-                        <div id="extra-menu" class="card glass" style="display: none;">
+                        <div id="extra-menu" class="card glass mac-glass-container" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
-                            <div class="card glass">
+                            <div class="card glass mac-glass-container">
                                 <h3>Learn</h3>
                                 <button onclick="alert('Tutorial started')">Tutorial Library</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
@@ -2989,7 +3022,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Seasonal Promotion Generator ✨</h1>
                         <p>Generate highly-converting, AI-styled seasonal campaigns for your business instantly.</p>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <label for="promo-occasion" style="display: block; margin-bottom: 8px; font-weight: 500;">Occasion / Season</label>
                             <input type="text" id="promo-occasion" placeholder="e.g., Summer Sale, Back to School, Halloween" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
 
@@ -2999,7 +3032,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
                         </div>
 
-                        <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
+                        <div id="promo-result" class="card glass mac-glass-container" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
                             <h3 style="color: var(--primary); margin-top: 0;">Generated Campaign</h3>
                             <div id="promo-content" style="font-size: 16px; line-height: 1.6; color: #333;"></div>
                         </div>
@@ -3010,7 +3043,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Referral Dashboard</h1>
 
                         <!-- Hero Card: Give a Month, Get a Month -->
-                        <div class="card glass" style="background: #3b82f6; background: linear-gradient(135deg, var(--primary, #0066ff) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
+                        <div class="card glass mac-glass-container" style="background: #3b82f6; background: linear-gradient(135deg, var(--primary, #0066ff) 0%, #3b82f6 100%); color: white; text-align: center; padding: 40px 24px; border: none; position: relative; overflow: hidden;">
                             <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
                             <div style="position: absolute; bottom: -50px; left: -50px; width: 150px; height: 150px; background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(20px);"></div>
                             <h2 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: white; position: relative; z-index: 1;">Give 1 Month, Get 1 Month Free</h2>
@@ -3039,7 +3072,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Progress Section -->
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3 style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
                                 <span>Your Growth Progress</span>
                                 <span style="font-size: 14px; font-weight: 500; color: var(--text-secondary); background: rgba(0,0,0,0.05); padding: 4px 10px; border-radius: 99px;">0 / 5 Referrals</span>
@@ -3051,7 +3084,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- One-Tap Share Tools -->
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
                                 <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
@@ -3074,7 +3107,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Embeddable Storefront Widget -->
-                        <div class="card glass" style="margin-top: 24px;">
+                        <div class="card glass mac-glass-container" style="margin-top: 24px;">
                             <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
                             <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
                             <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
@@ -3082,7 +3115,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Automated AI Review Requests -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <div class="card glass mac-glass-container" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                 <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
@@ -3093,7 +3126,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
                         </div>
 
-                        <div class="card glass" style="margin-top: 24px;">
+                        <div class="card glass mac-glass-container" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
                                     <h3 style="margin-bottom: 4px;">Referral History & Logs</h3>
@@ -3112,32 +3145,32 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="inbox-screen" class="screen glass">
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
-                        <div class="card glass" onclick="this.classList.toggle('active')">
+                        <div class="card glass mac-glass-container" onclick="this.classList.toggle('active')">
                             <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we have 3 vegan options!'">Yes, we have 3 vegan options!</button>
                         </div>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Facebook Comment <span style="font-size: 20px;">📘</span></h3>
                             <p>Are you open on Sundays?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, we are open 10am-2pm!'">Quick Reply</button>
                         </div>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">Instagram DM <span style="font-size: 20px;">📸</span></h3>
                             <p>Can I order a custom cake?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Sure, please send details!'">Quick Reply</button>
                         </div>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3 style="display: flex; justify-content: space-between; align-items: center;">WhatsApp <span style="font-size: 20px;">💬</span></h3>
                             <p>Hello, do you deliver?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
                             <button onclick="document.getElementById('reply-input').value = 'Yes, within a 5-mile radius.'">Quick Reply</button>
                         </div>
-                        <div id="chat-window" class="card glass">
+                        <div id="chat-window" class="card glass mac-glass-container">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
                             <input id="reply-input" type="text" placeholder="Type a message...">
@@ -3149,7 +3182,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="meetings-screen" class="screen glass" style="font-family: 'Inter', sans-serif;">
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
-                        <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                        <div class="card glass mac-glass-container" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
                             <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
@@ -3170,7 +3203,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <div id="scheduler" class="card glass" style="display: none; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+                        <div id="scheduler" class="card glass mac-glass-container" style="display: none; border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h2 style="font-family: 'Outfit', sans-serif; margin-top: 0;">Plan Create</h2>
                             <div style="display: flex; flex-direction: column; gap: 12px;">
                                 <input type="text" placeholder="Meeting Title" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
@@ -3218,7 +3251,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
 
                         <div id="departments-container">
-                            <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
+                            <div class="card glass mac-glass-container" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
                                 <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
@@ -3231,7 +3264,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                             </div>
 
-                            <div class="card glass" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
+                            <div class="card glass mac-glass-container" onclick="toggleDepartment('manager')" style="margin-top: 15px; cursor: pointer;">
                                 <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
@@ -3244,7 +3277,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                             </div>
 
-                            <div class="card glass" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
+                            <div class="card glass mac-glass-container" onclick="toggleDepartment('salesperson')" style="margin-top: 15px; cursor: pointer;">
                                 <h3 class="outfit">Sales Agent</h3>
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
@@ -3347,7 +3380,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                             <!-- Manychat Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Manychat</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
@@ -3357,7 +3390,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Cal.com Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Cal.com</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
@@ -3367,7 +3400,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Resend Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Resend</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
@@ -3377,7 +3410,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Alipay</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌏</span>
@@ -3387,7 +3420,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Mercado Pago</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
@@ -3397,7 +3430,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Shippo Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
@@ -3407,7 +3440,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Twilio Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
@@ -3417,7 +3450,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <!-- Zoom Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
+                            <div class="card glass mac-glass-container" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
@@ -3489,7 +3522,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Free</h3>
                             <p>$0 / month</p>
                             <ul>
@@ -3501,7 +3534,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('dashboard-screen')">Current Plan</button>
                         </div>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Starter</h3>
                             <p>$29 / month</p>
                             <p>Suggested for growing stores</p>
@@ -3514,7 +3547,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
                         </div>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Pro</h3>
                             <p>$79 / month</p>
                             <ul>
@@ -3526,7 +3559,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
                         </div>
 
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Business</h3>
                             <p>$299 / month</p>
                             <ul>
@@ -3540,7 +3573,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
                         <button class="secondary" onclick="showScreen('dashboard-screen')">Back</button>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h2>Frequently Asked Questions</h2>
                             <div class="faq-item" onclick="this.classList.toggle('active')">
                                 <h3>How do I upgrade, downgrade, or cancel?</h3>
@@ -3559,7 +3592,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
                         <p id="my-plan-next-bill">Estimated Next Bill: $0.00</p>
-                        <div class="card glass">
+                        <div class="card glass mac-glass-container">
                             <h3>Your Current Usage</h3>
                             <p id="my-plan-ai-usage">AI Actions Used: 0 / 100</p>
                             <p id="my-plan-storage-usage">Storage Used: 0MB / 500MB</p>
@@ -3589,7 +3622,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      <div id="checkout-screen" class="screen">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
-                         <div class="card glass">
+                         <div class="card glass mac-glass-container">
                              <p>100% money back guarantee. Secure SSL payments.</p>
                              <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
@@ -3627,7 +3660,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <button onclick="document.getElementById('diagnostics-result').textContent='Diagnostics data refreshed';">Refresh</button>
                          <button onclick="document.getElementById('diagnostics-result').textContent='Alert threshold saved';">Save</button>
                          <p id="diagnostics-result">Result passed</p>
-                         <div class="card glass">
+                         <div class="card glass mac-glass-container">
                             <h2>Recent Logs</h2>
                             <p>All good. Recent event log has no error, failure, or exception.</p>
                          </div>
@@ -3671,41 +3704,41 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                          <button>History</button>
                          <button>Apply</button>
                          <button>Save</button>
-                         <div class="card glass">
+                         <div class="card glass mac-glass-container">
                              <h2>Recommendations</h2>
                              <p>No optimization needed.</p>
                          </div>
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+                    <div id="setup-screen" class="screen glass mac-glass-container animate-fade-in">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" class="mac-glass-container animate-fade-in" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" class="mac-glass-button" style="border-radius: 8px;">🚀 Start My Business Next</button>
+                            <button class="secondary mac-glass-button" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden animate-fade-in" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <input type="text" placeholder="Business type" class="mac-glass-input" style="border-radius: 8px;" />
+                            <button onclick="nextStep(3)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary mac-glass-button" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
+                            <button class="secondary mac-glass-button" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary mac-glass-button" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary mac-glass-button" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
+                            <button class="secondary mac-glass-button" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary mac-glass-button" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden animate-fade-in" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" class="mac-glass-input" style="border-radius: 8px;" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" class="mac-glass-input" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" class="mac-glass-button" style="border-radius: 8px;">Generate Description</button>
+                            <button onclick="nextStep(4)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary mac-glass-button" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden animate-fade-in" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3713,34 +3746,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep(5)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary mac-glass-button" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden animate-fade-in" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" class="mac-glass-input" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" class="mac-glass-input" style="border-radius: 8px;" />
+                            <button onclick="nextStep('generating')" class="mac-glass-button" style="border-radius: 8px;">Generate AI Description</button>
+                            <button onclick="nextStep(6)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary mac-glass-button" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden animate-fade-in" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
+                            <button class="secondary mac-glass-button" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
+                            <button class="secondary mac-glass-button" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
+                            <br/><button class="secondary mac-glass-button" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden animate-fade-in" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" class="mac-glass-input" style="border-radius: 8px;" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" class="mac-glass-input" style="border-radius: 8px;" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" class="mac-glass-input" style="border-radius: 8px;" />
+                            <button onclick="nextStep(8)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden animate-fade-in" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
+                            <button class="secondary mac-glass-button" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
+                            <button class="secondary mac-glass-button" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
                             <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
                                 <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
@@ -3748,21 +3781,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden animate-fade-in" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary mac-glass-button" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
+                            <button class="secondary mac-glass-button" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)" class="mac-glass-button" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none;">
+                        <div id="step-10" class="animate-fade-in" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)" class="mac-glass-button" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none;">
+                        <div id="step-100" class="animate-fade-in" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
+                            <button onclick="showScreen('checklist-screen')" class="mac-glass-button" style="border-radius: 8px;">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')" class="mac-glass-button" style="border-radius: 8px;">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
@@ -3772,17 +3805,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" class="mac-glass-button" style="border-radius: 8px;">Go to Dashboard →</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none;">
+                        <div id="step-ai" class="hidden animate-fade-in" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." class="mac-glass-input" style="border-radius: 8px;" />
+                            <button onclick="generateAI()" class="mac-glass-button" style="border-radius: 8px;">Generate Storefront →</button>
+                            <button class="secondary mac-glass-button" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none;">
-                            <div class="card glass" style="padding: 60px 40px; text-align: center;">
+                        <div id="step-generating" class="hidden animate-fade-in" style="display: none;">
+                            <div class="card glass mac-glass-container" style="padding: 60px 40px; text-align: center;">
                                 <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
                                 <h1 class="outfit">Designing your storefront...</h1>
                                 <p>Our AI is crafting a custom experience for your brand.</p>
@@ -3790,9 +3823,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none;">
+                        <div id="step-launch-ai" class="hidden animate-fade-in" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" class="mac-glass-button" style="border-radius: 8px;">Continue to Dashboard →</button>
                         </div>
                     </div>
 
