@@ -12,6 +12,7 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
+    preferredStyle, setPreferredStyle,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
     template, setTemplate,
@@ -47,6 +48,7 @@ export default function OnboardingWizard() {
               if (data.businessType) setBusinessType(data.businessType);
               if (data.businessName) setBusinessName(data.businessName);
               if (data.businessCategory) setBusinessCategory(data.businessCategory);
+              if (data.preferredStyle) setPreferredStyle(data.preferredStyle);
               if (data.firstProductName) setFirstProductName(data.firstProductName);
               if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
               if (data.template) setTemplate(data.template);
@@ -59,6 +61,7 @@ export default function OnboardingWizard() {
                 businessType: data.businessType || businessType,
                 businessName: data.businessName || businessName,
                 businessCategory: data.businessCategory || businessCategory,
+                preferredStyle: data.preferredStyle || preferredStyle,
                 firstProductName: data.firstProductName || firstProductName,
                 firstProductPrice: data.firstProductPrice || firstProductPrice,
                 template: data.template || template,
@@ -89,6 +92,7 @@ export default function OnboardingWizard() {
       businessType,
       businessName,
       businessCategory,
+      preferredStyle,
       firstProductName,
       firstProductPrice,
       template,
@@ -119,7 +123,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [isLoaded, step, businessType, businessName, businessCategory, preferredStyle, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -152,24 +156,26 @@ export default function OnboardingWizard() {
         return;
       }
     }
+    if (step === 4) {
+      if (!preferredStyle.trim()) {
+        setError("Please describe your preferred style.");
+        return;
+      }
+    }
     setError("");
     setStep(step + 1);
   };
 
   const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
+    if (!preferredStyle.trim()) {
+      setError("Please describe your preferred style.");
       return;
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}\nPreferred Style: ${preferredStyle}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -184,7 +190,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setIntakeData(data);
-      setStep(4); // Go to review step
+      setStep(5); // Go to review step
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
     } finally {
@@ -200,7 +206,7 @@ export default function OnboardingWizard() {
       const startRequest = {
         business_type: intakeData.business_type || businessType || "Retail",
         company_name: intakeData.business_name || businessName,
-        company_description: "", // Removed preferredStyle
+        company_description: preferredStyle,
         selling_categories: intakeData.categories || [],
         payment_pref: "stripe",
         admin_email: "admin@example.com",
@@ -224,7 +230,7 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(5); // Go to live step
+      setStep(6); // Go to live step
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -283,7 +289,7 @@ export default function OnboardingWizard() {
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
            <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
+             Step {Math.min(step, 5)} of 5
            </div>
         </div>
 
@@ -359,7 +365,7 @@ export default function OnboardingWizard() {
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
@@ -369,6 +375,38 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your preferred style?</h2>
+              <p className="text-gray-500 text-sm mb-6">How do you want your storefront to look?</p>
+              <input
+                type="text"
+                value={preferredStyle}
+                onChange={(e) => setPreferredStyle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
+                placeholder="e.g. Minimalist, Colorful, Professional"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                autoFocus
+                enterKeyHint="next"
+                autoComplete="off"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setStep(3)}
                   className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
                 >
                   Back
@@ -388,7 +426,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 4 && intakeData && (
+          {step === 5 && intakeData && (
             <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
               <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
                 <span className="text-3xl text-[#0066FF]">✨</span>
@@ -466,7 +504,7 @@ export default function OnboardingWizard() {
 
               <div className="flex gap-3 mt-auto">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(4)}
                   className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
                   disabled={isLoading}
                 >
@@ -487,7 +525,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 5 && startResult && (
+          {step === 6 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">

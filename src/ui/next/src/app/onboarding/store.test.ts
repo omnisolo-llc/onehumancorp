@@ -9,6 +9,7 @@ describe('useOnboardingStore', () => {
       businessType: '',
       businessName: '',
       businessCategory: '',
+      preferredStyle: '',
       firstProductName: '',
       firstProductPrice: '',
       template: 'Modern',
@@ -25,6 +26,7 @@ describe('useOnboardingStore', () => {
     expect(state.step).toBe(1);
     expect(state.businessName).toBe('');
     expect(state.businessCategory).toBe('');
+    expect(state.preferredStyle).toBe('');
     expect(state.firstProductName).toBe('');
     expect(state.firstProductPrice).toBe('');
     expect(state.template).toBe('Modern');
@@ -48,6 +50,11 @@ describe('useOnboardingStore', () => {
   it('should update businessCategory', () => {
     useOnboardingStore.getState().setBusinessCategory('Test Category');
     expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
+  });
+
+  it('should update preferredStyle', () => {
+    useOnboardingStore.getState().setPreferredStyle('Minimalist');
+    expect(useOnboardingStore.getState().preferredStyle).toBe('Minimalist');
   });
 
   it('should update firstProductName', () => {

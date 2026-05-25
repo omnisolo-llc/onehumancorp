@@ -14,6 +14,7 @@ describe('OnboardingWizard', () => {
       businessType: '',
       businessName: '',
       businessCategory: '',
+      preferredStyle: '',
       firstProductName: '',
       firstProductPrice: '',
       template: 'Modern',
