@@ -464,39 +464,14 @@ impl AutoDreamWorker {
             if path.is_file() && path.extension().map_or(false, |ext| ext == "yml") {
                 let content = tokio::fs::read_to_string(&path).await?;
 
-                let doc: serde_yaml::Value = serde_yaml::from_str(&content).unwrap_or(serde_yaml::Value::Null);
-
-                let mut title = "Unknown Task".to_string();
-                let mut description = "".to_string();
-                let mut status = "".to_string();
-
-                if let serde_yaml::Value::Mapping(map) = &doc {
-                    if let Some(serde_yaml::Value::String(t)) = map.get(&serde_yaml::Value::String("title".to_string())) {
-                        title = t.clone();
-                    }
-                    if let Some(serde_yaml::Value::String(d)) = map.get(&serde_yaml::Value::String("description".to_string())) {
-                        description = d.clone();
-                    }
-                    if let Some(serde_yaml::Value::String(s)) = map.get(&serde_yaml::Value::String("status".to_string())) {
-                        status = s.clone();
-                    }
-                }
-
-                // Only process completed tasks as per KAIROS Orchestration design
-                if status != "COMPLETED" {
-                    continue;
-                }
-
-                let memory_content = format!("Task: {}\nDescription: {}", title, description);
-
-                let embedding_res = if let Some(cached) = cache.get(&memory_content) {
+                let embedding_res = if let Some(cached) = cache.get(&content) {
                     Ok(cached)
                 } else {
-                    match client.generate_embedding(&memory_content).await {
+                    match client.generate_embedding(&content).await {
                         Ok(embedding) => {
                             counter.add(1, &[]);
                             let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
-                            cache.set(&memory_content, &emb_str);
+                            cache.set(&content, &emb_str);
                             Ok(emb_str)
                         },
                         Err(e) => Err(e),
@@ -509,15 +484,11 @@ impl AutoDreamWorker {
 
                         let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        let mut metadata_map = serde_json::Map::new();
-                        metadata_map.insert("title".to_string(), serde_json::Value::String(title));
-                        metadata_map.insert("description".to_string(), serde_json::Value::String(description));
-
                         let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
                             id: mem_id,
                             tenant_id: "system".to_string(),
                             agent_id: "system_agent".to_string(),
-                            content: memory_content.clone(),
+                            content: content.clone(),
                             embedding: embedding_vec,
                             source_type: "TASK_SUMMARY".to_string(),
                             created_at: chrono::Utc::now(),
@@ -525,7 +496,7 @@ impl AutoDreamWorker {
                             reference_count: 0,
                             reliability_score: 50,
                             owner_override: false,
-                            metadata: Some(serde_json::Value::Object(metadata_map)),
+                            metadata: None,
                         };
 
                         let repository = match &db.store {

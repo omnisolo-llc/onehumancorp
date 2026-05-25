@@ -30,24 +30,13 @@ pub trait TeammateMesh: Send + Sync {
 pub struct LocalTeammateMesh {
     hub: Arc<crate::hub::Hub>,
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
-    redis: Option<Arc<ohc_builtin_agent::mesh::transport::RedisPubSubTransport>>,
 }
 
 impl LocalTeammateMesh {
-    pub async fn new(hub: Arc<crate::hub::Hub>) -> Self {
-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-        let redis = match ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(&redis_url).await {
-            Ok(t) => Some(Arc::new(t)),
-            Err(e) => {
-                tracing::warn!("LocalTeammateMesh failed to initialize RedisPubSubTransport: {}", e);
-                None
-            }
-        };
-
+    pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
         Self {
             hub,
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
-            redis,
         }
     }
 }
@@ -56,25 +45,10 @@ impl LocalTeammateMesh {
 impl MeshTransport for LocalTeammateMesh {
     async fn publish(&self, topic: &str, message: TeammateMeshEvent) -> Result<(), String> {
         let _ = self.hub.publish_teammate_event(topic.to_string(), message.clone());
-
-        if (topic == "mesh:tasks" || topic == "mesh:coordination") && self.redis.is_some() {
-            let redis_transport = self.redis.as_ref().unwrap();
-            let mut payload = Vec::new();
-            use prost::Message as ProstMessage;
-            if message.encode(&mut payload).is_ok() {
-                return redis_transport.publish(topic, ::ohc_builtin_agent::mesh::transport::Message { payload }).await;
-            }
-        }
-
         self.inner.publish(topic, message).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        if (topic == "mesh:tasks" || topic == "mesh:coordination") && self.redis.is_some() {
-            let redis_transport = self.redis.as_ref().unwrap();
-            return redis_transport.subscribe(topic, handler).await;
-        }
-
         // Also subscribe to hub events? Wait, hub events are broadcasted to websocket clients.
         // The transport is used for agent communication.
         // LocalTeammateMesh is a transport for the agent to receive events, but it also broadcasts to the hub.
@@ -311,7 +285,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
 
-        let mesh = LocalTeammateMesh::new(hub.clone()).await;
+        let mesh = LocalTeammateMesh::new(hub.clone());
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();

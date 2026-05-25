@@ -250,7 +250,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT,
                         task_id TEXT,
                         content TEXT NOT NULL,
@@ -273,7 +273,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
-                        organization_id VARCHAR NOT NULL,
+                        tenant_id VARCHAR NOT NULL,
                         title VARCHAR NOT NULL,
                         description TEXT,
                         status VARCHAR NOT NULL DEFAULT 'PENDING',
@@ -290,7 +290,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         title TEXT NOT NULL,
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
@@ -309,7 +309,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         department TEXT NOT NULL,
                         description TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'PENDING',
@@ -339,7 +339,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
-                        organization_id TEXT PRIMARY KEY,
+                        tenant_id TEXT PRIMARY KEY,
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
@@ -349,7 +349,7 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         user_id TEXT NOT NULL,
                         current_step INTEGER NOT NULL DEFAULT 0,
                         state_json TEXT NOT NULL DEFAULT '{}',
@@ -357,11 +357,11 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        PRIMARY KEY (organization_id, user_id)
+                        PRIMARY KEY (tenant_id, user_id)
                     );
                     CREATE TABLE IF NOT EXISTS customers (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         email TEXT,
                         phone TEXT,
                         name TEXT,
@@ -373,7 +373,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS orders (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         customer_id TEXT,
                         total_amount REAL,
                         status TEXT,
@@ -384,7 +384,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS order_items (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         order_id TEXT,
                         product_id TEXT,
                         quantity INTEGER,
@@ -396,7 +396,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS bookings (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         customer_id TEXT,
                         service_id TEXT,
                         start_time TEXT,
@@ -409,7 +409,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         name TEXT,
                         description TEXT,
                         price_cents INTEGER,
@@ -429,7 +429,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS referrals (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         user_id TEXT NOT NULL,
                         referral_code TEXT UNIQUE NOT NULL,
                         clicks INTEGER DEFAULT 0,
@@ -442,7 +442,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS competitor_metrics (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         competitor_name TEXT NOT NULL,
                         metrics_data TEXT NOT NULL,
                         probed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -453,7 +453,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_violations (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT NOT NULL,
                         session_id TEXT NOT NULL,
                         violation_type TEXT NOT NULL,
@@ -465,7 +465,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         local_path TEXT NOT NULL,
                         cloud_path TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'FILE_SYNC_PENDING',
@@ -476,7 +476,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS department_tasks (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         department TEXT NOT NULL,
                         event_type TEXT NOT NULL,
                         payload TEXT NOT NULL DEFAULT '{}',
@@ -487,7 +487,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
@@ -499,7 +499,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS autodream_memories (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
@@ -512,7 +512,7 @@ impl DB {
                     );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         entity_id TEXT NOT NULL,
                         entity_type TEXT NOT NULL,
                         from_state TEXT NOT NULL,
@@ -528,7 +528,7 @@ impl DB {
                     CREATE INDEX IF NOT EXISTS idx_sm_entity ON state_machine_transitions(entity_id, entity_type);
                     CREATE TABLE IF NOT EXISTS pages (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         title TEXT NOT NULL,
                         content TEXT,
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -536,7 +536,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS memories (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         customer_id TEXT NOT NULL,
                         embedding BLOB,
                         context TEXT NOT NULL,
@@ -545,7 +545,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS consolidated_memory (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT,
                         content TEXT NOT NULL,
                         embedding BLOB,
@@ -561,7 +561,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         name TEXT NOT NULL,
                         role TEXT NOT NULL,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'IDLE',
                         provider_type TEXT NOT NULL DEFAULT '',
                         region TEXT NOT NULL DEFAULT '',
@@ -570,7 +570,7 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS agent_inbox (
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         agent_id TEXT NOT NULL,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         message_id TEXT NOT NULL,
                         from_agent TEXT NOT NULL,
                         to_agent TEXT NOT NULL DEFAULT '',
@@ -581,14 +581,14 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS meeting_rooms (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agenda TEXT NOT NULL DEFAULT '',
                         participants TEXT NOT NULL DEFAULT '[]'
                     );
                     CREATE TABLE IF NOT EXISTS meeting_transcripts (
                         seq INTEGER PRIMARY KEY AUTOINCREMENT,
                         meeting_id TEXT NOT NULL,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         message_id TEXT NOT NULL,
                         from_agent TEXT NOT NULL,
                         to_agent TEXT NOT NULL DEFAULT '',
@@ -603,7 +603,7 @@ impl DB {
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                        organization_id TEXT NOT NULL DEFAULT 'system',
+                        tenant_id TEXT NOT NULL DEFAULT 'system',
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,
@@ -615,7 +615,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS inbox_messages (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT,
+                        tenant_id TEXT,
                         source TEXT,
                         content TEXT,
                         draft_reply TEXT,
@@ -625,7 +625,7 @@ impl DB {
 
                     CREATE TABLE IF NOT EXISTS interactions (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         customer_id TEXT NOT NULL,
                         channel TEXT NOT NULL,
                         content TEXT NOT NULL,
@@ -638,7 +638,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_actions (
                         id TEXT PRIMARY KEY,
-                        organization_id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
                         agent_id TEXT NOT NULL,
                         interaction_id TEXT,
                         action_type TEXT NOT NULL,
@@ -719,10 +719,10 @@ impl DB {
 
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                let shared_rows = sqlx::query("SELECT id, organization_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("organization_id");
+                    let org_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
@@ -730,7 +730,7 @@ impl DB {
                 let swarm_rows = sqlx::query("SELECT id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
-                    let org_id: String = "system".to_string(); // Fallback organization_id
+                    let org_id: String = "system".to_string(); // Fallback tenant_id
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
@@ -738,10 +738,10 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let shared_rows = sqlx::query("SELECT id, organization_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
-                    let org_id: String = row.get("organization_id");
+                    let org_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
@@ -750,7 +750,7 @@ impl DB {
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
-                    let org_id: String = "system".to_string(); // Fallback organization_id
+                    let org_id: String = "system".to_string(); // Fallback tenant_id
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "swarm_tasks".to_string()));
                 }
@@ -762,8 +762,8 @@ impl DB {
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
@@ -788,7 +788,7 @@ pub async fn insert_autodream_memory(
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -800,7 +800,7 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -827,7 +827,7 @@ pub async fn insert_autodream_memory(
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
@@ -839,7 +839,7 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO knowledge_embeddings (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
                     .bind(agent_id)
