@@ -19,6 +19,7 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
@@ -56,6 +57,7 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -130,6 +132,23 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
+                 "manychat" => {
+                     if !creds.api_token.is_empty() {
+                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                         let text = content.to_string();
+
+                         let clients = self.manychat_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
+                                 if let Err(e) = client.send_message(platform, &to, &text).await {
+                                     tracing::error!("Failed to send Manychat message: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
                  "meta" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
@@ -144,6 +163,36 @@ impl IntegrationsRegistry {
                                  let platform = if to.contains("whatsapp") { "whatsapp" } else if to.contains("instagram") { "instagram" } else { "facebook" };
                                  if let Err(e) = client.send_message(platform, &to, &text).await {
                                      tracing::error!("Failed to send Meta message: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 "mailchimp" => {
+                     if !creds.api_token.is_empty() {
+                         let text = content.to_string();
+
+                         let clients = self.mailchimp_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 if let Err(e) = client.send_campaign("default_audience", &text).await {
+                                     tracing::error!("Failed to send Mailchimp campaign: {}", e);
+                                 }
+                             });
+                         }
+                     }
+                 }
+                 "zoom" => {
+                     if !creds.api_token.is_empty() {
+                         let text = content.to_string();
+
+                         let clients = self.zoom_clients.read().unwrap();
+                         if let Some(client) = clients.get(integration_id) {
+                             let client = client.clone();
+                             tokio::spawn(async move {
+                                 if let Err(e) = client.create_meeting(&text).await {
+                                     tracing::error!("Failed to send Zoom meeting link: {}", e);
                                  }
                              });
                          }
@@ -200,6 +249,12 @@ impl IntegrationsRegistry {
                     clients.insert(integration_id_clone, std::sync::Arc::new(provider));
                 }
             });
+        }
+        if integration_id == "manychat" {
+            let mut clients = self.manychat_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(
+                creds.api_token.clone()
+            )));
         }
         if integration_id == "meta" {
             let mut clients = self.meta_clients.write().unwrap();

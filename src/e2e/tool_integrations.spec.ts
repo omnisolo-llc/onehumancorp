@@ -14,9 +14,9 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Seamlessly connect your favorite apps to streamline your business operations.')).toBeVisible();
   });
 
-  test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
-    await expect(page.getByText('Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp.')).toBeVisible();
+  test('displays manychat integration card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Manychat' })).toBeVisible();
+    await expect(page.getByText('Unified inbox for Instagram, Messenger, and WhatsApp.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
@@ -32,10 +32,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
   });
 
-  test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
+  test('displays email automation and automated video links cards', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Mailchimp Automations' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
-    await expect(page.getByText('AI-Powered Email Marketing and simple customer newsletters.')).toBeVisible();
+    await expect(page.getByText('Trigger email campaigns based on customer purchase behavior.')).toBeVisible();
     await expect(page.getByText('Auto-Generated Meeting Links for online services.')).toBeVisible();
   });
 
@@ -44,10 +44,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
   });
 
-  test('can connect Meta Graph API', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Meta Graph API' }).getByRole('button', { name: 'Connect' });
+  test('can connect Manychat', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Meta Graph API...');
+      expect(dialog.message()).toContain('Connecting to Manychat...');
       dialog.accept();
     });
     await connectButton.click();
@@ -62,8 +62,8 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await connectButton.click();
   });
 
-  test('can connect Resend and Mercado Pago', async ({ page }) => {
-    const resendBtn = page.locator('div.card.glass').filter({ hasText: 'Resend' }).getByRole('button', { name: 'Connect' });
+  test('can connect Mailchimp Automations and Mercado Pago', async ({ page }) => {
+    const resendBtn = page.locator('div.card.glass').filter({ hasText: 'Mailchimp Automations' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
     await resendBtn.click();
 

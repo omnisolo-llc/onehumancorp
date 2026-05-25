@@ -42,6 +42,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let chromadb_provider = crate::integrations::chromadb::provider::ChromaDbProvider::new();
     catalog.push(chromadb_provider.to_integration_provider());
 
+    let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
+    catalog.push(manychat_provider.to_integration_provider());
+
     let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
     catalog.push(meta_provider.to_integration_provider());
 
