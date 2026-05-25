@@ -391,6 +391,64 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_kairos_orchestrator_approval_workflow() {
+        let pool = SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'PENDING',
+                epic_id TEXT,
+                parent_id TEXT,
+                assigned_agent TEXT,
+                payload TEXT,
+                dependencies TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT,
+                updated_at TEXT,
+                action_risk TEXT,
+                approval_status TEXT,
+                proposed_content TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(pool.clone()),
+        });
+
+        let orchestrator = KairosOrchestrator::new(db);
+
+        // Insert task
+        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, status, dependencies) VALUES ('1', 'tenant1', 'Task 1', 'PENDING', '[]')")
+            .execute(&pool).await.unwrap();
+
+        // Submit for approval
+        orchestrator.submit_for_approval("1", "tenant1", "Email content", "HIGH").await.unwrap();
+
+        // Verify task is not claimable while pending
+        let task_blocked = orchestrator.claim_shared_task("tenant1", "agent1").await.unwrap();
+        assert!(task_blocked.is_none());
+
+        // Approve task
+        orchestrator.approve_task("1", "tenant1", true).await.unwrap();
+
+        // Verify state
+        let row: (String, String) = sqlx::query_as("SELECT approval_status, status FROM shared_tasks WHERE id = '1'")
+            .fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "APPROVED");
+        assert_eq!(row.1, "IN_PROGRESS");
+    }
+
+    #[tokio::test]
     async fn test_kairos_orchestrator_pg_paths() {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool = sqlx::postgres::PgPoolOptions::new()
