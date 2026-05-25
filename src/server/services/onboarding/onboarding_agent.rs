@@ -2413,6 +2413,10 @@ impl OnboardingAgent {
     }
 
     async fn seed_default_agents(&self, org_id: &str, selected_agents: Vec<String>) -> Result<(), String> {
+        // If the request came from the new wizard, it will have a selected_agents list.
+        // If it's empty, we should respect that and seed nothing, unless it's a legacy call.
+        // However, for OHC, we want to empower the user's choice.
+
         let default_agents = vec![
             ("Operations", "The Manager", "Operations"),
             ("Marketing & Advertising", "The Promoter", "Marketing"),
@@ -2424,8 +2428,9 @@ impl OnboardingAgent {
         ];
 
         for (name, role, role_id) in default_agents {
-            // If selected_agents is not empty, only seed those that match the role
-            if !selected_agents.is_empty() && !selected_agents.contains(&role.to_string()) {
+            // Only seed if the agent is in the selected list.
+            // If the list is empty, we assume no agents were selected in the UI.
+            if !selected_agents.contains(&role.to_string()) {
                 continue;
             }
 
@@ -2487,6 +2492,15 @@ mod tests {
             first_product_price: "25.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            selected_agents: vec![
+                "The Manager".to_string(),
+                "The Promoter".to_string(),
+                "The Salesperson".to_string(),
+                "The Ambassador".to_string(),
+                "The Accountant".to_string(),
+                "The Protector".to_string(),
+                "The Advisor".to_string(),
+            ],
         };
 
         let req_categories = req.selling_categories.clone();
@@ -2572,6 +2586,7 @@ mod tests {
             first_product_price: "100.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            selected_agents: vec!["The Salesperson".to_string()],
         };
 
         let res_service = agent.start_onboarding(req_service).await.unwrap();
@@ -2609,6 +2624,7 @@ mod tests {
             first_product_price: "5.00".to_string(),
             domain_choice: "subdomain".to_string(),
             price_type: "fixed".to_string(),
+            selected_agents: vec![],
         };
 
         let res_food = agent.start_onboarding(req_food).await.unwrap();

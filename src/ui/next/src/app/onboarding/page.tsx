@@ -108,6 +108,17 @@ export default function OnboardingWizard() {
     }
     setError("");
     setStep(step + 1);
+
+    // OHC Full-Spectrum Observability: Track step transition
+    try {
+      (window as any).ohc_metrics?.track('onboarding_step_transition', {
+        from: step,
+        to: step + 1,
+        timestamp: Date.now()
+      });
+    } catch (e) {
+      // Silence telemetry errors in UI
+    }
   };
 
   const handleIntakeSubmit = async () => {
@@ -147,7 +158,7 @@ export default function OnboardingWizard() {
           selling_categories: intakeData?.categories || [],
           admin_email: "admin@example.com",
           admin_name: "Admin",
-          admin_password: "password123",
+          admin_password: Math.random().toString(36).slice(-12), // Dynamic temporary password for onboarding
           website_template: template,
           first_product_name: firstProductName || intakeData?.initial_products?.[0]?.name || "Sample Product",
           first_product_price: firstProductPrice || intakeData?.initial_products?.[0]?.price || "10.00",
@@ -169,20 +180,20 @@ export default function OnboardingWizard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F0F0F2] dark:bg-[#000] font-inter text-[#1D1D1F] dark:text-[#F5F5F7]">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
-          background: rgba(255, 255, 255, 0.8);
-          backdrop-filter: blur(40px) saturate(210%);
-          -webkit-backdrop-filter: blur(40px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.5);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
+          border: 1px solid rgba(255, 255, 255, 0.4);
           box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
-            background: rgba(22, 22, 26, 0.8);
+            background: rgba(22, 22, 26, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
           }
         }
-        .animate-in { animation: fadeIn 300ms ease-out forwards; }
+        .animate-in { animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       `}} />
 
