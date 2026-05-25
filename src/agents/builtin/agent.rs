@@ -42,6 +42,7 @@ pub struct AgentRunConfig {
     pub confidence_threshold: f32,
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
+    pub enable_expert_team: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
@@ -98,6 +99,7 @@ impl Default for AgentRunConfig {
             confidence_threshold: 0.0,
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
+            enable_expert_team: false,
             enable_acon_context_strategy: false,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
@@ -1419,6 +1421,125 @@ impl Agent {
         Ok(parsed)
     }
 
+    /// Runs the agent using the Tencent Workbuddy (Expert Team) Feature logic.
+    pub async fn run_expert_team<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        on_event(AgentEvent::RunStarted { iteration: 0 });
+        ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_expert_team");
+
+        let experts = vec![
+            ohc_builtin_agent_core::expert_team::DomainExpert {
+                role: "Industry Researcher".to_string(),
+                llm: std::sync::Arc::new(ExpertTeamLlmAdapter {
+                    agent: std::sync::Arc::new(Agent {
+                        llm: self.llm.clone(),
+                        tools: vec![],
+                        progress: self.progress.clone(),
+                        memory_store: self.memory_store.clone(),
+                        checkpointer: self.checkpointer.clone(),
+                        observation_store: self.observation_store.clone(),
+                        native_env: self.native_env.clone(),
+                    }),
+                    cfg: cfg.clone(),
+                }),
+            },
+            ohc_builtin_agent_core::expert_team::DomainExpert {
+                role: "Financial Analyst".to_string(),
+                llm: std::sync::Arc::new(ExpertTeamLlmAdapter {
+                    agent: std::sync::Arc::new(Agent {
+                        llm: self.llm.clone(),
+                        tools: vec![],
+                        progress: self.progress.clone(),
+                        memory_store: self.memory_store.clone(),
+                        checkpointer: self.checkpointer.clone(),
+                        observation_store: self.observation_store.clone(),
+                        native_env: self.native_env.clone(),
+                    }),
+                    cfg: cfg.clone(),
+                }),
+            },
+            ohc_builtin_agent_core::expert_team::DomainExpert {
+                role: "Strategic Analyst".to_string(),
+                llm: std::sync::Arc::new(ExpertTeamLlmAdapter {
+                    agent: std::sync::Arc::new(Agent {
+                        llm: self.llm.clone(),
+                        tools: vec![],
+                        progress: self.progress.clone(),
+                        memory_store: self.memory_store.clone(),
+                        checkpointer: self.checkpointer.clone(),
+                        observation_store: self.observation_store.clone(),
+                        native_env: self.native_env.clone(),
+                    }),
+                    cfg: cfg.clone(),
+                }),
+            },
+        ];
+
+        let manager = ohc_builtin_agent_core::expert_team::ExpertTeamManager::new("Project Director", experts);
+
+        if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_flight(&manager, initial_message) {
+            on_event(AgentEvent::TaskError { error: e.clone() });
+            return Err(e.into());
+        }
+
+        let mut trace = ohc_builtin_agent_core::expert_team::SkillTrace::new();
+
+        let summaries = match manager.execute_parallel_tasks(initial_message, &mut trace).await {
+            Ok(s) => s,
+            Err(e) => {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        };
+
+        if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_merge(&summaries) {
+            on_event(AgentEvent::TaskError { error: e.clone() });
+            return Err(e.into());
+        }
+
+        let synthesis_prompt = format!(
+            "You are the Project Director. Synthesize the following expert summaries into a final coherent output:
+
+{}",
+            summaries.join("
+
+")
+        );
+
+        let final_req = crate::types::ChatRequest {
+            model: cfg.model.clone(),
+            system: cfg.server_system_message.clone(),
+            messages: vec![crate::types::Message::user(synthesis_prompt)],
+            tools: vec![],
+            max_tokens: cfg.max_tokens,
+            temperature: cfg.temperature,
+        };
+
+        let final_resp = match self.llm.chat(final_req).await {
+            Ok(r) => r.message.content,
+            Err(e) => {
+                let err = format!("Synthesis LLM Error: {}", e);
+                on_event(AgentEvent::TaskError { error: err.clone() });
+                return Err(err.into());
+            }
+        };
+
+        if let Err(e) = ohc_builtin_agent_core::expert_team::QualityGates::pre_deliver(&final_resp, &trace) {
+            on_event(AgentEvent::TaskError { error: e.clone() });
+            return Err(e.into());
+        }
+
+        on_event(AgentEvent::TaskComplete { content: final_resp.clone() });
+        Ok(final_resp)
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1428,6 +1549,10 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        if cfg.enable_expert_team {
+            return self.run_expert_team(cfg, initial_message, on_event).await;
+        }
+
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
 
@@ -2783,8 +2908,57 @@ impl Agent {
     }
 }
 
+
+pub struct ExpertTeamLlmAdapter {
+    pub agent: std::sync::Arc<crate::agent::Agent>,
+    pub cfg: crate::agent::AgentRunConfig,
+}
+
+#[async_trait::async_trait]
+impl ohc_builtin_agent_core::expert_team::ExpertTeamLlmClient for ExpertTeamLlmAdapter {
+    async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.agent.llm.chat(req).await
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_run_expert_team() {
+        struct MockExpertTeamLlmClient {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockExpertTeamLlmClient {
+            async fn chat(&self, _req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant(format!("Expert summary {} Chart: market Analysis: deep. This text is long enough to pass the twenty word check in the quality gate.", *count)),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some(format!("id-{}", *count)),
+                })
+            }
+        }
+
+        let llm = std::sync::Arc::new(MockExpertTeamLlmClient { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(llm, vec![]);
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_expert_team = true;
+
+        let mut events = vec![];
+        let mut on_event = |e: AgentEvent| {
+            events.push(e);
+        };
+
+        let result = agent.run(&cfg, "Analyze the market trends. Chart: yes. Analysis: deep.", &mut on_event).await;
+        assert!(result.is_ok());
+        let res_str = result.unwrap();
+        assert!(res_str.contains("Expert summary"));
+    }
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,
