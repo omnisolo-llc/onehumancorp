@@ -128,9 +128,14 @@ impl TaskDecompositionService {
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
                     r#"
-                    SELECT st.id, st.dependencies FROM shared_tasks_decomposition st
+                    SELECT st.id FROM shared_tasks_decomposition st
                     WHERE st.status = 'PENDING'
-                    AND NOT EXISTS (SELECT 1 FROM json_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED')
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM json_array_elements_text(st.dependencies) AS dep_id
+                        JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
+                        WHERE parent.status != 'COMPLETED'
+                    )
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED
                     "#
@@ -148,32 +153,6 @@ impl TaskDecompositionService {
                 };
 
                 let id: String = row.get("id");
-                let mut _skip = false;
-                let deps_val: serde_json::Value = row.get("dependencies");
-                let deps: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
-
-                // DAG Dependency check
-                if !deps.is_empty() {
-                    let mut is_ready = true;
-                    for dep in deps {
-                        let dep_status: Option<String> = sqlx::query_scalar(
-                            "SELECT status FROM shared_tasks_decomposition WHERE id = $1"
-                        )
-                        .bind(&dep)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .map_err(|e| e.to_string())?;
-
-                        if dep_status != Some("COMPLETED".to_string()) {
-                            is_ready = false;
-                            break;
-                        }
-                    }
-                    if !is_ready {
-                        tx.commit().await.map_err(|e| e.to_string())?;
-                        return Ok(None);
-                    }
-                }
 
                 // Transition state
                 sqlx::query(
@@ -855,6 +834,218 @@ mod tests {
         service.fail_task(fail_task_id, "agent-1", "intentional failure").await.unwrap();
 
         // This confirms that record_* does not panic and works smoothly with the process.
+    }
+
+    #[tokio::test]
+    async fn test_task_dag_dependencies_sqlite() {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
+        ).execute(&pool).await.unwrap();
+
+        let db = Arc::new(crate::db::DB { pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(), store: crate::db::DbStore::Sqlite(pool.clone()) });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = Arc::new(DummyMesh);
+        let service = TaskDecompositionService::new(db.clone(), mesh.clone());
+
+        // Create task 1
+        let task1 = crate::tasks::SharedTask {
+            id: "task-1".to_string(),
+            organization_id: "org-123".to_string(),
+            mission_id: "mission-456".to_string(),
+            parent_plan_id: "plan-456".to_string(),
+            dependencies: vec![],
+            title: "Task 1".to_string(),
+            description: Some("Test".to_string()),
+            assigned_agent_id: None,
+            status: "PENDING".to_string(),
+            priority: "HIGH".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(0),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+        service.create_task(task1).await.unwrap();
+
+        // Create task 2 depending on task 1
+        let task2 = crate::tasks::SharedTask {
+            id: "task-2".to_string(),
+            organization_id: "org-123".to_string(),
+            mission_id: "mission-456".to_string(),
+            parent_plan_id: "plan-456".to_string(),
+            dependencies: vec!["task-1".to_string()],
+            title: "Task 2".to_string(),
+            description: Some("Test".to_string()),
+            assigned_agent_id: None,
+            status: "PENDING".to_string(),
+            priority: "HIGH".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(0),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+        service.create_task(task2).await.unwrap();
+
+        // Attempt to claim. Should get task 1 because task 2 is blocked.
+        let claimed_opt = service.claim_task("agent-1").await.unwrap();
+        assert!(claimed_opt.is_some());
+        assert_eq!(claimed_opt.unwrap().id, "task-1");
+
+        // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
+        let claimed_opt2 = service.claim_task("agent-2").await.unwrap();
+        assert!(claimed_opt2.is_none());
+
+        // Complete task 1
+        service.update_status("task-1", "COMPLETED", "agent-1").await.unwrap();
+
+        // Attempt to claim. Should get task 2 now.
+        let claimed_opt3 = service.claim_task("agent-2").await.unwrap();
+        assert!(claimed_opt3.is_some());
+        assert_eq!(claimed_opt3.unwrap().id, "task-2");
+    }
+
+    #[tokio::test]
+    async fn test_task_dag_dependencies_postgres() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return; // Skip if no PG DB available for test
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1)
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db_pg = Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+
+        struct DummyMesh;
+        #[async_trait::async_trait]
+        impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+            async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+            async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+            async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+            async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+        }
+
+        let mesh = Arc::new(DummyMesh);
+        let service = TaskDecompositionService::new(db_pg.clone(), mesh.clone());
+
+        // Create task 1
+        let task1 = crate::tasks::SharedTask {
+            id: "task-pg-1".to_string(),
+            organization_id: "org-pg".to_string(),
+            mission_id: "mission-pg".to_string(),
+            parent_plan_id: "plan-pg".to_string(),
+            dependencies: vec![],
+            title: "Task 1 PG".to_string(),
+            description: Some("Test".to_string()),
+            assigned_agent_id: None,
+            status: "PENDING".to_string(),
+            priority: "HIGH".to_string(),
+            payload: "{}".to_string(),
+            locked_until: None,
+            ultraplan_phase: None,
+            deliberation_log: None,
+            depth: Some(0),
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+            action_risk: None,
+            approval_status: None,
+            proposed_content: None,
+        };
+        let _ = service.create_task(task1).await; // Might fail if DB is not migrated, that's fine.
+
+        // If creation succeeded (DB migrated), let's proceed to task 2
+        if let Ok(_) = service.get_task("task-pg-1").await {
+            let task2 = crate::tasks::SharedTask {
+                id: "task-pg-2".to_string(),
+                organization_id: "org-pg".to_string(),
+                mission_id: "mission-pg".to_string(),
+                parent_plan_id: "plan-pg".to_string(),
+                dependencies: vec!["task-pg-1".to_string()],
+                title: "Task 2 PG".to_string(),
+                description: Some("Test".to_string()),
+                assigned_agent_id: None,
+                status: "PENDING".to_string(),
+                priority: "HIGH".to_string(),
+                payload: "{}".to_string(),
+                locked_until: None,
+                ultraplan_phase: None,
+                deliberation_log: None,
+                depth: Some(0),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+                action_risk: None,
+                approval_status: None,
+                proposed_content: None,
+            };
+            service.create_task(task2).await.unwrap();
+
+            // Attempt to claim. Should get task 1 because task 2 is blocked.
+            let claimed_opt = service.claim_task("agent-1").await.unwrap();
+            assert!(claimed_opt.is_some());
+            assert_eq!(claimed_opt.unwrap().id, "task-pg-1");
+
+            // Attempt to claim again. Should get None because task 1 is executing and task 2 is blocked.
+            let claimed_opt2 = service.claim_task("agent-2").await.unwrap();
+            assert!(claimed_opt2.is_none());
+
+            // Complete task 1
+            service.update_status("task-pg-1", "COMPLETED", "agent-1").await.unwrap();
+
+            // Attempt to claim. Should get task 2 now.
+            let claimed_opt3 = service.claim_task("agent-2").await.unwrap();
+            assert!(claimed_opt3.is_some());
+            assert_eq!(claimed_opt3.unwrap().id, "task-pg-2");
+        }
     }
 
     #[tokio::test]
