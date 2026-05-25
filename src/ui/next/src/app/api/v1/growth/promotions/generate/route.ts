@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const message = randomPromo.replace('{tenant}', tenantName);
 
     // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+
 
     return NextResponse.json({ message });
   } catch (error) {

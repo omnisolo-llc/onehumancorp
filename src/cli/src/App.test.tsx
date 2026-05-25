@@ -17,7 +17,10 @@ describe('App', () => {
     expect(output).toContain('OHC Interactive Harness');
 
     // Fast-forward timers to trigger the useEffect state change
-    await vi.advanceTimersByTimeAsync(2000);
+    vi.advanceTimersByTime(2000);
+    await vi.waitFor(() => {
+      expect(lastFrame()).toContain('Analyzing Codebase...');
+    });
 
     output = lastFrame();
     expect(output).toContain('Analyzing Codebase...');

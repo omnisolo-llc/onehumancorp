@@ -183,10 +183,10 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByText("Draft email for review")).toBeVisible();
   });
 
-  test('verify CustomerSuccess Department renders properly inside Action Required block', async ({ page }) => {
+  test('verify Customer Success Department renders properly inside Action Required block', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
+    await expect(page.getByText("Customer Success Department")).toBeVisible();
   });
 
   test('verify Approve button works and removes item from UI', async ({ page }) => {
