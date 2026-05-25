@@ -43,11 +43,15 @@ pub struct SwarmTask {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTask {
     pub id: String,
-    pub tenant_id: String,
+    pub organization_id: String,
+    pub parent_plan_id: Option<String>,
     pub title: String,
+    pub description: Option<String>,
     pub status: String,
-    pub dependencies: String,
     pub assigned_agent_id: Option<String>,
+    pub dependencies: String,
+    pub created_at: Option<chrono::DateTime<Utc>>,
+    pub updated_at: Option<chrono::DateTime<Utc>>,
 }
 
 pub struct KairosOrchestrator {
@@ -163,7 +167,64 @@ impl KairosOrchestrator {
         }
     }
 
-    pub async fn claim_shared_task(&self, tenant_id: &str, agent_id: &str) -> Result<Option<SharedTask>, KairosError> {
+    pub async fn create_shared_task(&self, task: SharedTask) -> Result<SharedTask, KairosError> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (
+                        id, organization_id, parent_plan_id, title, description,
+                        status, assigned_agent_id, dependencies, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9, $10)
+                    "#
+                )
+                .bind(&task.id)
+                .bind(&task.organization_id)
+                .bind(&task.parent_plan_id)
+                .bind(&task.title)
+                .bind(&task.description)
+                .bind(&task.status)
+                .bind(&task.assigned_agent_id)
+                .bind(&task.dependencies)
+                .bind(now)
+                .bind(now)
+                .execute(&self.db.pool)
+                .await
+                .map_err(KairosError::Database)?;
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query(
+                    r#"
+                    INSERT INTO shared_tasks (
+                        id, organization_id, parent_plan_id, title, description,
+                        status, assigned_agent_id, dependencies, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    "#
+                )
+                .bind(&task.id)
+                .bind(&task.organization_id)
+                .bind(&task.parent_plan_id)
+                .bind(&task.title)
+                .bind(&task.description)
+                .bind(&task.status)
+                .bind(&task.assigned_agent_id)
+                .bind(&task.dependencies)
+                .bind(now.to_rfc3339())
+                .bind(now.to_rfc3339())
+                .execute(sqlite_pool)
+                .await
+                .map_err(KairosError::Database)?;
+            }
+        }
+
+        let mut res = task;
+        res.created_at = Some(now);
+        res.updated_at = Some(now);
+        Ok(res)
+    }
+
+    pub async fn claim_shared_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, KairosError> {
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -171,9 +232,9 @@ impl KairosOrchestrator {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT t.id, t.tenant_id, t.title, t.status, t.dependencies::text, t.assigned_agent
+                    SELECT t.id, t.organization_id, t.parent_plan_id, t.title, t.description, t.status, t.assigned_agent_id, t.dependencies::text, t.created_at, t.updated_at
                     FROM shared_tasks t
-                    WHERE t.status = 'PENDING' AND t.tenant_id = $1
+                    WHERE t.status = 'PENDING' AND t.organization_id = $1
                     AND NOT EXISTS (
                         SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) AS dep_id
                         JOIN shared_tasks parent ON parent.id::text = dep_id
@@ -183,16 +244,16 @@ impl KairosOrchestrator {
                     FOR UPDATE SKIP LOCKED
                     "#
                 )
-                .bind(tenant_id)
+                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(KairosError::Database)?;
 
                 if let Some(r) = row {
-                    let id: String = r.get(0);
+                    let id: String = r.get("id");
 
                     sqlx::query(
-                        "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1, updated_at = $2 WHERE id = $3"
+                        "UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent_id = $1, updated_at = $2 WHERE id = $3"
                     )
                     .bind(agent_id)
                     .bind(now)
@@ -205,11 +266,15 @@ impl KairosOrchestrator {
 
                     Ok(Some(SharedTask {
                         id,
-                        tenant_id: r.get(1),
-                        title: r.get(2),
+                        organization_id: r.get("organization_id"),
+                        parent_plan_id: r.get("parent_plan_id"),
+                        title: r.get("title"),
+                        description: r.get("description"),
                         status: "IN_PROGRESS".to_string(),
-                        dependencies: r.get(4),
+                        dependencies: r.get("dependencies"),
                         assigned_agent_id: Some(agent_id.to_string()),
+                        created_at: r.get("created_at"),
+                        updated_at: Some(now),
                     }))
                 } else {
                     tx.commit().await.map_err(KairosError::Database)?;
@@ -223,11 +288,11 @@ impl KairosOrchestrator {
                 let row = sqlx::query(
                     r#"
                     UPDATE shared_tasks
-                    SET status = 'IN_PROGRESS', assigned_agent = ?, updated_at = ?
+                    SET status = 'IN_PROGRESS', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT t.id
                         FROM shared_tasks t
-                        WHERE t.status = 'PENDING' AND t.tenant_id = ?
+                        WHERE t.status = 'PENDING' AND t.organization_id = ?
                         AND NOT EXISTS (
                             SELECT 1 FROM json_each(t.dependencies) AS dep_id
                             JOIN shared_tasks parent ON parent.id = dep_id.value
@@ -235,24 +300,35 @@ impl KairosOrchestrator {
                         )
                         LIMIT 1
                     )
-                    RETURNING id, tenant_id, title, status, dependencies, assigned_agent
+                    RETURNING id, organization_id, parent_plan_id, title, description, status, assigned_agent_id, dependencies, created_at
                     "#
                 )
                 .bind(agent_id)
                 .bind(now.to_rfc3339())
-                .bind(tenant_id)
+                .bind(organization_id)
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(KairosError::Database)?;
 
                 if let Some(r) = row {
+                    let created_str_opt: Option<String> = r.try_get("created_at").unwrap_or(None);
+                    let dt_created = if let Some(created_str) = created_str_opt {
+                        chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now())
+                    } else {
+                        chrono::Utc::now()
+                    };
+
                     let task = SharedTask {
                         id: r.get("id"),
-                        tenant_id: r.get("tenant_id"),
+                        organization_id: r.get("organization_id"),
+                        parent_plan_id: r.get("parent_plan_id"),
                         title: r.get("title"),
+                        description: r.get("description"),
                         status: r.get("status"),
                         dependencies: r.get("dependencies"),
-                        assigned_agent_id: r.get("assigned_agent"),
+                        assigned_agent_id: r.get("assigned_agent_id"),
+                        created_at: Some(dt_created),
+                        updated_at: Some(now),
                     };
                     tx.commit().await.map_err(KairosError::Database)?;
                     Ok(Some(task))
@@ -270,6 +346,8 @@ mod tests {
     use super::*;
     use crate::db::DB;
     use sqlx::sqlite::SqlitePoolOptions;
+    use chrono::Utc;
+    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_kairos_orchestrator_sqlite_swarm_tasks() {
@@ -341,20 +419,15 @@ mod tests {
         sqlx::query(
             "CREATE TABLE shared_tasks (
                 id TEXT PRIMARY KEY,
-                tenant_id TEXT NOT NULL,
+                organization_id TEXT NOT NULL,
+                parent_plan_id TEXT,
                 title TEXT NOT NULL,
                 description TEXT,
                 status TEXT NOT NULL DEFAULT 'PENDING',
-                epic_id TEXT,
-                parent_id TEXT,
-                assigned_agent TEXT,
-                payload TEXT,
-                dependencies TEXT NOT NULL DEFAULT '[]',
+                assigned_agent_id TEXT,
+                dependencies JSONB DEFAULT '[]',
                 created_at TEXT,
-                updated_at TEXT,
-                action_risk TEXT,
-                approval_status TEXT,
-                proposed_content TEXT
+                updated_at TEXT
             )"
         )
         .execute(&pool)
@@ -369,7 +442,7 @@ mod tests {
         let orchestrator = KairosOrchestrator::new(db);
 
         // Insert tasks
-        sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, status, dependencies) VALUES ('1', 'tenant1', 'Task 1', 'PENDING', '[]')")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, title, status, dependencies, created_at) VALUES ('1', 'tenant1', 'Task 1', 'PENDING', '[]', '2023-01-01T00:00:00Z')")
             .execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO shared_tasks (id, tenant_id, title, status, dependencies) VALUES ('2', 'tenant1', 'Task 2', 'PENDING', '[\"1\"]')")
             .execute(&pool).await.unwrap();
