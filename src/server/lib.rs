@@ -15,6 +15,8 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
+    m.insert("quick-actions-tooltip".to_string(), "These buttons are shortcuts to your most common daily tasks.".to_string());
+    m.insert("todays-sales-tooltip".to_string(), "Total revenue collected from all sales today. Updates in real-time.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
@@ -2753,7 +2755,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
             #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
-            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #ai-chat-widget { position: fixed; bottom: 96px; right: 88px; width: 360px; height: 500px; max-height: calc(100vh - 120px); background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #global-help-btn { display: none; } /* Replaced by global-help-container */
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
             .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; }
@@ -2835,7 +2838,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
-                            <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
+                            <h2 id="todays-sales" placeholder="todays-sales-tooltip" style="font-size: 48px; margin: 0; color: var(--primary); cursor: help;">$0.00</h2>
                             <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
                         </div>
 
@@ -2865,7 +2868,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>Approval Inbox</h3>
                         </div>
                         <div class="card glass">
-                            <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
+                            <h3>Quick Actions <button class="secondary" placeholder="quick-actions-tooltip" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
                             <p id="quick-actions-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); color: #1a1a1b;">These buttons are shortcuts to your most common daily tasks. Use them for adding products, checking messages, and reviewing your store.</p>
                             <button onclick="showScreen('team-screen')">Manage AI Assistants</button>
@@ -3424,6 +3427,80 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Auto-Generated Meeting Links for online services.</p>
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Connect</button>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 48px; border-top: 1px solid var(--border); padding-top: 24px;">
+                            <h2 style="color: var(--text-secondary); font-size: 18px;">Advanced</h2>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">For users who want to use OHC's APIs directly (e.g., connect a custom checkout).</p>
+                            <button class="secondary" onclick="showScreen('api-reference-screen')">API Reference &amp; Developer Docs</button>
+                        </div>
+                    </div>
+
+                    <!-- API Reference Screen -->
+                    <div id="api-reference-screen" class="screen glass">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                            <h1>API Reference</h1>
+                            <button class="secondary" onclick="showScreen('api-screen')">Back to Connect Tools</button>
+                        </div>
+                        <p>Interactive OpenAPI documentation for advanced users.</p>
+
+                        <!-- Embedded Swagger UI mock -->
+                        <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm); margin-top: 24px;">
+                            <div style="background: #1b1b1b; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span style="color: #89bf04; font-weight: bold; font-family: monospace; font-size: 16px;">swagger</span>
+                                    <span style="color: white; font-weight: 600;">OneHumanCorp API <span style="font-size: 12px; background: #4990e2; padding: 2px 6px; border-radius: 12px; margin-left: 8px;">1.0.0</span></span>
+                                </div>
+                                <span style="color: #aaa; font-size: 12px; font-family: monospace;">OAS3</span>
+                            </div>
+
+                            <div style="padding: 16px;">
+                                <div style="margin-bottom: 24px;">
+                                    <h2 style="font-size: 20px; color: #3b4151; margin-top: 0;">Store</h2>
+                                    <p style="color: #3b4151; font-size: 14px; margin-bottom: 16px;">Storefront operations</p>
+
+                                    <div style="border: 1px solid #61affe; background: rgba(97, 175, 254, 0.1); border-radius: 4px; margin-bottom: 12px; overflow: hidden;">
+                                        <div style="padding: 8px; display: flex; align-items: center; cursor: pointer;" onclick="const d = document.getElementById('swagger-get-prod'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
+                                            <span style="background: #61affe; color: white; font-weight: bold; padding: 6px 14px; border-radius: 3px; font-size: 14px; margin-right: 12px; min-width: 80px; text-align: center;">GET</span>
+                                            <span style="font-family: monospace; font-weight: bold; color: #3b4151; font-size: 16px;">/api/v1/store/products</span>
+                                            <span style="color: #3b4151; font-size: 14px; margin-left: 12px;">Retrieve a list of all active products</span>
+                                        </div>
+                                        <div id="swagger-get-prod" style="display: none; border-top: 1px solid #61affe; padding: 20px; background: white;">
+                                            <h4 style="margin-top: 0; color: #3b4151;">Parameters</h4>
+                                            <p style="font-size: 14px; color: #888;">No parameters</p>
+                                            <h4 style="color: #3b4151; margin-top: 20px;">Responses</h4>
+                                            <pre style="background: #41444e; color: #fff; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 13px; overflow-x: auto;">[
+  {
+    "id": "prod_01H...",
+    "name": "Artisan Coffee Beans",
+    "price": 1899,
+    "currency": "USD"
+  }
+]</pre>
+                                        </div>
+                                    </div>
+
+                                    <div style="border: 1px solid #49cc90; background: rgba(73, 204, 144, 0.1); border-radius: 4px; overflow: hidden;">
+                                        <div style="padding: 8px; display: flex; align-items: center; cursor: pointer;" onclick="const d = document.getElementById('swagger-post-checkout'); d.style.display = d.style.display === 'none' ? 'block' : 'none';">
+                                            <span style="background: #49cc90; color: white; font-weight: bold; padding: 6px 14px; border-radius: 3px; font-size: 14px; margin-right: 12px; min-width: 80px; text-align: center;">POST</span>
+                                            <span style="font-family: monospace; font-weight: bold; color: #3b4151; font-size: 16px;">/api/v1/store/checkout</span>
+                                            <span style="color: #3b4151; font-size: 14px; margin-left: 12px;">Create a new custom checkout session</span>
+                                        </div>
+                                        <div id="swagger-post-checkout" style="display: none; border-top: 1px solid #49cc90; padding: 20px; background: white;">
+                                            <h4 style="margin-top: 0; color: #3b4151;">Request Body</h4>
+                                            <pre style="background: #41444e; color: #fff; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 13px; overflow-x: auto;">{
+  "items": [
+    {
+      "id": "prod_01H...",
+      "quantity": 1
+    }
+  ]
+}</pre>
+                                            <button style="margin-top: 16px; background: white; border: 1px solid #49cc90; color: #49cc90; font-weight: bold; padding: 6px 16px; border-radius: 4px; cursor: pointer;">Try it out</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -4886,7 +4963,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'api-reference-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -5031,7 +5108,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href='#' onclick="showScreen('help-screen'); document.getElementById('ai-chat-widget').style.display='none';">' + data.link_text + '</a>';
+                                if(data.link) aiMsg.innerHTML += '<br><br><a href="javascript:void(0)" onclick="showScreen(\'help-screen\'); document.getElementById(\'ai-chat-widget\').style.display=\'none\'; return false;" style="color: var(--primary); font-weight: 500;">Read the full article →</a>';
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
@@ -5043,6 +5120,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
                             'accept-payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
                         };
+
+                        // Ensure highlight overlay blocks interactions outside the bubble
+                        function setupWalkthroughStyles() {
+                            if (!document.getElementById('walkthrough-styles')) {
+                                const style = document.createElement('style');
+                                style.id = 'walkthrough-styles';
+                                style.innerHTML = `
+                                    #walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9998; transition: all 0.3s ease; }
+                                    #walkthrough-bubble { position: fixed; background: white; padding: 16px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); width: 250px; z-index: 9999; transition: all 0.3s ease; display: none; }
+                                    #walkthrough-bubble h4 { margin: 0 0 8px 0; color: var(--primary); }
+                                    #walkthrough-bubble p { margin: 0 0 16px 0; font-size: 14px; color: var(--text); }
+                                `;
+                                document.head.appendChild(style);
+                            }
+                        }
+                        setupWalkthroughStyles();
+
                         let currentTour = null, currentStepIndex = 0;
 
                         function startWalkthrough(tourId) {
@@ -5060,13 +5154,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if(target) {
                                 const rect = target.getBoundingClientRect();
                                 const overlay = document.getElementById('walkthrough-overlay');
-                                overlay.style.boxShadow = `rgba(0, 0, 0, 0.5) 0px 0px 0px 9999px, rgba(0, 0, 0, 0) 0px 0px 0px 0px inset`;
-                                overlay.style.clipPath = `polygon(0% 0%, 0% 100%, ${rect.left}px 100%, ${rect.left}px ${rect.top}px, ${rect.right}px ${rect.top}px, ${rect.right}px ${rect.bottom}px, ${rect.left}px ${rect.bottom}px, ${rect.left}px 100%, 100% 100%, 100% 0%)`;
+                                overlay.style.clipPath = `polygon(0% 0%, 0% 100%, ${rect.left - 4}px 100%, ${rect.left - 4}px ${rect.top - 4}px, ${rect.right + 4}px ${rect.top - 4}px, ${rect.right + 4}px ${rect.bottom + 4}px, ${rect.left - 4}px ${rect.bottom + 4}px, ${rect.left - 4}px 100%, 100% 100%, 100% 0%)`;
                                 const bubble = document.getElementById('walkthrough-bubble');
                                 document.getElementById('walkthrough-title').textContent = step.title;
                                 document.getElementById('walkthrough-text').textContent = step.text;
-                                bubble.style.left = (rect.right + 16) + 'px';
-                                bubble.style.top = rect.top + 'px';
+                                // Responsive positioning
+                                if (window.innerWidth < 768) {
+                                    bubble.style.left = '16px';
+                                    bubble.style.top = (rect.bottom + 16) + 'px';
+                                    bubble.style.width = 'calc(100vw - 32px)';
+                                } else {
+                                    if (rect.right + 300 > window.innerWidth) {
+                                        bubble.style.left = (rect.left - 300) + 'px'; // Show on left if no space on right
+                                    } else {
+                                        bubble.style.left = (rect.right + 16) + 'px';
+                                    }
+                                    bubble.style.top = rect.top + 'px';
+                                    bubble.style.width = '250px';
+                                }
                                 document.getElementById('walkthrough-next-btn').textContent = (currentStepIndex === currentTour.length - 1) ? 'Finish' : 'Next';
                             } else nextWalkthroughStep();
                         }
@@ -5076,13 +5181,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         // Scribe: Help Center & Videos Logic
                         const helpTopics = [
-                            { id: 'getting-started', title: 'Getting Started', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
-                            { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️' },
-                            { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
-                            { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
-                            { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
+                            { id: 'getting-started', title: 'Getting Started', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀', content: '<h3>Welcome!</h3><p>Starting a new business can be daunting, but OneHumanCorp makes it easy. To get started, simply type a description of what you want to sell into the Magic Box on your dashboard. Our AI will instantly build a custom storefront for you.</p>' },
+                            { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️', content: '<h3>Managing Your Store</h3><p>You can add new products by clicking the "Add Product" button on the mobile bottom navigation bar, or by visiting the "Setup" screen. To change a product\'s photo or price, just click on it in your storefront builder.</p>' },
+                            { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳', content: '<h3>Getting Paid</h3><p>Before you can accept orders, you need to connect a payment method. Go to the "Setup" screen and follow the prompts to link your bank account securely. Once connected, all your sales money will be deposited there automatically.</p>' },
+                            { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖', content: '<h3>Your AI Workforce</h3><p>Your AI agents handle customer support, order fulfillment, and social media. You can monitor them from the "Your Team" screen. If you want them to act completely on their own, change their autonomy setting from "Draft" to "Auto-execute".</p>' },
+                            { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢', content: '<h3>Grow Your Business</h3><p>The easiest way to get your first sales is to share your store on social media. Check out the "Seasonal Promos" tool in your Quick Actions—our AI will write catchy posts for upcoming holidays that you can copy and paste directly to Facebook or Instagram.</p>' },
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️', content: '<h3>Billing & Plans</h3><p>You can view your current plan limit and past invoices by visiting the "Billing" screen from your dashboard. We offer a Free tier to get started, and a Pro tier when you need to unlock more products or advanced AI insights.</p>' }
                         ];
+
+                        function showHelpArticle(id) {
+                            const topic = helpTopics.find(t => t.id === id);
+                            if (!topic) return;
+                            const screen = document.getElementById('help-screen');
+                            const originalContent = screen.innerHTML;
+                            screen.innerHTML = `<div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;"><button class="secondary" onclick="renderHelpCenterFull()">← Back</button><h1 style="margin:0;">${topic.icon} ${topic.title}</h1></div><div class="card glass">${topic.content}</div>`;
+                            screen.dataset.originalHtml = originalContent;
+                        }
+
+                        function renderHelpCenterFull() {
+                            const screen = document.getElementById('help-screen');
+                            if (screen.dataset.originalHtml) {
+                                screen.innerHTML = screen.dataset.originalHtml;
+                                renderHelpCenter();
+                                renderVideos();
+                            }
+                        }
 
                         function renderHelpCenter() {
                             const container = document.getElementById('help-categories-container');
@@ -5104,7 +5227,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const card = document.createElement('div');
                                 card.className = 'help-category-card';
                                 card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
-                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                card.onclick = () => { showHelpArticle(topic.id); };
                                 container.appendChild(card);
                             });
                         }
@@ -5116,14 +5239,37 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         async function renderVideos() {
                             try {
-                                const res = await fetch('/api/videos');
-                                const videos = await res.json();
+                                // Dummy video data as requested
+                                const videos = [
+                                    { id: 'v1', title: 'How to add your first product', duration: '1:12' },
+                                    { id: 'v2', title: 'Connecting a custom domain', duration: '0:45' },
+                                    { id: 'v3', title: 'Understanding your dashboard', duration: '1:30' },
+                                    { id: 'v4', title: 'Setting up shipping rates', duration: '1:05' }
+                                ];
                                 const container = document.getElementById('help-videos-container');
                                 if(!container) return; container.innerHTML = '';
+
+                                // Ensure responsive video grid styles
+                                if (!document.getElementById('video-grid-styles')) {
+                                    const style = document.createElement('style');
+                                    style.id = 'video-grid-styles';
+                                    style.innerHTML = `
+                                        .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+                                        .video-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s ease; }
+                                        .video-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+                                        .video-thumbnail { background: #1a1a1a; height: 120px; display: flex; align-items: center; justify-content: center; font-size: 32px; position: relative; }
+                                        .video-duration { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+                                        .video-info { padding: 12px; }
+                                        .video-info h4 { margin: 0; font-size: 14px; color: var(--text); line-height: 1.4; }
+                                    `;
+                                    document.head.appendChild(style);
+                                }
+
                                 videos.forEach(vid => {
                                     const card = document.createElement('div');
                                     card.className = 'video-card';
-                                    card.innerHTML = `<div class="video-thumbnail">▶️</div><div class="video-info"><h4>${vid.title}</h4><p>${vid.duration}</p></div>`;
+                                    card.innerHTML = `<div class="video-thumbnail">▶️<span class="video-duration">${vid.duration}</span></div><div class="video-info"><h4>${vid.title}</h4></div>`;
+                                    card.onclick = () => alert('Playing video: ' + vid.title);
                                     container.appendChild(card);
                                 });
                             } catch(e) { console.error(e); }
@@ -5136,7 +5282,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <div id="global-help-container" style="position: fixed; bottom: 96px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 8999;">
+                        <button id="global-chat-btn" onclick="const widget = document.getElementById('ai-chat-widget'); widget.style.display = widget.style.display === 'flex' ? 'none' : 'flex';" style="width: 48px; height: 48px; border-radius: 24px; background: var(--primary); color: white; border: none; font-size: 20px; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; padding: 0;">💬</button>
+                        <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip" style="width: 48px; height: 48px; border-radius: 24px; background: var(--surface-strong); color: var(--text); border: 1px solid var(--border); font-size: 20px; cursor: pointer; box-shadow: var(--shadow-sm); display: flex; align-items: center; justify-content: center; padding: 0;">?</button>
+                    </div>
 
                     <div id="ai-chat-widget">
                         <div id="ai-chat-header">
@@ -5152,13 +5301,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                     </div>
 
-                    <div id="walkthrough-overlay"></div>
-                    <div id="walkthrough-bubble">
-                        <h4 id="walkthrough-title">Step Title</h4>
-                        <p id="walkthrough-text">Step description goes here.</p>
+                    <div id="walkthrough-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9998; pointer-events:none;"></div>
+                    <div id="walkthrough-bubble" style="display:none; position:fixed; background:white; padding:16px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:9999; max-width:280px; transition:all 0.3s ease;">
+                        <h4 id="walkthrough-title" style="margin:0 0 8px 0; color:var(--primary); font-size:16px;">Step Title</h4>
+                        <p id="walkthrough-text" style="margin:0 0 16px 0; font-size:14px; color:var(--text); line-height:1.4;">Step description goes here.</p>
                         <div style="display:flex; gap:8px; justify-content:flex-end;">
-                            <button class="secondary" onclick="endWalkthrough()">Skip</button>
-                            <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
+                            <button class="secondary" onclick="endWalkthrough()" style="padding:6px 12px; font-size:13px;">Skip</button>
+                            <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn" style="padding:6px 12px; font-size:13px;">Next</button>
                         </div>
                     </div>
 
