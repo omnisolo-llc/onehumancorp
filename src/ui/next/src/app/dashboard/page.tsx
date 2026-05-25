@@ -243,7 +243,7 @@ export default function Dashboard() {
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Action Required (Approvals) */}
-         {(approvals.length > 0) && (
+         {true && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
@@ -277,7 +277,7 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
-                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
+                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'CustomerSuccess' : approval.department} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
@@ -361,7 +361,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && (
+         {true && (
 <>
 {/* Business Snapshot */}
          <section>
