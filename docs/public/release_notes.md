@@ -1,3 +1,8 @@
+## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
+
+### Routine Updates
+- Bumped versions across Cloud and Standalone packages to prepare for v0.4.46 release.
+
 ## v0.4.42 (Cloud) / v0.4.42+1 (Standalone)
 
 ### Cloud Scaling Improvements
