@@ -80,6 +80,7 @@ rust_library(
         "service.rs",
         "consolidation_worker.rs",
         "gpt_researcher.rs",
+        "deerflow_orchestrator.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -216,6 +217,8 @@ rust_binary(
         "pubsub",
         "registry",
         "gpt_researcher",
+        "deerflow_orchestrator",
+
         "local_provider",
     ]
 ]
