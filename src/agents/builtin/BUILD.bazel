@@ -80,6 +80,7 @@ rust_library(
         "service.rs",
         "consolidation_worker.rs",
         "gpt_researcher.rs",
+        "agentic_seek.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -216,6 +217,7 @@ rust_binary(
         "pubsub",
         "registry",
         "gpt_researcher",
+        "agentic_seek",
         "local_provider",
     ]
 ]
