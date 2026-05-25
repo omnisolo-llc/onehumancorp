@@ -99,8 +99,18 @@ jobs:
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Build all artifacts
-        run: bazelisk build //... --config=${{ matrix.bazel_config }}
+      - name: Build non-test artifacts
+        run: |
+          bazelisk query '
+            kind(".* rule", //...)
+            except kind(".*_test rule", //...)
+            except attr("tags", "manual", //...)
+            except //src/ui/tauri:all
+          ' > build-targets.txt
+          xargs -r bazelisk build \
+            --config=${{ matrix.bazel_config }} \
+            --skip_incompatible_explicit_targets \
+            < build-targets.txt
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
