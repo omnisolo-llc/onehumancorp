@@ -234,4 +234,58 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
   });
+
+  test('verify promo generation resolves instantly (no 800ms mock delay)', async ({ request }) => {
+    // Tests that the API endpoint doesn't have the 800ms mock delay
+    const start = Date.now();
+    const res = await request.post('/api/v1/growth/promotions/generate', {
+      data: { tenant: 'test-tenant' }
+    });
+    const end = Date.now();
+    expect(res.ok()).toBeTruthy();
+    // Assuming a fast local response (< 200ms) - definitely less than the 800ms old mock
+    expect(end - start).toBeLessThan(500);
+  });
+
+  test('verify seasonal-promo route resolves and has correct initial state without timeouts', async ({ page }) => {
+    await page.goto('/seasonal-promo');
+    await expect(page.getByRole('heading', { name: 'AI Seasonal Promotions' })).toBeVisible();
+    await expect(page.locator('input#promo-occasion')).toBeVisible();
+  });
+
+  test('verify the "generating..." UI isn\'t stuck on the dashboard-screen when navigating', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+
+    // Ensure "Generating..." mock state is not present in the dom
+    await expect(page.getByText('Generating...')).not.toBeVisible();
+  });
+
+  test('verify navigation from the dashboard doesn\'t incur the 2000ms mock delay', async ({ page }) => {
+    await page.goto('/dashboard');
+    const start = Date.now();
+
+    // Navigate to agents
+    const agentsLink = page.getByRole('link', { name: 'AI Departments' });
+    await agentsLink.click();
+
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 1000 });
+    const end = Date.now();
+
+    // Ensure it took less than 2000ms
+    expect(end - start).toBeLessThan(1500);
+  });
+
+  test('verify that the promo string correctly replaces {tenant} with the default value my-store when tenant is not defined', async ({ request }) => {
+    const res = await request.post('/api/v1/growth/promotions/generate', {
+      data: {} // Empty body to trigger the fallback
+    });
+    expect(res.ok()).toBeTruthy();
+    const body = await res.json();
+
+    // Because the response is random, we just check that '{tenant}' is not present
+    // and that 'my-store' is present
+    expect(body.message).not.toContain('{tenant}');
+    expect(body.message).toContain('my-store');
+  });
 });
