@@ -147,6 +147,19 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+        "invoice.payment_failed" => {
+            let obj = &payload.data.object;
+            let tenant_id_opt = obj.get("customer")
+                .and_then(|id| id.as_str());
+
+            if let Some(_tenant_id) = tenant_id_opt {
+                // Trigger SMS notification
+                tokio::spawn(async move {
+                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
+                });
+            }
+            StatusCode::OK.into_response()
+        },
         _ => {
             // Unhandled event types are ignored successfully
             StatusCode::OK.into_response()
