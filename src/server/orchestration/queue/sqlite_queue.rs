@@ -5,11 +5,12 @@ use std::sync::Arc;
 
 pub struct SQLiteTaskQueue {
     pool: Arc<SqlitePool>,
+    mu: tokio::sync::Mutex<()>,
 }
 
 impl SQLiteTaskQueue {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        Self { pool }
+        Self { pool, mu: tokio::sync::Mutex::new(()) }
     }
 }
 
@@ -102,6 +103,16 @@ impl TaskQueue for SQLiteTaskQueue {
         if roles.is_empty() {
             return Ok(None);
         }
+
+        let lock_result = self.mu.try_lock();
+        let _lock = match lock_result {
+            Ok(guard) => guard,
+            Err(_) => {
+                let pg_pool = crate::db::get_pool();
+                let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
+                self.mu.lock().await
+            }
+        };
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 

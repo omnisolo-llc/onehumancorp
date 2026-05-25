@@ -228,7 +228,14 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
-                let _lock = self.sqlite_mu.lock().await;
+                let lock_result = self.sqlite_mu.try_lock();
+                let _lock = match lock_result {
+                    Ok(guard) => guard,
+                    Err(_) => {
+                        let _ = crate::telemetry::record_sqlite_lock_contention(&self.db.pool, "ClaimTask").await;
+                        self.sqlite_mu.lock().await
+                    }
+                };
 
                 let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
 
