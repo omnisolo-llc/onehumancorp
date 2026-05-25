@@ -241,6 +241,78 @@ export default function Dashboard() {
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
+    // Check if this is the automated review request approval
+    const approval = approvals.find(a => a.id === id);
+
+    // Safety & Maintainability: We use payload structured data instead of string description matching
+    let isReviewRequest = false;
+    let payloadObj: any = null;
+
+    if (approval && approval.payload) {
+        if (typeof approval.payload === 'string') {
+            try {
+                payloadObj = JSON.parse(approval.payload);
+            } catch (e) {
+                // Ignore parsing errors for simple strings
+            }
+        } else {
+            payloadObj = approval.payload;
+        }
+
+        if (payloadObj && payloadObj.feature_type === 'automated_review_request') {
+            isReviewRequest = true;
+        }
+    }
+
+    if (approved && isReviewRequest) {
+        setApprovals(approvals.filter(a => a.id !== id));
+
+        // Ensure it's removed from backend as well
+        try {
+          await fetch(`/api/agents/approvals/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ approved: true })
+          });
+        } catch (e) {
+            console.error("Failed to submit decision", e);
+        }
+
+        // Use dynamic payload data to generate the review if present, otherwise fallback
+        const orderId = payloadObj?.target_order_id || '8922';
+        const customerName = payloadObj?.target_customer_name || 'Sarah';
+        const productName = payloadObj?.target_product_name || 'Signature Coffee Blend';
+
+        // Open the review modal as per the new growth loop flow
+        setShowReviewModal(true);
+        setIsGeneratingReview(true);
+        try {
+            const response = await fetch('/api/v1/growth/campaign/generate-review', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    order_id: orderId,
+                    customer_name: customerName,
+                    product_name: productName
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setReviewMessage(data.message);
+            } else {
+                setReviewMessage(`Hi ${customerName},\n\nWe noticed you recently received your ${productName} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${orderId}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+            }
+        } catch (e) {
+            console.error("Failed to generate review", e);
+            setReviewMessage(`Hi ${customerName},\n\nWe noticed you recently received your ${productName} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${orderId}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+        } finally {
+            setIsGeneratingReview(false);
+            setReviewSent(false);
+        }
+
+        return;
+    }
+
     try {
       await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
