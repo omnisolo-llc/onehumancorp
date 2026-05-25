@@ -15,3 +15,5 @@ pub mod agent;
 pub mod autodream;
 pub mod booking;
 pub mod docs;
+pub mod inventory;
+pub mod marketing;
