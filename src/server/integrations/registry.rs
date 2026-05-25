@@ -25,6 +25,7 @@ pub struct IntegrationsRegistry {
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
+    pub razorpay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
@@ -61,6 +62,7 @@ impl IntegrationsRegistry {
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -230,6 +232,11 @@ impl IntegrationsRegistry {
         if integration_id == "mercadopago" {
             let mut clients = self.mercadopago_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mercadopago::provider::MercadoPagoProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "razorpay" {
+            let mut clients = self.razorpay_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::razorpay::provider::RazorpayProvider::new(creds.api_token.clone(), creds.api_token.clone())));
         }
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
@@ -438,6 +445,21 @@ impl IntegrationsRegistry {
         let client = {
             if integration_id == "mercadopago" {
                 let clients = self.mercadopago_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_checkout_preference(price_id, tenant_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn razorpay_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "razorpay" {
+                let clients = self.razorpay_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
                 None

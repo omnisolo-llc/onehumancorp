@@ -47,6 +47,10 @@ impl StripeClient {
             },
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
+            },
+            crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
+                // Return razorpay checkout dummy link here since routing was updated
+                Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
             }
         }
     }
