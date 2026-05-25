@@ -40,6 +40,11 @@ async fn handle_webhook(
 ) -> impl IntoResponse {
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
+        // Trigger SMS notification for new orders
+        tokio::spawn(async move {
+            let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+        });
+
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: payload.tenant_id.clone(),

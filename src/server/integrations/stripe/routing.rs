@@ -2,6 +2,7 @@
 pub enum PaymentMethod {
     CreditCard,
     Ach,
+    Razorpay,
 }
 
 pub struct PaymentRouter;
@@ -17,6 +18,15 @@ impl PaymentRouter {
     /// Stripe Credit Card fee: 2.9% + $0.30
     /// Stripe ACH fee: 0.8%, capped at $5.00
     pub fn optimize_payment_method(amount_usd: f64) -> PaymentMethod {
+        Self::optimize_payment_method_with_currency(amount_usd, "USD")
+    }
+
+    pub fn optimize_payment_method_with_currency(amount: f64, currency: &str) -> PaymentMethod {
+        if currency.eq_ignore_ascii_case("INR") {
+            return PaymentMethod::Razorpay;
+        }
+        let amount_usd = amount;
+
         let card_fee = (amount_usd * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
         let ach_fee = (amount_usd * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP);
 
@@ -124,5 +134,16 @@ mod extra_tests {
     fn test_negative_amount() {
         assert_eq!(PaymentRouter::optimize_payment_method(-10.0), PaymentMethod::CreditCard);
         assert_eq!(PaymentRouter::calculate_fee_savings(-10.0), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod razorpay_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_inr() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "INR"), PaymentMethod::Razorpay);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(10000.0, "inr"), PaymentMethod::Razorpay);
     }
 }
