@@ -12,3 +12,4 @@ Technical reports and audits.
 - [Harness Git Protection Report](./harness-git-protection-report.md)
 - [CPP Migration Evaluation](./cpp-migration-evaluation.md)
 - [MCP Bridge README](./mcp-bridge-readme.md)
+- [OHC Market Dominance & Research Report](../../reports/ohc_market_dominance_and_research_report.md)
