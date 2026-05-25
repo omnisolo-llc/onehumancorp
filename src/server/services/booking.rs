@@ -186,6 +186,13 @@ impl BookingService {
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
 
+        let now = chrono::Utc::now();
+        if booking.start_time.signed_duration_since(now).num_hours() < 48 {
+            tokio::spawn(async move {
+                let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
+            });
+        }
+
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)"
