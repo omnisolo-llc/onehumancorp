@@ -160,12 +160,7 @@ export default function Dashboard() {
             const token = localStorage.getItem('token') || 'test-token';
             const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
 
-            const [salesRes, metricsRes, invitesRes] = await Promise.all([
-                fetch('/api/v1/dashboard/sales', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ tenant_id: tenant })
-                }),
+            const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
@@ -177,13 +172,10 @@ export default function Dashboard() {
                 })
             ]);
 
-            if (salesRes.ok) {
-                const salesData = await salesRes.json();
-                setTodaysSales(salesData.total_sales);
-            }
 
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
+                setTodaysSales(metricsData.total_sales);
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
@@ -239,6 +231,9 @@ export default function Dashboard() {
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-[8px] text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
+             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+               <span>⚡️</span> KAIROS
+             </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -256,7 +251,7 @@ export default function Dashboard() {
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
+                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
                         >
                             <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
                         </button>
@@ -290,15 +285,15 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
                                         >
                                             Reject
                                         </button>
                                         <button
                                             onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm"
-                                            style={{ borderRadius: '8px' }}
+                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                            style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
                                             Approve
                                         </button>

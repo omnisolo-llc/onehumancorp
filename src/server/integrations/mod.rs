@@ -19,7 +19,6 @@ pub mod cal_com;
 pub mod resend;
 pub mod shippo;
 pub mod zoom;
-pub mod manychat;
 pub mod calendly;
 pub mod mailchimp;
 pub mod ayrshare;
