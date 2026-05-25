@@ -599,6 +599,7 @@ impl AgentServiceImpl {
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_verification_loops: false,
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
@@ -1020,6 +1021,7 @@ impl AgentService for AgentServiceImpl {
             curated_memory_nudge_threshold: 5,
                 enable_time_travel_rewind: false,
                 enable_serverless_hibernation: false,
+                enable_verification_loops: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,

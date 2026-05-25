@@ -76,6 +76,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
+    pub enable_verification_loops: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
@@ -132,6 +133,7 @@ enable_llmcompiler_plan_and_execute: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_verification_loops: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
@@ -2025,6 +2027,22 @@ impl Agent {
                 // In a production-grade agent, we might use a separate LLM pass
                 // to evaluate confidence in the final answer if threshold > 0.
                 // For now, we'll assume the model is confident if it didn't use more tools.
+
+                // Verification Loops (Quality x3) integration via VerificationManager
+                if final_cfg.enable_verification_loops {
+                    let mut verification_manager = crate::verification_loops::VerificationManager::new();
+                    verification_manager.add_inferential(std::sync::Arc::new(
+                        crate::verification_loops::LlmJudgeSensor {
+                            llm: self.llm.clone(),
+                        }
+                    ));
+
+                    if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, initial_message).await {
+                        messages.push(Message::user(format!("Verification Feedback: {}", e)));
+                        on_event(AgentEvent::TaskError { error: format!("Verification Loop failed: {}", e) });
+                        continue; // Self-correction
+                    }
+                }
 
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
@@ -6140,6 +6158,94 @@ mod hierarchical_prompt_tests {
         assert_eq!(result.unwrap(), "I see the nudge");
     }
 
+
+#[tokio::test]
+async fn test_verification_loops_feedback() {
+    use crate::types::{ChatRequest, ChatResponse, Usage};
+
+    struct VerificationLoopMockClient {
+        pub call_count: tokio::sync::Mutex<usize>,
+    }
+    #[async_trait::async_trait]
+    impl LlmClient for VerificationLoopMockClient {
+        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let mut count = self.call_count.lock().await;
+            *count += 1;
+
+            if req.model == "judge-model" {
+                // First time judge sees it, reject
+                if *count == 2 {
+                    return Ok(ChatResponse {
+                        message: Message::assistant("FAIL: output is missing details"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("judge-1".to_string()),
+                    });
+                }
+                // Second time judge sees it, pass
+                if *count == 4 {
+                    return Ok(ChatResponse {
+                        message: Message::assistant("PASS"),
+                        usage: Usage::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("judge-2".to_string()),
+                    });
+                }
+            }
+
+            // First draft
+            if *count == 1 {
+                return Ok(ChatResponse {
+                    message: Message::assistant("Here is the first draft"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("draft-1".to_string()),
+                });
+            }
+
+            // Second draft (self-corrected)
+            if *count == 3 {
+                return Ok(ChatResponse {
+                    message: Message::assistant("Here is the fixed draft with details"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("draft-2".to_string()),
+                });
+            }
+
+            Ok(ChatResponse {
+                message: Message::assistant("PASS"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("default".to_string()),
+            })
+        }
+    }
+
+    let client = std::sync::Arc::new(VerificationLoopMockClient { call_count: tokio::sync::Mutex::new(0) });
+    let agent = Agent::new(client.clone(), vec![]);
+    let mut cfg = AgentRunConfig::default();
+    cfg.enable_verification_loops = true;
+
+    let mut events = vec![];
+    let res = agent.run(&cfg, "Write a draft", &mut |e| events.push(e)).await;
+
+    assert!(res.is_ok(), "Agent should complete successfully after self-correction");
+    let final_ans = res.unwrap();
+    assert_eq!(final_ans, "Here is the fixed draft with details");
+
+    let call_count = *client.call_count.lock().await;
+    assert_eq!(call_count, 4, "Should have called LLM 4 times (draft 1, judge 1, draft 2, judge 2)");
+
+    let has_verification_error = events.iter().any(|e| {
+        if let AgentEvent::TaskError { error } = e {
+            error.contains("Verification Loop failed: FAIL: output is missing details")
+        } else {
+            false
+        }
+    });
+    assert!(has_verification_error, "Should have emitted a TaskError event for the verification failure");
+}
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
