@@ -529,6 +529,52 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Interactive Analytics Soft Paywall */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Advanced Analytics</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                        <span className="text-xs font-medium text-yellow-700">Premium Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="filter blur-sm opacity-60 select-none flex flex-col sm:flex-row gap-6 items-center">
+                    <div className="flex-1 w-full">
+                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between mb-3">
+                            <span className="font-semibold text-gray-700">Conversion Rate</span>
+                            <span className="text-xl font-bold text-green-600">4.2%</span>
+                        </div>
+                        <div className="bg-gray-50 border border-gray-100 p-4 rounded-xl flex items-center justify-between">
+                            <span className="font-semibold text-gray-700">Customer Lifetime Value</span>
+                            <span className="text-xl font-bold text-blue-600">$184.50</span>
+                        </div>
+                    </div>
+                    <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                        <div className="text-4xl mb-3">📈</div>
+                        <span className="text-sm font-medium text-gray-600 text-center">Top Traffic: Organic Search</span>
+                    </div>
+                </div>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px]">
+                    <div className="bg-white p-6 rounded-2xl shadow-xl border border-yellow-100 text-center max-w-sm flex flex-col items-center animate-fade-in" style={{ transform: 'translateY(10px)' }}>
+                        <div className="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center text-xl mb-3">
+                            🔒
+                        </div>
+                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock Growth Insights</h3>
+                        <p className="text-sm text-gray-600 mb-4">See exactly where your best customers come from and optimize your store to double your conversion rate.</p>
+                        <button
+                            onClick={() => setShowUpgradeModal(true)}
+                            className="w-full py-2.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl text-sm font-semibold shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
+                        >
+                            Upgrade to Premium
+                        </button>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
