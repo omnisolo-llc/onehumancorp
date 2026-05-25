@@ -475,6 +475,7 @@ impl DashboardService for MyDashboardService {
 
         let req = request.into_inner();
         let org_id = req.organization_id;
+        let tenant_id = org_id.clone();
 
         if ::server_config::get().multitenant && org_id.is_empty() {
             return Err(Status::invalid_argument(
@@ -488,7 +489,8 @@ impl DashboardService for MyDashboardService {
         }
 
         use sqlx::Row;
-        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE organization_id = $1 LIMIT 1")
+        let res = sqlx::query("SELECT user_id, current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND organization_id = $2 LIMIT 1")
+            .bind(&tenant_id)
             .bind(&org_id)
             .fetch_optional(&self.db.pool)
             .await
@@ -549,6 +551,7 @@ impl DashboardService for MyDashboardService {
             .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
 
         let req = request.into_inner();
+        let tenant_id = req.state.as_ref().map(|s| s.organization_id.clone()).unwrap_or_default();
         let state = req
             .state
             .ok_or_else(|| Status::invalid_argument("state is required"))?;
@@ -564,10 +567,11 @@ impl DashboardService for MyDashboardService {
 
         let update_res = tokio::time::timeout(std::time::Duration::from_secs(2), async {
             sqlx::query(
-                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE organization_id = $3"
+                "UPDATE onboarding_state SET current_step = $1, state_json = $2, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $3 AND organization_id = $4"
             )
             .bind(state.current_step)
             .bind(state_json_val)
+            .bind(&tenant_id)
             .bind(&state.organization_id)
             .execute(&self.db.pool)
             .await
