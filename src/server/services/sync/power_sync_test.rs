@@ -30,7 +30,7 @@ mod tests {
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at TIMESTAMP,
-                synced_to_cloud BOOLEAN DEFAULT 0,
+                synced_to_cloud BOOLEAN DEFAULT false,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1,
                 mission_log TEXT
@@ -95,7 +95,7 @@ mod tests {
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
-                synced_to_cloud BOOLEAN DEFAULT 0,
+                synced_to_cloud BOOLEAN DEFAULT false,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1,
                 mission_log TEXT
@@ -148,7 +148,7 @@ mod tests {
                 cloud_mission_id TEXT,
                 sync_error TEXT,
                 last_synced_at DATETIME,
-                synced_to_cloud BOOLEAN DEFAULT 0,
+                synced_to_cloud BOOLEAN DEFAULT false,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1,
                 mission_log TEXT
