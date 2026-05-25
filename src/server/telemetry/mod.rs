@@ -402,8 +402,8 @@ pub async fn record_sync_daemon_batch_size(
 
     buffer_metric(
         pool,
-        "sync_daemon_batch_size",
-        "gauge",
+        "ohc_sync_daemon_batch_size",
+        "histogram",
         count,
         serde_json::json!({ "mode": mode }),
     )

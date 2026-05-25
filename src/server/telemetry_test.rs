@@ -23,15 +23,15 @@ mod tests {
             }
         }
 
-        assert_eq!(sanitized_props.get("username").unwrap(), "[REDACTED]"); // Because username contains "name"
-        assert_eq!(sanitized_props.get("password").unwrap(), "[REDACTED]"); // Because it contains "password"
-        assert_eq!(sanitized_props.get("contact").unwrap(), "[EMAIL_REDACTED]");
-        assert_eq!(sanitized_props.get("safe_field").unwrap(), "safe_value");
-        assert_eq!(sanitized_props.get("ip_address").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized_props.get("mac_address").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized_props.get("auth_jwt").unwrap(), "[REDACTED]");
-        assert_eq!(sanitized_props.get("authorization_bearer").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("username").unwrap(), "[REDACTED]"); // Because username contains "name"
+    assert_eq!(sanitized_props.get("password").unwrap(), "[REDACTED]"); // Because it contains "password"
+    assert_eq!(sanitized_props.get("contact").unwrap(), "[EMAIL_REDACTED]");
+    assert_eq!(sanitized_props.get("safe_field").unwrap(), "safe_value");
+    assert_eq!(sanitized_props.get("ip_address").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("mac_address").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("geolocation").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("auth_jwt").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("authorization_bearer").unwrap(), "[REDACTED]");
     }
 
 
@@ -48,7 +48,7 @@ mod tests {
             "organization_id": "tenant-123",
             "safe_field": "ok"
         });
-        assert_eq!(redact_interface_pii(input), expected);
+    assert_eq!(redact_interface_pii(input), expected);
     }
 
     #[test]
@@ -67,7 +67,7 @@ mod tests {
                 "admin_key": "[REDACTED]"
             }
         });
-        assert_eq!(redact_interface_pii(input), expected);
+    assert_eq!(redact_interface_pii(input), expected);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod tests {
             "contact": "[EMAIL_REDACTED]",
             "other": "not-an-email"
         });
-        assert_eq!(redact_interface_pii(input), expected);
+    assert_eq!(redact_interface_pii(input), expected);
     }
 
     #[test]
@@ -93,175 +93,175 @@ mod tests {
             {"token": "[REDACTED]"},
             {"user": "maya"}
         ]);
-        assert_eq!(redact_interface_pii(input), expected);
+    assert_eq!(redact_interface_pii(input), expected);
     }
 
     #[tokio::test]
     async fn test_buffer_metric_persistence() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
         let labels = json!({"user_id": "123", "secret": "shh"});
-        let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
-        assert!(res.is_ok());
+    let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
-        let labels_json: String = row.get("labels_json");
+    use sqlx::Row;
+    let labels_json: String = row.get("labels_json");
         let redacted: Value = serde_json::from_str(&labels_json).unwrap();
 
-        assert_eq!(redacted["user_id"], "123");
-        assert_eq!(redacted["secret"], "[REDACTED]");
+    assert_eq!(redacted["user_id"], "123");
+    assert_eq!(redacted["secret"], "[REDACTED]");
     }
 
     #[tokio::test]
     async fn test_sqlite_metrics() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
-        let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_sqlite_lock_contention(&pool, "test_operation").await;
+    assert!(res.is_ok());
 
-        let res = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_sqlite_retry_exhausted(&pool, "test_operation").await;
+    assert!(res.is_ok());
     }
 
     #[tokio::test]
     async fn test_record_token_usage_forecast() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
-        let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
-        let value: f32 = row.get("value");
-        assert_eq!(value, 15000.0);
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 15000.0);
 
-        let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
+    let labels_json: String = row.get("labels_json");
+    let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed["organization_id"], "[REDACTED]");
     }
 
     #[tokio::test]
     async fn test_record_agent_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
-        let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
-        let value: f32 = row.get("value");
-        assert_eq!(value, 1.5);
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 1.5);
 
-        let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["agent_id"], "agent-123");
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
-        assert_eq!(parsed["entity"], "test-entity");
+    let labels_json: String = row.get("labels_json");
+    let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed["agent_id"], "agent-123");
+    assert_eq!(parsed["organization_id"], "[REDACTED]");
+    assert_eq!(parsed["entity"], "test-entity");
     }
 
     #[tokio::test]
     async fn test_record_api_call_cost() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
-        let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
-        let value: f32 = row.get("value");
-        assert_eq!(value, 0.5);
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 0.5);
 
-        let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["organization_id"], "[REDACTED]");
-        assert_eq!(parsed["entity"], "test-entity-2");
+    let labels_json: String = row.get("labels_json");
+    let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed["organization_id"], "[REDACTED]");
+    assert_eq!(parsed["entity"], "test-entity-2");
     }
 
     #[tokio::test]
     async fn test_record_swarm_job_latency_by_entity() {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
-        let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
-        assert!(res.is_ok());
+    let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
-        let value: f32 = row.get("value");
-        assert_eq!(value, 125.0);
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 125.0);
 
-        let labels_json: String = row.get("labels_json");
-        let parsed: Value = serde_json::from_str(&labels_json).unwrap();
-        assert_eq!(parsed["mode"], "cloud");
-        assert_eq!(parsed["entity"], "test-entity-3");
+    let labels_json: String = row.get("labels_json");
+    let parsed: Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed["mode"], "cloud");
+    assert_eq!(parsed["entity"], "test-entity-3");
     }
 
     #[test]
     fn test_buffer_metric_respects_standalone() {
         temp_env::with_vars(vec![("STANDALONE_MODE", Some("true"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
-        let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
-            Ok(Ok(p)) => p,
-            _ => return, // Gracefully exit if DB is not available in sandbox or times out
-        };
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return, // Gracefully exit if DB is not available in sandbox or times out
+    };
 
         // Ensure STANDALONE_MODE is true. Telemetry should be ignored
 
         let labels = json!({"user_id": "standalone_test"});
-        let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
-        assert!(res.is_ok());
+    let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
+    assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+    let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
-        use sqlx::Row;
+    use sqlx::Row;
         let count: i64 = row.get(0);
                 assert_eq!(count, 0, "Metric should not be buffered in standalone mode");
             });
@@ -424,7 +424,7 @@ mod tests {
         if checked_files == 0 {
             panic!("Data compliance test skipped: Could not find any .rs files even in fallback. Search dirs: {:?}", search_dirs_for_error);
         }
-        assert!(
+    assert!(
             violations.is_empty(),
             "Found PII logging violations in the following lines:\n{:#?}",
             violations
@@ -621,3 +621,34 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }
+
+    #[tokio::test]
+async fn test_record_sync_daemon_batch_size() {
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
+    let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
+        Ok(Ok(p)) => p,
+        _ => return,
+    };
+
+    let res = ::server_telemetry::record_sync_daemon_batch_size(&pool, 42.0, "standalone").await;
+    assert!(res.is_ok());
+
+    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sync_daemon_batch_size' ORDER BY timestamp DESC LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+
+    use sqlx::Row;
+    let value: f32 = row.get("value");
+    assert_eq!(value, 42.0);
+
+    let labels_json: String = row.get("labels_json");
+    let parsed: serde_json::Value = serde_json::from_str(&labels_json).unwrap();
+    assert_eq!(parsed.get("mode").unwrap().as_str().unwrap(), "standalone");
+    }
+
+    #[test]
+fn test_record_agent_execution_trace() {
+    ::server_telemetry::record_agent_execution_trace("agent-xyz", "run_structured");
+    let _counter = ::server_telemetry::get_agent_execution_traces_total();
+    }
