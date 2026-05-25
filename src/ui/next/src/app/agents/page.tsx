@@ -7,6 +7,8 @@ export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'approvals'>('departments');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
+  const [toggles, setToggles] = useState<Record<string, Record<string, boolean>>>({});
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -123,11 +125,39 @@ export default function AgentsPage() {
                     <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
 
                     {showAdvanced && (
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
-                        </span>
-                        <span>Auto-approve: $0</span>
+                      <div className="mt-4 pt-4 border-t border-gray-100/50 space-y-4">
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Agent Persona & Tone</label>
+                          <textarea
+                            className="w-full p-3 rounded-[8px] border border-white/40 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/65 backdrop-blur-[30px] saturate-[210%] text-gray-900 shadow-inner transition-all text-sm resize-none h-20"
+                            placeholder="e.g. Friendly, professional, and helpful..."
+                            value={prompts[dept.id] || ''}
+                            onChange={(e) => setPrompts({...prompts, [dept.id]: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 block">Capabilities</label>
+                          <div className="space-y-2">
+                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded-[4px] border-gray-300 text-[#0066FF] focus:ring-[#0066FF]"
+                                checked={toggles[dept.id]?.autoDraft ?? true}
+                                onChange={(e) => setToggles({...toggles, [dept.id]: {...(toggles[dept.id] || {}), autoDraft: e.target.checked}})}
+                              />
+                              Auto-draft responses
+                            </label>
+                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="w-4 h-4 rounded-[4px] border-gray-300 text-[#0066FF] focus:ring-[#0066FF]"
+                                checked={toggles[dept.id]?.autoPublish ?? false}
+                                onChange={(e) => setToggles({...toggles, [dept.id]: {...(toggles[dept.id] || {}), autoPublish: e.target.checked}})}
+                              />
+                              Publish without approval
+                            </label>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
