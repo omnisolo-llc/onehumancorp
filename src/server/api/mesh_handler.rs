@@ -27,19 +27,28 @@ pub async fn mesh_ws_handler(
 #[derive(serde::Deserialize)]
 pub struct BroadcastRequest {
     pub topic: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct DirectRequest {
     pub target_agent_id: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MailboxRequest {
     pub mailbox_id: String,
-    pub message: MeshMessage,
+    pub agent_id: String,
+    pub action: String,
+    pub status: String,
+    pub payload: Vec<u8>,
 }
 
 fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
@@ -51,6 +60,13 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
         let error_res = serde_json::json!({ "error": "unauthorized" });
         return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
     }
+
+    let parts: Vec<&str> = spiffe_id.split('/').collect();
+    if parts.len() < 7 || parts[2] != "ohc" || parts[3] != "org" || parts[5] != "agent" || parts[4] != "system" {
+        let error_res = serde_json::json!({ "error": "unauthorized" });
+        return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
+    }
+
     Ok(spiffe_id.to_string())
 }
 
@@ -63,7 +79,15 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.action,
+        status: payload.status,
+        payload: payload.payload,
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    match transport.publish(&payload.topic, msg.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -89,7 +113,15 @@ pub async fn broadcast_handler(
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.action,
+        status: payload.status,
+        payload: payload.payload,
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
+    match transport.publish(&payload.topic, msg.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -107,8 +139,16 @@ pub async fn direct_handler(
         return err_response;
     }
 
+    let msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.action,
+        status: payload.status,
+        payload: payload.payload,
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
-    match transport.publish(&topic, payload.message.into()).await {
+    match transport.publish(&topic, msg.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -126,8 +166,16 @@ pub async fn mailbox_handler(
         return err_response;
     }
 
+    let msg = MeshMessage {
+        agent_id: payload.agent_id,
+        action: payload.action,
+        status: payload.status,
+        payload: payload.payload,
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
-    match transport.publish(&topic, payload.message.into()).await {
+    match transport.publish(&topic, msg.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -293,13 +341,10 @@ mod tests {
 
         let req_body = DirectRequest {
             target_agent_id: "agent-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            }
+            agent_id: "test".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"ws_test".to_vec(),
         };
 
         // Missing x-spiffe-id header
@@ -307,7 +352,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://example.org/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/system/agent/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 
@@ -336,13 +381,10 @@ mod tests {
 
         let req_body = MailboxRequest {
             mailbox_id: "mailbox-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
-            }
+            agent_id: "test".to_string(),
+            action: "test_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"ws_test".to_vec(),
         };
 
         // Missing x-spiffe-id header
@@ -350,7 +392,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://example.org/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/system/agent/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 }
