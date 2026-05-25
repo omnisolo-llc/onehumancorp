@@ -13,8 +13,17 @@ body {
     background: rgba(255, 255, 255, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.4);
     font-family: 'Outfit', 'Inter', sans-serif;
-    color: #ffffff;
-    border-radius: 12px;
+    color: #1D1D1F;
+    border-radius: 16px;
     padding: 24px;
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    .ohc-hybrid-panel {
+        background: rgba(22, 22, 26, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #F5F5F7;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    }
 }

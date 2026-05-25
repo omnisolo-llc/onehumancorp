@@ -210,31 +210,31 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] dark:bg-[#16161a]">
 
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+      <header className="px-6 py-4 flex items-center justify-between border-b dark:border-white/10" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
+         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]" style={{ letterSpacing: '-0.02em' }}>Dashboard</h1>
          <nav className="flex items-center gap-3">
-             <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
+             <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-[8px] text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
                Inbox
              </Link>
-             <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
+             <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-[8px] text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
                Review Campaigns ⭐️
              </Link>
-             <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
+             <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-[8px] text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
                Social Cards 🎴
              </Link>
-             <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
+             <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-[8px] text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-[8px] text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
-             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-[#0066FF] text-white rounded-[8px] text-sm font-medium hover:opacity-90 transition-colors shadow-sm flex items-center gap-1">
                <span>⚡️</span> KAIROS
              </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+             <div className="w-8 h-8 rounded-[8px] bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
          </nav>
@@ -246,9 +246,9 @@ export default function Dashboard() {
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Action Required</h2>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                        <span className="text-sm font-medium text-[#86868B] dark:text-[#86868B]">Advanced Settings</span>
                         <button
                             onClick={() => setShowAdvanced(!showAdvanced)}
                             className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
@@ -269,17 +269,17 @@ export default function Dashboard() {
                         }
 
                         return (
-                            <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                            <div key={approval.id} className="ohc-hybrid-panel p-5 flex flex-col gap-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
                                             {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'operations' || approval.department === 'Operations' ? '⚙️' : '🤖'}
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
+                                            <h3 className="font-semibold text-lg font-outfit capitalize">
                                                 {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
                                             </h3>
-                                            <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
+                                            <p className="font-inter text-sm dark:text-[#86868B] text-gray-600">{plainMessage}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-2">
@@ -300,7 +300,7 @@ export default function Dashboard() {
                                     </div>
                                 </div>
                                 {showAdvanced && payload && (
-                                    <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
+                                    <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-[8px] text-xs font-mono overflow-x-auto">
                                         <div className="text-gray-400 mb-1">Technical Payload:</div>
                                         <pre>{payload}</pre>
                                     </div>
@@ -315,7 +315,7 @@ export default function Dashboard() {
          {/* Milestone Viral Share Loop Banner */}
          {activeCustomers > 0 && !bannerDismissed && (
              <section className="mb-6">
-                 <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', color: '#fff' }}>
+                 <div className="p-4 rounded-[16px] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', color: '#fff' }}>
                      <div className="flex items-center gap-4">
                          <span className="text-3xl">🎉</span>
                          <div>
@@ -339,7 +339,7 @@ export default function Dashboard() {
 
                              alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
                          }}
-                         className="px-5 py-2 bg-white text-orange-500 font-bold rounded-lg shadow-sm hover:bg-orange-50 transition-colors whitespace-nowrap"
+                         className="px-5 py-2 bg-white text-orange-500 font-bold rounded-[8px] shadow-sm hover:bg-orange-50 transition-colors whitespace-nowrap"
                      >
                          Share & Claim Reward
                      </button>
@@ -349,13 +349,13 @@ export default function Dashboard() {
 
          {/* Top Action Banner (Stripe Setup) */}
          <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+             <div className="p-4 rounded-[16px] shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
                  <div className="flex items-center gap-4">
                      <div>
                          <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
                      </div>
                  </div>
-                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
+                 <button className="px-5 py-2 text-white font-bold rounded-[8px] shadow-sm transition-colors whitespace-nowrap hover:opacity-90" style={{backgroundColor: '#FF3B30'}}>
                      Complete Stripe Setup
                  </button>
              </div>
@@ -364,24 +364,30 @@ export default function Dashboard() {
          {approvals.length === 0 && (
 <>
 {/* Business Snapshot */}
-         <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Business Snapshot</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+                    <div className="text-sm font-medium mb-1 text-[#86868B] dark:text-[#86868B]">Today's Sales</div>
+                    <div className="text-3xl font-bold font-outfit">
+                        ${todaysSales.toFixed(2)}
+                    </div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
+                    <div className="text-sm font-medium mb-1 text-[#86868B] dark:text-[#86868B]">Active Customers</div>
+                    <div className="text-3xl font-bold font-outfit">
+                        {activeCustomers}
+                    </div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                    <div className="text-sm font-medium mb-1 text-[#86868B] dark:text-[#86868B]">Pending Orders</div>
+                    <div className="text-3xl font-bold font-outfit">
+                        {pendingOrders}
+                    </div>
                 </div>
 
             </div>
@@ -391,19 +397,19 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Business Insights</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">AI Business Insights</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-[8px] border border-yellow-100">
                         <span className="text-xs font-medium text-yellow-600">Pro Feature</span>
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fcfbf8)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center mb-8">
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Store Analytics</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Discover hidden trends in your sales data. Our AI analyzes customer behavior to recommend exactly what to sell next and how to price it for maximum profit.</p>
+                    <h3 className="text-lg font-bold font-outfit mb-2">Unlock Advanced Store Analytics</h3>
+                    <p className="text-sm dark:text-[#86868B] text-gray-600 mb-4 leading-relaxed">Discover hidden trends in your sales data. Our AI analyzes customer behavior to recommend exactly what to sell next and how to price it for maximum profit.</p>
                     <button
                         onClick={() => setShowUpgradeModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
+                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-[8px] shadow-sm transition-all flex items-center gap-2"
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
                         View AI Insights
@@ -412,7 +418,7 @@ export default function Dashboard() {
                 <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
                    {/* Decorative visual */}
                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
-                   <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
+                   <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-[16px] rotate-3 shadow-lg flex items-center justify-center text-white">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                    </div>
                 </div>
@@ -423,16 +429,16 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Growth & Promotions</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Growth & Promotions</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-[8px] border border-purple-100">
                         <span className="text-xs font-medium text-purple-600">AI Powered</span>
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+            <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center mb-8">
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
+                    <h3 className="text-lg font-bold font-outfit mb-2">Boost Sales with AI Campaigns</h3>
+                    <p className="text-sm dark:text-[#86868B] text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
                     <button
                         onClick={async () => {
                             setShowPromoModal(true);
@@ -457,7 +463,7 @@ export default function Dashboard() {
                             }
                         }}
                         disabled={isGeneratingPromo}
-                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
+                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-[8px] shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                         {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
@@ -466,7 +472,7 @@ export default function Dashboard() {
                 <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
                    {/* Decorative AI visual */}
                    <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
-                   <div className="relative w-20 h-20 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
+                   <div className="relative w-20 h-20 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-[16px] rotate-3 shadow-lg flex items-center justify-center text-white">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                    </div>
                 </div>
@@ -477,31 +483,31 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Embed Your Store</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Embed Your Store</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-[8px] border border-green-100">
                         <span className="text-xs font-medium text-green-600">New Growth Loop</span>
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+            <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center">
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Sell Anywhere</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                    <h3 className="text-lg font-bold font-outfit mb-2">Sell Anywhere</h3>
+                    <p className="text-sm dark:text-[#86868B] text-gray-600 mb-4 leading-relaxed">Embed your OHC storefront on your existing website, blog, or partner pages. This powerful widget allows customers to buy directly from you anywhere on the web.</p>
+                    <div className="bg-gray-50 border border-gray-200 rounded-[8px] p-3 relative dark:bg-[#1C1C1E] dark:border-white/10">
                         <div className="flex gap-2 items-center">
-                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
+                            <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded-[8px] dark:border-white/10" />
                             <button
                                 onClick={() => setShowEmbedModal(true)}
-                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                                className="px-3 py-1.5 bg-[#0066FF] text-white rounded-[8px] text-xs font-semibold hover:opacity-90 transition-colors shadow-sm whitespace-nowrap"
                             >
                                 Get Widget
                             </button>
                         </div>
                     </div>
                 </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-[16px] p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px] dark:bg-[#1C1C1E] dark:border-white/10">
                     <div className="text-4xl mb-3">💻</div>
-                    <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
+                    <span className="text-sm font-medium dark:text-[#86868B] text-gray-600 text-center">Preview: Connect your brand everywhere</span>
                 </div>
             </div>
          </section>
@@ -513,8 +519,8 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Products</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-[8px] border border-green-100">
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
@@ -530,7 +536,7 @@ export default function Dashboard() {
                             }
                         }
                     }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#0066FF] text-white font-semibold rounded-[8px] shadow-md hover:opacity-90 transition-all font-inter text-sm"
                 >
                     <span>+ Add Product</span>
                 </button>
@@ -541,26 +547,26 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Extend Your Trial</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Extend Your Trial</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-[8px] border border-yellow-100">
                         <span className="text-xs font-medium text-yellow-600">Grow Faster</span>
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+            <div className="ohc-hybrid-panel p-6 shadow-sm flex flex-col md:flex-row gap-6 items-center">
                 <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock More Time</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong className="text-gray-900">{trialDaysLeft} days left</strong> in your free trial. Complete these quick tasks to earn more time and get the most out of OHC.</p>
+                    <h3 className="text-lg font-bold font-outfit mb-2">Unlock More Time</h3>
+                    <p className="text-sm dark:text-[#86868B] text-gray-600 mb-4 leading-relaxed">You have <strong>{trialDaysLeft} days left</strong> in your free trial. Complete these quick tasks to earn more time and get the most out of OHC.</p>
 
                     <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between bg-white/5 p-3 rounded-[8px] shadow-sm border border-gray-100 dark:border-white/10 dark:bg-[#1C1C1E]">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-500">
+                                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-[#0066FF] dark:bg-[#0066FF]/20">
                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Connect Twitter</h4>
-                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                    <h4 className="text-sm font-semibold">Connect Twitter</h4>
+                                    <p className="text-xs dark:text-[#86868B] text-gray-500">+7 Days</p>
                                 </div>
                             </div>
                             <button
@@ -571,20 +577,20 @@ export default function Dashboard() {
                                     }
                                 }}
                                 disabled={twitterConnected}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${twitterConnected ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[8px] transition-colors ${twitterConnected ? 'bg-[#34C759]/20 text-[#34C759] cursor-not-allowed' : 'bg-[#0066FF] text-white hover:opacity-90'}`}
                             >
                                 {twitterConnected ? 'Connected' : 'Connect'}
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between bg-white/5 p-3 rounded-[8px] shadow-sm border border-gray-100 dark:border-white/10 dark:bg-[#1C1C1E]">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-purple-500">
+                                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center text-[#0066FF] dark:bg-[#0066FF]/20">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Leave a Review</h4>
-                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                    <h4 className="text-sm font-semibold">Leave a Review</h4>
+                                    <p className="text-xs dark:text-[#86868B] text-gray-500">+7 Days</p>
                                 </div>
                             </div>
                             <button
@@ -595,25 +601,25 @@ export default function Dashboard() {
                                     }
                                 }}
                                 disabled={reviewLeft}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${reviewLeft ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[8px] transition-colors ${reviewLeft ? 'bg-[#34C759]/20 text-[#34C759] cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-gray-800'}`}
                             >
                                 {reviewLeft ? 'Done' : 'Review'}
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between bg-white p-3 rounded-[8px] shadow-sm border border-gray-100">
+                        <div className="flex items-center justify-between bg-white/5 p-3 rounded-[8px] shadow-sm border border-gray-100 dark:border-white/10 dark:bg-[#1C1C1E]">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-green-500">
+                                <div className="w-8 h-8 rounded-full bg-[#34C759]/10 flex items-center justify-center text-[#34C759]">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                 </div>
                                 <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Add First Product</h4>
-                                    <p className="text-xs text-gray-500">+7 Days</p>
+                                    <h4 className="text-sm font-semibold">Add First Product</h4>
+                                    <p className="text-xs dark:text-[#86868B] text-gray-500">+7 Days</p>
                                 </div>
                             </div>
                             <button
                                 disabled={true}
-                                className={`px-4 py-1.5 text-xs font-semibold rounded-[6px] transition-colors ${productAdded ? 'bg-green-100 text-green-700 cursor-not-allowed' : 'bg-gray-100 text-gray-500 cursor-not-allowed'}`}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-[8px] transition-colors ${productAdded ? 'bg-[#34C759]/20 text-[#34C759] cursor-not-allowed' : 'bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-white/10 dark:text-gray-400'}`}
                             >
                                 {productAdded ? 'Done' : 'Pending'}
                             </button>
@@ -622,8 +628,8 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full md:w-1/3 flex justify-center mt-4 md:mt-0">
                      <div className="text-center">
-                        <div className="text-5xl font-outfit font-bold text-gray-900 mb-2">{trialDaysLeft}</div>
-                        <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Days Left</div>
+                        <div className="text-5xl font-outfit font-bold mb-2">{trialDaysLeft}</div>
+                        <div className="text-sm font-medium dark:text-[#86868B] text-gray-500 uppercase tracking-widest">Days Left</div>
                     </div>
                 </div>
             </div>
@@ -633,8 +639,8 @@ export default function Dashboard() {
          <section>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Referral Program</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100">
+                    <h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Referral Program</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 rounded-[8px] border border-indigo-100">
                         <span className="text-xs font-medium text-indigo-600">Active</span>
                     </div>
                 </div>
@@ -642,7 +648,7 @@ export default function Dashboard() {
                     name="Referrals"
                     onClick={openReferralModal}
                     disabled={isGeneratingReferral}
-                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
+                    className={`flex items-center gap-2 px-5 py-2.5 bg-[#0066FF] text-white font-semibold rounded-[8px] shadow-sm hover:opacity-90 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
                 >
                     <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
                 </button>
@@ -675,35 +681,35 @@ export default function Dashboard() {
 )}
 {/* Swarm Observability / Team Activity Panel */}
          <section>
-            <div className="flex items-center justify-between mb-4">
-                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
-                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+            <div className="flex items-center justify-between mb-4 mt-8">
+                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Team Activity</h2></WithTooltip>
+                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-[8px] border border-green-100">
                     <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
                     <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
                 </div></WithTooltip>
             </div>
 
-            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden p-0">
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
-                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
-                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
+                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-[#0066FF] animate-spin mb-3 dark:border-white/10 dark:border-t-[#0066FF]"></div>
+                        <p className="text-sm text-[#86868B] dark:text-[#86868B]">Waiting for team activity...</p>
                     </div>
                 ) : (
                     <div className="flex flex-col">
                         {swarmActivity.map((activity, index) => (
-                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40 dark:hover:bg-white/5 dark:border-white/10 border-black/5">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm dark:bg-[#1C1C1E] dark:border-white/10 bg-white border border-black/5">
                                         🤖
                                     </div>
                                     <div>
-                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
-                                        <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
+                                        <p className="text-sm font-semibold">{activity.agent}</p>
+                                        <p className="text-sm text-[#86868B] dark:text-[#86868B]">{activity.action}</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>{activity.time}</span>
+                                    <span className="text-xs font-medium text-[#86868B] dark:text-[#86868B]">{activity.time}</span>
                                     {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
                                     {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
                                     {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
