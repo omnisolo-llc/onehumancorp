@@ -673,6 +673,43 @@ export default function Dashboard() {
 
          </>
 )}
+
+{/* Free-Tier Quota Panel */}
+         <section className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <WithTooltip id="free-tier-quota-tooltip" defaultText="Your current usage limits on the Free plan."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Free-Tier Quota</h2></WithTooltip>
+            </div>
+
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden flex flex-col md:flex-row justify-between items-center gap-6">
+               <div className="flex-1 w-full grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col">
+                     <span className="text-sm font-medium text-gray-500 mb-1">AI Actions</span>
+                     <span className="text-lg font-bold text-gray-900">12 / 100</span>
+                  </div>
+                  <div className="flex flex-col">
+                     <span className="text-sm font-medium text-gray-500 mb-1">Agents</span>
+                     <span className="text-lg font-bold text-gray-900">1 / 1</span>
+                  </div>
+                  <div className="flex flex-col">
+                     <span className="text-sm font-medium text-gray-500 mb-1">Products</span>
+                     <span className="text-lg font-bold text-gray-900">{productCount} / 10</span>
+                  </div>
+                  <div className="flex flex-col">
+                     <span className="text-sm font-medium text-gray-500 mb-1">Storage</span>
+                     <span className="text-lg font-bold text-gray-900">120MB / 500MB</span>
+                  </div>
+               </div>
+               <div className="w-full md:w-auto flex-shrink-0">
+                  <button
+                     onClick={() => setShowReferralModal(true)}
+                     className="w-full md:w-auto px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center justify-center gap-2"
+                  >
+                     <span>🚀</span> Invite Team to Expand Quota
+                  </button>
+               </div>
+            </div>
+         </section>
+
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
