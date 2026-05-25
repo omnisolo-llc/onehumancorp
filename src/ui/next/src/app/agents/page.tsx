@@ -9,8 +9,6 @@ export default function AgentsPage() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [activeAgents, setActiveAgents] = useState<string[]>(['operations']);
-  const [showPaywallModal, setShowPaywallModal] = useState(false);
 
   const fetchApprovals = async () => {
     setLoading(true);
@@ -73,7 +71,7 @@ export default function AgentsPage() {
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
             </Link>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Advanced</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pro Mode</span>
               <button
                 onClick={() => setShowAdvanced(!showAdvanced)}
                 className={`w-10 h-6 rounded-full transition-colors relative ${showAdvanced ? 'bg-indigo-600' : 'bg-gray-200'}`}
@@ -111,45 +109,30 @@ export default function AgentsPage() {
         <main className="flex-1 p-5 overflow-y-auto pb-24 bg-gray-50">
           {activeTab === 'departments' ? (
             <div className="space-y-4">
-              {departments.map((dept) => {
-                const isActive = activeAgents.includes(dept.id);
-                return (
+              {departments.map((dept) => (
                 <div
                   key={dept.id}
-                  onClick={() => {
-                    if (!isActive) {
-                      if (activeAgents.length >= 1) {
-                        setShowPaywallModal(true);
-                      } else {
-                        setActiveAgents([...activeAgents, dept.id]);
-                      }
-                    }
-                  }}
-                  className={`backdrop-blur-[30px] saturate-[210%] shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-all ${isActive ? 'bg-white/90 border border-indigo-200 ring-2 ring-indigo-500/20' : 'bg-white/50 border border-white/50 opacity-80 hover:opacity-100'}`}
+                  className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
                 >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl shrink-0 ${isActive ? 'bg-indigo-100' : 'bg-gray-100 grayscale'}`}>
+                  <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h3 className={`font-bold font-outfit text-lg ${isActive ? 'text-gray-900' : 'text-gray-700'}`}>{dept.name}</h3>
-                      {isActive && (
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
-                          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Active
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${isActive ? 'text-indigo-600' : 'text-gray-500'}`}>{dept.role}</p>
+                  <div>
+                    <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
+                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{dept.role}</p>
                     <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
 
                     {showAdvanced && (
                       <div className="mt-3 pt-3 border-t border-gray-100 flex gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span> Active
+                        </span>
                         <span>Auto-approve: $0</span>
                       </div>
                     )}
                   </div>
                 </div>
-              )})}
+              ))}
             </div>
           ) : (
             <div className="h-full flex flex-col">
@@ -204,48 +187,6 @@ export default function AgentsPage() {
           )}
         </main>
       </div>
-
-      {/* Paywall Modal */}
-      {showPaywallModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
-
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
-                🤖
-              </div>
-              <button
-                onClick={() => setShowPaywallModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Hire more AI Agents</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your current plan includes <strong className="text-gray-900">1 Active Agent</strong>. Upgrade to the Starter plan to hire more AI assistants and scale your business faster.
-            </p>
-
-            <div className="space-y-3">
-              <Link
-                href="/pricing"
-                className="block w-full py-3 bg-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-              >
-                Upgrade to Starter
-              </Link>
-              <button
-                onClick={() => setShowPaywallModal(false)}
-                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                Maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
