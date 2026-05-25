@@ -249,6 +249,7 @@ impl AutoDreamConsolidator {
             crate::db::DbStore::Postgres => {
                 let tasks = sqlx::query(query).fetch_all(&db.pool).await?;
                 for row in tasks {
+                    use sqlx::Row;
                     let task_id: String = row.get("id");
                     let tenant_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
@@ -259,6 +260,7 @@ impl AutoDreamConsolidator {
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let tasks = sqlx::query(query).fetch_all(sqlite_pool).await?;
                 for row in tasks {
+                    use sqlx::Row;
                     let task_id: String = row.get("id");
                     let tenant_id: String = row.get("tenant_id");
                     let payload: String = row.try_get("payload").unwrap_or_default();
