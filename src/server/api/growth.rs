@@ -88,9 +88,23 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/copywriter/generate", post(handle_copywriter_generate))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CopywriterRequest {
+    pub title: String,
+    pub image_data: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CopywriterResponse {
+    pub title: String,
+    pub description: String,
+    pub price: String,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
@@ -398,6 +412,39 @@ async fn handle_team_invite_accept(
     match tracker.accept_invite(&req.id).await {
         Ok(_) => Ok(Json(())),
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+async fn handle_copywriter_generate(
+    Extension(state): Extension<GrowthState>,
+    Json(payload): Json<CopywriterRequest>,
+) -> Result<Json<CopywriterResponse>, StatusCode> {
+    let api_key = state.hub.minimax_api_key().to_string();
+    let client = crate::minimax::MinimaxClient::new(api_key);
+
+    let prompt = format!(
+        "You are an AI Copywriter agent for a handyman / small business platform.
+Based on the user's uploaded work photo (if any) and a brief title '{}', generate a compelling service title, description, and an estimated reasonable price (as a string, e.g. '150.00').
+Respond ONLY with a valid JSON object in the following format:
+{{
+  \"title\": \"Your Suggested Title\",
+  \"description\": \"Your compelling description...\",
+  \"price\": \"99.00\"
+}}
+Do not include any extra text or markdown formatting outside the JSON object.",
+        payload.title
+    );
+
+    let image_data = payload.image_data.as_deref();
+    match client.reason_multimodal(&prompt, image_data).await {
+        Ok(response_text) => {
+            let clean_json = response_text.trim_start_matches("```json").trim_end_matches("```").trim();
+            match serde_json::from_str::<CopywriterResponse>(clean_json) {
+                Ok(data) => Ok(Json(data)),
+                Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+            }
+        }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

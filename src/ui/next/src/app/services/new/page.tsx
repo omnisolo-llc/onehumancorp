@@ -9,6 +9,9 @@ export default function NewServicePage() {
   const [frequency, setFrequency] = useState('monthly');
   const [price, setPrice] = useState('');
   const [saved, setSaved] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const handleSave = () => {
     if (!title) return;
@@ -18,8 +21,40 @@ export default function NewServicePage() {
     }, 1500);
   };
 
-  const generateDescription = () => {
-    setDescription('A weekly music tutoring session focused on improving technique, music theory, and performance skills. Perfect for students of all levels.');
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const generateDescription = async () => {
+    setIsGenerating(true);
+    try {
+      const formData = new FormData();
+      formData.append('title', title);
+      if (imageFile) formData.append('image', imageFile);
+
+      const res = await fetch('/api/v1/services/rewrite', {
+        method: 'POST',
+        body: formData,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title) setTitle(data.title);
+        if (data.description) setDescription(data.description);
+        if (data.price) setPrice(data.price);
+      }
+    } catch (error) {
+      console.error('Failed to generate description', error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (saved) {
@@ -42,6 +77,21 @@ export default function NewServicePage() {
 
       <div className="space-y-4">
         <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Upload Work Photo</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            className="w-full border rounded p-2 text-black text-sm"
+          />
+          {imagePreview && (
+            <div className="mt-2">
+              <img src={imagePreview} alt="Uploaded work" className="w-full h-48 object-cover rounded" />
+            </div>
+          )}
+        </div>
+
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Service Title</label>
           <input
             type="text"
@@ -58,9 +108,10 @@ export default function NewServicePage() {
             <label className="block text-sm font-medium text-gray-700">Description</label>
             <button
               onClick={generateDescription}
+              disabled={isGenerating}
               className="text-xs text-purple-600 hover:text-purple-800 flex items-center"
             >
-              ✨ Auto-draft
+              {isGenerating ? '⏳ Generating...' : '✨ Auto-draft'}
             </button>
           </div>
           <textarea

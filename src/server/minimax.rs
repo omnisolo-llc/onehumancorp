@@ -183,6 +183,53 @@ impl MinimaxClient {
         Err(format!("failed after 5 retries: {}", last_err))
     }
 
+    pub async fn reason_multimodal(&self, text_prompt: &str, base64_image: Option<&str>) -> Result<String, String> {
+        let url = "https://api.minimax.chat/v1/text/chatcompletion_v2";
+        let mut messages = Vec::new();
+
+        if let Some(img) = base64_image {
+            // MiniMax multimodal format usually expects a list of content parts
+            let content_array = serde_json::json!([
+                {
+                    "type": "text",
+                    "text": text_prompt
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": format!("data:image/jpeg;base64,{}", img)
+                    }
+                }
+            ]);
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": content_array
+            }));
+        } else {
+            messages.push(serde_json::json!({
+                "role": "user",
+                "content": text_prompt
+            }));
+        }
+
+        let request_body = serde_json::json!({
+            "model": "MiniMax-VL-01",
+            "messages": messages,
+            "stream": false
+        });
+
+        let client = reqwest::Client::new();
+        let response = client.post(url)
+            .header("Content-Type", "application/json")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(&request_body)
+            .send().await.map_err(|e| e.to_string())?;
+
+        let result: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let response_text = result["choices"][0]["message"]["content"].as_str().unwrap_or("").to_string();
+        Ok(response_text)
+    }
+
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
