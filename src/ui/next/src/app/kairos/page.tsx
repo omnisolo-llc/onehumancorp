@@ -6,7 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
-export default function KairosDashboard() {
+import { Suspense } from 'react';
+
+function KairosDashboardContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([
@@ -158,5 +160,13 @@ export default function KairosDashboard() {
         }
       `}} />
     </div>
+  );
+}
+
+export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-screen bg-[#F5F5F7]">Loading...</div>}>
+      <KairosDashboardContent />
+    </Suspense>
   );
 }
