@@ -250,8 +250,8 @@ impl AutoDreamConsolidator {
                 let tasks = sqlx::query(query).fetch_all(&db.pool).await?;
                 for row in tasks {
                     use sqlx::Row;
-                    let task_id: String = row.get("id");
-                    let tenant_id: String = row.get("tenant_id");
+                    let task_id: String = row.try_get("id").unwrap_or_default();
+                    let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
                     extracted_tasks.push((task_id, tenant_id, payload, log));
@@ -261,8 +261,8 @@ impl AutoDreamConsolidator {
                 let tasks = sqlx::query(query).fetch_all(sqlite_pool).await?;
                 for row in tasks {
                     use sqlx::Row;
-                    let task_id: String = row.get("id");
-                    let tenant_id: String = row.get("tenant_id");
+                    let task_id: String = row.try_get("id").unwrap_or_default();
+                    let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
                     extracted_tasks.push((task_id, tenant_id, payload, log));
