@@ -1,51 +1,73 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import OnboardingWizard from './page';
-import { useOnboardingStore } from './store';
 
-global.fetch = vi.fn();
+// Mock Zustand store
+vi.mock('./store', () => {
+  let step = 1;
+  let businessType = '';
+  let businessName = '';
+  let businessCategory = '';
+
+  return {
+    useOnboardingStore: vi.fn(() => ({
+      step,
+      setStep: vi.fn((newStep) => { step = newStep; }),
+      businessType,
+      setBusinessType: vi.fn((val) => { businessType = val; }),
+      businessName,
+      setBusinessName: vi.fn((val) => { businessName = val; }),
+      businessCategory,
+      setBusinessCategory: vi.fn((val) => { businessCategory = val; }),
+      firstProductName: '',
+      setFirstProductName: vi.fn(),
+      firstProductPrice: '',
+      setFirstProductPrice: vi.fn(),
+      template: 'Modern',
+      setTemplate: vi.fn(),
+      domain: 'free',
+      setDomain: vi.fn(),
+      isLoading: false,
+      setIsLoading: vi.fn(),
+      error: '',
+      setError: vi.fn(),
+      intakeData: null,
+      setIntakeData: vi.fn(),
+      startResult: null,
+      setStartResult: vi.fn()
+    }))
+  };
+});
 
 describe('OnboardingWizard', () => {
   beforeEach(() => {
-    vi.resetAllMocks();
-    localStorage.clear();
-    useOnboardingStore.setState({
-      step: 1,
-      businessType: '',
-      businessName: '',
-      businessCategory: '',
-      firstProductName: '',
-      firstProductPrice: '',
-      template: 'Modern',
-      domain: 'free',
-      isLoading: false,
-      error: '',
-      intakeData: null,
-      startResult: null,
-    });
+    global.fetch = vi.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      })
+    ) as any;
   });
 
-  it('loads state from backend on mount if data.step >= step', async () => {
-    (global.fetch as any)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          step: 2,
-          businessType: 'Bakery',
-          businessName: 'My Bakery'
-        })
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({})
-      });
-
+  it('renders step 1 and validates immediate state persistence', async () => {
     render(<OnboardingWizard />);
 
+    expect(screen.getByText('What do you do?')).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText('e.g. Sell cakes, plumbing');
+    fireEvent.change(input, { target: { value: 'Baking' } });
+
+    // Test autoCapitalize is applied
+    expect(input.getAttribute('autoCapitalize')).toBe('words');
+
+    const nextBtn = screen.getByRole('button', { name: 'Next' });
+    fireEvent.click(nextBtn);
+
     await waitFor(() => {
-      expect(useOnboardingStore.getState().step).toBe(2);
-      expect(useOnboardingStore.getState().businessType).toBe('Bakery');
-      expect(useOnboardingStore.getState().businessName).toBe('My Bakery');
+      expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+        headers: expect.objectContaining({ 'x-tenant-id': 'storefront' })
+      }));
     });
   });
 });

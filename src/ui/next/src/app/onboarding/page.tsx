@@ -36,7 +36,7 @@ export default function OnboardingWizard() {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
         const userId = localStorage.getItem('user_id') || 'test-user';
         const res = await fetch('/api/onboarding/state', {
-          headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+          headers: { 'x-tenant-id': tenantId, 'x-user-id': userId }
         });
         if (res.ok) {
           const data = await res.json();
@@ -108,7 +108,7 @@ export default function OnboardingWizard() {
         const userId = localStorage.getItem('user_id') || 'test-user';
         await fetch('/api/onboarding/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+          headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId, 'x-user-id': userId },
           body: currentStateStr
         });
         lastSyncState.current = currentStateStr;
@@ -153,7 +153,27 @@ export default function OnboardingWizard() {
       }
     }
     setError("");
-    setStep(step + 1);
+
+    // Sync state immediately upon advancing to prevent data loss across devices
+    const nextStep = step + 1;
+    setStep(nextStep);
+
+    try {
+      const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront') : 'storefront';
+      const userId = typeof window !== 'undefined' ? (localStorage.getItem('user_id') || 'test-user') : 'test-user';
+      const stateToSave = {
+        step: nextStep, businessType, businessName, businessCategory,
+        firstProductName, firstProductPrice, template, domain, intakeData, startResult
+      };
+
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId, 'x-user-id': userId },
+        body: JSON.stringify(stateToSave)
+      }).catch(err => console.error("Failed to sync immediate step change", err));
+    } catch (e) {
+      // ignore local storage errors
+    }
   };
 
   const handleIntakeSubmit = async () => {
@@ -305,10 +325,10 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 backdrop-blur-2xl shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoCapitalize="words" autoComplete="off"
               />
               <button
                 onClick={handleNext}
@@ -329,15 +349,15 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 backdrop-blur-2xl shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoCapitalize="words" autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/30 backdrop-blur-xl text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
                 >
                   Back
                 </button>
@@ -361,15 +381,15 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 backdrop-blur-2xl shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoCapitalize="words" autoComplete="off"
               />
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/30 backdrop-blur-xl text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
                 >
                   Back
                 </button>
@@ -398,7 +418,7 @@ export default function OnboardingWizard() {
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
-                <div className="bg-white/40 backdrop-blur-md p-5 rounded-[16px] border border-white/50 shadow-sm space-y-3">
+                <div className="bg-white/20 backdrop-blur-2xl p-5 rounded-[16px] border border-white/50 shadow-sm space-y-3">
                    <h3 className="font-bold text-gray-900 font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
@@ -407,7 +427,7 @@ export default function OnboardingWizard() {
                          type="text"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/40 backdrop-blur-xl text-gray-900 shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
                        />
                      </div>
@@ -419,7 +439,7 @@ export default function OnboardingWizard() {
                          pattern="[0-9]*\.?[0-9]*"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/40 backdrop-blur-xl text-gray-900 shadow-inner transition-all"
                          placeholder="0.00"
                        />
                      </div>
@@ -434,7 +454,7 @@ export default function OnboardingWizard() {
                        <button
                          key={t}
                          onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/50 backdrop-blur-2xl text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/20 backdrop-blur-2xl text-gray-700 hover:border-white/80'} transition-all text-sm`}
                        >
                          {t}
                        </button>
@@ -448,14 +468,14 @@ export default function OnboardingWizard() {
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/50 backdrop-blur-2xl text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/20 backdrop-blur-2xl text-gray-700 hover:border-white/80'} transition-all text-sm`}
                      >
                        <span>Free OHC Domain</span>
                        <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
                      </button>
                      <button
                        onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/50 backdrop-blur-2xl text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/20 backdrop-blur-2xl text-gray-700 hover:border-white/80'} transition-all text-sm`}
                      >
                        <span>Connect Custom Domain</span>
                        <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
@@ -467,7 +487,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/30 backdrop-blur-xl text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -508,7 +528,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 backdrop-blur-md text-[#1D1D1F] border border-white/50 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/50 backdrop-blur-2xl text-[#1D1D1F] border border-white/50 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
