@@ -66,7 +66,7 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
   const handleMouseEnter = () => {
     if (wrapperRef.current) {
       setTooltipRect(wrapperRef.current.getBoundingClientRect());
-      setTooltipText(getTooltip(id) || defaultText || id);
+      setTooltipText(getTooltip(id) || defaultText || "");
       setActiveTooltip(id);
     }
   };
