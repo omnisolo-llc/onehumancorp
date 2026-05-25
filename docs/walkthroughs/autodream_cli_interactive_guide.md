@@ -18,6 +18,8 @@ graph TD
     Run --> LLM[Embedding Service]
     LLM --> DB
     Query --> DB
+    classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%),font-family:'Outfit',sans-serif;
+    class CLI,Status,Run,Query,DB,LLM premium;
 ```
 
 ### 1. Checking Pipeline Status
