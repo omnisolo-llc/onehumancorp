@@ -340,26 +340,7 @@ impl DashboardService for MyDashboardService {
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        if req.mobile_optimized {
-            final_agents_payload = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .map(|a| {
-                    ::server_ohc::agent::Agent {
-                        id: a.id.clone(),
-                        name: String::new(),
-                        role: ::server_ohc::common::Role::Unspecified as i32,
-                        status: ::server_ohc::common::AgentStatus::Idle as i32,
-                        organization_id: a.organization_id.clone(),
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            final_meetings = out_meetings;
-        } else {
+        if !req.mobile_optimized {
             let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
                 .iter()
                 .filter(|a| {
