@@ -1066,5 +1066,6 @@ mod tests {
         assert!(health.get("db_ping_ms").is_some());
         assert!(health.get("hybrid_mode_ready").is_some());
         assert!(health.get("local_to_cloud_sync_queue").is_some());
+        // For hybrid health probe mapping tests, unsynced_missions is tested via api::health::health_handler
     }
 }

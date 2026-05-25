@@ -22,7 +22,7 @@ mod tests {
         let schema = "
             CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,7 +87,7 @@ mod tests {
         let schema = "
             CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -140,7 +140,7 @@ mod tests {
         let schema = "
             CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

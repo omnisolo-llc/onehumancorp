@@ -599,7 +599,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_missions (
                         id TEXT PRIMARY KEY,
-                        status TEXT NOT NULL,
+                        status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                         payload TEXT NOT NULL,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -610,7 +610,8 @@ impl DB {
                         synced_to_cloud BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        mission_log TEXT
+                        mission_log TEXT,
+                        organization_id TEXT NOT NULL DEFAULT 'system'
                     );
 
                     CREATE TABLE IF NOT EXISTS inbox_messages (

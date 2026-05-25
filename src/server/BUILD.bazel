@@ -196,6 +196,25 @@ rust_test(
 )
 
 rust_test(
+    name = "health_test",
+    size = "small",
+    edition = "2024",
+    crate = ":server_lib",
+    args = ["--test", "health_test"],
+    deps = [
+        "@crates//:tokio",
+        "@crates//:sqlx",
+        "@crates//:axum",
+        "@crates//:serde_json",
+        "@crates//:tempfile",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_test(
     name = "telemetry_test",
     size = "large",
     srcs = ["telemetry_test.rs"],

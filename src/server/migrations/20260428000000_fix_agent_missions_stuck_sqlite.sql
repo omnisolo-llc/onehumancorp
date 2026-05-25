@@ -1,0 +1,39 @@
+-- Reconstruction of the agent_missions table to persist the STUCK enum constraint safely.
+-- We must retain all critical columns (updated_at, synced_to_cloud, organization_id, etc.).
+
+-- 1. Rename existing table to _temp_agent_missions
+ALTER TABLE agent_missions RENAME TO _temp_agent_missions;
+
+-- 2. Re-create the agent_missions table with the CHECK constraint.
+CREATE TABLE agent_missions (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tenant_id TEXT NOT NULL DEFAULT 'system',
+    cloud_mission_id TEXT,
+    sync_error TEXT,
+    last_synced_at TIMESTAMP,
+    synced_to_cloud BOOLEAN DEFAULT 0,
+    _sync_status TEXT DEFAULT 'pending',
+    version INTEGER DEFAULT 1,
+    mission_log TEXT,
+    organization_id TEXT NOT NULL DEFAULT 'system'
+);
+
+-- 3. Copy the data back.
+-- Some previous schemas had organization_id, some used tenant_id. We copy what we can.
+INSERT INTO agent_missions (
+    id, status, payload, created_at, updated_at, tenant_id,
+    cloud_mission_id, sync_error, last_synced_at, synced_to_cloud,
+    _sync_status, version, mission_log, organization_id
+)
+SELECT
+    id, status, payload, created_at, updated_at, tenant_id,
+    cloud_mission_id, sync_error, last_synced_at, synced_to_cloud,
+    _sync_status, version, mission_log, organization_id
+FROM _temp_agent_missions;
+
+-- 4. Drop the temporary table.
+DROP TABLE _temp_agent_missions;

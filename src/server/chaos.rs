@@ -67,7 +67,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -200,7 +200,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -416,12 +416,13 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS agent_missions (
                 id TEXT PRIMARY KEY,
-                status TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 tenant_id TEXT DEFAULT 'system',
-                mission_log TEXT
+                mission_log TEXT,
+                organization_id TEXT NOT NULL DEFAULT 'system'
             );"
         ).execute(&pool).await.unwrap();
 

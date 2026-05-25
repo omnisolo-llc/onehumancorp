@@ -57,9 +57,10 @@ mod tests {
         sqlx::query(
             "CREATE TABLE IF NOT EXISTS agent_missions (
                 id VARCHAR PRIMARY KEY,
-                status VARCHAR NOT NULL,
+                status VARCHAR NOT NULL CHECK(status IN ('PENDING', 'RUNNING', 'STUCK', 'COMPLETED', 'FAILED', 'CLOUD_ESCALATION', 'BURSTING', 'blocked')),
                 payload TEXT,
-                tenant_id VARCHAR
+                tenant_id VARCHAR,
+                organization_id TEXT NOT NULL DEFAULT 'system'
             )"
         ).execute(&pg_pool).await.unwrap();
 
