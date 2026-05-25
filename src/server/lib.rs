@@ -5040,8 +5040,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
                             'setup-store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
-                            'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'accept-payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Open your AI Agents dashboard.' }, { target: 'hire-agent-btn', title: 'Hire Agents', text: 'Click here to add the AI Support Agent to your team.' }, { target: 'agent-status-toggle', title: 'Activate', text: 'Turn them on to start automatically replying to customers!' } ],
+                            'accept-payment': [ { target: 'nav-setup', title: 'Setup', text: 'Go to Setup to configure your business.' }, { target: 'billing-setup-card', title: 'Connect Payments', text: 'Click here to connect Stripe or MercadoPago and start accepting payments.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
