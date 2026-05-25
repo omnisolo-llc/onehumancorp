@@ -2725,6 +2725,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
+        #setup-screen h1, #setup-screen h2, #setup-screen h3 {
+            font-family: 'Outfit', sans-serif;
+        }
+
         @media (max-width: 375px) {
             #setup-screen.glass {
                 margin: 10px;
@@ -3681,7 +3685,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="setup-screen" class="screen glass">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            <h1>10-Minute Setup Wizard</h1>
+                            <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
