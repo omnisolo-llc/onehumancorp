@@ -18,6 +18,11 @@ impl ToolGater {
                 return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
         }
+        // Human-in-loop Spectrum check
+        if let Some(hil) = &cfg.human_in_loop_spectrum {
+            hil.check_authorization(&tc.name)?;
+        }
+
         // Stage 3: Explicit user confirmation for high-risk operations
         // If a tool is in high_risk_tools, or if PermissionArchitecture is Restrictive and the tool is mutating.
         let is_high_risk = cfg.high_risk_tools.contains(&tc.name);

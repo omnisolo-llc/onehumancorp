@@ -61,3 +61,4 @@ pub mod visual_workflow;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod gpt_researcher;
+pub mod human_in_loop;

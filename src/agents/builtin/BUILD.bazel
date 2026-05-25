@@ -43,6 +43,7 @@ rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
         "auth.rs",
+        "human_in_loop.rs",
         "codex_runner.rs",
         "agent_protocol.rs",
         "json_rpc_server.rs",

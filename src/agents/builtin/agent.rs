@@ -79,6 +79,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
+    pub human_in_loop_spectrum: Option<crate::human_in_loop::HumanInLoopSpectrum>,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -135,6 +136,7 @@ enable_llmcompiler_plan_and_execute: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            human_in_loop_spectrum: None,
             manually_approved_tool_calls: vec![],
         }
     }
