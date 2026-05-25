@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
-import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough } from './Walkthrough';
 
@@ -179,7 +178,6 @@ export function useWalkthrough() {
 
 // --- Help Widget System ---
 export function HelpWidget() {
-  const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
@@ -299,16 +297,6 @@ export function HelpWidget() {
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-[16px] shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
-                  </button>
-                  <button
-                    id="kairos-walkthrough-btn"
-                    onClick={() => {
-                      setOpen(false);
-                      router.push("/kairos?walkthrough=true");
-                    }}
-                    className="w-full text-left bg-indigo-50 p-3 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
-                  >
-                    <span className="font-bold text-indigo-800 text-sm block">Tour: KAIROS AI OS Orchestration</span>
                   </button>
                 </div>
               </div>

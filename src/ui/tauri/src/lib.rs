@@ -124,8 +124,7 @@ fn read_ai_provider_config() -> Result<AiProviderConfig, String> {
     }
 
     let content = std::fs::read_to_string(path).map_err(|err| err.to_string())?;
-    let config =
-        serde_json::from_str::<AiProviderConfig>(&content).map_err(|err| err.to_string())?;
+    let config = serde_json::from_str::<AiProviderConfig>(&content).map_err(|err| err.to_string())?;
     Ok(normalize_ai_provider_config(config))
 }
 

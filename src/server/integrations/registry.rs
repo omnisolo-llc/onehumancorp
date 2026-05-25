@@ -19,6 +19,7 @@ pub struct IntegrationsRegistry {
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
@@ -56,6 +57,7 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -128,6 +130,19 @@ impl IntegrationsRegistry {
                                  }
                              });
                          }
+                     }
+                 }
+                 "manychat" => {
+                     let clients = self.manychat_clients.read().unwrap();
+                     if let Some(client) = clients.get(integration_id) {
+                         let client = client.clone();
+                         let to = channel.to_string();
+                         let text = content.to_string();
+                         tokio::spawn(async move {
+                             if let Err(e) = client.send_message("instagram", &to, &text).await {
+                                 tracing::error!("Failed to send Manychat message: {}", e);
+                             }
+                         });
                      }
                  }
                  "meta" => {
@@ -206,6 +221,10 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::meta::provider::MetaProvider::new(
                 creds.api_token.clone()
             )));
+        }
+        if integration_id == "manychat" {
+            let mut clients = self.manychat_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
         if integration_id == "calendly" {
             let mut clients = self.calendly_clients.write().unwrap();

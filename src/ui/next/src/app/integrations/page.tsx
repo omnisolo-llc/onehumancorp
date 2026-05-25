@@ -6,7 +6,7 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp." },
+    { id: "manychat", name: "Manychat", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Social Media Inbox for Instagram, Facebook, and WhatsApp." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "AI-Powered Email Marketing and simple customer newsletters." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },

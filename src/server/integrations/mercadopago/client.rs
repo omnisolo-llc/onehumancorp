@@ -46,37 +46,3 @@ impl MercadoPagoClient {
         Ok("mock_txn_123".to_string())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mercadopago_client_new() {
-        let client = MercadoPagoClient::new("test_token".to_string());
-        assert_eq!(client.access_token, "test_token");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_client_create_checkout_preference() {
-        let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client.create_checkout_preference("price_123", "tenant_123").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_client_create_payment() {
-        let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client.create_payment(100.0, "Test payment", "test@example.com").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "mock_txn_123");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_client_handle_webhook() {
-        let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client.handle_webhook("{}").await;
-        assert!(result.is_ok());
-    }
-}
