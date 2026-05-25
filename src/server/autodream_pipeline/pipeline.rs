@@ -70,23 +70,49 @@ impl AutoDreamPipeline {
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
-            LIMIT 100
+            LIMIT 500
         ";
 
-        let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
-            .await
-            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let (mut task_ids, mut tenant_ids, mut agent_ids, mut payloads, mut logs) = (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        match &self.db.store {
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let sqlite_query = query.replace("organization_id", "tenant_id"); // adjust if sqlite uses tenant_id for shared_tasks
+                let rows = sqlx::query(&sqlite_query)
+                    .fetch_all(sqlite_pool)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                for row in rows {
+                    task_ids.push(row.get::<String, _>("id"));
+                    tenant_ids.push(row.try_get::<String, _>("organization_id").unwrap_or_else(|_| row.get::<String, _>("tenant_id")));
+                    agent_ids.push(row.try_get::<Option<String>, _>("assigned_agent_id").unwrap_or(None));
+                    payloads.push(row.try_get::<String, _>("payload").unwrap_or_default());
+                    logs.push(row.try_get::<Option<String>, _>("deliberation_log").unwrap_or(None));
+                }
+            },
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query(query)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                for row in rows {
+                    task_ids.push(row.get::<String, _>("id"));
+                    tenant_ids.push(row.try_get::<String, _>("organization_id").unwrap_or_else(|_| row.get::<String, _>("tenant_id")));
+                    agent_ids.push(row.try_get::<Option<String>, _>("assigned_agent_id").unwrap_or(None));
+                    payloads.push(row.try_get::<String, _>("payload").unwrap_or_default());
+                    logs.push(row.try_get::<Option<String>, _>("deliberation_log").unwrap_or(None));
+                }
+            }
+        };
 
-        for row in tasks {
-            let task_id: String = row.get("id");
-            let tenant_id: String = row.get("organization_id");
-            let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
+        for i in 0..task_ids.len() {
+            let task_id = &task_ids[i];
+            let tenant_id = &tenant_ids[i];
+            let agent_id = &agent_ids[i];
 
-            let payload: String = row.try_get("payload").unwrap_or_default();
-            let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+            let payload = &payloads[i];
+            let log = &logs[i];
 
-            let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
+            let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.clone().unwrap_or_default());
 
             // Chunk the content to avoid token limits (e.g., 2000 chars roughly to tokens)
             let chunks = Self::chunk_content(&content, 2000);
