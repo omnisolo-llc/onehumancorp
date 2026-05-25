@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use sqlx::{postgres::PgPoolOptions, Row};
-    use std::env;
+
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
@@ -12,10 +12,6 @@ mod tests {
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
-        if env::var("CI").is_ok() {
-            // We just ensure it compiles locally
-            return;
-        }
 
         let tenant_1 = "00000000-0000-0000-0000-000000000001";
         let tenant_2 = "00000000-0000-0000-0000-000000000002";
@@ -43,7 +39,7 @@ mod tests {
                 tx.commit().await.expect("Failed to commit test data");
             },
             Err(_) => {
-                // Ignore errors if test db is not running
+                panic!("Integration tests require the Postgres database");
                 return;
             }
         }
@@ -79,7 +75,7 @@ mod tests {
                 assert_eq!(count, 0, "Should return 0 rows for another tenant despite data existing");
             },
             Err(_) => {
-                // Ignore errors if test db is not running
+                panic!("Integration tests require the Postgres database");
             }
         }
     }
