@@ -1417,7 +1417,7 @@ impl HubService for MyHubService {
         tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
-        let msg = crate::msgbus::Message {
+        let msg = Message {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
@@ -2194,7 +2194,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                         }
 
                         // Simulate task execution by publishing a message
-                        let msg = crate::msgbus::Message {
+                        let msg = Message {
                             id: format!("{}-{}", task.id, Utc::now().timestamp()),
                             from_agent: "system-scheduler".to_string(),
                             to_agent: task.agent_id.clone(),
