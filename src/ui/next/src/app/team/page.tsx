@@ -11,7 +11,7 @@ export type ApprovalRequest = {
   description: string;
   status: string;
   action_risk: string;
-  feature_type?: string;
+  payload?: any;
 };
 
 const DEPARTMENTS = [
