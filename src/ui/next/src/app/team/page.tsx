@@ -77,6 +77,11 @@ export default function TeamPage() {
     }
   };
 
+  const handleEdit = async (id: string) => {
+    // Navigate to edit page or open edit modal
+    console.log("Edit requested for", id);
+  };
+
   if (selectedDepartment) {
     const deptInfo = DEPARTMENTS.find(d => d.id === selectedDepartment);
     const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
@@ -89,6 +94,7 @@ export default function TeamPage() {
         onBack={() => setSelectedDepartment(null)}
         onApprove={handleApprove}
         onReject={handleReject}
+        onEdit={handleEdit}
       />
     );
   }
