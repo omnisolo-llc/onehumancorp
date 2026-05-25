@@ -62,7 +62,7 @@ impl MeshTransport for LocalTeammateMesh {
             let mut payload = Vec::new();
             use prost::Message as ProstMessage;
             if message.encode(&mut payload).is_ok() {
-                return redis_transport.publish(topic, Message { payload }).await;
+                return redis_transport.publish(topic, ::ohc_builtin_agent::mesh::transport::Message { payload }).await;
             }
         }
 
