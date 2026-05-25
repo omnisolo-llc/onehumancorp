@@ -92,12 +92,19 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
+        let draft_note = "Thank you for your order! We're getting it ready and will send you a shipping ETA soon.";
+        let description = format!("Drafted thank you note for order: '{}'", draft_note);
+        let mut payload = event.payload.clone();
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("draft_note".to_string(), serde_json::json!(draft_note));
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::CustomerSuccess,
-            "Send personalized thank you & shipping ETA".to_string(),
+            description,
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload,
         ).await.map(|_| ())
     }
 

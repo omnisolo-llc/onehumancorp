@@ -197,15 +197,24 @@ export default function Dashboard() {
   }, []);
 
   const handleApprove = async (id: string, approved: boolean) => {
+    // Optimistic UI update: Remove the item immediately
+    const previousApprovals = [...approvals];
+    setApprovals(approvals.filter(a => a.id !== id));
+
     try {
-      await fetch(`/api/agents/approvals/${id}`, {
+      const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved })
       });
-      setApprovals(approvals.filter(a => a.id !== id));
+
+      if (!response.ok) {
+        throw new Error('Failed to submit decision');
+      }
     } catch (e) {
       console.error("Failed to submit decision", e);
+      // Revert the optimistic update on error
+      setApprovals(previousApprovals);
     }
   };
 
@@ -285,14 +294,14 @@ export default function Dashboard() {
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
+                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80 min-w-[44px] min-h-[44px]"
                                             style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
                                         >
                                             Reject
                                         </button>
                                         <button
                                             onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90 min-w-[44px] min-h-[44px]"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
                                             Approve

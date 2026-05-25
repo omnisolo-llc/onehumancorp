@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
-export default function KairosDashboard() {
+import { Suspense } from 'react';
+
+function KairosDashboardContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([
@@ -22,7 +24,7 @@ export default function KairosDashboard() {
   ]);
 
   useEffect(() => {
-    if (searchParams.get('walkthrough') === 'true') {
+    if (searchParams && searchParams.get('walkthrough') === 'true') {
       setTimeout(() => {
         startWalkthrough([
           { targetId: "kairos-brain", message: "The Shared Task List is the 'Brain' of your business, where KAIROS manages and prioritizes all agent activities." },
@@ -158,5 +160,13 @@ export default function KairosDashboard() {
         }
       `}} />
     </div>
+  );
+}
+
+export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <KairosDashboardContent />
+    </Suspense>
   );
 }
