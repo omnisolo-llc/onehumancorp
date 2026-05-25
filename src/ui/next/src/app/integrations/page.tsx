@@ -6,13 +6,13 @@ export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
   const integrations = [
-    { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "AI-Powered Email Marketing and simple customer newsletters." },
+    { id: "meta", name: "Connect my Instagram", category: "marketing", status: "disconnected", icon: "📱", description: "Read your Instagram DMs and let the AI reply to customers automatically." },
+    { id: "cal_com", name: "My Booking Calendar", category: "operations", status: "disconnected", icon: "📅", description: "Let customers book appointments and sync them to your phone." },
+    { id: "resend", name: "Email Customers", category: "marketing", status: "disconnected", icon: "📨", description: "Send automated updates and newsletters to your customers." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Label Generation and real-time shipping rates." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generated Meeting Links for online services." }
+    { id: "shippo", name: "Shipping Labels", category: "operations", status: "disconnected", icon: "📦", description: "Automatically generate and print shipping labels." },
+    { id: "twilio", name: "Get order notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Get text messages on your phone when you receive a new order." },
+    { id: "zoom", name: "Online Meetings", category: "operations", status: "disconnected", icon: "📹", description: "Automatically create meeting links for online classes or services." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -27,8 +27,8 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
-            <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Custom Software</h1>
+            <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite software tools.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
             🧩

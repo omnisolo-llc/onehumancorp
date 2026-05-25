@@ -412,7 +412,7 @@ export default function OnboardingWizard() {
                        />
                      </div>
                      <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Price</label>
+                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Starting at (Price)</label>
                        <input
                          type="text"
                          inputMode="decimal"

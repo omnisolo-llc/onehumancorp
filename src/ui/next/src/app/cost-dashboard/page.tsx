@@ -104,16 +104,16 @@ export default function CostDashboardPage() {
             <div className="space-y-4">
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">LLM Usage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of AI agent actions and interactions.</p>
+                        <span className="font-medium text-gray-900">AI Assistants</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of your AI helpers replying to customers and managing your store.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.llm_cost || 0)}</span>
                 </div>
 
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
-                        <span className="font-medium text-gray-900">Storage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of database storage and file hosting.</p>
+                        <span className="font-medium text-gray-900">My Store Size</span>
+                        <p className="text-sm text-gray-500 mt-1">Cost of saving your product photos and customer details.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>

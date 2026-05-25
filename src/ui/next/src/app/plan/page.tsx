@@ -139,7 +139,7 @@ export default function MyPlanPage() {
                 {/* Storage */}
                 <div>
                     <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-700">Storage Used</span>
+                        <span className="font-medium text-gray-700">My Store Size</span>
                         <span className="text-sm font-medium text-gray-500">
                             {formatStorage(planData?.storage_used_bytes || 0)} / {planData?.storage_limit_bytes === null ? 'Unlimited' : formatStorage(planData?.storage_limit_bytes || 0)}
                         </span>
@@ -157,7 +157,7 @@ export default function MyPlanPage() {
                     {planData?.storage_limit_bytes && planData.storage_used_bytes >= planData.storage_limit_bytes && (
                         <div className="mt-3 p-3 bg-amber-50 border border-amber-100 rounded-lg text-sm text-amber-800 flex items-start gap-2">
                             <span className="text-lg">📦</span>
-                            <p>Storage is getting full! We're automatically optimizing your images to WebP to save space, but upgrading to Starter would give you 5GB of headroom for your products.</p>
+                            <p>Your store is getting full! We're automatically making your images smaller to save space, but upgrading to Starter would give you more room for your products.</p>
                         </div>
                     )}
                 </div>
@@ -167,8 +167,8 @@ export default function MyPlanPage() {
         {/* Management Actions */}
         <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button onClick={() => router.push('/cost-dashboard')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
-                <h3 className="font-medium text-gray-900">View Cost Details</h3>
-                <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and storage details.</p>
+                <h3 className="font-medium text-gray-900">My Business Status</h3>
+                <p className="text-sm text-gray-500 mt-1">Check your total costs, AI agent limits, and store size details.</p>
             </button>
             <button onClick={() => router.push('/pricing')} className="p-4 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 text-left transition-colors">
                 <h3 className="font-medium text-gray-900">Change Plan</h3>

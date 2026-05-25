@@ -282,7 +282,7 @@ export default function Dashboard() {
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+                                    <div className="flex flex-col gap-2 w-full mt-4 sm:mt-0 sm:flex-row sm:w-auto min-w-0">
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
                                             className="px-4 py-2 font-medium transition-colors hover:opacity-80"
@@ -339,7 +339,7 @@ export default function Dashboard() {
 
                              alert('Thank you for sharing! Your 1 month of Pro will be applied shortly.');
                          }}
-                         className="px-5 py-2 bg-white text-orange-500 font-bold rounded-lg shadow-sm hover:bg-orange-50 transition-colors whitespace-nowrap"
+                         className="px-5 py-2 bg-white text-orange-500 font-bold rounded-lg shadow-sm hover:bg-orange-50 transition-colors "
                      >
                          Share & Claim Reward
                      </button>
@@ -349,15 +349,20 @@ export default function Dashboard() {
 
          {/* Top Action Banner (Stripe Setup) */}
          <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100 overflow-hidden">
                  <div className="flex items-center gap-4">
                      <div>
-                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
+                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect your bank to accept payments.</h3>
                      </div>
                  </div>
-                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
-                     Complete Stripe Setup
-                 </button>
+                 <div className="flex flex-col gap-2 w-full mt-4 sm:mt-0 sm:flex-row sm:w-auto min-w-0">
+                   <button className="w-full sm:w-auto px-4 py-2 bg-white text-gray-700 border border-gray-300 font-semibold rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm break-words whitespace-normal leading-tight">
+                       Setup Later (Receive Money as Credit)
+                   </button>
+                   <button className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white font-semibold rounded-lg shadow-sm hover:bg-red-700 transition-colors text-sm whitespace-normal">
+                       Connect Bank
+                   </button>
+                 </div>
              </div>
          </section>
 
@@ -492,7 +497,7 @@ export default function Dashboard() {
                             <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
                             <button
                                 onClick={() => setShowEmbedModal(true)}
-                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm "
                             >
                                 Get Widget
                             </button>
@@ -1032,7 +1037,7 @@ export default function Dashboard() {
               {/* Copy Link Section */}
               <div>
                 <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Your Unique Link</label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 w-full mt-4 sm:mt-0 sm:flex-row sm:w-auto min-w-0">
                   <input
                     type="text"
                     readOnly
