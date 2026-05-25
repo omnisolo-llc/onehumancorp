@@ -147,7 +147,7 @@ mod tests {
         let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
