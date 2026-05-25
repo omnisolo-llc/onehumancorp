@@ -80,6 +80,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub observability: Option<Arc<dyn crate::observability::ObservabilityProvider>>,
 }
 
 impl Default for AgentRunConfig {
@@ -136,6 +137,7 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observability: None,
         }
     }
 }
@@ -360,6 +362,14 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        // Wrap the on_event closure to also log to observability provider if configured
+        let mut wrapper_on_event = |event: AgentEvent| {
+            if let Some(obs) = &cfg.observability {
+                obs.log_event(&event);
+            }
+            on_event(event);
+        };
+        let on_event = &mut wrapper_on_event;
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run_loop");

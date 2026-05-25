@@ -58,6 +58,7 @@ rust_library(
         "harness.rs",
         "hibernation.rs",
         "langgraph.rs",
+        "observability.rs",
         "autogen.rs",
         "ruflo.rs",
         "lib.rs",
