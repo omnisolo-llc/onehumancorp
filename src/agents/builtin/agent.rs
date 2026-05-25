@@ -78,7 +78,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
-    pub hil_spectrum: crate::types::HumanInLoopSpectrum,
+    pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -134,7 +134,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
-            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
         }
     }
@@ -318,7 +318,6 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
-    pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
 }
 
 impl Agent {
@@ -333,7 +332,6 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
-            native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
         }
     }
 
@@ -1400,7 +1398,6 @@ impl Agent {
             memory_store: self.memory_store.clone(),
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
-            native_env: self.native_env.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1481,7 +1478,6 @@ impl Agent {
                 memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
-                native_env: self.native_env.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -2272,7 +2268,7 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate {
+                if final_cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
@@ -6217,123 +6213,3 @@ async fn test_stripe_retry_limit() {
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
 }
-
-    #[tokio::test]
-    async fn test_code_native_agent_integration() {
-        use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
-
-        struct EnvSetterTool;
-        #[async_trait::async_trait]
-        impl CodeNativeTool for EnvSetterTool {
-            async fn execute_native(&self, env: &mut RichExecutionEnvironment, _args: serde_json::Value) -> Result<String, String> {
-                env.set_variable("agent_secret", 42u64);
-                Ok("Stored secret 42 natively".to_string())
-            }
-        }
-
-        struct EnvGetterTool;
-        #[async_trait::async_trait]
-        impl CodeNativeTool for EnvGetterTool {
-            async fn execute_native(&self, env: &mut RichExecutionEnvironment, _args: serde_json::Value) -> Result<String, String> {
-                if let Some(secret_arc) = env.get_variable::<u64>("agent_secret") {
-                    Ok(format!("Retrieved secret natively: {}", *secret_arc))
-                } else {
-                    Err("Secret not found in native env".to_string())
-                }
-            }
-        }
-
-        // We simulate the LLM orchestrating this via standard chat interface
-        struct MockNativeLlmClient;
-        #[async_trait::async_trait]
-        impl LlmClient for MockNativeLlmClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                // Determine which tool to call based on how many tool calls have already been executed
-                // We'll count the number of tools in history
-                let tool_msgs_count = req.messages.iter().filter(|m| m.role == Role::Tool).count();
-                if tool_msgs_count == 0 {
-                    // Call the setter first
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: "".to_string(),
-                            tool_calls: vec![ToolCall {
-                                id: "set_call".to_string(),
-                                name: "env_setter".to_string(),
-                                arguments: serde_json::json!({}),
-                            }],
-                            tool_results: vec![],
-                            response_id: Some("id1".to_string()),
-                            previous_response_id: None,
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some("id1".to_string()),
-                    })
-                } else if tool_msgs_count == 1 {
-                    // Then call the getter
-                    Ok(ChatResponse {
-                        message: Message {
-                            role: Role::Assistant,
-                            content: "".to_string(),
-                            tool_calls: vec![ToolCall {
-                                id: "get_call".to_string(),
-                                name: "env_getter".to_string(),
-                                arguments: serde_json::json!({}),
-                            }],
-                            tool_results: vec![],
-                            response_id: Some("id2".to_string()),
-                            previous_response_id: None,
-                        },
-                        usage: Usage::default(),
-                        stop_reason: "tool_calls".to_string(),
-                        response_id: Some("id2".to_string()),
-                    })
-                } else {
-                    // Done
-                    Ok(ChatResponse {
-                        message: Message::assistant("I have successfully passed state using native execution"),
-                        usage: Usage::default(),
-                        stop_reason: "stop".to_string(),
-                        response_id: Some("id3".to_string()),
-                    })
-                }
-            }
-        }
-
-        let llm = Arc::new(MockNativeLlmClient);
-        let mut agent = Agent::new(llm, vec![]);
-
-        let adapter_set = CodeNativeAdapter { env: agent.native_env.clone(), tool: Arc::new(EnvSetterTool) };
-        let adapter_get = CodeNativeAdapter { env: agent.native_env.clone(), tool: Arc::new(EnvGetterTool) };
-
-        agent.add_tool(Tool {
-            name: "env_setter".to_string(),
-            description: "set env".to_string(),
-            is_read_only: false,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(adapter_set),
-        });
-
-        agent.add_tool(Tool {
-            name: "env_getter".to_string(),
-            description: "get env".to_string(),
-            is_read_only: true,
-            parameters: serde_json::json!({}),
-            execute: Arc::new(adapter_get),
-        });
-
-        let mut config = AgentRunConfig::default();
-        config.allowed_tools = Some(vec!["env_setter".to_string(), "env_getter".to_string()]);
-        config.approved_tool_calls.push("set_call".to_string());
-
-        let mut on_event = |_e| {};
-        let result = agent.run(&config, "run it", &mut on_event).await.unwrap();
-        assert_eq!(result, "I have successfully passed state using native execution");
-
-        // Assert native state directly from the outside as well
-        let lock = agent.native_env.read().await;
-        let val = lock.get_variable::<u64>("agent_secret").unwrap();
-        assert_eq!(*val, 42);
-    }

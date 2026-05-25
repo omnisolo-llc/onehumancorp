@@ -4,9 +4,8 @@ import Link from 'next/link';
 
 export default function InboxPage() {
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'Facebook User', source: 'Facebook', icon: '📘', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
-    { id: 2, sender: 'Instagram User', source: 'Instagram', icon: '📸', content: 'When will my order be shipped?', date: 'Yesterday' },
-    { id: 3, sender: 'WhatsApp User', source: 'WhatsApp', icon: '💬', content: 'Can I change my delivery address?', date: 'Yesterday' },
+    { id: 1, sender: 'Alice', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
+    { id: 2, sender: 'Bob', content: 'When will my order be shipped?', date: 'Yesterday' },
   ]);
   const [replyInput, setReplyInput] = useState('');
 
@@ -16,7 +15,7 @@ export default function InboxPage() {
 
   const sendReply = () => {
     if (!replyInput) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', source: 'Me', icon: '👤', content: replyInput, date: 'Just now' }]);
+    setMessages([...messages, { id: Date.now(), sender: 'Me', content: replyInput, date: 'Just now' }]);
     setReplyInput('');
   };
 
@@ -37,11 +36,8 @@ export default function InboxPage() {
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 h-64 overflow-y-auto text-black">
         {messages.map(msg => (
           <div key={msg.id} className={`mb-3 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
-            <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
-              {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
-              <span className="font-semibold text-sm">{msg.sender}</span>
-              <span className="text-xs text-gray-500">{msg.date}</span>
-            </div>
+            <span className="font-semibold text-sm">{msg.sender}</span>
+            <span className="text-xs text-gray-500 ml-2">{msg.date}</span>
             <p className={`p-2 rounded mt-1 inline-block text-left ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-100'}`}>
               {msg.content}
             </p>

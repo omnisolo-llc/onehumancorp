@@ -51,8 +51,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
     catalog.push(cal_com_provider.to_integration_provider());
 
-    let sendgrid_provider = crate::integrations::sendgrid::provider::SendGridProvider::new("dummy_token".to_string());
-    catalog.push(sendgrid_provider.to_integration_provider());
+    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
+    catalog.push(resend_provider.to_integration_provider());
 
     let shippo_provider = crate::integrations::shippo::provider::ShippoProvider::new("dummy_token".to_string());
     catalog.push(shippo_provider.to_integration_provider());
@@ -65,9 +65,6 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
 
     let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
     catalog.push(alipay_provider.to_integration_provider());
-
-    let razorpay_provider = crate::integrations::razorpay::provider::RazorpayProvider::new("dummy_key".to_string(), "dummy_secret".to_string());
-    catalog.push(razorpay_provider.to_integration_provider());
 
 
     let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());

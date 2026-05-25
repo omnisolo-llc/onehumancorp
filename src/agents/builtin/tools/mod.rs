@@ -41,13 +41,6 @@ pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
 
-#[async_trait::async_trait]
-impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
-    async fn execute(&self, args: Value) -> Result<String, ToolError> {
-        self.execute_adapter(args).await
-    }
-}
-
 /// A tool definition and executor — mirrors Go builtin.Tool.
 pub struct Tool {
     pub name: String,

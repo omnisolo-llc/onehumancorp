@@ -24,10 +24,6 @@ pub struct AppSettings {
     pub minimax_api_key: Option<String>,
     pub ai_providers: Vec<AiProvider>,
     pub extras: HashMap<String, String>,
-    pub sms_critical_phone: Option<String>,
-    pub sms_alert_urgent_booking: bool,
-    pub sms_alert_failed_payment: bool,
-    pub sms_alert_new_order: bool,
 }
 
 #[allow(dead_code)]
@@ -42,10 +38,6 @@ impl AppSettings {
             minimax_api_key: None,
             ai_providers: vec![],
             extras: HashMap::new(),
-            sms_critical_phone: None,
-            sms_alert_urgent_booking: false,
-            sms_alert_failed_payment: false,
-            sms_alert_new_order: false,
         }
     }
 }
@@ -108,16 +100,6 @@ impl Store {
     pub fn set_extra(&self, key: String, value: String) -> Result<(), String> {
         let mut data = self.data.write().unwrap();
         data.extras.insert(key, value);
-        drop(data);
-        self.save()
-    }
-
-    pub fn set_sms_preferences(&self, phone: String, urgent_booking: bool, failed_payment: bool, new_order: bool) -> Result<(), String> {
-        let mut data = self.data.write().unwrap();
-        data.sms_critical_phone = Some(phone);
-        data.sms_alert_urgent_booking = urgent_booking;
-        data.sms_alert_failed_payment = failed_payment;
-        data.sms_alert_new_order = new_order;
         drop(data);
         self.save()
     }

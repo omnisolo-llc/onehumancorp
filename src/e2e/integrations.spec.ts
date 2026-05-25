@@ -28,14 +28,14 @@ test.describe('Integrations Page', () => {
     await page.getByRole('button', { name: 'Back to Dashboard' }).click();
     await page.getByRole('button', { name: 'Integrations' }).click();
 
-    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
-    await expect(page.locator('#manychat-integration').getByRole('button', { name: 'Configure' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Facebook/ })).toBeVisible();
+    await expect(page.locator('#facebook-integration').getByRole('button', { name: 'Configure' })).toBeVisible();
   });
 
   test('configure action routes to inbox', async ({ page }) => {
     await page.getByRole('button', { name: 'Back to Dashboard' }).click();
     await page.getByRole('button', { name: 'Integrations' }).click();
-    await page.locator('#manychat-integration').getByRole('button', { name: 'Configure' }).click();
+    await page.locator('#facebook-integration').getByRole('button', { name: 'Configure' }).click();
 
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
     await expect(page.getByText('Facebook User')).toBeVisible();

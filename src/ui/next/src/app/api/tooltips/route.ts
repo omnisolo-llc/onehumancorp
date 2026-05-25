@@ -14,7 +14,6 @@ export async function GET() {
     "nav-setup-tooltip": "Set up your business info, logo, and how you get paid.",
     "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
-    "changelog-nav-tooltip": "See the latest updates and new features we just added.",
-    "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid."
+    "changelog-nav-tooltip": "See the latest updates and new features we just added."
   });
 }

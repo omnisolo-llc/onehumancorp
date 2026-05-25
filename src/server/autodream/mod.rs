@@ -3,7 +3,8 @@ pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
-use sqlx::Row;
+
+
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
 
@@ -249,7 +250,7 @@ impl AutoDreamConsolidator {
             crate::db::DbStore::Postgres => {
                 let tasks = sqlx::query(query).fetch_all(&db.pool).await?;
                 for row in tasks {
-                    use sqlx::Row;
+
                     let task_id: String = row.try_get("id").unwrap_or_default();
                     let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
                     let payload: String = row.try_get("payload").unwrap_or_default();
@@ -260,7 +261,7 @@ impl AutoDreamConsolidator {
             crate::db::DbStore::Sqlite(sqlite_pool) => {
                 let tasks = sqlx::query(query).fetch_all(sqlite_pool).await?;
                 for row in tasks {
-                    use sqlx::Row;
+
                     let task_id: String = row.try_get("id").unwrap_or_default();
                     let tenant_id: String = row.try_get("tenant_id").unwrap_or_default();
                     let payload: String = row.try_get("payload").unwrap_or_default();
@@ -310,7 +311,7 @@ impl AutoDreamConsolidator {
                 .await?;
 
             for row in rows {
-                use sqlx::Row;
+
                 results.push(::server_ohc::orchestration::TruthSearchResult {
                     id: row.get("id"),
                     content: row.get("content"),
@@ -330,7 +331,7 @@ impl AutoDreamConsolidator {
                 .await?;
 
             for row in rows {
-                use sqlx::Row;
+
                 let score: f64 = row.get("similarity_score");
                 results.push(::server_ohc::orchestration::TruthSearchResult {
                     id: row.get("id"),
@@ -351,7 +352,7 @@ impl AutoDreamConsolidator {
             .await?;
 
         for row in rows {
-            use sqlx::Row;
+
             let session_id: String = row.get("session_id");
             let mut context_data: String = row.get("context_data");
             if context_data.starts_with("gz_b64:") {
