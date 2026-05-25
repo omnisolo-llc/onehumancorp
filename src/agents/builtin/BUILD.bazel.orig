@@ -214,6 +214,8 @@ rust_binary(
         "consolidation_worker",
         "ruflo",
         "observability",
+        "observability",
+
         "output_parser",
         "pubsub",
 
