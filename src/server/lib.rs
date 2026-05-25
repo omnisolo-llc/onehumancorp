@@ -2128,7 +2128,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
             let auditor = hub_clone.get_cost_auditor();
             if true {
-                auditor.record_llm_cost("chat-agent", 0.001); // 0.1 cents for this operation
+                auditor.record_event(crate::services::billing::auditor::AuditEvent::LlmCall { model: "chat-agent".to_string(), tokens: 10 }); // Task 4: Infrastructure Cost Metering
             }
 
             // Task 1: LLM Token Efficiency
