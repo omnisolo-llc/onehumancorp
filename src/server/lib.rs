@@ -2839,6 +2839,33 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
                         </div>
 
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; margin-top: 16px;">
+                            <h2 style="margin: 0; font-size: 1.1rem;">Action Required</h2>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 14px; color: var(--text-secondary);">Advanced Settings</span>
+                                <label class="switch" style="position: relative; display: inline-block; width: 40px; height: 24px;">
+                                    <input type="checkbox" style="opacity: 0; width: 0; height: 0;">
+                                    <span class="slider round" style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px;"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="card glass" id="customer-success-action" style="display: flex; justify-content: space-between; align-items: center; padding: 20px; background: white;">
+                            <div style="display: flex; align-items: center; gap: 16px;">
+                                <div style="background: rgba(255, 165, 0, 0.1); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+                                    🤝
+                                </div>
+                                <div>
+                                    <h3 style="margin: 0 0 4px 0; font-size: 16px; color: black;">CustomerSuccess Department</h3>
+                                    <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">3 customers haven't reviewed their orders. Request reviews?</p>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 12px;">
+                                <button onclick="document.getElementById('customer-success-action').style.display='none'" style="background: transparent; color: #ef4444; border: none; font-weight: bold; cursor: pointer; padding: 8px 16px;">Reject</button>
+                                <button id="send-review-campaign-btn-action" onclick="sendReviewCampaign(this)" style="background: #2563eb; color: white; border: none; border-radius: 8px; font-weight: bold; padding: 8px 24px; cursor: pointer;">Approve</button>
+                            </div>
+                        </div>
+
                         <h2 style="padding: 20px; background: rgba(255,255,255,0.1); border-radius: 8px;">Inbox</h2>
                         <div class="card glass">
                             <h2>Welcome back, Human.</h2>
@@ -4144,15 +4171,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
-                        async function sendReviewCampaign() {
+                        async function sendReviewCampaign(eventTarget) {
                             if (localStorage.getItem('has_pro') !== 'true') {
                                 document.getElementById('soft-paywall-modal').classList.add('open');
                                 return;
                             }
 
-                            const btn = document.getElementById('send-review-campaign-btn');
-                            btn.textContent = 'Generating...';
-                            btn.disabled = true;
+                            const btn = eventTarget || document.getElementById('send-review-campaign-btn');
+                            if (btn) {
+                                btn.textContent = 'Generating...';
+                                btn.disabled = true;
+                            }
 
                             try {
                                 const response = await fetch('/api/v1/growth/campaign/send', {
@@ -4168,18 +4197,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 if (response.ok) {
                                     const data = await response.json();
-                                    document.getElementById('review-emails-sent').textContent = data.emails_sent;
-                                    document.getElementById('review-campaign-success').style.display = 'block';
-                                    btn.style.display = 'none';
+                                    const emailsSentEl = document.getElementById('review-emails-sent');
+                                    if (emailsSentEl) emailsSentEl.textContent = data.emails_sent;
+                                    const successEl = document.getElementById('review-campaign-success');
+                                    if (successEl) successEl.style.display = 'block';
+                                    if (btn) btn.style.display = 'none';
+                                    const actionCard = document.getElementById('customer-success-action');
+                                    if (actionCard) actionCard.style.display = 'none';
                                 } else {
-                                    btn.textContent = '✨ Send AI Review Requests';
-                                    btn.disabled = false;
+                                    if (btn) btn.textContent = '✨ Send AI Review Requests';
+                                    if (btn) btn.disabled = false;
                                     alert('Failed to send campaign');
                                 }
                             } catch (e) {
                                 console.error('Failed to send review campaign', e);
-                                btn.textContent = '✨ Send AI Review Requests';
-                                btn.disabled = false;
+                                if (btn) btn.textContent = '✨ Send AI Review Requests';
+                                if (btn) btn.disabled = false;
                                 alert('Failed to send campaign');
                             }
                         }
