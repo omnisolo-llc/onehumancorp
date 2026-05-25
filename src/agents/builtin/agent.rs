@@ -1532,7 +1532,7 @@ impl Agent {
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
             // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
-            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
+            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") || model_lower.contains("o3-mini") {
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
@@ -3069,6 +3069,23 @@ mod tests {
         let reqs2 = client_strong.requests.lock().await;
         assert!(!reqs2[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs2[0].system.contains("You must think step by step"));
+        drop(reqs2);
+
+        let client_o3 = std::sync::Arc::new(MockThicknessClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent_o3 = Agent::new(client_o3.clone(), vec![]);
+
+        let mut cfg_o3 = cfg_strong.clone();
+        cfg_o3.model = "o3-mini".to_string();
+        cfg_o3.server_system_message = "You must think step by step and make a detailed plan. Make a plan before executing.".to_string();
+
+        let mut events_o3 = vec![];
+        let _ = agent_o3.run(&cfg_o3, "Hello", &mut |e| events_o3.push(e)).await;
+
+        let reqs_o3 = client_o3.requests.lock().await;
+        assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
+        assert!(!reqs_o3[0].system.contains("You must think step by step"));
     }
     #[tokio::test]
     async fn test_4_type_error_handling() {
