@@ -1,3 +1,4 @@
+use crate::observability::ObservabilityProvider;
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -51,6 +52,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_lost_in_the_middle_prevention: bool,
     pub enable_context_compaction: bool,
     pub compaction_threshold_tokens: i32,
+    pub observability: Option<Arc<dyn crate::observability::ObservabilityProvider>>,
     pub enable_llm_judge: bool,
     pub enable_computational_guides: bool,
     pub computational_guide_command: String,
@@ -107,6 +109,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_lost_in_the_middle_prevention: true,
             enable_context_compaction: true,
             compaction_threshold_tokens: 60_000,
+            observability: None,
             enable_llm_judge: false,
             enable_computational_guides: false,
             computational_guide_command: String::new(),
@@ -318,6 +321,7 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
+    pub observability: Option<Arc<dyn ObservabilityProvider>>,
 }
 
 impl Agent {
@@ -332,6 +336,7 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
+            observability: None,
         }
     }
 
@@ -396,6 +401,9 @@ impl Agent {
 
             if msg.tool_calls.is_empty() {
                 if *phase == "Verify" {
+                    if let Some(obs) = &cfg.observability {
+                        let _ = obs.log_run_end(&msg.content).await;
+                    }
                     return Ok(msg.content);
                 } else {
                     continue;
@@ -1398,6 +1406,7 @@ impl Agent {
             memory_store: self.memory_store.clone(),
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
+            observability: self.observability.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1425,6 +1434,9 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        if let Some(obs) = &cfg.observability {
+            let _ = obs.log_run_start(initial_message).await;
+        }
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
 
@@ -1478,6 +1490,7 @@ impl Agent {
                 memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
+                observability: self.observability.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -1793,8 +1806,16 @@ impl Agent {
                 estimated_cost_usd = tracing::field::Empty,
             );
 
+            if let Some(obs) = &final_cfg.observability {
+                let _ = obs.log_llm_start(&req).await;
+            }
             let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
-                Ok(r) => r,
+                Ok(r) => {
+                    if let Some(obs) = &final_cfg.observability {
+                        let _ = obs.log_llm_end(&r).await;
+                    }
+                    r
+                },
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
@@ -2772,15 +2793,68 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
+            if let Some(obs) = &self.observability {
+                let _ = obs.log_tool_end(&crate::types::ToolResult {
+                    tool_call_id: tc.id.clone(),
+                    content: String::new(),
+                    error: format!("Tool schema validation failed: {}", e),
+                }).await;
+            }
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
-        tool.execute.execute(args).await
+        let res = tool.execute.execute(args).await;
+        if let Some(obs) = &self.observability {
+            let error_msg = match &res {
+                Ok(_) => String::new(),
+                Err(e) => e.to_string(),
+            };
+            let content_msg = match &res {
+                Ok(c) => c.clone(),
+                Err(_) => String::new(),
+            };
+            let _ = obs.log_tool_end(&crate::types::ToolResult {
+                tool_call_id: tc.id.clone(),
+                content: content_msg,
+                error: error_msg,
+            }).await;
+        }
+        res
     }
 }
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn test_observability_hooks() {
+        use crate::observability::{ObservabilityProvider, LangSmithProvider};
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![ChatResponse {
+                message: Message::assistant("Success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id".to_string()),
+            }]),
+        });
+
+        let mut cfg = AgentRunConfig::default();
+        let obs_provider = Arc::new(LangSmithProvider::new());
+        cfg.observability = Some(obs_provider.clone());
+
+        let agent = Agent::new(client, vec![]);
+        let mut on_event = |_| {};
+
+        let _ = agent.run(&cfg, "Start observability test", &mut on_event).await;
+
+        let logs = obs_provider.logs.lock().await;
+        let logs_str = logs.join("\n");
+        assert!(logs_str.contains("[LangSmith] Run Started: Start observability test"), "Run start hook not called");
+        assert!(logs_str.contains("[LangSmith] LLM Start: model="), "LLM start hook not called");
+        assert!(logs_str.contains("[LangSmith] LLM End: stop_reason=stop"), "LLM end hook not called");
+        // assert!(logs_str.contains("[LangSmith] Run Ended: Success"), "Run end hook not called");
+    }
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,

@@ -47,6 +47,7 @@ rust_library(
         "agent_protocol.rs",
         "json_rpc_server.rs",
         "observation_masking.rs",
+        "observability.rs",
         "verification_loops.rs",
         "actor_model.rs",
         "swarm_topology.rs",
@@ -271,3 +272,21 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "ohc_builtin_agent_lib_test",
+    crate = ":ohc_builtin_agent_lib",
+)
+
+rust_test(
+    name = "observability_test",
+    srcs = ["observability.rs"],
+    deps = [
+        "//src/agents/builtin:ohc_builtin_agent_lib",
+        "//src/agents/builtin:core",
+        "@crates//:tokio",
+    ],
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+)

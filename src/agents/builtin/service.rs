@@ -552,6 +552,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            observability: None,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             max_retries: 2,
@@ -966,6 +967,7 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                observability: None,
                 enable_progressive_skills: false,
                 progressive_skills_dir: None,
                 max_retries: 2,
