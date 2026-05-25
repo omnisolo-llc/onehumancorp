@@ -177,7 +177,7 @@ export default function WebsiteBuilderPage() {
                   id="bio-input"
                   enterKeyHint="done"
                   autoCapitalize="sentences"
-                  className="w-full border border-gray-200 bg-white/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7]"
+                  className="w-full border border-white/50 bg-white/40 backdrop-blur-md shadow-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/30 focus:border-[#0071E3] outline-none transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] resize-none text-gray-800 dark:text-[#f5f5f7]"
                   style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
@@ -190,10 +190,10 @@ export default function WebsiteBuilderPage() {
                 <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] ${
                       bio.trim().length > 5
                         ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-white/40 border border-white/50 backdrop-blur-md text-gray-400 cursor-not-allowed"
                     }`}
                     style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                     onClick={handleGenerate}
@@ -231,13 +231,13 @@ export default function WebsiteBuilderPage() {
           <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h1>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full bg-white/40 p-3 rounded-[8px] border border-white/50 mb-6 flex items-center justify-between backdrop-blur-md">
             <span className="text-sm text-gray-700 dark:text-[#a1a1a6] truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
+            className="w-full bg-white/70 text-gray-900 border border-white/50 backdrop-blur-md dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] hover:bg-white/90"
             style={{ borderRadius: '8px' }}
             onClick={() => updateStatus("idle")}
           >
@@ -250,7 +250,7 @@ export default function WebsiteBuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container mac-glass-container">
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
@@ -263,11 +263,11 @@ export default function WebsiteBuilderPage() {
           <SmartBlock type="PoweredBy" props={{ tenantId }} />
         </div>
 
-        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
+        <div className="absolute bottom-0 w-full p-4 bg-white/65 backdrop-blur-[30px] border-t border-white/40 z-50 saturate-210" style={{ borderRadius: '0 0 16px 16px' }}>
           <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-[#0071E3] text-white p-4 font-bold shadow-lg hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-[250ms] ease-[cubic-bezier(0.4,0,0.2,1)] flex justify-center items-center gap-2"
               style={{ borderRadius: '8px' }}
               onClick={handleLaunch}
             >
