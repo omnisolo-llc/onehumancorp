@@ -48,84 +48,98 @@ impl RalphLoop {
     /// Run the full Ralph Loop
     pub async fn run(&self, initial_task: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Phase 1: Initializer
-        let mut progress = self.initialize(initial_task).await?;
+        let _progress = self.initialize(initial_task).await?;
         
         // Phase 2: Coding Agent Loop
-        while !progress.is_complete {
-            if progress.current_feature_index >= progress.features.len() {
-                progress.is_complete = true;
-                self.save_progress(&progress).await?;
+        loop {
+            let has_more = self.step().await?;
+            if !has_more {
                 break;
             }
-
-            let feature_name = progress.features[progress.current_feature_index].name.clone();
-            if progress.features[progress.current_feature_index].status == "completed" {
-                progress.current_feature_index += 1;
-                continue;
-            }
-
-            tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
-            
-            // Phase 2 (Coding Agent): Read git logs to orient itself
-            let git_log_output = Command::new("git")
-                .arg("log")
-                .arg("--oneline")
-                .arg("-n")
-                .arg("5")
-                .current_dir(&self.repo_path)
-                .output()
-                .ok()
-                .and_then(|out| String::from_utf8(out.stdout).ok())
-                .unwrap_or_else(|| "No git history available".to_string());
-
-            // Execute the agent run for this specific feature
-            let feature_prompt = format!(
-                "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
-                progress.task_description, git_log_output, feature_name
-            );
-
-            // We use a fresh config to keep the context window small (compaction/reset)
-            let mut feature_config = self.config.clone();
-            feature_config.user_instructions = feature_prompt.clone();
-            
-            let mut on_event = |event: AgentEvent| {
-                if let AgentEvent::TaskError { error } = event {
-                    tracing::error!("Ralph Loop Feature Error: {}", error);
-                }
-            };
-
-            match self.agent.run(&feature_config, &feature_prompt, &mut on_event).await {
-                Ok(result) => {
-                    tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
-                    progress.features[progress.current_feature_index].status = "completed".to_string();
-                    progress.current_feature_index += 1;
-                    self.save_progress(&progress).await?;
-
-                    // Phase 2: Commit after completion
-                    if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git add: {}", e);
-                    }
-                    let commit_msg = format!("Completed feature: {}", feature_name);
-
-                    let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
-                    let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
-
-                    if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
-                        tracing::error!("Phase 2 failed to git commit: {}", e);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
-                    break;
-                }
-            }
         }
-
         tracing::info!("Ralph Loop completely finished.");
         Ok(())
     }
 
-    async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
+    /// Execute a single step (Phase 2 feature) from the Ralph Loop.
+    pub async fn step(&self) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+        let mut progress = self.read_progress().await?;
+        if progress.is_complete {
+            return Ok(false);
+        }
+        if progress.current_feature_index >= progress.features.len() {
+            progress.is_complete = true;
+            self.save_progress(&progress).await?;
+            return Ok(false);
+        }
+
+        let feature_name = progress.features[progress.current_feature_index].name.clone();
+        if progress.features[progress.current_feature_index].status == "completed" {
+            progress.current_feature_index += 1;
+            self.save_progress(&progress).await?;
+            return Ok(true);
+        }
+
+        tracing::info!("Ralph Loop: Starting work on feature: {}", feature_name);
+            
+        // Phase 2 (Coding Agent): Read git logs to orient itself
+        let git_log_output = Command::new("git")
+            .arg("log")
+            .arg("--oneline")
+            .arg("-n")
+            .arg("5")
+            .current_dir(&self.repo_path)
+            .output()
+            .ok()
+            .and_then(|out| String::from_utf8(out.stdout).ok())
+            .unwrap_or_else(|| "No git history available".to_string());
+
+        // Execute the agent run for this specific feature
+        let feature_prompt = format!(
+            "You are continuing a long-running task.\nOverall Task: {}\nRecent Git History:\n{}\nFeature to implement now: {}\nExecute steps to complete this feature, verify it, and then stop.",
+            progress.task_description, git_log_output, feature_name
+        );
+
+        // We use a fresh config to keep the context window small (compaction/reset)
+        let mut feature_config = self.config.clone();
+        feature_config.user_instructions = feature_prompt.clone();
+
+        let mut on_event = |event: AgentEvent| {
+            if let AgentEvent::TaskError { error } = event {
+                tracing::error!("Ralph Loop Feature Error: {}", error);
+            }
+        };
+
+        match self.agent.run(&feature_config, &feature_prompt, &mut on_event).await {
+            Ok(result) => {
+                tracing::info!("Ralph Loop: Feature {} completed. Result: {}", feature_name, result);
+                progress.features[progress.current_feature_index].status = "completed".to_string();
+                progress.current_feature_index += 1;
+                self.save_progress(&progress).await?;
+
+                // Phase 2: Commit after completion
+                if let Err(e) = Command::new("git").arg("add").arg(".").current_dir(&self.repo_path).output() {
+                    tracing::error!("Phase 2 failed to git add: {}", e);
+                }
+                let commit_msg = format!("Completed feature: {}", feature_name);
+
+                let _ = Command::new("git").arg("config").arg("user.name").arg("Ralph Agent").current_dir(&self.repo_path).output();
+                let _ = Command::new("git").arg("config").arg("user.email").arg("ralph@example.com").current_dir(&self.repo_path).output();
+
+                if let Err(e) = Command::new("git").arg("commit").arg("-m").arg(&commit_msg).current_dir(&self.repo_path).output() {
+                    tracing::error!("Phase 2 failed to git commit: {}", e);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Ralph Loop failed on feature {}: {}", feature_name, e);
+                return Err(e);
+            }
+        }
+
+        Ok(true)
+    }
+
+    pub async fn initialize(&self, task: &str) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
         if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
             if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
                 tracing::info!("Ralph Loop: Resuming from existing progress file.");
@@ -198,6 +212,15 @@ impl RalphLoop {
         let json = serde_json::to_string_pretty(progress)?;
         fs::write(&self.progress_file_path, json).await?;
         Ok(())
+    }
+
+    pub async fn read_progress(&self) -> Result<RalphProgress, Box<dyn std::error::Error + Send + Sync>> {
+        if let Ok(data) = fs::read_to_string(&self.progress_file_path).await {
+            if let Ok(progress) = serde_json::from_str::<RalphProgress>(&data) {
+                return Ok(progress);
+            }
+        }
+        Err("Progress file not found or invalid".into())
     }
 }
 
