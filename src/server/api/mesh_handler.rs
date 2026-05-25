@@ -55,13 +55,13 @@ pub struct BroadcastRequest {
     pub message: SIPPayload,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize)]
 pub struct DirectRequest {
     pub target_agent_id: String,
     pub message: SIPPayload,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize)]
 pub struct MailboxRequest {
     pub mailbox_id: String,
     pub message: SIPPayload,
