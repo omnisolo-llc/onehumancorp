@@ -57,6 +57,13 @@ jobs:
             install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
 
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
@@ -179,6 +186,13 @@ jobs:
             install_linux_deps: true
     steps:
       - uses: actions/checkout@v6
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -525,6 +539,13 @@ jobs:
             patterns: "*.ipa"
     steps:
       - uses: actions/checkout@v6
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
 
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
@@ -652,6 +673,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
 
       - name: Install Linux build dependencies
         run: |
@@ -895,6 +923,13 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo apt-get clean
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
