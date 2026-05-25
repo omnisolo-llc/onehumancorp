@@ -32,12 +32,12 @@ impl SkillTrace {
     }
 }
 
-pub struct DomainExpert {
+pub struct DomainExpert<T: ExpertTeamLlmClient + ?Sized> {
     pub role: String,
-    pub llm: std::sync::Arc<MockExpertLlm>,
+    pub llm: std::sync::Arc<T>,
 }
 
-impl DomainExpert {
+impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
     pub async fn execute(&self, task: &str, trace: &mut SkillTrace) -> Result<String, String> {
         // Track the skill usage
         trace.record_skill(&format!("{}_analysis", self.role.to_lowercase().replace(" ", "_")));
@@ -63,13 +63,13 @@ impl DomainExpert {
     }
 }
 
-pub struct ExpertTeamManager {
+pub struct ExpertTeamManager<T: ExpertTeamLlmClient + ?Sized> {
     pub lead_agent_name: String,
-    pub domain_experts: Vec<DomainExpert>,
+    pub domain_experts: Vec<DomainExpert<T>>,
 }
 
-impl ExpertTeamManager {
-    pub fn new(lead: &str, experts: Vec<DomainExpert>) -> Self {
+impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
+    pub fn new(lead: &str, experts: Vec<DomainExpert<T>>) -> Self {
         Self {
             lead_agent_name: lead.to_string(),
             domain_experts: experts,
@@ -137,7 +137,7 @@ pub struct QualityGates;
 impl QualityGates {
     /// Pre-flight (e.g., initialization check).
     /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy Expert Team Feature).
-    pub fn pre_flight(manager: &ExpertTeamManager, task: &str) -> Result<(), String> {
+    pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(manager: &ExpertTeamManager<T>, task: &str) -> Result<(), String> {
         // Enforce 6 agent initialization
         // 1 Lead (already in manager) + 5 Domain/Quality experts = 6 total
         // Therefore, we expect exactly 5 domain_experts.
