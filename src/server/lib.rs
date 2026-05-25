@@ -350,6 +350,14 @@ async fn http_login_handler(
         .or_else(|| std::env::var("OHC_DEFAULT_TENANT_ID").ok())
         .unwrap_or_else(|| "e2e-tenant".to_string());
 
+    struct UserData {
+        id: String,
+        email: String,
+        username: String,
+        password_hash: String,
+        roles: Vec<String>,
+    }
+
     let mut tx = match db.pool.begin().await {
         Ok(tx) => tx,
         Err(e) => {
@@ -383,6 +391,13 @@ async fn http_login_handler(
     .bind(username)
     .fetch_optional(&mut *tx)
     .await
+    .map(|row_opt| row_opt.map(|row| UserData {
+        id: row.get("id"),
+        email: row.get("email"),
+        username: row.get("username"),
+        password_hash: row.get("password_hash"),
+        roles: row.try_get("roles").unwrap_or_default(),
+    }))
     {
         Ok(row) => row,
         Err(e) => {
@@ -403,7 +418,7 @@ async fn http_login_handler(
             .into_response();
     };
 
-    let password_hash: String = row.get("password_hash");
+    let password_hash = row.password_hash;
     match bcrypt::verify(&payload.password, &password_hash) {
         Ok(true) => {}
         Ok(false) => {
@@ -423,10 +438,10 @@ async fn http_login_handler(
         }
     }
 
-    let id: String = row.get("id");
-    let email: String = row.get("email");
-    let username: String = row.get("username");
-    let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
+    let id = row.id;
+    let email = row.email;
+    let username = row.username;
+    let roles = row.roles;
     let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let issued_at = chrono::Utc::now().timestamp();
     let secret = std::env::var("JWT_SECRET")
@@ -1612,11 +1627,30 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     db.run_migrations().await?;
+    if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+        // Hash password "password123" with bcrypt manually, standard test credential
+        let test_hash = bcrypt::hash("password123", bcrypt::DEFAULT_COST).unwrap();
+
+        let _ = sqlx::query(r#"
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id)
+            VALUES ($1, $2, $3, $4, $5, 1, 'e2e-tenant')
+            ON CONFLICT(email) DO NOTHING
+        "#)
+        .bind("e2e-user-1")
+        .bind("test")
+        .bind("test@example.com")
+        .bind(&test_hash)
+        .bind("[\"ROLE_ADMIN\"]")
+        .execute(sqlite_pool)
+        .await;
+
+        tracing::info!("Seeded test user 'test@example.com'");
+    }
 
     let grpc_port = std::env::var("OHC_GRPC_PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
-        .unwrap_or(8081);
+        .unwrap_or(8080);
     let addr = format!("0.0.0.0:{}", grpc_port).parse()?;
     let (event_tx, mut event_rx) = tokio::sync::mpsc::channel(100);
     let hub = Arc::new(Hub::new(event_tx, db.pool.clone()));
@@ -2102,7 +2136,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let port = std::env::var("OHC_PORT")
         .ok()
         .and_then(|p| p.parse::<u16>().ok())
-        .unwrap_or(18789);
+        .unwrap_or(8081);
     let mesh_addr: std::net::SocketAddr = format!("0.0.0.0:{}", port).parse().unwrap();
     let listener = tokio::net::TcpListener::bind(&mesh_addr).await.unwrap();
     tokio::spawn(async move {

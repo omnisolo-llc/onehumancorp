@@ -142,6 +142,7 @@ impl DB {
             conn_opts = conn_opts.pragma("cipher", "'sqlcipher'");
 
             let sqlite_pool = SqlitePoolOptions::new()
+                .max_connections(50)
                 .after_connect(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -237,6 +238,16 @@ impl DB {
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
+                    CREATE TABLE IF NOT EXISTS tenants (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        industry TEXT DEFAULT '',
+                        tier TEXT DEFAULT 'free',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        version BIGINT DEFAULT 1
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
                         agent_id TEXT NOT NULL,
@@ -346,6 +357,19 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS users (
+                        id TEXT PRIMARY KEY,
+                        username TEXT UNIQUE NOT NULL,
+                        email TEXT UNIQUE NOT NULL,
+                        password_hash TEXT NOT NULL DEFAULT '',
+                        roles TEXT DEFAULT '[]',
+                        active BOOLEAN DEFAULT 1,
+                        tenant_id TEXT,
+                        oidc_subject TEXT UNIQUE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         version INTEGER DEFAULT 1
                     );
                     CREATE TABLE IF NOT EXISTS onboarding_state (

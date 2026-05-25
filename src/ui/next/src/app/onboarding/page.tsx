@@ -216,39 +216,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <style dangerouslySetInnerHTML={{__html: `
-        .glass-container {
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(40px) saturate(250%);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-        }
-        @media (prefers-color-scheme: dark) {
-          .glass-container {
-            background: rgba(22, 22, 26, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-          }
-          .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
-            color: #F5F5F7;
-          }
-          .glass-container p, .glass-container .text-gray-500 {
-            color: #A1A1A6;
-          }
-          .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.3);
-            color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.2);
-          }
-        }
-        .animate-fade-in {
-          animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}} />
+
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
