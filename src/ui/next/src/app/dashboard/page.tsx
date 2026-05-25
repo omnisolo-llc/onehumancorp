@@ -226,7 +226,8 @@ export default function Dashboard() {
                Social Cards 🎴
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
-               Seasonal Promos ✨
+               Seasonal Promos ✨</Link>
+             <Link href="/abandoned-carts" className="px-4 py-2 bg-orange-100 text-orange-700 rounded-md text-sm font-medium hover:bg-orange-200 transition-colors border border-orange-200 shadow-sm">AI Cart Recovery 🛒
              </Link>
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
