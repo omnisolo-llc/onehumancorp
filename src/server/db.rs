@@ -288,25 +288,23 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    DROP TABLE IF EXISTS shared_tasks;
                     CREATE TABLE IF NOT EXISTS shared_tasks (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
+                        parent_plan_id TEXT,
                         title TEXT NOT NULL,
                         description TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
-                        agent_id TEXT,
-                        priority TEXT NOT NULL DEFAULT 'P2',
-                        payload TEXT,
-                        parent_plan_id TEXT,
-                        dependencies TEXT NOT NULL DEFAULT '[]',
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        auto_dreamed BOOLEAN DEFAULT 0,
-                        locked_until TIMESTAMP,
                         assigned_agent_id TEXT,
+                        dependencies JSONB DEFAULT '[]',
+                        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
+                    CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
