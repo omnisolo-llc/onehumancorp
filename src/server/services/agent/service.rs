@@ -67,7 +67,7 @@ impl MyAgentManagerService {
         let statuses = status_map.into_iter().map(|(status, count)| StatusCount { status, count }).collect();
 
         let snapshot = DashboardSnapshot {
-            meetings: meetings.to_vec(),
+            meetings: meetings.await.to_vec(),
             costs: Some(costs),
             agents: agents.to_vec(),
             statuses,
@@ -241,7 +241,7 @@ impl AgentManagerService for MyAgentManagerService {
         let hub2 = self.hub.clone();
         let (agents_res, meetings_res) = tokio::join!(
             tokio::spawn(async move { hub1.get_agents().await }),
-            tokio::task::spawn_blocking(move || hub2.get_meetings())
+            tokio::spawn(async move { hub2.get_meetings().await })
         );
         let agents = agents_res.map_err(|e| Status::internal(e.to_string()))?;
         let meetings = meetings_res.map_err(|e| Status::internal(e.to_string()))?;
