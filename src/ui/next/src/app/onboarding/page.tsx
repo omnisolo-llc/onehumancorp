@@ -142,16 +142,6 @@ export default function OnboardingWizard() {
         return;
       }
     }
-    if (step === 3) {
-      if (!businessCategory.trim()) {
-        setError("Please describe your niche.");
-        return;
-      }
-      if (businessCategory.trim().length < 5) {
-        setError("Niche description must be at least 5 characters.");
-        return;
-      }
-    }
     setError("");
     setStep(step + 1);
   };
@@ -278,7 +268,7 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
@@ -301,6 +291,7 @@ export default function OnboardingWizard() {
               <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
               <input
                 type="text"
+                inputMode="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
@@ -325,6 +316,7 @@ export default function OnboardingWizard() {
               <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
               <input
                 type="text"
+                inputMode="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
@@ -357,13 +349,14 @@ export default function OnboardingWizard() {
               <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
               <input
                 type="text"
+                inputMode="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
-                enterKeyHint="next"
+                enterKeyHint="done"
                 autoComplete="off"
               />
               <div className="flex gap-3">
@@ -405,6 +398,8 @@ export default function OnboardingWizard() {
                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Name</label>
                        <input
                          type="text"
+                         inputMode="text"
+                         enterKeyHint="next"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
