@@ -40,6 +40,7 @@ nav:
       - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
       - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
       - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
+      - Storefront Builder Architecture: features/storefront_builder_architecture.md
   - Technical:
       - Architecture Overview: technical/architecture/architecture-overview.md
       - System Overview: technical/architecture/system-overview.md
