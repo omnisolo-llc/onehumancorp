@@ -307,6 +307,16 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS agent_departments (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        department_type TEXT NOT NULL,
+                        config JSONB NOT NULL DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        UNIQUE(tenant_id, department_type)
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_approvals (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,

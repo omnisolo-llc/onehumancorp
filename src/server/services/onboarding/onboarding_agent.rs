@@ -2425,13 +2425,33 @@ impl OnboardingAgent {
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
             sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
-                .bind(id)
+                .bind(&id)
                 .bind(name)
                 .bind(role)
                 .bind(org_id)
                 .bind("IDLE")
                 .bind("builtin")
                 .bind(true)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+            let config = if role_id == "CustomerSuccess" {
+                serde_json::json!({"tone_of_voice": "friendly", "auto_approve_limits": 0.0})
+            } else if role_id == "Operations" {
+                serde_json::json!({"tone_of_voice": "professional", "auto_approve_limits": 10.0})
+            } else {
+                serde_json::json!({"tone_of_voice": "professional", "auto_approve_limits": 0.0})
+            };
+
+            let dep_id = uuid::Uuid::new_v4().to_string();
+            let dep_type = role_id.to_lowercase();
+
+            sqlx::query("INSERT INTO agent_departments (id, tenant_id, department_type, config) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = EXCLUDED.config")
+                .bind(&dep_id)
+                .bind(org_id)
+                .bind(&dep_type)
+                .bind(&config)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
