@@ -137,17 +137,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_token_usage_forecast() {
+    async fn test_record_token_burn_rate_predicted_24h() {
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/ohc".to_string());
         let pool = match tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::PgPool::connect(&db_url)).await {
             Ok(Ok(p)) => p,
             _ => return, // Gracefully exit if DB is not available in sandbox or times out
         };
 
-        let res = ::server_telemetry::record_token_usage_forecast(&pool, "org_test", 15000.0).await;
+        let res = ::server_telemetry::record_token_burn_rate_predicted_24h(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_forecast' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
