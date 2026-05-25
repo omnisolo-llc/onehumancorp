@@ -68,6 +68,7 @@ rust_library(
         "//src/server/ohc:server_ohc",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
+        "@crates//:rust_decimal",
         "//src/proto:hub_tonic",
         "//src/proto:billing_tonic",
         "//src/proto:app_tonic",
@@ -110,6 +111,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
+            "@crates//:rust_decimal",
         "@crates//:tonic",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
@@ -130,6 +132,7 @@ rust_binary(
     deps = [
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
+        "@crates//:rust_decimal",
         ":server_lib",
         "@crates//:tokio",
     ],
@@ -157,6 +160,7 @@ rust_binary(
         deps = [
             "@crates//:tempfile",
             "@crates//:tokio-tungstenite",
+            "@crates//:rust_decimal",
         ],
     )
     for module in [
@@ -243,6 +247,7 @@ rust_test(
     deps = [
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
+            "@crates//:rust_decimal",
     ],
 )
 
@@ -261,6 +266,7 @@ rust_test(
         "//src/server/utils:server_utils",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:mcp_proxy_prost",
+        "@crates//:rust_decimal",
         "@crates//:aes-gcm",
         "@crates//:base64",
         "@crates//:hmac",
@@ -319,6 +325,7 @@ rust_test(
     deps = [
         "@crates//:tempfile",
         "@crates//:tokio-tungstenite",
+            "@crates//:rust_decimal",
     ],
 )
 
