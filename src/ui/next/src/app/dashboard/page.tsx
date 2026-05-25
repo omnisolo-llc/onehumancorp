@@ -347,23 +347,55 @@ export default function Dashboard() {
              </section>
          )}
 
-         {/* Top Action Banner (Stripe Setup) */}
-         <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
-                 <div className="flex items-center gap-4">
-                     <div>
-                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
-                     </div>
-                 </div>
-                 <button className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
-                     Complete Stripe Setup
-                 </button>
-             </div>
+
+
+         {/* Swarm Observability / Team Activity Panel */}
+         <section>
+            <div className="flex items-center justify-between mb-4">
+                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
+                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
+                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                </div></WithTooltip>
+            </div>
+
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+                {swarmActivity.length === 0 ? (
+                    <div className="p-8 text-center">
+                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
+                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col">
+                        {swarmActivity.map((activity, index) => (
+                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                        🤖
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
+                                        <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>{activity.time}</span>
+                                    {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
+                                    {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
+                                    {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
          </section>
 
          {approvals.length === 0 && (
 <>
-{/* Business Snapshot */}
+
+
+         {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -673,47 +705,7 @@ export default function Dashboard() {
 
          </>
 )}
-{/* Swarm Observability / Team Activity Panel */}
-         <section>
-            <div className="flex items-center justify-between mb-4">
-                <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
-                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
-                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
-                </div></WithTooltip>
-            </div>
 
-            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
-                {swarmActivity.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
-                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
-                    </div>
-                ) : (
-                    <div className="flex flex-col">
-                        {swarmActivity.map((activity, index) => (
-                            <div key={activity.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
-                                        🤖
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{activity.agent}</p>
-                                        <p className="text-sm" style={{ color: '#86868B' }}>{activity.action}</p>
-                                    </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>{activity.time}</span>
-                                    {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
-                                    {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
-                                    {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-         </section>
 
       </main>
 
