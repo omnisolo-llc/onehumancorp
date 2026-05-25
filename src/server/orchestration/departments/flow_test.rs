@@ -159,4 +159,68 @@ mod tests {
         }
         assert!(has_draft, "Should generate a draft for review");
     }
+
+    #[tokio::test]
+    async fn test_department_service_msgbus_integration() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::msgbus::{Bus, MemoryBus, Message};
+        use crate::services::agent::department::service::DepartmentService;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        orchestrator.register_department(ops_agent).await;
+
+        let tenant_id = "test-tenant-bus-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let memory_bus = Arc::new(MemoryBus::new());
+        let department_service = DepartmentService::new(memory_bus.clone(), orchestrator.clone());
+
+        department_service.start().await.unwrap();
+
+        let payload_json = serde_json::json!({
+            "tenant_id": tenant_id
+        });
+
+        let msg = Message {
+            topic: "system:order_received".to_string(),
+            payload: payload_json.to_string().into_bytes(),
+        };
+
+        memory_bus.publish(msg).await.unwrap();
+
+        let mut has_ops_auto = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
+                has_ops_auto = true;
+                break;
+            }
+        }
+
+        assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
+    }
 }
