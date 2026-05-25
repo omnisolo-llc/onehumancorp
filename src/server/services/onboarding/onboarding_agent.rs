@@ -212,6 +212,18 @@ impl OnboardingAgent {
             };
             let _ = hub_clone.publish_teammate_event("protector_inbox".to_string(), policy_event);
 
+            let ops_event = ::server_ohc::orchestration::TeammateMeshEvent {
+                agent_id: "system".to_string(),
+                action: "SetupBaseInventory".to_string(),
+                status: "pending".to_string(),
+                payload: serde_json::to_vec(&json!({
+                    "organization_id": org_id_clone3,
+                    "business_type": business_type_clone_2,
+                })).unwrap_or_default(),
+                msg_id: uuid::Uuid::new_v4().to_string(),
+            };
+            let _ = hub_clone.publish_teammate_event("products_inbox".to_string(), ops_event);
+
 
             // Schedule the weekly health report via the internal task queue for The Advisor
             let scheduled_at = chrono::Utc::now() + chrono::Duration::days(7);
@@ -297,6 +309,7 @@ impl OnboardingAgent {
         // Add initial artifact placeholders to state
         flags.insert("storefront_status".to_string(), json!("generating"));
         flags.insert("policies_status".to_string(), json!("generating"));
+        flags.insert("operations_status".to_string(), json!("generating"));
         flags.insert("artifacts".to_string(), json!({
             "storefront": {
                 "title": company_name,
