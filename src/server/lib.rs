@@ -2779,6 +2779,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info h4 { margin: 0 0 4px 0; }
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
+
+                        @media (prefers-color-scheme: dark) {
+                            #setup-screen {
+                                background: rgba(22, 22, 26, 0.7) !important;
+                                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                            }
+                        }
+                        #setup-screen input {
+                            border-radius: 8px !important;
+                            max-width: 100% !important;
+                            box-sizing: border-box !important;
+                        }
+                        #setup-screen button {
+                            border-radius: 8px !important;
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -3678,7 +3694,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+                    <div id="setup-screen" class="screen glass" style="max-width: 100%; box-sizing: border-box; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -3988,7 +4004,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 // Restore step if needed
                                 if (state.step && state.step > 1) {
-                                    nextStep(state.step);
+                                    if (window.location.pathname.includes('/business-setup') || window.location.pathname.includes('/website-builder')) {
+                                        nextStep(state.step);
+                                    }
                                 }
 
                                 // Restore onboardingState
@@ -4442,10 +4460,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             domain_choice: 'subdomain'
                         };
 
-                        function setBusinessType(type) {
+                        function setBusinessType(type, advance = true) {
                             onboardingState.business_type = type;
                             saveWizardState();
-                            nextStep(3);
+                            if (advance) {
+                                nextStep(3);
+                            }
                         }
 
                         function setPaymentPref(pref) {
@@ -4536,8 +4556,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 document.querySelectorAll('#step-2 button.secondary').forEach(b => {
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
+                                const typeInput = document.querySelector('#step-2 input[type="text"]');
+                                if (typeInput && typeInput.value.trim().length >= 3) {
+                                    valid = true;
+                                    setBusinessType(typeInput.value.trim(), false); // Ensure custom input is saved
+                                }
                                 if (!valid) {
-                                    alert('Please select a business type');
+                                    alert('Please select or type a business type (at least 3 characters).');
                                     return false;
                                 }
                             }
@@ -4546,7 +4571,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let valid = false;
                                 inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
+                                    alert('Please give your business a name. It must be at least 3 characters long.');
                                     return false;
                                 }
                             }
@@ -4554,19 +4579,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
                                 const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
+                                    alert('Please enter a name for your first product or service.');
                                     return false;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
+                                    alert('Please enter a valid price, like 10.00 or 150.');
                                     return false;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
+                                const nameInput = document.querySelector('#step-7 input[type="text"]');
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!nameInput || nameInput.value.trim().length < 2) {
+                                    alert('Please enter your full name.');
+                                    return false;
+                                }
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
+                                    alert('We need a valid email address to create your account.');
                                     return false;
                                 }
                             }
