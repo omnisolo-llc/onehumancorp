@@ -217,6 +217,7 @@ rust_binary(
         "registry",
         "gpt_researcher",
         "local_provider",
+        "expert_team",
     ]
 ]
 
