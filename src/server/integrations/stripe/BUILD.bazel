@@ -4,6 +4,7 @@ filegroup(
         "client.rs",
         "mod.rs",
         "routing.rs",
+        "provider.rs",
     ],
     visibility = ["//src/server/integrations:__pkg__"],
 )

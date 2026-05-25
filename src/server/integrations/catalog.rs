@@ -82,7 +82,10 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
     catalog.push(easypost_provider.to_integration_provider());
 
-    let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
+
+    let stripe_provider = crate::integrations::stripe::provider::StripeProvider::new("dummy_token".to_string());
+    catalog.push(stripe_provider.to_integration_provider());
+let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 
     catalog
