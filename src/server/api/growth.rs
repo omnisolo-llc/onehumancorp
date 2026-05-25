@@ -84,6 +84,7 @@ where
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
+        .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
@@ -125,11 +126,14 @@ pub struct CreateTeamInviteRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GetTeamInvitesQuery {
+    pub cursor: Option<String>,
+    pub limit: Option<usize>,
     pub team_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesResponse {
+    pub next_cursor: Option<String>,
     pub invites: Vec<crate::services::growth::invites::TeamInvite>,
 }
 
@@ -326,8 +330,16 @@ async fn handle_get_team_invites(
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.get_team_invites(&query.team_id).await {
-        Ok(invites) => Ok(Json(TeamInvitesResponse { invites })),
+    let limit = query.limit.unwrap_or(20);
+    match tracker.get_team_invites(&query.team_id, query.cursor.clone(), limit as i64).await {
+        Ok(invites) => {
+            let next_cursor = if invites.len() == limit {
+                invites.last().map(|i| i.id.clone())
+            } else {
+                None
+            };
+            Ok(Json(TeamInvitesResponse { invites, next_cursor }))
+        },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -500,12 +512,15 @@ mod tests {
         // Call get handler directly
         let query = GetTeamInvitesQuery {
             team_id: "team-test-direct".to_string(),
+            cursor: None,
+            limit: Some(10),
         };
         let get_res = handle_get_team_invites(Extension(state.clone()), Query(query)).await;
         assert!(get_res.is_ok());
 
         let get_res_json = get_res.unwrap().0;
         assert!(!get_res_json.invites.is_empty());
+        assert_eq!(get_res_json.next_cursor, None);
 
         let mut found = false;
         let mut invite_id = String::new();
@@ -527,6 +542,8 @@ mod tests {
         // Call metrics handler directly
         let metrics_query = GetTeamInvitesQuery {
             team_id: "team-test-direct".to_string(),
+            cursor: None,
+            limit: None,
         };
         let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
         assert!(metrics_res.is_ok());
@@ -704,5 +721,17 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+}
+
+async fn handle_aggregated_team_invites_metrics(
+    Extension(state): Extension<GrowthState>,
+) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let tracker = crate::services::growth::invites::InviteTracker::new(repo);
+
+    match tracker.get_total_invites_count().await {
+        Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
