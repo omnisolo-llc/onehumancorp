@@ -2128,7 +2128,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
             let auditor = hub_clone.get_cost_auditor();
             if true {
-                auditor.record_event(crate::services::billing::auditor::AuditEvent::LlmCall { model: "chat-agent".to_string(), tokens: 10 }); // Task 4: Infrastructure Cost Metering
+                auditor.record_event(crate::services::billing::auditor::AuditEvent { agent_id: "chat-agent".to_string(), tenant_id: tenant_id.to_string(), input_tokens: 10, output_tokens: 10, cached_input_tokens: 0, local_embedding_tokens: 0 }); // Task 4: Infrastructure Cost Metering
             }
 
             // Task 1: LLM Token Efficiency
