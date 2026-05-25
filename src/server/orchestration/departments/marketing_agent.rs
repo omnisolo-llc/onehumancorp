@@ -19,11 +19,38 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec![
+            "tenant.insight.trending".to_string(),
+            "tenant.product.added".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "tenant.product.added" {
+            let product_name = event.payload.get("draft_product")
+                .and_then(|p| p.get("name"))
+                .and_then(|n| n.as_str())
+                .unwrap_or("New Product");
+
+            let action_description = format!("[The Promoter] Drafted social media launch post for {}", product_name);
+
+            let action_payload = serde_json::json!({
+                "persona": "The Promoter",
+                "product_name": product_name,
+                "draft_post": format!("Check out our amazing new {}! Now available.", product_name),
+                "platforms": ["Instagram", "Facebook"]
+            });
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                action_description,
+                event.tenant_id.clone(),
+                risk,
+                action_payload,
+            ).await.map(|_| ());
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,

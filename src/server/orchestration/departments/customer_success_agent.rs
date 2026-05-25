@@ -52,6 +52,7 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "tenant.message.received" {
             let message = event.payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
+            let channel = event.payload.get("channel").and_then(|v| v.as_str()).unwrap_or("unknown");
 
             // Dummy query embedding for simulation
             let query_embedding = vec![0.5; 1536];
@@ -70,12 +71,14 @@ impl Department for CustomerSuccessAgent {
             };
 
             let description = if risk == ActionRisk::AutoExecute {
-                format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
+                format!("[The Ambassador] Auto-replied via {}: '{}' with '{}'", channel, message, generated_response)
             } else {
-                format!("Drafted reply for message: '{}'", message)
+                format!("[The Ambassador] Drafted reply via {} for message: '{}'", channel, message)
             };
 
             let action_payload = serde_json::json!({
+                "persona": "The Ambassador",
+                "channel": channel,
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
