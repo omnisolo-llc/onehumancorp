@@ -36,7 +36,7 @@ pub struct BookingRecord {
     pub id: String,
     pub tenant_id: String,
     pub customer_id: String,
-    pub product_id: String,
+    pub order_id: String,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub status: String,
@@ -161,7 +161,7 @@ impl BookingService {
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
+        let rows = sqlx::query("SELECT id, tenant_id, customer_id, order_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
@@ -172,7 +172,7 @@ impl BookingService {
             id: row.get("id"),
             tenant_id: row.get("tenant_id"),
             customer_id: row.get("customer_id"),
-            product_id: row.get("product_id"),
+            order_id: row.get("order_id"),
             start_time: row.get("start_time"),
             end_time: row.get("end_time"),
             status: row.get("status"),
@@ -187,13 +187,13 @@ impl BookingService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
+            "INSERT INTO bookings (id, tenant_id, customer_id, order_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)"
         )
         .bind(&booking.id)
         .bind(&booking.tenant_id)
         .bind(&booking.customer_id)
-        .bind(&booking.product_id)
+        .bind(&booking.order_id)
         .bind(booking.start_time)
         .bind(booking.end_time)
         .bind(&booking.status)

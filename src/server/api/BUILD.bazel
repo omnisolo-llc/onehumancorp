@@ -9,6 +9,7 @@ filegroup(
         "health.rs",
         "mesh_handler.rs",
         "mod.rs",
+        "booking.rs",
         "telemetry.rs",
         "//src/server/api/agents:srcs",
         "//src/server/api/onboarding:srcs",
