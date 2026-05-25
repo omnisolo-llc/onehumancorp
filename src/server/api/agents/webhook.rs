@@ -40,16 +40,27 @@ async fn handle_webhook(
 ) -> impl IntoResponse {
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
+        // Trigger SMS notification for new orders
+        tokio::spawn(async move {
+            let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+        });
+
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: payload.tenant_id.clone(),
-            event_type: "tenant.quote.accepted".to_string(),
+            event_type: "tenant.order.created".to_string(),
             payload: serde_json::json!({"source": payload.source, "message": payload.message}),
         };
 
         match orchestrator.dispatch_event(event).await {
             Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
-            Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+            Err(e) => {
+                if e.contains("AI Budget exhausted") {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                } else {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                }
+            }
         }
     }
 
@@ -109,6 +120,12 @@ async fn handle_webhook(
         }),
     ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        Err(e) => {
+            if e.contains("AI Budget exhausted") {
+                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+            } else {
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+            }
+        }
     }
 }

@@ -53,12 +53,12 @@ SET username = EXCLUDED.username,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, payload, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', '{"feature_type": "ambassador_reply", "original_message": "Do you have vegan options for birthday cakes?", "generated_response": "Yes, we have several vegan options for birthday cakes. We would love to help you plan your special day!"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
-('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', '{"feature_type": "social_calendar"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', '{"feature_type": "abandoned_cart"}'::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;

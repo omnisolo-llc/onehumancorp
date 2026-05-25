@@ -286,16 +286,27 @@ impl HarnessBackend for LocalBackend {
         if self.is_bwrap_available() {
             let args = self.get_bwrap_args(command, policy);
 
+            ::server_telemetry::record_bubblewrap_spawn("local_agent", "local_task");
+            let start_time = std::time::Instant::now();
+
             let output = tokio::process::Command::new("bwrap")
                 .args(&args)
                 .output()
                 .await
                 .map_err(|e| format!("failed to execute bwrap: {}", e))?;
 
+            let latency = start_time.elapsed().as_secs_f64() * 1000.0;
+            ::server_telemetry::record_bubblewrap_execution_latency("local_agent", "local_task", latency);
+
+            let exit_code = output.status.code().unwrap_or(-1);
+            if exit_code != 0 {
+                ::server_telemetry::record_bubblewrap_violation("local_agent", "local_task", &format!("exit code: {}", exit_code));
+            }
+
             Ok(ResultModel {
                 stdout: String::from_utf8_lossy(&output.stdout).to_string(),
                 stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-                exit_code: output.status.code().unwrap_or(-1),
+                exit_code,
             })
         } else {
             // Fallback for non-Linux or systems without bwrap
