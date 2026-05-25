@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 
 use opentelemetry::metrics::Histogram;
 
-use opentelemetry::metrics::{Counter, UpDownCounter};
+use opentelemetry::metrics::{Counter, UpDownCounter, Gauge};
 
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
@@ -21,6 +21,7 @@ static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
 static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
 static MEETING_EVENT: OnceLock<Counter<u64>> = OnceLock::new();
 static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
+static TOKEN_BURN_RATE_FORECAST_GAUGE: OnceLock<Gauge<f64>> = OnceLock::new();
 
 pub fn get_token_usage_counter() -> &'static Counter<u64> {
     TOKEN_USAGE.get_or_init(|| {
@@ -534,19 +535,38 @@ pub async fn record_queue_length(
     .await
 }
 
+pub fn get_token_burn_rate_forecast_gauge() -> &'static Gauge<f64> {
+    TOKEN_BURN_RATE_FORECAST_GAUGE.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter
+            .f64_gauge("ohc_token_burn_rate_forecast")
+            .with_description("Token burn rate forecast per tenant")
+            .build()
+    })
+}
+
 pub async fn record_token_usage_forecast(
     pool: &PgPool,
     org_id: &str,
     forecast: f32,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
+    let result = buffer_metric(
         pool,
         "ohc_token_burn_rate_forecast",
         "gauge",
         forecast,
         serde_json::json!({ "organization_id": org_id }),
     )
-    .await
+    .await;
+
+    if result.is_ok() {
+        get_token_burn_rate_forecast_gauge().record(
+            forecast as f64,
+            &[opentelemetry::KeyValue::new("organization_id", org_id.to_string())],
+        );
+    }
+
+    result
 }
 
 pub async fn record_task_resolution_efficiency(
@@ -806,6 +826,13 @@ mod tests {
         // Calling it again should return the same instance
         let gauge2 = get_queue_length_gauge();
         gauge2.add(1, &[]);
+    }
+
+    #[test]
+    fn test_get_token_burn_rate_forecast_gauge() {
+        let gauge = get_token_burn_rate_forecast_gauge();
+        gauge.record(15000.0, &[opentelemetry::KeyValue::new("organization_id", "org_test")]);
+        // Just testing initialization and recording doesn't panic.
     }
 
     #[test]
