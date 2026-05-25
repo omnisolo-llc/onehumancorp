@@ -249,8 +249,8 @@ export default function OnboardingWizard() {
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5));
-          backdrop-filter: blur(40px) saturate(250%);
-          -webkit-backdrop-filter: blur(40px) saturate(250%);
+          backdrop-filter: blur(30px) saturate(210%);
+          -webkit-backdrop-filter: blur(30px) saturate(210%);
           border: 1px solid rgba(255, 255, 255, 0.6);
           box-shadow:
             0 8px 32px 0 rgba(31, 38, 135, 0.1),
@@ -259,8 +259,8 @@ export default function OnboardingWizard() {
         @media (prefers-color-scheme: dark) {
           .glass-container {
             background: linear-gradient(135deg, rgba(35, 35, 40, 0.8), rgba(22, 22, 26, 0.7));
-            backdrop-filter: blur(40px) saturate(250%);
-            -webkit-backdrop-filter: blur(40px) saturate(250%);
+            backdrop-filter: blur(30px) saturate(210%);
+            -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.15);
             box-shadow:
               0 8px 32px 0 rgba(0, 0, 0, 0.4),
