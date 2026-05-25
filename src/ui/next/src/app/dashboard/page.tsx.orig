@@ -4,10 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
-import { useRouter } from 'next/navigation';
-
 export default function Dashboard() {
-  const router = useRouter();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
@@ -243,10 +240,8 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
-
-{/* Business Analytics Widget with Soft Paywall */}
-      <div className="card glass p-6 bg-white rounded-xl shadow-sm border border-gray-200" style={{ position: 'relative', overflow: 'hidden' }}>
+      {/* Business Analytics Widget with Soft Paywall */}
+      <div className="card glass mt-6 mx-6 p-6 bg-white rounded-xl shadow-sm border border-gray-200" style={{ position: 'relative', overflow: 'hidden' }}>
           <h3 className="text-xl font-bold font-outfit mb-4">Business Analytics</h3>
           <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
@@ -269,14 +264,14 @@ export default function Dashboard() {
                   <p className="font-semibold text-gray-900 text-center max-w-[80%] mb-3">Unlock predictive analytics & AI recommendations to grow faster.</p>
                   <button
                       className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-lg"
-                      onClick={() => { if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { router.push('/pricing'); } }}>
+                      onClick={() => { if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { window.location.href='/pricing'; } }}>
                       Upgrade to Pro
                   </button>
               </div>
           </div>
       </div>
 
-
+      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (

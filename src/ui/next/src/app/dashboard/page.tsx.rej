@@ -1,0 +1,72 @@
+--- page.tsx
++++ page.tsx
+@@ -242,39 +242,39 @@
+          </div>
+       </header>
+
+-      {/* Business Analytics Widget with Soft Paywall */}
+-      <div className="card glass mt-6 mx-6 p-6 bg-white rounded-xl shadow-sm border border-gray-200" style={{ position: 'relative', overflow: 'hidden' }}>
+-          <h3 className="text-xl font-bold font-outfit mb-4">Business Analytics</h3>
+-          <div className="grid grid-cols-2 gap-4 mb-6">
+-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+-                  <p className="text-sm font-medium text-gray-500">Total Sales</p>
+-                  <p className="text-2xl font-bold text-gray-900">${todaysSales}</p>
+-              </div>
+-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+-                  <p className="text-sm font-medium text-gray-500">Visitors</p>
+-                  <p className="text-2xl font-bold text-gray-900">342</p>
+-              </div>
+-          </div>
+-          <div className="relative p-6 rounded-xl border border-black/5 bg-gradient-to-br from-blue-50/80 to-white/80">
+-              <h4 className="flex items-center gap-2 mb-3 font-outfit text-lg">
+-                  <span className="text-xl">✨</span> Advanced AI Insights
+-              </h4>
+-              <div className="blur-sm opacity-70 pointer-events-none select-none">
+-                  <p className="text-sm text-gray-900 mb-2">Customer retention dropped by 12% this week. We recommend launching a re-engagement email campaign.</p>
+-              </div>
+-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
+-                  <p className="font-semibold text-gray-900 text-center max-w-[80%] mb-3">Unlock predictive analytics & AI recommendations to grow faster.</p>
+-                  <button
+-                      className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-lg"
+-                      onClick={() => { if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { window.location.href='/pricing'; } }}>
+-                      Upgrade to Pro
+-                  </button>
+-              </div>
+-          </div>
+-      </div>
+-
+       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
++         {/* Business Analytics Widget with Soft Paywall */}
++         <div className="card glass p-6 bg-white rounded-xl shadow-sm border border-gray-200" style={{ position: 'relative', overflow: 'hidden' }}>
++             <h3 className="text-xl font-bold font-outfit mb-4">Business Analytics</h3>
++             <div className="grid grid-cols-2 gap-4 mb-6">
++                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
++                     <p className="text-sm font-medium text-gray-500">Total Sales</p>
++                     <p className="text-2xl font-bold text-gray-900">${todaysSales}</p>
++                 </div>
++                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
++                     <p className="text-sm font-medium text-gray-500">Visitors</p>
++                     <p className="text-2xl font-bold text-gray-900">342</p>
++                 </div>
++             </div>
++             <div className="relative p-6 rounded-xl border border-black/5 bg-gradient-to-br from-blue-50/80 to-white/80">
++                 <h4 className="flex items-center gap-2 mb-3 font-outfit text-lg">
++                     <span className="text-xl">✨</span> Advanced AI Insights
++                 </h4>
++                 <div className="blur-sm opacity-70 pointer-events-none select-none">
++                     <p className="text-sm text-gray-900 mb-2">Customer retention dropped by 12% this week. We recommend launching a re-engagement email campaign.</p>
++                 </div>
++                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/50 backdrop-blur-[2px] rounded-xl">
++                     <p className="font-semibold text-gray-900 text-center max-w-[80%] mb-3">Unlock predictive analytics & AI recommendations to grow faster.</p>
++                     <button
++                         className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-lg"
++                         onClick={() => { if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { require('next/navigation').useRouter().push('/pricing'); } }}>
++                         Upgrade to Pro
++                     </button>
++                 </div>
++             </div>
++         </div>
++
+          {/* Top Row: Welcome & Viral Milestone Banner */}
+          <section className="grid grid-cols-1 gap-6">
