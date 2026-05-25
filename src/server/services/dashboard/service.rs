@@ -72,12 +72,15 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(hub2.get_meetings())
             }),
             tokio::task::spawn_blocking(move || {
+                if mobile_optimized {
+                    return Ok::<_, String>(None);
+                }
                 let cost_auditor = hub3.get_cost_auditor();
-                Ok::<_, String>((
+                Ok::<_, String>(Some((
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
-                ))
+                )))
             }),
             tokio::spawn(async move {
                 let org_id = org_id1;
@@ -269,10 +272,9 @@ impl DashboardService for MyDashboardService {
         let _meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+        let cost_data_opt = cost_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -393,32 +395,34 @@ impl DashboardService for MyDashboardService {
                 }
             }
 
-            let mut optimized_total_tokens = total_tokens;
-            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
-                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
-                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
-            }
+            if let Some((total_cost, total_tokens, _agent_costs_data)) = cost_data_opt {
+                let mut optimized_total_tokens = total_tokens;
+                if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
+                    let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
+                    optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
+                }
 
-            let mut agent_summaries = Vec::new();
-            for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
-                agent_summaries.push(::server_ohc::billing::AgentCostSummary {
-                    agent_id,
-                    cost_usd,
-                    token_used: tokens_used,
-                    roi,
-                    efficiency,
-                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
-                    storage_usage_bytes: _storage,
+                let mut agent_summaries = Vec::new();
+                for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
+                    agent_summaries.push(::server_ohc::billing::AgentCostSummary {
+                        agent_id,
+                        cost_usd,
+                        token_used: tokens_used,
+                        roi,
+                        efficiency,
+                        pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                        storage_usage_bytes: _storage,
+                    });
+                }
+
+                final_cost_summary = Some(::server_ohc::billing::CostSummary {
+                    organization_id: req.organization_id.clone(),
+                    total_cost_usd: total_cost,
+                    total_tokens: optimized_total_tokens,
+                    projected_monthly_usd: 0.0,
+                    agents: agent_summaries,
                 });
             }
-
-            final_cost_summary = Some(::server_ohc::billing::CostSummary {
-                organization_id: req.organization_id.clone(),
-                total_cost_usd: total_cost,
-                total_tokens: optimized_total_tokens,
-                projected_monthly_usd: 0.0,
-                agents: agent_summaries,
-            });
 
             final_agents_payload = _filtered_agents
                 .into_iter()
