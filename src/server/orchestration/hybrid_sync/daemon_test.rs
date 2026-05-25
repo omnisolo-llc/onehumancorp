@@ -75,8 +75,32 @@ mod tests {
             .await
             .unwrap();
 
-        let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        let mut server = mockito::Server::new_async().await;
+
+        let mock = server.mock("POST", "/api/sync/missions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"success": true}"#)
+            .match_body(mockito::Matcher::PartialJson(json!({
+                "missions": [{
+                    "memory_id": "test_mem_1",
+                    "payload": {
+                        "source": "hybrid_sync",
+                        "memory_id": "test_mem_1",
+                        "context": {
+                            "email": "[REDACTED]",
+                            "safe_data": "hello world"
+                        }
+                    }
+                }]
+            })))
+            .create_async()
+            .await;
+
+        let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone(), server.url());
         daemon.sync_step().await.unwrap();
+
+        mock.assert_async().await;
 
         let row = sqlx::query("SELECT sync_status FROM swarm_truth_embeddings WHERE memory_id = 'test_mem_1'")
             .fetch_one(&sqlite_pool)
@@ -85,26 +109,6 @@ mod tests {
         use sqlx::Row;
         let status: String = row.get("sync_status");
         assert_eq!(status, "SYNCED");
-
-        // Let's also check the pg queue redaction.
-        let queue_row = sqlx::query("SELECT payload FROM sub_agent_queue WHERE payload LIKE '%test_mem_1%'")
-            .fetch_one(&pg_pool)
-            .await
-            .unwrap();
-        let payload_str: String = queue_row.get("payload");
-        assert!(payload_str.contains("[REDACTED]"));
-        assert!(!payload_str.contains("test@example.com"));
-        assert!(payload_str.contains("safe_data"));
-
-        // Let's also check the agent_missions table redaction.
-        let mission_row = sqlx::query("SELECT payload FROM agent_missions WHERE payload LIKE '%test_mem_1%'")
-            .fetch_one(&pg_pool)
-            .await
-            .unwrap();
-        let mission_payload_str: String = mission_row.get("payload");
-        assert!(mission_payload_str.contains("[REDACTED]"));
-        assert!(!mission_payload_str.contains("test@example.com"));
-        assert!(mission_payload_str.contains("safe_data"));
     }
 }
 
@@ -159,7 +163,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     // We also need to reload config somehow... or actually our change reads ::server_config::get().
     // We can't really reload standard OnceLock easily so we'll just check if it blocks.
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone(), "http://localhost:8080".to_string());
     daemon.sync_telemetry_step().await.unwrap();
 
     // Check that it's still pending

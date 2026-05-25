@@ -1417,7 +1417,7 @@ impl HubService for MyHubService {
         tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
-        let msg = Message {
+        let msg = crate::msgbus::Message {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
@@ -2022,6 +2022,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+        .nest("/api/sync", api::sync_handler::router(db.pool.clone(), std::sync::Arc::new(crate::auth::Store::new())))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
@@ -2135,6 +2136,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         telemetry_daemon.start();
     }
 
+    if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+        if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+            let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
+            let daemon = crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), db.pool.clone(), cloud_url);
+            tokio::spawn(async move {
+                daemon.run().await;
+            });
+        }
+    }
+
     if is_cloud {
         let cloud_url = std::env::var("OHC_CLOUD_URL").unwrap_or_else(|_| "https://api.onehumancorp.com".to_string());
         let power_sync_orchestrator = Arc::new(crate::services::sync::power_sync_orchestrator::PowerSyncOrchestrator::new(db.clone(), cloud_url.clone()));
@@ -2183,7 +2194,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                         }
 
                         // Simulate task execution by publishing a message
-                        let msg = Message {
+                        let msg = crate::msgbus::Message {
                             id: format!("{}-{}", task.id, Utc::now().timestamp()),
                             from_agent: "system-scheduler".to_string(),
                             to_agent: task.agent_id.clone(),
