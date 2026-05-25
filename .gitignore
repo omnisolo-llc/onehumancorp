@@ -128,3 +128,4 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+test-results/
