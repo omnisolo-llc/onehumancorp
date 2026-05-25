@@ -25,6 +25,7 @@ pub struct IntegrationsRegistry {
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
+    buffer_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::buffer::client::BufferClient>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
@@ -227,6 +228,10 @@ impl IntegrationsRegistry {
         if integration_id == "alipay" {
             let mut clients = self.alipay_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "buffer" {
+            let mut clients = self.buffer_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::buffer::client::BufferClient::new(creds.api_token.clone())));
         }
         if integration_id == "mercadopago" {
             let mut clients = self.mercadopago_clients.write().unwrap();
