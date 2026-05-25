@@ -1909,7 +1909,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
-                        .route("/api/v1/customers/:id/360", axum::routing::get(api::customers_360::customer_360_handler).layer(
+                        .route("/api/v1/customers/{id}/360", axum::routing::get(api::customers_360::customer_360_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
                     use axum::response::IntoResponse;
