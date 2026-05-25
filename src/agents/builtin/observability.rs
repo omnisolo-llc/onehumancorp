@@ -87,3 +87,9 @@ impl ObservabilityProvider for MockObservabilityProvider {
         calls.push(data);
     }
 }
+
+impl std::fmt::Debug for MockObservabilityProvider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MockObservabilityProvider").finish()
+    }
+}

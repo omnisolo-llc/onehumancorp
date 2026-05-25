@@ -26,7 +26,7 @@ pub enum AgentEvent {
 }
 
 /// Configuration for a single agent run.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AgentRunConfig {
     pub agent_id: String,
     /// Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
@@ -80,7 +80,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
-    #[serde(skip)]
+
+
     pub observability_provider: Option<Arc<dyn crate::observability::ObservabilityProvider>>,
 }
 
@@ -6288,4 +6289,14 @@ async fn test_observability_provider() {
     assert_eq!(calls.len(), 1, "Expected exactly 1 LLM call to be logged");
     assert_eq!(calls[0].usage.input_tokens, 10);
     assert_eq!(calls[0].usage.output_tokens, 5);
+}
+
+impl std::fmt::Debug for AgentRunConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentRunConfig")
+            .field("agent_id", &self.agent_id)
+            .field("max_retries", &self.max_retries)
+            .field("model", &self.model)
+            .finish_non_exhaustive()
+    }
 }
