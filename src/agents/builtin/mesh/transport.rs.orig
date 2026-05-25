@@ -1713,7 +1713,8 @@ Content-Length: 0
         cancel();
     }
 
-    async fn _test_sqlite_transport_coverage() {
+    #[tokio::test]
+    async fn test_sqlite_transport_coverage() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .connect("sqlite::memory:")
             .await
@@ -1749,7 +1750,8 @@ Content-Length: 0
         assert!(result.is_ok(), "Did not receive sqlite_payload in time");
     }
 
-    async fn _test_pg_transport_coverage() {
+    #[tokio::test]
+    async fn test_pg_transport_coverage() {
         let db_url = "postgres://postgres:postgres@localhost:5432/test";
 
         let pool_res = sqlx::postgres::PgPoolOptions::new()
@@ -1801,7 +1803,8 @@ Content-Length: 0
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
     }
 
-    async fn _test_pg_transport_methods() {
+    #[tokio::test]
+    async fn test_pg_transport_methods() {
         let db_url = "postgres://postgres:postgres@localhost:5432/test";
         let pool_res = sqlx::postgres::PgPoolOptions::new()
             .connect(&db_url)
