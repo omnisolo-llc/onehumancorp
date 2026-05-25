@@ -112,6 +112,27 @@ jobs:
             --skip_incompatible_explicit_targets \
             < build-targets.txt
 
+      - name: Install Linux Tauri desktop dependencies
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            pkg-config
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
+
+      - name: Build Tauri desktop Bazel target
+        if: matrix.name == 'linux-x86_64'
+        run: |
+          bazelisk build \
+            //src/ui/tauri:app \
+            --config=linux_x86_64 \
+            --//src/ui/tauri:build_tauri=true
+
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
         run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
