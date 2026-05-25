@@ -78,7 +78,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
-    pub permission_architecture: crate::types::PermissionArchitecture,
+    pub human_in_loop_spectrum: crate::types::HumanInLoopSpectrum,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -134,7 +134,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
-            permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            human_in_loop_spectrum: crate::types::HumanInLoopSpectrum::FullyAutonomous,
             manually_approved_tool_calls: vec![],
         }
     }
@@ -436,16 +436,26 @@ impl Agent {
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
                     let r = match gating_res {
                         Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                            Ok(res) => res,
-                            Err(e) => format!("Error: {:?}", e),
+                            Ok(res) => Ok(res),
+                            Err(e) => Err(ToolError::Unexpected(format!("{:?}", e))),
                         },
-                        Err(e) => format!("Error: {:?}", e),
+                        Err(e) => Err(e),
                     };
                     (tc_clone, r)
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, r_res) in ro_results {
+                let r = match r_res {
+                    Ok(r) => r,
+                    Err(ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(ToolError::UserFixable(msg).into());
+                    }
+                    Err(e) => format!("Error: {:?}", e),
+                };
+
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
                 on_event(AgentEvent::ToolCall {
@@ -473,7 +483,13 @@ impl Agent {
                         Ok(res) => res,
                         Err(e) => format!("Error: {:?}", e),
                     },
-                    Err(e) => format!("Error: {:?}", e),
+                    Err(e) => {
+                        if let ToolError::UserFixable(msg) = &e {
+                            on_event(AgentEvent::UserInterventionRequired { error: format!("USER_FIXABLE: {}", msg) });
+                            return Err(ToolError::UserFixable(msg.to_string()).into());
+                        }
+                        format!("Error: {:?}", e)
+                    }
                 };
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
@@ -2166,6 +2182,11 @@ impl Agent {
                             error: err,
                         };
                     }
+                    Err(ToolError::UserFixable(msg)) => {
+                        let err = format!("USER_FIXABLE: {}", msg);
+                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                        return Err(ToolError::UserFixable(msg).into());
+                    }
                     Err(ToolError::LlmRecoverable(msg)) => {
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
@@ -2267,13 +2288,16 @@ impl Agent {
             if !mutating_calls.is_empty() {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
+
             for tc in &mutating_calls {
-                if final_cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive {
-                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
-                        on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
-                        return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
+                // PairProgramming mode check per-tool
+                if final_cfg.human_in_loop_spectrum == crate::types::HumanInLoopSpectrum::PairProgramming {
+                    if !final_cfg.manually_approved_tool_calls.contains(&tc.id) && !final_cfg.approved_tool_calls.contains(&tc.id) {
+                        on_event(AgentEvent::UserInterventionRequired { error: "[PairProgramming] Yielding control to human partner for review.".to_string() });
+                        return Err(ToolError::UserFixable("[PairProgramming] Yielding control to human partner for review.".to_string()).into());
                     }
                 }
+
                 // OpenAI Mechanic: Tool Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
@@ -2288,7 +2312,7 @@ impl Agent {
                         ToolError::UserFixable(msg) => {
                             let err = format!("USER_FIXABLE: {}", msg);
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                            return Err(err.into());
+                            return Err(ToolError::UserFixable(msg).into());
                         }
                         ToolError::Fatal(msg) => {
                             let err = format!("Fatal tool error: {}", msg);
@@ -3557,6 +3581,7 @@ mod tests {
         // Test 1: Untrusted project rejects mutating tools
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = false;
+        cfg.human_in_loop_spectrum = crate::types::HumanInLoopSpectrum::ApproveMutating;
 
         let mut events = vec![];
         let mut on_event = |e| { events.push(e); };
@@ -3643,6 +3668,7 @@ mod tests {
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
         cfg.high_risk_tools = vec!["high_risk_tool".to_string()];
+        cfg.human_in_loop_spectrum = crate::types::HumanInLoopSpectrum::ApproveMutating;
         // Not in approved_tool_calls
 
         let mut events = vec![];

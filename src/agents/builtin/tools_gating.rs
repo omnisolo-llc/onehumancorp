@@ -18,10 +18,16 @@ impl ToolGater {
                 return Err(ToolError::Fatal(format!("Tool '{}' is not in the allowed list.", tc.name)));
             }
         }
-        // Stage 3: Explicit user confirmation for high-risk operations
-        // If a tool is in high_risk_tools, or if PermissionArchitecture is Restrictive and the tool is mutating.
+        // Stage 3: Explicit user confirmation for high-risk operations or under specific HumanInLoopSpectrums
         let is_high_risk = cfg.high_risk_tools.contains(&tc.name);
-        let requires_approval = is_high_risk || (!is_read_only && cfg.permission_architecture == ohc_builtin_agent_core::types::PermissionArchitecture::Restrictive);
+
+        let requires_approval = match cfg.human_in_loop_spectrum {
+            ohc_builtin_agent_core::types::HumanInLoopSpectrum::FullyAutonomous => is_high_risk, // Security fix: still gate high-risk tools!
+            ohc_builtin_agent_core::types::HumanInLoopSpectrum::ApproveMutating => is_high_risk || !is_read_only,
+            ohc_builtin_agent_core::types::HumanInLoopSpectrum::ApproveHighRisk => is_high_risk,
+            ohc_builtin_agent_core::types::HumanInLoopSpectrum::ApproveAll => true,
+            ohc_builtin_agent_core::types::HumanInLoopSpectrum::PairProgramming => true,
+        };
 
         if requires_approval {
             let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id);
@@ -29,7 +35,7 @@ impl ToolGater {
                 if is_high_risk {
                     return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
                 } else {
-                    return Err(ToolError::UserFixable(format!("Mutating tool '{}' requires explicit user confirmation under Restrictive permission architecture. Approve this tool call to proceed.", tc.name)));
+                    return Err(ToolError::UserFixable(format!("Tool '{}' requires explicit user confirmation under the current HumanInLoopSpectrum. Approve this tool call to proceed.", tc.name)));
                 }
             }
         }
@@ -43,7 +49,7 @@ impl ToolGater {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::PermissionArchitecture;
+    use ohc_builtin_agent_core::types::HumanInLoopSpectrum;
 
     fn create_tool_call(id: &str, name: &str) -> ToolCall {
         ToolCall {
@@ -121,32 +127,32 @@ mod tests {
     }
 
     #[test]
-    fn test_permission_architecture() {
+    fn test_human_in_loop_spectrum() {
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
-        cfg.permission_architecture = PermissionArchitecture::Restrictive;
+        cfg.human_in_loop_spectrum = HumanInLoopSpectrum::ApproveMutating;
 
         let tc_mutating = create_tool_call("1", "mutating_tool");
         let tc_readonly = create_tool_call("2", "readonly_tool");
 
-        // Restrictive + Read-only -> OK
+        // ApproveMutating + Read-only -> OK
         assert!(ToolGater::check_gating(&tc_readonly, true, &cfg).is_ok());
 
-        // Restrictive + Mutating -> UserFixable
+        // ApproveMutating + Mutating -> UserFixable
         let res = ToolGater::check_gating(&tc_mutating, false, &cfg);
         assert!(matches!(res, Err(ToolError::UserFixable(_))));
         if let Err(ToolError::UserFixable(msg)) = res {
-            assert!(msg.contains("Restrictive permission architecture"));
+            assert!(msg.contains("requires explicit user confirmation"));
         }
 
-        // Restrictive + Mutating (Approved) -> OK
+        // ApproveMutating + Mutating (Approved) -> OK
         cfg.approved_tool_calls.push("1".to_string());
         assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
 
-        // Switch to Permissive -> Mutating tool OK without approval
+        // Switch to FullyAutonomous -> Mutating tool OK without approval
         let mut cfg_permissive = AgentRunConfig::default();
         cfg_permissive.project_trusted = true;
-        cfg_permissive.permission_architecture = PermissionArchitecture::Permissive;
+        cfg_permissive.human_in_loop_spectrum = HumanInLoopSpectrum::FullyAutonomous;
 
         let tc_mutating_new = create_tool_call("3", "another_mutating_tool");
         assert!(ToolGater::check_gating(&tc_mutating_new, false, &cfg_permissive).is_ok());

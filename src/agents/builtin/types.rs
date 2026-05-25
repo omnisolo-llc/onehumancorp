@@ -162,11 +162,17 @@ impl std::fmt::Display for ToolError {
 
 impl std::error::Error for ToolError {}
 
-/// Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
+/// Human-in-loop as spectrum -> not binary autonomy vs control
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PermissionArchitecture {
-    /// Auto-approve all tools
-    Permissive,
+pub enum HumanInLoopSpectrum {
+    /// Full Autonomy: auto-approve all tools (except explicitly high-risk ones)
+    FullyAutonomous,
     /// Require explicit user approval for mutating tools
-    Restrictive,
+    ApproveMutating,
+    /// Require explicit user approval for high-risk tools only
+    ApproveHighRisk,
+    /// Require explicit user approval for ALL tools
+    ApproveAll,
+    /// Pair Programming: human and agent take turns, yields control frequently
+    PairProgramming,
 }
