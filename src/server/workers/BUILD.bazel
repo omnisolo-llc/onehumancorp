@@ -7,8 +7,6 @@ filegroup(
         "maintenance.rs",
         "memory.rs",
         "mod.rs",
-        "token_forecast.rs",
-
     ],
     visibility = ["//src/server:__pkg__"],
 )
