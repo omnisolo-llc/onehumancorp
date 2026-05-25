@@ -681,6 +681,29 @@
       ],
       "title": "Token Budget Alerts (last 1h)",
       "type": "timeseries"
+    },
+    {
+      "type": "timeseries",
+      "title": "Task Claim Contention Rate",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_task_claim_contention_total[5m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "transparent": true
     }
   ],
   "schemaVersion": 38,

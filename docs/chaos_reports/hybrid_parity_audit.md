@@ -6,7 +6,23 @@ body {
 h1, h2 {
     color: white;
 }
+.glass-container {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 12px;
+    padding: 24px;
+}
+@media (prefers-color-scheme: dark) {
+    .glass-container {
+        background: rgba(22, 22, 26, 0.7);
+        backdrop-filter: blur(30px) saturate(210%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+}
 </style>
+<div class="glass-container">
+
 
 # Hybrid Parity Audit & Chaos Resilience Report
 
@@ -31,3 +47,5 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 ### Grafana Visualizations
 ![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
 ![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
+
+</div>
