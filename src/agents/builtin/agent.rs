@@ -45,6 +45,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
+    pub enable_sona_neural_patterns: bool,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
     pub observation_masking_size_limit: usize,
@@ -101,6 +102,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
+            enable_sona_neural_patterns: false,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
             observation_masking_size_limit: 512,
@@ -318,9 +320,15 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
+    pub sona_memory: Option<Arc<dyn crate::ruflo::SonaMemory>>,
 }
 
 impl Agent {
+    pub fn with_sona_memory(mut self, memory: Arc<dyn crate::ruflo::SonaMemory>) -> Self {
+        self.sona_memory = Some(memory);
+        self
+    }
+
     pub fn add_tool(&mut self, tool: Tool) {
         self.tools.push(tool);
     }
@@ -332,6 +340,7 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
+            sona_memory: None,
         }
     }
 
@@ -1398,6 +1407,7 @@ impl Agent {
             memory_store: self.memory_store.clone(),
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
+            sona_memory: self.sona_memory.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1484,13 +1494,29 @@ impl Agent {
 
         let session_tools = self_with_memory.tools.clone();
 
+
         let mut final_cfg = cfg.clone();
+
+        // Harness Mechanic: SONA Neural Patterns
+        let mut actual_task = initial_message.to_string();
+        if final_cfg.enable_sona_neural_patterns {
+            if let Some(memory) = &self_with_memory.sona_memory {
+                if let Ok(Some(pattern)) = memory.recall_pattern(initial_message).await {
+                    actual_task = format!(
+                        "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
+                        pattern.successful_trajectory, initial_message
+                    );
+                    // SONA hint applied
+                }
+            }
+        }
+
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
             if let Some(ref dir) = final_cfg.progressive_skills_dir {
                 let manager = crate::progressive_skills::ProgressiveSkillManager::new(std::path::PathBuf::from(dir));
-                match manager.get_relevant_skills(initial_message) {
+                match manager.get_relevant_skills(&actual_task) {
                     Ok(skills) => {
                         for skill in skills {
                             let skill_instr = format!("\n[Progressive Skill Loaded: {}]\n{}\n", skill.name, skill.instruction);
@@ -1535,7 +1561,7 @@ impl Agent {
             }
         }
         if final_cfg.enable_llmcompiler_plan_and_execute {
-            return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+            return self.run_plan_and_execute(&final_cfg, &actual_task, &session_tools, on_event).await;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
@@ -1562,7 +1588,7 @@ impl Agent {
 
         // OpenAI Mechanic: Input Guardrails
         if let Some(guard_cfg) = &final_cfg.guardrails {
-            if let Err(e) = guard_cfg.check_input(initial_message) {
+            if let Err(e) = guard_cfg.check_input(&actual_task) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
                 return Err(e.into());
             }
@@ -1602,7 +1628,7 @@ impl Agent {
         }
 
         if final_cfg.enable_langgraph_mechanic {
-            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+            return self_with_memory.run_langgraph(&final_cfg, &actual_task, session_tools, &mut messages, on_event).await;
         }
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
@@ -1639,9 +1665,9 @@ impl Agent {
         }
 
         if messages.is_empty() {
-            messages.push(Message::user(initial_message));
-        } else if !initial_message.is_empty() {
-            messages.push(Message::user(initial_message));
+            messages.push(Message::user(&actual_task));
+        } else if !actual_task.is_empty() {
+            messages.push(Message::user(&actual_task));
         }
         let mut budget_tracker = BudgetTracker::default();
         let mut global_turn_tokens = 0i32;
@@ -1660,7 +1686,7 @@ impl Agent {
         let mut rewind_attempts_remaining = final_cfg.max_rewind_attempts;
 
         if let Some(store) = &self_with_memory.memory_store {
-            match store.retrieve(initial_message, 5).await {
+            match store.retrieve(&actual_task, 5).await {
                 Ok(memories) => {
                     if !memories.is_empty() {
                         combined_system.push_str("\n\n[Long-Term Memory Context]\n");
@@ -2037,6 +2063,36 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
+
+                // Extract and store SONA pattern upon successful execution
+                if final_cfg.enable_sona_neural_patterns {
+                    if let Some(memory) = &self_with_memory.sona_memory {
+                        let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
+                        let trajectory_prompt = format!("Task: {}\nResult: {}\n", initial_message, last_assistant_content);
+                        let llm_clone = self_with_memory.llm.clone();
+                        let mem_clone = memory.clone();
+                        let initial_msg_clone = initial_message.to_string();
+
+                        let req = ohc_builtin_agent_core::types::ChatRequest {
+                            model: "default".to_string(),
+                            system: extract_instruction.to_string(),
+                            messages: vec![ohc_builtin_agent_core::types::Message::user(trajectory_prompt)],
+                            tools: vec![],
+                            max_tokens: 2000,
+                            temperature: 0.2,
+                        };
+                        tokio::spawn(async move {
+                            if let Ok(resp) = llm_clone.chat(req).await {
+                                let pattern = crate::ruflo::SonaPattern {
+                                    task_signature: initial_msg_clone,
+                                    successful_trajectory: resp.message.content,
+                                };
+                                let _ = mem_clone.store_pattern(pattern).await;
+                            }
+                        });
+                    }
+                }
+
                 return Ok(last_assistant_content);
             }
 
@@ -6212,4 +6268,51 @@ async fn test_stripe_retry_limit() {
     let lock = client.call_count.lock().await;
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
+
+
+    #[tokio::test]
+    async fn test_sona_neural_patterns_integration() {
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let memory = Arc::new(crate::ruflo::SonaMemoryStore::new());
+        // pre-seed memory
+        let pattern = crate::ruflo::SonaPattern {
+            task_signature: "do magic".to_string(),
+            successful_trajectory: "Step 1: Abra. Step 2: Cadabra.".to_string(),
+        };
+        let _ = memory.store_pattern(pattern).await;
+
+        let client = Arc::new(MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![
+                ChatResponse {
+                    message: crate::types::Message::assistant("Magic done."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                },
+                ChatResponse {
+                    message: crate::types::Message::assistant("Extracted trajectory: Step 1: Abra. Step 2: Cadabra."),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id2".to_string()),
+                }
+            ]),
+        });
+
+        let agent = Agent::new(client, vec![]).with_sona_memory(memory.clone());
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_sona_neural_patterns = true;
+
+        let result = agent.run(&cfg, "do magic", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Magic done.");
+
+        // SONA hint is injected into task implicitly without a dedicated event.
+
+        // Wait briefly for background store
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
 }
