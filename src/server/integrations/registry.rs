@@ -26,6 +26,7 @@ pub struct IntegrationsRegistry {
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
     pub razorpay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::razorpay::provider::RazorpayProvider>>>,
+    pub manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
@@ -63,6 +64,7 @@ impl IntegrationsRegistry {
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -258,6 +260,12 @@ impl IntegrationsRegistry {
             let mut clients = self.easypost_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
         }
+
+        if integration_id == "manychat" {
+            let mut clients = self.manychat_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
+        }
+
         if integration_id == "sendgrid" {
             let mut clients = self.sendgrid_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
