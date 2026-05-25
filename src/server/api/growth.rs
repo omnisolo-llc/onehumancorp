@@ -228,6 +228,11 @@ async fn handle_storefront_embed(
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="{safe_name} - Powered by OHC">
+    <meta property="og:description" content="Get {safe_name} for just {safe_price}. Launch your own business instantly with OHC!">
+    <meta property="og:image" content="https://ohc.app/assets/og-default.png">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
     <style>
         body {{ margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: {bg_color}; color: {text_color}; }}
         .card {{ border: 1px solid {border_color}; border-radius: 8px; padding: 16px; max-width: 300px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}

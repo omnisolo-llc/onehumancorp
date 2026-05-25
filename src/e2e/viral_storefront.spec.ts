@@ -47,4 +47,15 @@ test.describe('Viral Storefront E2E', () => {
     await expect(footer).toContainText('⚡ Powered by OHC');
     await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
   });
+
+  test('includes Social OG share cards for virality', async ({ page }) => {
+    await page.goto('/api/v1/growth/storefront/embed?product_name=TestProduct&price=19.99');
+
+    // Verify OG Meta tags are present in the DOM
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', 'TestProduct - Powered by OHC');
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', 'Get TestProduct for just 19.99. Launch your own business instantly with OHC!');
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', 'https://ohc.app/assets/og-default.png');
+    await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'website');
+    await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
+  });
 });
