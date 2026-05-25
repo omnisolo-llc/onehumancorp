@@ -5,15 +5,27 @@ import { useState } from "react";
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
-  const integrations = [
-    { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "AI-Powered Email Marketing and simple customer newsletters." },
+  const [integrations, setIntegrations] = useState([
+    { id: "unified_inbox", name: "Unified Inbox", category: "marketing", status: "disconnected", icon: "📱", description: "Connect Instagram, Facebook, TikTok, and WhatsApp into a single inbox." },
+    { id: "google_calendar", name: "Google Calendar", category: "operations", status: "disconnected", icon: "📅", description: "Smart Calendar Sync and Automated Meeting Booking." },
+    { id: "outlook", name: "Outlook", category: "operations", status: "disconnected", icon: "🗓️", description: "Smart Calendar Sync and Automated Meeting Booking." },
+    { id: "email_campaigns", name: "Email Campaigns", category: "marketing", status: "disconnected", icon: "📨", description: "Integrated Email Campaign and Newsletter Management." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "paytm", name: "Paytm", category: "finance", status: "disconnected", icon: "₹", description: "Accept local payment methods in India." },
+    { id: "alipay", name: "Alipay", category: "finance", status: "disconnected", icon: "¥", description: "Accept local payment methods in China." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Label Generation and real-time shipping rates." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generated Meeting Links for online services." }
-  ];
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable Global SMS Notifications for critical updates." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generate Zoom Links for Appointments." },
+    { id: "google_meet", name: "Google Meet", category: "operations", status: "disconnected", icon: "🎥", description: "Auto-Generate Google Meet Links for Appointments." }
+  ]);
+
+  const toggleConnection = (id: string) => {
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === id
+        ? { ...integration, status: integration.status === 'connected' ? 'disconnected' : 'connected' }
+        : integration
+    ));
+  };
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
@@ -44,7 +56,7 @@ export default function Integrations() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
+              className={`min-h-[44px] min-w-[44px] px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                 activeTab === tab
                   ? "bg-gray-900 text-white"
                   : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
@@ -75,7 +87,9 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+              <button
+                onClick={() => toggleConnection(integration.id)}
+                className={`min-h-[44px] w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
                 integration.status === 'connected'
                   ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                   : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
