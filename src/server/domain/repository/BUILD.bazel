@@ -4,6 +4,7 @@ filegroup(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "customer_360.rs",
     ],
     visibility = ["//src/server/domain:__pkg__"],
 )
