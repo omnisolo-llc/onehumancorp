@@ -1,26 +1,44 @@
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use opentelemetry::global;
+use opentelemetry::trace::Tracer;
+use opentelemetry::metrics::Counter;
+use opentelemetry::KeyValue;
 
 pub struct RedisMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
+    publish_counter: Counter<u64>,
+    receive_counter: Counter<u64>,
 }
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
         let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
             .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
-        Ok(Self { inner })
+        let meter = global::meter("ohc.orchestration.hub");
+        let publish_counter = meter.u64_counter("mesh.redis.publish.count").build();
+        let receive_counter = meter.u64_counter("mesh.redis.receive.count").build();
+        Ok(Self { inner, publish_counter, receive_counter })
     }
 }
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+        let tracer = global::tracer("ohc.orchestration.hub");
+        let _span = tracer.start("redis_publish");
+        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
         self.inner.publish(topic, message).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.inner.subscribe(topic, handler).await
+        let receive_counter = self.receive_counter.clone();
+        let topic_str = topic.to_string();
+        let wrapped_handler = Box::new(move |msg: Message| {
+            receive_counter.add(1, &[KeyValue::new("topic", topic_str.clone())]);
+            handler(msg);
+        });
+        self.inner.subscribe(topic, wrapped_handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
@@ -42,12 +60,19 @@ impl MeshTransport for RedisMeshTransport {
 
 pub struct MemoryMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    publish_counter: Counter<u64>,
+    receive_counter: Counter<u64>,
 }
 
 impl MemoryMeshTransport {
     pub fn new() -> Self {
+        let meter = global::meter("ohc.orchestration.hub");
+        let publish_counter = meter.u64_counter("mesh.memory.publish.count").build();
+        let receive_counter = meter.u64_counter("mesh.memory.receive.count").build();
         Self {
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            publish_counter,
+            receive_counter,
         }
     }
 }
@@ -55,11 +80,20 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+        let tracer = global::tracer("ohc.orchestration.hub");
+        let _span = tracer.start("memory_publish");
+        self.publish_counter.add(1, &[KeyValue::new("topic", topic.to_string())]);
         self.inner.publish(topic, message).await
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.inner.subscribe(topic, handler).await
+        let receive_counter = self.receive_counter.clone();
+        let topic_str = topic.to_string();
+        let wrapped_handler = Box::new(move |msg: Message| {
+            receive_counter.add(1, &[KeyValue::new("topic", topic_str.clone())]);
+            handler(msg);
+        });
+        self.inner.subscribe(topic, wrapped_handler).await
     }
 
     async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
