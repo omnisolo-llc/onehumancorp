@@ -129,7 +129,7 @@ impl ClaudeSubagentSpawner {
                         ::server_telemetry::record_ohc_sub_agent_failures_total();
                         return Err(e);
                     }
-                    tokio::time::sleep(tokio::time::Duration::from_secs(backoff)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
                     backoff *= 2;
                 }
             }
@@ -139,6 +139,36 @@ impl ClaudeSubagentSpawner {
 
         // Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
         self.summarize_output(&raw_output, config).await
+    }
+
+
+    async fn summarize_output(
+        &self,
+        raw_output: &str,
+        config: &AgentRunConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let prompt = format!(
+            "Please condense the following subagent output into a 1k-2k token summary. Do not include raw context loops or tool outputs, only the key findings, changes made, and final result.\n\nRaw output:\n{}",
+            raw_output
+        );
+
+        let mut sum_config = config.clone();
+        sum_config.developer_instructions = "You are a summarizing agent. Your job is to return 1k-2k token condensed summaries of subagent outputs.".to_string();
+
+        let mut on_event = |_| {};
+        self.parent_agent.run(&sum_config, &prompt, &mut on_event).await
+    }
+
+
+    ",
+            raw_output
+        );
+
+        let mut sum_config = config.clone();
+        sum_config.developer_instructions = "You are a summarizing agent. Your job is to return 1k-2k token condensed summaries of subagent outputs.".to_string();
+
+        let mut on_event = |_| {};
+        self.parent_agent.run(&sum_config, &prompt, &mut on_event).await
     }
 
     #[tokio::test]
