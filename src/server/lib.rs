@@ -2305,18 +2305,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text-secondary);
                         }
                         .glass {
-                            background: rgba(255, 255, 255, 0.65);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
-                            box-shadow: var(--shadow-md);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            background: rgba(255, 255, 255, 0.4);
+                            border: 1px solid rgba(255, 255, 255, 0.5);
+                            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+                            backdrop-filter: blur(20px) saturate(180%);
+                            -webkit-backdrop-filter: blur(20px) saturate(180%);
                             border-radius: 16px;
                         }
                         body.dark-theme .glass {
-                            background: rgba(22, 22, 26, 0.7);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                            backdrop-filter: blur(30px) saturate(210%);
-                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            background: rgba(22, 22, 26, 0.5);
+                            border: 1px solid rgba(255, 255, 255, 0.2);
+                            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+                            backdrop-filter: blur(20px) saturate(180%);
+                            -webkit-backdrop-filter: blur(20px) saturate(180%);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2698,22 +2699,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         /* Premium Standard Overrides for Wizard */
         #setup-screen.glass {
-            background: rgba(255, 255, 255, 0.65);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             border-radius: 16px;
             max-width: 375px;
             margin: 40px auto;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         }
 
         body.dark-theme #setup-screen.glass {
-            background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(22, 22, 26, 0.5);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
 
         #setup-screen > div {
@@ -2741,10 +2743,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         }
             @media (prefers-color-scheme: dark) {
                 .glass, .screen {
-                    background: rgba(22, 22, 26, 0.7) !important;
-                    backdrop-filter: blur(30px) saturate(210%) !important;
-                    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    background: rgba(22, 22, 26, 0.5) !important;
+                    backdrop-filter: blur(20px) saturate(180%) !important;
+                    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+                    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3) !important;
                 }
             }
 
@@ -4943,6 +4946,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             if (screenId === 'setup-screen') {
+                                // Add keyboard listener for Enter key to advance steps
+                                document.getElementById('setup-screen').addEventListener('keydown', function(e) {
+                                    if (e.key === 'Enter') {
+                                        if (e.target.tagName.toLowerCase() === 'input' && e.target.type !== 'checkbox') {
+                                            e.preventDefault();
+                                            // Find the next step button visible in the current step
+                                            const currentStepDiv = document.getElementById('step-' + currentStep);
+                                            if (currentStepDiv) {
+                                                const nextBtn = Array.from(currentStepDiv.querySelectorAll('button')).find(btn => btn.innerText.includes('Next') || btn.innerText.includes('Generate') || btn.innerText.includes('Start My Business Next'));
+                                                if (nextBtn && nextBtn.style.display !== 'none') {
+                                                    nextBtn.click();
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
                                 try {
                                     const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
                                     const userId = localStorage.getItem('user_id') || 'test-user';
