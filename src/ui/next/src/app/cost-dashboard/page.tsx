@@ -113,7 +113,7 @@ export default function CostDashboardPage() {
                 <div className="flex justify-between items-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
                     <div>
                         <span className="font-medium text-gray-900">Storage</span>
-                        <p className="text-sm text-gray-500 mt-1">Cost of database storage and file hosting.</p>
+                        <p className="text-sm text-gray-500 mt-1">Cost of cloud storage and file hosting.</p>
                     </div>
                     <span className="text-lg font-semibold text-gray-900">{formatCurrency(data?.storage_cost || 0)}</span>
                 </div>
