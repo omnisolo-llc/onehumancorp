@@ -251,7 +251,7 @@ impl TaskDecompositionService {
                     "#
                 )
                 .bind(agent_id)
-                .bind(now)
+                .bind(now.to_rfc3339())
                 .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
