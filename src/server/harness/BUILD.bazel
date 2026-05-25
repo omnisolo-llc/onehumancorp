@@ -14,6 +14,7 @@ rust_library(
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
         "sandbox/macos_sandbox.rs",
+        "sandbox/bwrap_sandbox.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
