@@ -61,6 +61,7 @@ rust_library(
         "autogen.rs",
         "ruflo.rs",
         "lib.rs",
+        "sona_patterns.rs",
         "marketplace.rs",
         "visual_workflow.rs",
         "local_provider.rs",
@@ -271,3 +272,15 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "sona_patterns_unit_test",
+    crate = ":ohc_builtin_agent_lib",
+    args = ["sona_patterns"],
+    edition = "2024",
+    size = "small",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
