@@ -12,6 +12,7 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
+    businessGoal, setBusinessGoal,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
     template, setTemplate,
@@ -86,9 +87,9 @@ export default function OnboardingWizard() {
 
     const currentStateStr = JSON.stringify({
       step,
-      businessType,
       businessName,
       businessCategory,
+      businessGoal,
       firstProductName,
       firstProductPrice,
       template,
@@ -119,20 +120,10 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [isLoaded, step, businessName, businessCategory, businessGoal, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
-      if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
       if (!businessName.trim()) {
         setError("Please enter your business name.");
         return;
@@ -142,13 +133,23 @@ export default function OnboardingWizard() {
         return;
       }
     }
-    if (step === 3) {
+    if (step === 2) {
       if (!businessCategory.trim()) {
-        setError("Please describe your niche.");
+        setError("Please enter your category.");
         return;
       }
-      if (businessCategory.trim().length < 5) {
-        setError("Niche description must be at least 5 characters.");
+      if (businessCategory.trim().length < 3) {
+        setError("Category must be at least 3 characters.");
+        return;
+      }
+    }
+    if (step === 3) {
+      if (!businessGoal.trim()) {
+        setError("Please describe your goal.");
+        return;
+      }
+      if (businessGoal.trim().length < 5) {
+        setError("Goal description must be at least 5 characters.");
         return;
       }
     }
@@ -157,19 +158,19 @@ export default function OnboardingWizard() {
   };
 
   const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
+    if (!businessGoal.trim()) {
+      setError("Please describe your goal.");
       return;
     }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
+    if (businessGoal.trim().length < 5) {
+      setError("Goal description must be at least 5 characters.");
       return;
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = `Business Name: ${businessName}\nCategory: ${businessCategory}\nGoal: ${businessGoal}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -198,9 +199,9 @@ export default function OnboardingWizard() {
 
     try {
       const startRequest = {
-        business_type: intakeData.business_type || businessType || "Retail",
+        business_type: intakeData.business_type || "Retail",
         company_name: intakeData.business_name || businessName,
-        company_description: "", // Removed preferredStyle
+        company_description: businessGoal, // Added business goal
         selling_categories: intakeData.categories || [],
         payment_pref: "stripe",
         admin_email: "admin@example.com",
@@ -297,14 +298,14 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your business called?</h2>
+              <p className="text-gray-500 text-sm mb-6">You can change this later.</p>
               <input
                 type="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
+                value={businessName}
+                onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
+                placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
@@ -321,14 +322,14 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your category?</h2>
+              <p className="text-gray-500 text-sm mb-6">e.g., Food/Bakery, Handyman, Boutique</p>
               <input
                 type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                value={businessCategory}
+                onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Maya's Cakes"
+                placeholder="e.g. Food/Bakery"
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
@@ -353,14 +354,14 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your goal?</h2>
+              <p className="text-gray-500 text-sm mb-6">Tell us what you want to achieve.</p>
               <input
                 type="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
+                value={businessGoal}
+                onChange={(e) => setBusinessGoal(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
-                placeholder="e.g. I bake custom wedding cakes"
+                placeholder="e.g. I want to sell custom wedding cakes online"
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"

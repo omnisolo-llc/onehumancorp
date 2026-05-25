@@ -242,6 +242,24 @@ export default function Dashboard() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
+         {/* Daily Brief */}
+         <section className="mb-2">
+            <div className="bg-white/40 backdrop-blur-md p-6 rounded-[16px] border border-white/50 shadow-sm">
+                <div className="flex items-center gap-3 mb-3">
+                    <span className="text-2xl">✨</span>
+                    <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Daily Brief</h2>
+                </div>
+                <p className="text-sm md:text-base leading-relaxed text-gray-700">
+                    You have <span className="font-bold text-gray-900">3 orders</span> today. You are close to your free tier product limit.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                    <button onClick={() => setShowUpgradeModal(true)} className="px-4 py-2 bg-[#0066FF] text-white text-sm font-semibold rounded-lg shadow-sm hover:bg-[#0052cc] transition-colors">
+                        Upgrade to Starter
+                    </button>
+                </div>
+            </div>
+         </section>
+
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">

@@ -6,6 +6,7 @@ interface OnboardingState {
   businessType: string;
   businessName: string;
   businessCategory: string;
+  businessGoal: string;
   firstProductName: string;
   firstProductPrice: string;
   template: string;
@@ -18,6 +19,7 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
   setBusinessCategory: (category: string) => void;
+  setBusinessGoal: (goal: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
   setTemplate: (template: string) => void;
@@ -35,6 +37,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   businessType: '',
   businessName: '',
   businessCategory: '',
+  businessGoal: '',
   firstProductName: '',
   firstProductPrice: '',
   template: 'Modern',
@@ -47,6 +50,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
   setBusinessCategory: (businessCategory) => set({ businessCategory }),
+  setBusinessGoal: (businessGoal) => set({ businessGoal }),
   setFirstProductName: (firstProductName) => set({ firstProductName }),
   setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
   setTemplate: (template) => set({ template }),
