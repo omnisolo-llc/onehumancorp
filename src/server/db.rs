@@ -271,6 +271,14 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    CREATE TABLE IF NOT EXISTS crdt_deltas (
+                        id TEXT PRIMARY KEY,
+                        entity_id TEXT NOT NULL,
+                        data TEXT NOT NULL,
+                        updated_at TIMESTAMP NOT NULL,
+                        synced_to_cloud BOOLEAN DEFAULT false
+                    );
+
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
                         id VARCHAR PRIMARY KEY,
                         tenant_id VARCHAR NOT NULL,

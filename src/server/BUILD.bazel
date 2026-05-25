@@ -347,3 +347,10 @@ rust_test(
         "@crates//:temp-env",
     ],
 )
+
+rust_test(
+    name = "crdt_sync_unit_test",
+    crate = ":server_lib",
+    args = ["--test", "tools::crdt_sync"],
+    tags = ["unit"],
+)

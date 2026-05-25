@@ -1,12 +1,13 @@
+
 use super::provider::{LocalFSProvider, CloudFSProvider, FileSystemProvider};
 use super::server::HybridFSMcpServer;
 use std::sync::Arc;
-use tempfile::tempdir;
+
 use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_fs_provider() {
-    let dir = tempdir().unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
 
     // Test write and read
@@ -25,7 +26,7 @@ async fn test_local_fs_provider() {
 
 #[tokio::test]
 async fn test_cloud_fs_provider() {
-    let dir = tempdir().unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let tenant_id = "tenant-123".to_string();
     let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
 
@@ -46,7 +47,7 @@ async fn test_cloud_fs_provider() {
 
 #[tokio::test]
 async fn test_hybrid_fs_mcp_server() {
-    let dir = tempdir().unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
@@ -80,7 +81,7 @@ async fn test_hybrid_fs_mcp_server() {
 
 #[tokio::test]
 async fn test_server_search() {
-    let dir = tempdir().unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
@@ -106,7 +107,7 @@ async fn test_server_search() {
 
 #[tokio::test]
 async fn test_local_fs_provider_search() {
-    let dir = tempdir().unwrap();
+    let dir = tempfile::tempdir().unwrap();
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
 
     tokio::fs::create_dir_all(dir.path().join("dir")).await.unwrap();
