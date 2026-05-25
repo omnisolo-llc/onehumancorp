@@ -5,57 +5,6 @@ use futures::future::join_all;
 
 /// Ruflo Unique Harness Innovations: Swarm coordination topologies
 /// Hierarchical, mesh, adaptive with consensus
-/// SONA neural patterns: Self-learning trajectory patterns
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SonaPattern {
-    pub task_signature: String,
-    pub successful_trajectory: String,
-}
-
-#[async_trait::async_trait]
-pub trait SonaMemory: Send + Sync {
-    async fn store_pattern(&self, pattern: SonaPattern) -> Result<(), String>;
-    async fn recall_pattern(&self, task: &str) -> Result<Option<SonaPattern>, String>;
-}
-
-pub struct SonaMemoryStore {
-    patterns: std::sync::Arc<tokio::sync::Mutex<Vec<SonaPattern>>>,
-}
-
-impl Default for SonaMemoryStore {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl SonaMemoryStore {
-    pub fn new() -> Self {
-        Self {
-            patterns: std::sync::Arc::new(tokio::sync::Mutex::new(Vec::new())),
-        }
-    }
-}
-
-#[async_trait::async_trait]
-impl SonaMemory for SonaMemoryStore {
-    async fn store_pattern(&self, pattern: SonaPattern) -> Result<(), String> {
-        let mut patterns = self.patterns.lock().await;
-        patterns.push(pattern);
-        Ok(())
-    }
-
-    async fn recall_pattern(&self, task: &str) -> Result<Option<SonaPattern>, String> {
-        let patterns = self.patterns.lock().await;
-        // Simple heuristic for demonstration: if task contains the signature keyword
-        for pattern in patterns.iter() {
-            if task.contains(&pattern.task_signature) {
-                return Ok(Some(pattern.clone()));
-            }
-        }
-        Ok(None)
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SwarmTopology {
@@ -187,69 +136,12 @@ mod tests {
         // The mock always returns "COMPLEX" for complexity check, which triggers Mesh topology
         assert!(result.contains("Adaptive output"));
     }
-
-    #[tokio::test]
-    async fn test_sona_neural_patterns() {
-        let llm = Arc::new(MockLlmClient { resp: "Execution complete.".to_string() });
-        let lead = SwarmAgent::new("Lead", llm.clone());
-        let worker = SwarmAgent::new("Worker", llm);
-        let memory = std::sync::Arc::new(SonaMemoryStore::new());
-
-        let coordinator = SwarmCoordinator::new(lead, vec![worker], SwarmTopology::Hierarchical)
-            .with_sona_memory(memory.clone());
-
-        // Initial task execution
-        let task1 = "Unique task 1";
-        let _ = coordinator.execute(task1).await.unwrap();
-
-        // Check if pattern was stored
-        let pattern_opt = memory.recall_pattern(task1).await.unwrap();
-        assert!(pattern_opt.is_some());
-        let pattern = pattern_opt.unwrap();
-        assert_eq!(pattern.task_signature, task1);
-        assert!(pattern.successful_trajectory.contains("Lead Agent Output: Execution complete."));
-
-        // Second execution should pick up the hint
-        // Wait, the MockLlmClient ignores the actual prompt and just returns self.resp
-        // We'll use a special mock to verify the hint was injected.
-        struct HintMockLlmClient;
-        #[async_trait::async_trait]
-        impl LlmClient for HintMockLlmClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                let msg_content = &req.messages[0].content;
-                let output = if msg_content.contains("SONA Trajectory Hint") {
-                    "Hint recognized".to_string()
-                } else {
-                    "No hint".to_string()
-                };
-                Ok(ChatResponse {
-                    message: Message::assistant(output),
-                    usage: Usage::default(),
-                    stop_reason: "stop".to_string(),
-                    response_id: Some("id".to_string()),
-                })
-            }
-        }
-
-        let hint_llm = Arc::new(HintMockLlmClient);
-        let lead2 = SwarmAgent::new("Lead", hint_llm.clone());
-        let worker2 = SwarmAgent::new("Worker", hint_llm);
-        let coordinator2 = SwarmCoordinator::new(lead2, vec![worker2], SwarmTopology::Hierarchical)
-            .with_sona_memory(memory.clone());
-
-        // Execute task 1 again
-        let result2 = coordinator2.execute(task1).await.unwrap();
-        // Because of how Hierarchical topology works, the lead agent synthesizes.
-        // It will pass the task text (which includes the hint) to the lead agent's synthesis.
-        assert_eq!(result2, "Hint recognized");
-    }
 }
 
 pub struct SwarmCoordinator {
     pub lead_agent: SwarmAgent,
     pub workers: Vec<SwarmAgent>,
     pub topology: SwarmTopology,
-    pub sona_memory: Option<std::sync::Arc<dyn SonaMemory>>,
 }
 
 impl SwarmCoordinator {
@@ -258,30 +150,10 @@ impl SwarmCoordinator {
             lead_agent,
             workers,
             topology,
-            sona_memory: None,
         }
-    }
-
-    pub fn with_sona_memory(mut self, memory: std::sync::Arc<dyn SonaMemory>) -> Self {
-        self.sona_memory = Some(memory);
-        self
     }
 
     pub async fn execute(&self, task: &str) -> Result<String, String> {
-        let original_task = task.to_string();
-        let mut actual_task = original_task.clone();
-
-        if let Some(memory) = &self.sona_memory {
-            if let Ok(Some(pattern)) = memory.recall_pattern(task).await {
-                actual_task = format!(
-                    "[SONA Trajectory Hint: A similar past task followed this successful trajectory:\n{}\n]\n\nCurrent Task: {}",
-                    pattern.successful_trajectory, task
-                );
-            }
-        }
-
-        let task = &actual_task;
-
         let active_topology = if self.topology == SwarmTopology::Adaptive {
             // Adaptive logic: Lead agent evaluates complexity
             let eval_instruction = "Assess the complexity of the following task. Reply ONLY with 'COMPLEX' or 'SIMPLE'.";
@@ -295,7 +167,7 @@ impl SwarmCoordinator {
             self.topology.clone()
         };
 
-        let result = match active_topology {
+        match active_topology {
             SwarmTopology::Hierarchical => {
                 // Lead agent delegates to workers (simulated here by simply passing the task to each)
                 let mut futures = Vec::new();
@@ -353,22 +225,6 @@ impl SwarmCoordinator {
                 let final_prompt = format!("Original Task: {}\n\nAgent Solutions:\n{}", task, all_outputs);
                 self.lead_agent.process_task(&final_prompt, consensus_instruction).await
             }
-        };
-
-        if let Ok(res_str) = &result {
-            if let Some(memory) = &self.sona_memory {
-                let extract_instruction = "Extract a concise SONA trajectory pattern from the execution outcome. What were the key steps taken to solve this task? Return ONLY the trajectory steps.";
-                let trajectory_prompt = format!("Task: {}\nResult: {}\n", original_task, res_str);
-                if let Ok(trajectory) = self.lead_agent.process_task(&trajectory_prompt, extract_instruction).await {
-                    let pattern = SonaPattern {
-                        task_signature: original_task.clone(), // In a real system, LLM extracts the signature
-                        successful_trajectory: trajectory,
-                    };
-                    let _ = memory.store_pattern(pattern).await;
-                }
-            }
         }
-
-        result
     }
 }

@@ -106,7 +106,6 @@ Chart.lock
 
 # Rust build artifacts
 /target/
-/src/ui/tauri/gen/
 site/
 
 # Android/Flutter local properties (auto-generated, machine-specific)
