@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { useOnboardingStore } from './store';
+import { useRouter } from 'next/navigation';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
@@ -23,6 +24,7 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const lastSyncState = useRef("");
+  const router = useRouter();
 
   const [isLoaded, setIsLoaded] = React.useState(false);
 
@@ -121,18 +123,15 @@ export default function OnboardingWizard() {
     return () => clearTimeout(timer);
   }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 1) {
       if (!businessType.trim()) {
         setError("Please describe what you sell.");
         return;
       }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
+      setError("");
+      setStep(2);
+    } else if (step === 2) {
       if (!businessName.trim()) {
         setError("Please enter your business name.");
         return;
@@ -141,19 +140,10 @@ export default function OnboardingWizard() {
         setError("Business name must be at least 3 characters.");
         return;
       }
+      setError("");
+      setStep(3);
+      handleStartOnboarding();
     }
-    if (step === 3) {
-      if (!businessCategory.trim()) {
-        setError("Please describe your niche.");
-        return;
-      }
-      if (businessCategory.trim().length < 5) {
-        setError("Niche description must be at least 5 characters.");
-        return;
-      }
-    }
-    setError("");
-    setStep(step + 1);
   };
 
   const handleIntakeSubmit = async () => {
@@ -198,18 +188,18 @@ export default function OnboardingWizard() {
 
     try {
       const startRequest = {
-        business_type: intakeData.business_type || businessType || "Retail",
-        company_name: intakeData.business_name || businessName,
+        business_type: businessType || "Retail",
+        company_name: businessName,
         company_description: "", // Removed preferredStyle
-        selling_categories: intakeData.categories || [],
+        selling_categories: [],
         payment_pref: "stripe",
         admin_email: "admin@example.com",
         admin_name: "Admin",
         admin_password: "password123",
         website_template: template,
         domain: domain,
-        first_product_name: firstProductName || intakeData.initial_products?.[0]?.name || "Sample Product",
-        first_product_price: firstProductPrice || intakeData.initial_products?.[0]?.price || "10.00",
+        first_product_name: "Sample Product",
+        first_product_price: "10.00",
       };
 
       const response = await fetch('/api/onboarding/start', {
@@ -283,7 +273,7 @@ export default function OnboardingWizard() {
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
            <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
+             Step {Math.min(step, 3)} of 3
            </div>
         </div>
 
@@ -298,21 +288,53 @@ export default function OnboardingWizard() {
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+              <p className="text-gray-500 text-sm mb-6 font-inter">Tell us what you sell or the services you provide.</p>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                {[
+                  { icon: '🧁', name: 'Bake', type: 'Bakery & Desserts' },
+                  { icon: '📚', name: 'Teach', type: 'Education & Tutoring' },
+                  { icon: '🔧', name: 'Fix', type: 'Home Services & Repairs' },
+                  { icon: '🛍️', name: 'Sell', type: 'Retail & E-commerce' }
+                ].map((item) => (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      setBusinessType(item.type);
+                      setStep(2);
+                      setError("");
+                    }}
+                    className="flex flex-col items-center justify-center p-6 rounded-[16px] border border-white/50 bg-white/40 backdrop-blur-[20px] shadow-sm hover:bg-white/60 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    <span className="text-4xl mb-2">{item.icon}</span>
+                    <span className="font-bold font-outfit text-gray-900">{item.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300/50"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-[#f8fafc] text-gray-500 font-inter">or type it out</span>
+                </div>
+              </div>
+
               <input
                 type="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                placeholder="e.g. Sell custom cakes, plumbing"
+                className="w-full mt-4 p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-[20px] shadow-sm font-inter text-gray-900"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
               />
               <button
                 onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-md hover:bg-[#0052cc] hover:scale-[1.02] active:scale-[0.98] transition-all font-inter"
               >
                 Next
               </button>
@@ -322,14 +344,14 @@ export default function OnboardingWizard() {
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <p className="text-gray-500 text-sm mb-6 font-inter">Don't worry, you can change this later.</p>
               <input
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-[20px] shadow-sm font-inter text-gray-900"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -337,13 +359,13 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-[20px] text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all font-inter"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-md hover:bg-[#0052cc] hover:scale-[1.02] active:scale-[0.98] transition-all font-inter"
                 >
                   Next
                 </button>
@@ -352,167 +374,15 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
-              <input
-                type="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
-                placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleIntakeSubmit}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Generate Draft"
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && intakeData && (
-            <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
-                <span className="text-3xl text-[#0066FF]">✨</span>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center shrink-0">Ready to Launch!</h2>
-              <p className="text-gray-500 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
-
-              <div className="space-y-6 flex-1 overflow-visible">
-                {/* Product Section */}
-                <div className="bg-white/40 backdrop-blur-md p-5 rounded-[16px] border border-white/50 shadow-sm space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit">First Product/Service</h3>
-                   <div className="flex gap-3">
-                     <div className="flex-1">
-                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Name</label>
-                       <input
-                         type="text"
-                         value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
-                         onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
-                         placeholder="e.g. Custom Cake"
-                       />
-                     </div>
-                     <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Price</label>
-                       <input
-                         type="text"
-                         inputMode="decimal"
-                         pattern="[0-9]*\.?[0-9]*"
-                         value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
-                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
-                         placeholder="0.00"
-                       />
-                     </div>
-                   </div>
-                </div>
-
-                {/* Template Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Choose a Template</h3>
-                   <div className="grid grid-cols-2 gap-3">
-                     {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
-                       <button
-                         key={t}
-                         onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
-                       >
-                         {t}
-                       </button>
-                     ))}
-                   </div>
-                </div>
-
-                {/* Domain Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Domain Name</h3>
-                   <div className="flex flex-col gap-3">
-                     <button
-                       onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
-                     >
-                       <span>Free OHC Domain</span>
-                       <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
-                     </button>
-                     <button
-                       onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
-                     >
-                       <span>Connect Custom Domain</span>
-                       <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
-                     </button>
-                   </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
-                  disabled={isLoading}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Publish Now"
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                </svg>
+              <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6 relative">
+                 <span className="w-16 h-16 border-4 border-blue-200 border-t-[#0066FF] rounded-full animate-spin absolute"></span>
+                 <span className="text-3xl relative z-10">🤖</span>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h2>
-              <p className="text-gray-500 text-sm mb-8 px-4">
-                {startResult.message || "Your business has been successfully launched."}
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Generating your store...</h2>
+              <p className="text-gray-500 text-sm mb-8 px-4 font-inter">
+                Our AI agents are designing your storefront and setting up operations.
               </p>
-
-              <div className="w-full space-y-3 mt-auto">
-                <a
-                  href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
-                >
-                  Go to Dashboard
-                </a>
-                <a
-                  href="/builder"
-                  className="block w-full bg-white/70 backdrop-blur-md text-[#1D1D1F] border border-white/50 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all"
-                >
-                  Preview Storefront
-                </a>
-              </div>
             </div>
           )}
         </div>

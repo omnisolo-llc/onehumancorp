@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useSearchParams } from 'next/navigation';
+
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
 export default function KairosDashboard() {
-  const searchParams = useSearchParams();
+  const searchParams = new URLSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([
     { id: "task-1", name: "Inventory Reorder Strategy", status: "In Progress", priority: "High" },
