@@ -160,12 +160,13 @@ BEGIN
 END
 $$;
 
-DROP INDEX IF EXISTS ai_memories_embedding_hnsw_idx;
-DROP TABLE IF EXISTS ai_memories;
-DROP TABLE IF EXISTS bookings;
-DROP TABLE IF EXISTS order_line_items;
-DROP TABLE IF EXISTS orders;
-DROP TABLE IF EXISTS services;
-DROP TABLE IF EXISTS products;
-DROP TABLE IF EXISTS customers;
-DROP TABLE IF EXISTS tenants;
+-- We don't drop tables because other files like 001_initial might have dependencies.
+-- DROP INDEX IF EXISTS ai_memories_embedding_hnsw_idx;
+-- DROP TABLE IF EXISTS ai_memories CASCADE;
+-- DROP TABLE IF EXISTS bookings CASCADE;
+-- DROP TABLE IF EXISTS order_line_items CASCADE;
+-- DROP TABLE IF EXISTS orders CASCADE;
+-- DROP TABLE IF EXISTS services CASCADE;
+-- DROP TABLE IF EXISTS products CASCADE;
+-- DROP TABLE IF EXISTS customers CASCADE;
+-- DROP TABLE IF EXISTS tenants CASCADE;
