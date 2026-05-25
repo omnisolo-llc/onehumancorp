@@ -136,12 +136,43 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   }
 
   if (type === "Referral") {
+    const [referralLink, setReferralLink] = React.useState<string | null>(null);
+    const [isGenerating, setIsGenerating] = React.useState(false);
+
+    const handleCreateReferral = async () => {
+      setIsGenerating(true);
+      try {
+        const res = await fetch("/api/v1/growth/referrals/generate", { method: "POST" });
+        const data = await res.json();
+        if (data.referral_link) {
+          setReferralLink(data.referral_link);
+        }
+      } catch (err) {
+        console.error("Error generating referral:", err);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
     return (
       <div className="p-6 bg-gradient-to-br from-indigo-50 to-purple-50 font-inter text-center border-t border-b border-indigo-100 my-4 shadow-sm">
         <h2 className="text-xl font-bold font-outfit mb-2 text-indigo-900">{props.offerTitle || "Refer a Friend & Earn"}</h2>
         <p className="text-sm text-indigo-700 mb-5">{props.offerDescription || "Get 20% off your next purchase when a friend buys from us!"}</p>
 
+        {referralLink ? (
+          <div className="mb-4 text-sm font-mono bg-white p-2 rounded border border-indigo-200 break-all text-indigo-800">
+            {referralLink}
+          </div>
+        ) : null}
+
         <div className="flex gap-3 justify-center">
+          <button
+            onClick={handleCreateReferral}
+            disabled={isGenerating || !!referralLink}
+            className="flex-1 bg-indigo-600 text-white flex items-center justify-center gap-2 p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-indigo-700 transition-all max-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGenerating ? "Generating..." : referralLink ? "Created!" : "Create Referral"}
+          </button>
           <a
             href={`https://wa.me/?text=${encodeURIComponent(`Check out this store and get a discount! ${props.url || 'https://ohc.store'}`)}`}
             target="_blank"

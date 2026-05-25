@@ -4,7 +4,7 @@ test.describe('Viral Storefront E2E', () => {
   test('exposes referral share entry points for storefront growth', async ({ page }) => {
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
-    await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
+    await expect(page.locator('#referral-link')).toContainText(/ohc:\/\/join\?ref=([A-Z0-9]+|DEFAULT)/);
     await expect(page.getByRole('button', { name: /Share to Instagram/ })).toBeVisible();
   });
 

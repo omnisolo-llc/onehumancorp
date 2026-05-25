@@ -4,7 +4,19 @@ import React, { useState } from 'react';
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
-  const referralLink = "ohc://join?ref=DEFAULT";
+  const [referralLink, setReferralLink] = useState("ohc://join?ref=DEFAULT");
+
+  React.useEffect(() => {
+    fetch("/api/v1/growth/referrals/generate", { method: "POST" })
+      .then(res => res.json())
+      .then(data => {
+        if (data.referral_link) {
+          setReferralLink(data.referral_link);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
 
   return (
