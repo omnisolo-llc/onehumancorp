@@ -1,8 +1,11 @@
+exports_files(["060_shared_task_list.sql"])
+
 filegroup(
     name = "migrations",
     srcs = glob(["*.sql"]),
     visibility = [
         "//deploy:__pkg__",
         "//src/server:__pkg__",
+        "//src/server/db:__pkg__",
     ],
 )
