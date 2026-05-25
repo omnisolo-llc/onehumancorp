@@ -308,7 +308,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="off" autoCorrect="off" spellCheck={false}
               />
               <button
                 onClick={handleNext}
@@ -332,7 +332,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="organization" autoCapitalize="words"
               />
               <div className="flex gap-3">
                 <button
@@ -364,7 +364,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="off" autoCorrect="off" spellCheck={false}
               />
               <div className="flex gap-3">
                 <button
@@ -409,6 +409,7 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
+                         autoComplete="off" autoCorrect="off" spellCheck={false} autoCapitalize="words"
                        />
                      </div>
                      <div className="w-24">

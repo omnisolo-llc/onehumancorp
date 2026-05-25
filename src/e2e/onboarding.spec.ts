@@ -22,8 +22,13 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
+    // Verify keyboard optimizations
+    const typeInput = page.getByPlaceholder("e.g. Sell cakes, plumbing");
+    await expect(typeInput).toHaveAttribute('enterKeyHint', 'next');
+    await expect(typeInput).toHaveAttribute('autoComplete', 'off');
+
     // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
+    await typeInput.fill("Sell custom cakes");
 
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
@@ -90,8 +95,13 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
+    // Verify keyboard optimizations
+    const typeInput = page.getByPlaceholder("e.g. Sell cakes, plumbing");
+    await expect(typeInput).toHaveAttribute('enterKeyHint', 'next');
+    await expect(typeInput).toHaveAttribute('autoComplete', 'off');
+
     // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
+    await typeInput.fill("Plumbing");
 
     // Click Next
     await page.getByRole('button', { name: /Next/i }).click();
