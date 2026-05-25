@@ -17,6 +17,7 @@ impl PgTaskQueue {
 impl TaskQueue for PgTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
+        ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
@@ -70,6 +71,7 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
+        ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
@@ -135,12 +137,13 @@ impl TaskQueue for PgTaskQueue {
         }
 
         if let Some(row) = job_opt {
+            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             let payload_val: serde_json::Value = row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
 
             let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency);
+            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
 
             let job = Job {
                 id: row.get("id"),
@@ -166,11 +169,20 @@ impl TaskQueue for PgTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+        let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING updated_at, run_after")
             .bind(job_id)
-            .execute(&*self.pool)
+            .fetch_optional(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        if let Some(r) = row {
+            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
+            use sqlx::Row;
+            let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
+            let run_after: chrono::DateTime<chrono::Utc> = r.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now());
+            let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
+            ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
+        }
         Ok(())
     }
 
