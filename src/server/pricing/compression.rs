@@ -112,6 +112,16 @@ pub fn get_optimized_key(key: &str) -> String {
     key.to_string()
 }
 
+pub fn cdn_url(path: &str) -> String {
+    let cdn_host = std::env::var("OHC_CDN_HOST").unwrap_or_default();
+    if cdn_host.is_empty() || path.starts_with("http://") || path.starts_with("https://") {
+        return path.to_string();
+    }
+    let cdn_host = cdn_host.trim_end_matches('/');
+    let path_str = if path.starts_with('/') { path.to_string() } else { format!("/{}", path) };
+    format!("{}{}", cdn_host, path_str)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,6 +198,20 @@ mod tests {
         assert_eq!(get_optimized_key("test.jpg"), "test.webp");
         assert_eq!(get_optimized_key("test.webp"), "test.webp");
         assert_eq!(get_optimized_key("test.txt"), "test.txt");
+    }
+
+    #[test]
+    fn test_cdn_url() {
+        std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com");
+        assert_eq!(cdn_url("/assets/img.png"), "https://cdn.example.com/assets/img.png");
+        assert_eq!(cdn_url("assets/img.png"), "https://cdn.example.com/assets/img.png");
+        assert_eq!(cdn_url("https://other.com/img.png"), "https://other.com/img.png");
+
+        std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com/");
+        assert_eq!(cdn_url("/assets/img.png"), "https://cdn.example.com/assets/img.png");
+
+        std::env::remove_var("OHC_CDN_HOST");
+        assert_eq!(cdn_url("/assets/img.png"), "/assets/img.png");
     }
 
     #[test]
