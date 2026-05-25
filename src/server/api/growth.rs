@@ -88,6 +88,7 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/trial-extension/share", post(handle_trial_extension_share))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -665,4 +666,48 @@ mod tests {
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtensionRequest {
+    pub platform: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtensionResponse {
+    pub extended: bool,
+    pub days_added: i32,
+    pub message: String,
+}
+
+async fn handle_trial_extension_share(
+    Extension(state): Extension<GrowthState>,
+    auth_opt: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    Json(req): Json<TrialExtensionRequest>,
+) -> Result<Json<TrialExtensionResponse>, axum::http::StatusCode> {
+    let (org_id, agent_id) = match auth_opt {
+        Some(axum::extract::Extension(auth)) => (auth.org_id, auth.agent_id),
+        None => ("anonymous_org".to_string(), "anonymous_agent".to_string()),
+    };
+
+    if let Ok(event) = serde_json::to_string(&serde_json::json!({
+        "type": "trial_extended",
+        "platform": req.platform,
+        "org_id": org_id,
+        "agent_id": agent_id,
+        "days_added": 14
+    })) {
+        let msg = crate::hub::HubEvent {
+            r#type: "growth.trial_extended".to_string(),
+            payload: event,
+            occurred_at: chrono::Utc::now(),
+        };
+        state.hub.append_recent_event(msg);
+    }
+
+    Ok(Json(TrialExtensionResponse {
+        extended: true,
+        days_added: 14,
+        message: format!("Trial successfully extended by 14 days for sharing on {}!", req.platform),
+    }))
 }

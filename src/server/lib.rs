@@ -2815,6 +2815,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
 
+                        <!-- Trial Extension Widget -->
+                        <div id="trial-extension-banner" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h3 style="margin: 0 0 8px 0; font-weight: bold; color: white;">Extend Your Trial</h3>
+                                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Love using OHC? Share your store on social media to get 14 extra days on your trial!</p>
+                            </div>
+                            <div>
+                                <button onclick="extendTrial()" style="background: white; color: #059669; font-weight: bold; padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; white-space: nowrap;">Share to Extend</button>
+                            </div>
+                        </div>
+                        <div id="trial-extension-success" style="display: none; background: #e0f2fe; color: #0369a1; padding: 16px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #0284c7; font-weight: 500;">
+                            Trial extended by 14 days!
+                        </div>
+
+
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
                             <div class="flex items-center gap-4">
@@ -3256,6 +3271,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <script>
+                        async function extendTrial() {
+                            try {
+                                const tenant = localStorage.getItem("tenant_id") || "DEFAULT";
+                                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent("I just launched my business on OHC! Start yours today: ohc://join?ref=" + tenant)}`, "_blank");
+                                const res = await fetch("/api/v1/growth/trial-extension/share", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ platform: "twitter" })
+                                });
+                                if (res.ok) {
+                                    document.getElementById("trial-extension-banner").style.display = "none";
+                                    document.getElementById("trial-extension-success").style.display = "block";
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        }
+
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
@@ -3892,8 +3925,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('signup-screen')">Don't have an account? Sign Up</button>
                         <button class="secondary" onclick="showScreen('setup-screen')">🚀 Start Business Setup</button>
                     </div>
-
                     <script>
+
+
 
 
                         // Server-Side State Management for Cross-Device Resumes
