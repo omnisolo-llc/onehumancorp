@@ -64,12 +64,61 @@ impl DashboardService for MyDashboardService {
         let hub_org = self.hub.clone();
         let mobile_optimized = req.mobile_optimized;
 
+        let req_org_id = req.organization_id.clone();
+
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
-                Ok::<_, String>(hub1.get_agents().await)
+                let agents = hub1.get_agents().await;
+
+                let filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+                    .iter()
+                    .filter(|a| {
+                        a.organization_id == req_org_id
+                            || a.id.starts_with(&format!("{}-", req_org_id))
+                    })
+                    .cloned()
+                    .collect();
+
+                let final_statuses = if !mobile_optimized {
+                    let mut status_map = std::collections::HashMap::new();
+                    for a in agents.iter() {
+                        *status_map.entry(a.status.clone()).or_insert(0) += 1;
+                    }
+                    status_map
+                        .into_iter()
+                        .map(|(status, count)| StatusCount { status, count })
+                        .collect()
+                } else {
+                    Vec::new()
+                };
+
+                Ok::<_, String>((filtered_agents, final_statuses))
             }),
             tokio::task::spawn_blocking(move || {
-                Ok::<_, String>(hub2.get_meetings())
+                let meetings = hub2.get_meetings();
+                let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
+                for m in meetings.iter() {
+                    let mut transcript = Vec::new();
+                    if !mobile_optimized {
+                        for msg in &m.transcript {
+                            transcript.push(::server_ohc::agent::AgentMessage {
+                                id: msg.id.clone(),
+                                from_agent_id: msg.from_agent.clone(),
+                                to_agent_id: msg.to_agent.clone(),
+                                message_type: msg.r#type.clone(),
+                                content: msg.content.clone(),
+                                meeting_id: m.id.clone(),
+                                occurred_at_unix: msg.occurred_at_unix,
+                            });
+                        }
+                    }
+                    out_meetings.push(::server_ohc::app::MeetingRoom {
+                        id: m.id.clone(),
+                        participants: m.participants.clone(),
+                        transcript,
+                    });
+                }
+                Ok::<_, String>(out_meetings)
             }),
             tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
@@ -263,7 +312,7 @@ impl DashboardService for MyDashboardService {
             })
         );
 
-        let agents = agents_res
+        let (agents, final_statuses) = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res
@@ -312,72 +361,25 @@ impl DashboardService for MyDashboardService {
             orders
         };
 
-        let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
-        for m in _meetings.iter() {
-            let mut transcript = Vec::new();
-            if !req.mobile_optimized {
-                for msg in &m.transcript {
-                    transcript.push(::server_ohc::agent::AgentMessage {
-                        id: msg.id.clone(),
-                        from_agent_id: msg.from_agent.clone(),
-                        to_agent_id: msg.to_agent.clone(),
-                        message_type: msg.r#type.clone(),
-                        content: msg.content.clone(),
-                        meeting_id: m.id.clone(),
-                        occurred_at_unix: msg.occurred_at_unix,
-                    });
-                }
-            }
-            out_meetings.push(::server_ohc::app::MeetingRoom {
-                id: m.id.clone(),
-                participants: m.participants.clone(),
-                transcript,
-            });
-        }
-
         let mut final_meetings = Vec::new();
         let mut final_agents_payload = Vec::new();
         let mut final_cost_summary = None;
-        let mut final_statuses = Vec::new();
 
         if !req.mobile_optimized {
-            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .cloned()
-                .collect();
-
-            let mut status_map = std::collections::HashMap::new();
-            for a in agents.iter() {
-                *status_map.entry(a.status.clone()).or_insert(0) += 1;
-            }
-            final_statuses = status_map
-                .into_iter()
-                .map(|(status, count)| StatusCount { status, count })
-                .collect();
-
             // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
             let mut original_prompts_len = 0;
             let mut compressed_prompts_len = 0;
+            let mut prompt_cache: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
-            let org_agents: Vec<_> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .collect();
-
-            for agent in org_agents {
+            for agent in &agents {
                 let prompt = &agent.name;
                 let orig_len = prompt.len();
                 if orig_len > 0 {
                     original_prompts_len += orig_len;
 
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    let compressed = prompt_cache.entry(prompt.clone()).or_insert_with(|| {
+                        ::server_pricing::compression::reduce_tokens(prompt)
+                    });
 
                     compressed_prompts_len += compressed.len();
                 }
@@ -388,7 +390,9 @@ impl DashboardService for MyDashboardService {
                 let orig_len = prompt.len();
                 if orig_len > 0 {
                     original_prompts_len += orig_len;
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                    let compressed = prompt_cache.entry(prompt.clone()).or_insert_with(|| {
+                        ::server_pricing::compression::reduce_tokens(prompt)
+                    });
                     compressed_prompts_len += compressed.len();
                 }
             }
@@ -420,10 +424,13 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-            final_agents_payload = _filtered_agents
+            final_agents_payload = agents
                 .into_iter()
                 .map(|a| {
-                    let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
+                    let compressed_name = prompt_cache
+                        .get(&a.name)
+                        .cloned()
+                        .unwrap_or_else(|| ::server_pricing::compression::reduce_tokens(&a.name));
 
                     ::server_ohc::agent::Agent {
                         id: a.id,
@@ -435,7 +442,7 @@ impl DashboardService for MyDashboardService {
                 })
                 .collect::<Vec<_>>();
 
-            final_meetings = out_meetings;
+            final_meetings = _meetings;
         }
 
         let org = if req.mobile_optimized {
