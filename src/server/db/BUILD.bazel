@@ -1,6 +1,7 @@
-# Add missing migrations/060_shared_task_list.sql to embedsrcs
 filegroup(
     name = "embedsrcs",
-    srcs = ["//src/server/migrations:060_shared_task_list.sql"],
-    visibility = ["//src/server:__pkg__"],
+    srcs = [
+        "//src/server/migrations:060_shared_task_list.sql",
+    ],
+    visibility = ["//visibility:public"],
 )
