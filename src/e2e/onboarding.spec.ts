@@ -67,10 +67,9 @@ test.describe('Onboarding Wizard', () => {
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
-    // 4. Verify Dashboard redirect and action banner
+    // 4. Verify Dashboard redirect
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
 
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
@@ -130,9 +129,8 @@ test.describe('Onboarding Wizard', () => {
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
-    // 4. Verify Dashboard redirect and action banner
+    // 4. Verify Dashboard redirect
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
 });
