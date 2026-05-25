@@ -2126,7 +2126,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 }
             }
 
-            if let Some(auditor) = hub_clone.auditor.clone() {
+            let auditor = hub_clone.get_cost_auditor();
+            if true {
                 auditor.record_llm_cost("chat-agent", 0.001); // 0.1 cents for this operation
             }
 
