@@ -3,10 +3,19 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
 export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8">Loading Kairos UI...</div>}>
+      <KairosContent />
+    </Suspense>
+  );
+}
+
+function KairosContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([

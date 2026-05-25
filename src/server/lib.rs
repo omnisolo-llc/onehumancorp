@@ -2363,6 +2363,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 32px;
                             max-width: 1120px;
                             margin: 0 auto;
+                            animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
                         }
                         #dashboard-screen {
                             max-width: 1180px;
