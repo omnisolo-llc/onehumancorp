@@ -899,7 +899,6 @@ pub fn track_onboarding_step(tenant_id: &str, step: &str, duration_ms: u64) {
     );
 }
 
-// Telemetry Flow for Bubblewrap OS-Level Sandboxing
 pub fn get_bubblewrap_spawn_total() -> &'static UpDownCounter<i64> {
     BUBBLEWRAP_SPAWN_TOTAL.get_or_init(|| {
         let meter = global::meter("ohc.sandbox");

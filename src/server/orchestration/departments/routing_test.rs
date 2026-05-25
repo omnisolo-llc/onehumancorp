@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
-    use crate::orchestration::departments::types::{DepartmentEvent, DepartmentType};
+    use crate::orchestration::departments::types::DepartmentEvent;
     use crate::orchestration::departments::sales_agent::SalesAgent;
     use crate::orchestration::departments::finance_agent::FinanceAgent;
     use crate::orchestration::departments::legal_agent::LegalAgent;
