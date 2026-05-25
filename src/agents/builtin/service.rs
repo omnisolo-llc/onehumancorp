@@ -602,7 +602,7 @@ impl AgentServiceImpl {
             max_rewind_attempts: 3,
             // Long-term memory store for cross-department context sharing
             long_term_memory,
-            permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             manually_approved_tool_calls: vec![],
         }
     }
@@ -1022,7 +1022,7 @@ impl AgentService for AgentServiceImpl {
                 enable_serverless_hibernation: false,
                 max_rewind_attempts: 3,
                 long_term_memory: None,
-            permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             manually_approved_tool_calls: vec![],
             };
 
