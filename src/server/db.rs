@@ -322,7 +322,6 @@ impl DB {
                         description TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         action_risk TEXT NOT NULL,
-                        payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -1134,8 +1133,8 @@ mod security_tests_final {
     fn test_sqlite_secure_directory_creation() {
         let _lock = ENV_MUTEX.lock().unwrap();
         // Run with a temporary directory
-        let temp_dir = tempfile::tempdir().unwrap();
-        let db_path = temp_dir.path().join("secure_test_dir/test.db");
+        let temp_dir = std::env::temp_dir();
+        let db_path = temp_dir.as_path().join("secure_test_dir/test.db");
         let database_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
         temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {

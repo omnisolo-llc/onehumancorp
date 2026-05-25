@@ -7,8 +7,8 @@ use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_fs_provider() {
-    let dir = tempfile::tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+    let temp_dir_base = std::env::temp_dir(); let dir = temp_dir_base.as_path();
+    let provider = LocalFSProvider::new(dir.to_path_buf());
 
     // Test write and read
     provider.write_file("test.txt", b"hello world").await.unwrap();
@@ -26,9 +26,9 @@ async fn test_local_fs_provider() {
 
 #[tokio::test]
 async fn test_cloud_fs_provider() {
-    let dir = tempfile::tempdir().unwrap();
+    let temp_dir_base = std::env::temp_dir(); let dir = temp_dir_base.as_path();
     let tenant_id = "tenant-123".to_string();
-    let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
+    let provider = CloudFSProvider::new(tenant_id.clone(), dir.to_path_buf());
 
     // Test write and read
     provider.write_file("test.txt", b"cloud content").await.unwrap();
@@ -36,7 +36,7 @@ async fn test_cloud_fs_provider() {
     assert_eq!(content, b"cloud content");
 
     // Verify it was written to tenant dir
-    let tenant_file = dir.path().join(&tenant_id).join("test.txt");
+    let tenant_file = dir.join(&tenant_id).join("test.txt");
     assert!(tenant_file.exists());
 
     // Test list dir
@@ -47,8 +47,8 @@ async fn test_cloud_fs_provider() {
 
 #[tokio::test]
 async fn test_hybrid_fs_mcp_server() {
-    let dir = tempfile::tempdir().unwrap();
-    let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
+    let temp_dir_base = std::env::temp_dir(); let dir = temp_dir_base.as_path();
+    let provider = Arc::new(LocalFSProvider::new(dir.to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
     let tools = server.get_tools();
@@ -81,8 +81,8 @@ async fn test_hybrid_fs_mcp_server() {
 
 #[tokio::test]
 async fn test_server_search() {
-    let dir = tempfile::tempdir().unwrap();
-    let provider = Arc::new(LocalFSProvider::new(dir.path().to_path_buf()));
+    let temp_dir_base = std::env::temp_dir(); let dir = temp_dir_base.as_path();
+    let provider = Arc::new(LocalFSProvider::new(dir.to_path_buf()));
     let server = HybridFSMcpServer::new(provider);
 
     let req = McpInvokeRequest {
@@ -107,10 +107,10 @@ async fn test_server_search() {
 
 #[tokio::test]
 async fn test_local_fs_provider_search() {
-    let dir = tempfile::tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
+    let temp_dir_base = std::env::temp_dir(); let dir = temp_dir_base.as_path();
+    let provider = LocalFSProvider::new(dir.to_path_buf());
 
-    tokio::fs::create_dir_all(dir.path().join("dir")).await.unwrap();
+    tokio::fs::create_dir_all(dir.join("dir")).await.unwrap();
 
     provider.write_file("dir/file1.txt", b"hello").await.unwrap();
     provider.write_file("dir/file2.md", b"world").await.unwrap();
