@@ -45,6 +45,10 @@ impl TwilioProvider {
     pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
         self.client.send_sms(to, from, body).await
     }
+
+    pub async fn send_conversation_message(&self, channel: &str, to: &str, body: &str) -> Result<(), String> {
+        self.client.send_conversation_message(channel, to, body).await
+    }
 }
 
 #[cfg(test)]
@@ -61,6 +65,11 @@ mod tests {
     #[async_trait]
     impl TwilioClientWrapper for MockTwilioClient {
         async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn send_conversation_message(&self, _channel: &str, _to: &str, _body: &str) -> Result<(), String> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }

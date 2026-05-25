@@ -620,6 +620,17 @@ impl DB {
                         content TEXT,
                         draft_reply TEXT,
                         status TEXT,
+                        sender_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    -- Add columns if missing
+                    ALTER TABLE inbox_messages ADD COLUMN IF NOT EXISTS sender_id TEXT;
+
+                    CREATE TABLE IF NOT EXISTS tenant_integrations (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        provider TEXT NOT NULL,
+                        credentials TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 

@@ -1,23 +1,80 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 
 export default function InboxPage() {
-  const [messages, setMessages] = useState([
-    { id: 1, sender: 'Alice', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
-    { id: 2, sender: 'Bob', content: 'When will my order be shipped?', date: 'Yesterday' },
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [replyInput, setReplyInput] = useState('');
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+
+  const [filters, setFilters] = useState({
+    whatsapp: true,
+    instagram: true,
+    facebook: true,
+    twilio: true,
+  });
+
+  const loadMessages = useCallback(async () => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+      const res = await fetch('/api/inbox/messages', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
 
   const generateDraft = () => {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
 
-  const sendReply = () => {
-    if (!replyInput) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', content: replyInput, date: 'Just now' }]);
-    setReplyInput('');
+  const sendReply = async () => {
+    if (!replyInput || !selectedMessageId) return;
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+      };
+      const res = await fetch('/api/inbox/messages/reply', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ message_id: selectedMessageId, reply_content: replyInput })
+      });
+      if (res.ok) {
+        setReplyInput('');
+        setSelectedMessageId(null);
+        alert('Reply sent successfully!');
+        loadMessages();
+      } else {
+        alert('Failed to send reply');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error sending reply');
+    }
   };
+
+  const toggleFilter = (key: keyof typeof filters) => {
+    setFilters(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const filteredMessages = messages.filter(msg => {
+    const s = (msg.source || '').toLowerCase();
+    if (s.includes('whatsapp') && !filters.whatsapp) return false;
+    if (s.includes('instagram') && !filters.instagram) return false;
+    if (s.includes('facebook') && !filters.facebook) return false;
+    if (s.includes('twilio') && !filters.twilio) return false;
+    return true;
+  });
 
   return (
     <div className="p-4 max-w-md mx-auto">
@@ -33,16 +90,40 @@ export default function InboxPage() {
         </div>
       </div>
 
+      <div className="flex gap-4 mb-4 text-sm text-black flex-wrap">
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={filters.whatsapp} onChange={() => toggleFilter('whatsapp')} /> WhatsApp
+        </label>
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={filters.instagram} onChange={() => toggleFilter('instagram')} /> Instagram
+        </label>
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={filters.facebook} onChange={() => toggleFilter('facebook')} /> Facebook
+        </label>
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={filters.twilio} onChange={() => toggleFilter('twilio')} /> Twilio
+        </label>
+      </div>
+
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 h-64 overflow-y-auto text-black">
-        {messages.map(msg => (
-          <div key={msg.id} className={`mb-3 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
-            <span className="font-semibold text-sm">{msg.sender}</span>
-            <span className="text-xs text-gray-500 ml-2">{msg.date}</span>
-            <p className={`p-2 rounded mt-1 inline-block text-left ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+        {filteredMessages.map(msg => (
+          <div
+            key={msg.id}
+            className={`mb-3 cursor-pointer p-2 rounded ${selectedMessageId === msg.id ? 'bg-blue-50 border-blue-200 border' : ''}`}
+            onClick={() => setSelectedMessageId(msg.id)}
+          >
+            <div className="flex justify-between">
+              <span className="font-semibold text-sm capitalize">{msg.source}</span>
+              <span className="text-xs text-gray-500">{msg.created_at || 'Just now'}</span>
+            </div>
+            <p className="p-2 rounded mt-1 inline-block text-left bg-gray-100 w-full text-sm">
               {msg.content}
             </p>
           </div>
         ))}
+        {filteredMessages.length === 0 && (
+          <p className="text-sm text-gray-500">No messages found.</p>
+        )}
       </div>
 
       <div className="bg-gray-50 p-4 rounded border text-black">

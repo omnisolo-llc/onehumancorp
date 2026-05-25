@@ -5,7 +5,7 @@ import { useState } from "react";
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
 
-  const integrations = [
+  const [integrations, setIntegrations] = useState([
     { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "AI-Powered Email Marketing and simple customer newsletters." },
@@ -13,7 +13,30 @@ export default function Integrations() {
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Label Generation and real-time shipping rates." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
     { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generated Meeting Links for online services." }
-  ];
+  ]);
+
+  const handleConnect = async (id: string, name: string) => {
+    alert(`Connecting to ${name}...`);
+    try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        };
+        const res = await fetch('/api/integrations/connect', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ provider: id })
+        });
+        if (res.ok) {
+            setIntegrations(prev => prev.map(i => i.id === id ? { ...i, status: 'connected' } : i));
+        } else {
+            alert('Failed to connect to ' + name);
+        }
+    } catch (e) {
+        alert('Error connecting');
+    }
+  };
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
@@ -75,11 +98,15 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
-                integration.status === 'connected'
-                  ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
-                  : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
-              }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
+              <button
+                onClick={() => handleConnect(integration.id, integration.name)}
+                className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+                  integration.status === 'connected'
+                    ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                    : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
+                }`}
+                style={integration.status === 'connected' ? {} : { background: '#0066FF' }}
+              >
                 {integration.status === 'connected' ? 'Manage' : 'Connect'}
               </button>
             </div>
