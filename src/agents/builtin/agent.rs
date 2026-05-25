@@ -80,6 +80,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub observer: Option<std::sync::Arc<dyn crate::observability::AgentObserver>>,
+    pub run_id: Option<String>,
 }
 
 impl Default for AgentRunConfig {
@@ -136,6 +138,8 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observer: None,
+            run_id: None,
         }
     }
 }
@@ -1468,6 +1472,12 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        if let Some(ref obs) = cfg.observer {
+            if let Some(ref rid) = cfg.run_id {
+                obs.on_run_started(rid, initial_message);
+            }
+        }
+
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -1793,8 +1803,22 @@ impl Agent {
                 estimated_cost_usd = tracing::field::Empty,
             );
 
-            let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
-                Ok(r) => r,
+
+            if let Some(ref obs) = final_cfg.observer {
+                if let Some(ref rid) = final_cfg.run_id {
+                    obs.on_llm_call(rid, &format!("{:?}", req));
+                }
+            }
+            let resp = match self.llm.chat(req.clone()).instrument(llm_span.clone()).await {
+
+                Ok(r) => {
+                    if let Some(ref obs) = final_cfg.observer {
+                        if let Some(ref rid) = final_cfg.run_id {
+                            obs.on_llm_response(rid, &format!("{:?}", r));
+                        }
+                    }
+                    r
+                },
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
@@ -2037,7 +2061,14 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
+
+                if let Some(ref obs) = final_cfg.observer {
+                    if let Some(ref rid) = final_cfg.run_id {
+                        obs.on_run_completed(rid, &last_assistant_content);
+                    }
+                }
                 return Ok(last_assistant_content);
+
             }
 
             // Execute tool calls and collect results.
@@ -2089,7 +2120,14 @@ impl Agent {
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
+
+                if let Some(ref obs) = final_cfg.observer {
+                    if let Some(ref rid) = final_cfg.run_id {
+                        obs.on_tool_call(rid, &tc.name, &tc.arguments.to_string());
+                    }
+                }
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, true, &final_cfg);
+
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
@@ -2137,7 +2175,14 @@ impl Agent {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 match res {
                     Ok(r) => {
+
+                        if let Some(ref obs) = final_cfg.observer {
+                            if let Some(ref rid) = final_cfg.run_id {
+                                obs.on_tool_response(rid, &tc.name, &r);
+                            }
+                        }
                         tool_error_counts.remove(&tc.name);
+
                         self.progress.record_tool_use();
                         self.observation_store.insert(tc.id.clone(), r.clone());
                         on_event(AgentEvent::ToolCall {
@@ -2217,7 +2262,14 @@ impl Agent {
                                             checkpoint_id: prev_id,
                                             reason: format!("Tool '{}' failed 3 times", tc.name),
                                         });
-                                        tool_error_counts.remove(&tc.name);
+
+                        if let Some(ref obs) = final_cfg.observer {
+                            if let Some(ref rid) = final_cfg.run_id {
+                                obs.on_tool_response(rid, &tc.name, &msg);
+                            }
+                        }
+                        tool_error_counts.remove(&tc.name);
+
                                         continue;
                                     }
                                 }
@@ -2325,7 +2377,14 @@ impl Agent {
                     );
                     match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
                         Ok(r) => {
-                            tool_error_counts.remove(&tc.name);
+
+                        if let Some(ref obs) = final_cfg.observer {
+                            if let Some(ref rid) = final_cfg.run_id {
+                                obs.on_tool_response(rid, &tc.name, &r);
+                            }
+                        }
+                        tool_error_counts.remove(&tc.name);
+
                             self.progress.record_tool_use();
                             self.observation_store.insert(tc.id.clone(), r.clone());
                             on_event(AgentEvent::ToolCall {
@@ -2406,7 +2465,14 @@ impl Agent {
                                                 checkpoint_id: prev_id,
                                                 reason: format!("Tool '{}' failed 3 times", tc.name),
                                             });
-                                            tool_error_counts.remove(&tc.name);
+
+                        if let Some(ref obs) = final_cfg.observer {
+                            if let Some(ref rid) = final_cfg.run_id {
+                                obs.on_tool_response(rid, &tc.name, &msg);
+                            }
+                        }
+                        tool_error_counts.remove(&tc.name);
+
                                             continue;
                                         }
                                     }

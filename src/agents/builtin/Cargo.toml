@@ -1,0 +1,9 @@
+[package]
+name = "ohc_builtin_agent"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]

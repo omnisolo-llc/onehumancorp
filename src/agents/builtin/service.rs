@@ -604,6 +604,8 @@ impl AgentServiceImpl {
             long_term_memory,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observer: None,
+            run_id: None,
         }
     }
 
@@ -1024,6 +1026,8 @@ impl AgentService for AgentServiceImpl {
                 long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observer: None,
+            run_id: None,
             };
 
             let observation_store = Arc::new(dashmap::DashMap::new());

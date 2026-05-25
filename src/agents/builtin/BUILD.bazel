@@ -6,6 +6,7 @@ load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 rust_library(
     name = "core",
     srcs = [
+        "observability.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",
@@ -42,6 +43,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "observability.rs",
         "auth.rs",
         "codex_runner.rs",
         "agent_protocol.rs",
