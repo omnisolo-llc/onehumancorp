@@ -141,6 +141,21 @@ impl ClaudeSubagentSpawner {
         self.summarize_output(&raw_output, config).await
     }
 
+    async fn summarize_output(
+        &self,
+        raw_output: &str,
+        config: &AgentRunConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let mut on_event = |_| {};
+        let prompt = format!(
+            "Please provide a condensed summary (1k-2k tokens) of the following subagent execution loop. \
+            Focus on the final results, key decisions, and any important artifacts produced. \
+            Do not include the full raw context.\n\nSubagent Output:\n{}",
+            raw_output
+        );
+        self.parent_agent.run(config, &prompt, &mut on_event).await
+    }
+
     #[tokio::test]
     async fn test_claude_subagent_fork() {
         let parent_client = Arc::new(MockLlmClient {
