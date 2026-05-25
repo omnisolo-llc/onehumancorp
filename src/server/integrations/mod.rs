@@ -16,7 +16,7 @@ pub mod chromadb;
 pub mod meta;
 pub mod google_calendar;
 pub mod cal_com;
-pub mod resend;
+pub mod sendgrid;
 pub mod shippo;
 pub mod zoom;
 pub mod calendly;
@@ -26,3 +26,5 @@ pub mod listmonk;
 pub mod easypost;
 pub mod jitsi;
 pub mod alipay;
+
+pub mod razorpay;

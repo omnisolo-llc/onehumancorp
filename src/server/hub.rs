@@ -341,7 +341,7 @@ impl Hub {
         Ok(())
     }
 
-    pub fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
+    pub async fn get_meetings(&self) -> Arc<Vec<MeetingRoom>> {
         {
             let cache = self.meetings_cache.read().unwrap();
             if let Some(meetings) = &*cache {
@@ -350,12 +350,13 @@ impl Hub {
         }
 
         if let Some(client) = self.redis_client.clone() {
-            let res = tokio::task::block_in_place(move || {
-                let mut conn = client.get_connection().ok()?;
-                let data: Option<String> = redis::Commands::get(&mut conn, "hub:meetings").ok()?;
+            let res: Option<Arc<Vec<MeetingRoom>>> = async {
+                let mut conn = client.get_multiplexed_tokio_connection().await.ok()?;
+                use redis::AsyncCommands;
+                let data: Option<String> = conn.get("hub:meetings").await.ok()?;
                 let meetings: Vec<MeetingRoom> = serde_json::from_str(&data?).ok()?;
                 Some(Arc::new(meetings))
-            });
+            }.await;
             if let Some(arc) = res {
                 *self.meetings_cache.write().unwrap() = Some(Arc::clone(&arc));
                 return arc;
@@ -804,7 +805,6 @@ mod tests {
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -835,7 +835,6 @@ mod tests {
         }
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -871,7 +870,7 @@ mod tests {
 
         // 5. Open meeting invalidates both caches
         let meetings = hub.get_meetings();
-        assert_eq!(meetings.len(), 0);
+        assert_eq!(meetings.await.len(), 0);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 
         hub.open_meeting("meeting1".to_string(), vec![], "agenda".to_string());
@@ -880,7 +879,7 @@ mod tests {
 
         // 6. Publish invalidates meeting cache
         let meetings = hub.get_meetings();
-        assert_eq!(meetings.len(), 1);
+        assert_eq!(meetings.await.len(), 1);
         assert!(hub.meetings_cache.read().unwrap().is_some());
 
         let _ = hub.clone().publish(Message {
@@ -902,7 +901,6 @@ mod tests {
 
         let db_url = std::env::var("DATABASE_URL").unwrap();
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
@@ -1049,7 +1047,6 @@ mod tests {
         let db_url = std::env::var("DATABASE_URL").unwrap();
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap();
