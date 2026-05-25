@@ -2,8 +2,6 @@ use super::client::{TwilioClientWrapper, RealTwilioClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-
-
 pub struct TwilioProvider {
     client: Arc<dyn TwilioClientWrapper>,
     metadata: ProviderMetadata,
@@ -17,8 +15,8 @@ impl TwilioProvider {
             client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "twilio".to_string(),
-                name: "Twilio SMS".to_string(),
-                category: "sms".to_string(),
+                name: "Twilio Conversations".to_string(),
+                category: "omnichannel".to_string(),
                 base_url: "https://api.twilio.com".to_string(),
             },
         }
@@ -29,8 +27,8 @@ impl TwilioProvider {
             client,
             metadata: ProviderMetadata {
                 id: "twilio".to_string(),
-                name: "Twilio SMS".to_string(),
-                category: "sms".to_string(),
+                name: "Twilio Conversations".to_string(),
+                category: "omnichannel".to_string(),
                 base_url: "https://api.twilio.com".to_string(),
             },
         }
@@ -44,6 +42,10 @@ impl TwilioProvider {
 
     pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
         self.client.send_sms(to, from, body).await
+    }
+
+    pub async fn send_conversation_message(&self, conversation_id: &str, author: &str, body: &str) -> Result<(), String> {
+        self.client.send_conversation_message(conversation_id, author, body).await
     }
 }
 
@@ -64,6 +66,11 @@ mod tests {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
             Ok(())
         }
+
+        async fn send_conversation_message(&self, _conversation_id: &str, _author: &str, _body: &str) -> Result<(), String> {
+            self.sent_messages.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        }
     }
 
     #[tokio::test]
@@ -74,13 +81,16 @@ mod tests {
 
         provider.send_sms("+1234567890", "+0987654321", "Test message").await.unwrap();
         assert_eq!(sent.load(Ordering::SeqCst), 1);
+
+        provider.send_conversation_message("CHXXX", "System", "Test conversation").await.unwrap();
+        assert_eq!(sent.load(Ordering::SeqCst), 2);
     }
 
     #[test]
     fn test_twilio_provider_new() {
         let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
         assert_eq!(provider.metadata.id, "twilio");
-        assert_eq!(provider.metadata.category, "sms");
+        assert_eq!(provider.metadata.category, "omnichannel");
     }
 
     #[test]

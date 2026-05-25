@@ -114,20 +114,26 @@ impl IntegrationsRegistry {
                      }
                  }
                  "twilio" => {
-                     if !creds.from_phone.is_empty() {
-                         let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
-                         let from = creds.from_phone.clone();
-                         let text = content.to_string();
+                     let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
+                     let from = if !creds.from_phone.is_empty() { creds.from_phone.clone() } else { "System".to_string() };
+                     let text = content.to_string();
+                     let conv_id = thread_id.to_string();
 
-                         let clients = self.twilio_clients.read().unwrap();
-                         if let Some(client) = clients.get(integration_id) {
-                             let client = client.clone();
-                             tokio::spawn(async move {
+                     let clients = self.twilio_clients.read().unwrap();
+                     if let Some(client) = clients.get(integration_id) {
+                         let client = client.clone();
+                         tokio::spawn(async move {
+                             // Use Twilio Conversations API if thread_id (ConversationSid) is present
+                             if !conv_id.is_empty() {
+                                 if let Err(e) = client.send_conversation_message(&conv_id, &from, &text).await {
+                                     tracing::error!("Failed to send Twilio Conversation message: {}", e);
+                                 }
+                             } else {
                                  if let Err(e) = client.send_sms(&to, &from, &text).await {
                                      tracing::error!("Failed to send Twilio SMS: {}", e);
                                  }
-                             });
-                         }
+                             }
+                         });
                      }
                  }
                  "meta" => {

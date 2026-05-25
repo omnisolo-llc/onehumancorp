@@ -3,6 +3,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn send_conversation_message(&self, conversation_id: &str, author: &str, body: &str) -> Result<(), String>;
 }
 
 pub struct RealTwilioClient {
@@ -21,6 +22,12 @@ impl TwilioClientWrapper for RealTwilioClient {
     async fn send_sms(&self, to: &str, _from: &str, body: &str) -> Result<(), String> {
         // Mock send sms
         println!("Sending SMS via Twilio to {}: {}", to, body);
+        Ok(())
+    }
+
+    async fn send_conversation_message(&self, conversation_id: &str, author: &str, body: &str) -> Result<(), String> {
+        // Mock send conversation message
+        println!("Sending conversation message via Twilio in conversation {} from {}: {}", conversation_id, author, body);
         Ok(())
     }
 }
