@@ -181,6 +181,14 @@ export default function WebsiteBuilderPage() {
                   style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (bio.trim().length > 5) {
+                        handleGenerate();
+                      }
+                    }
+                  }}
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
                   rows={6}
                 />
