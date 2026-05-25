@@ -78,6 +78,7 @@ where
     Router::new()
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
+        .route("/campaign/generate-review", post(handle_generate_review))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -97,6 +98,18 @@ where
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateReviewRequest {
+    pub order_id: String,
+    pub customer_name: String,
+    pub product_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateReviewResponse {
+    pub message: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -150,6 +163,22 @@ async fn handle_social_post(
     Json(SocialPostResponse {
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
+    })
+}
+
+async fn handle_generate_review(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateReviewRequest>,
+) -> impl IntoResponse {
+    // In a real implementation we would call an AI provider here.
+    // For now we simulate generating a review request based on the inputs.
+    let generated = format!(
+        "Hi {},\n\nWe noticed you recently received your {} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/{}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        req.customer_name, req.product_name, req.order_id
+    );
+
+    Json(GenerateReviewResponse {
+        message: generated,
     })
 }
 

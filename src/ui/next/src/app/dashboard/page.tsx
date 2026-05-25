@@ -450,14 +450,32 @@ export default function Dashboard() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => {
+                                onClick={async () => {
                                     setShowReviewModal(true);
                                     setIsGeneratingReview(true);
-                                    setTimeout(() => {
+                                    try {
+                                        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                order_id: '8922',
+                                                customer_name: 'Sarah',
+                                                product_name: 'Signature Coffee Blend'
+                                            })
+                                        });
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            setReviewMessage(data.message);
+                                        } else {
+                                            setReviewMessage("Hi Sarah,\n\nWe noticed you recently received your Signature Coffee Blend and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/8922\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
+                                        }
+                                    } catch (e) {
+                                        console.error("Failed to generate review", e);
                                         setReviewMessage("Hi Sarah,\n\nWe noticed you recently received your Signature Coffee Blend and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/8922\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
+                                    } finally {
                                         setIsGeneratingReview(false);
                                         setReviewSent(false);
-                                    }, 800);
+                                    }
                                 }}
                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
                             >
@@ -1035,9 +1053,32 @@ export default function Dashboard() {
                         </div>
                     ) : (
                         <button
-                            onClick={() => {
-                                setReviewSent(true);
-                                setTimeout(() => setShowReviewModal(false), 1500);
+                            onClick={async () => {
+                                try {
+                                    const response = await fetch('/api/v1/growth/campaign/send', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            name: 'Automated Review Request',
+                                            subject: 'How did we do? Leave a review!',
+                                            body: reviewMessage,
+                                            target_segment: 'recent_buyers_no_review'
+                                        })
+                                    });
+                                    if (response.ok) {
+                                        setReviewSent(true);
+                                        setTimeout(() => setShowReviewModal(false), 1500);
+                                    } else {
+                                        const originalMessage = reviewMessage;
+                                        setReviewMessage('Failed to send campaign. Please try again later.');
+                                        setTimeout(() => setReviewMessage(originalMessage), 3000);
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to send review campaign', e);
+                                    const originalMessage = reviewMessage;
+                                    setReviewMessage('Failed to send campaign. Please try again later.');
+                                    setTimeout(() => setReviewMessage(originalMessage), 3000);
+                                }
                             }}
                             className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md flex items-center justify-center gap-2"
                         >
