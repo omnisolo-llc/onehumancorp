@@ -157,3 +157,37 @@ ALTER TABLE IF EXISTS meeting_rooms FORCE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS meeting_transcripts FORCE ROW LEVEL SECURITY;
 
 COMMIT;
+
+INSERT INTO tenants (id, name, industry, tier)
+VALUES ('e2e-cross-device-tenant', 'Cross Device OHC Bakery', 'Food and beverage', 'starter')
+ON CONFLICT (id) DO UPDATE
+SET name = EXCLUDED.name,
+    industry = EXCLUDED.industry,
+    tier = EXCLUDED.tier,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+VALUES
+  (
+    'e2e-cross-device-user',
+    'crossdevice@example.com',
+    'crossdevice@example.com',
+    '$2b$10$hmVhunI7Fq2ZzQ0PguAH5OeXUyb/gNAORUpLPD2g44Ik9/Fd9sM7a',
+    ARRAY['ADMIN'],
+    TRUE,
+    'e2e-cross-device-tenant',
+    CURRENT_TIMESTAMP,
+    CURRENT_TIMESTAMP
+  )
+ON CONFLICT (id) DO UPDATE
+SET username = EXCLUDED.username,
+    email = EXCLUDED.email,
+    password_hash = EXCLUDED.password_hash,
+    roles = EXCLUDED.roles,
+    active = EXCLUDED.active,
+    tenant_id = EXCLUDED.tenant_id,
+    updated_at = CURRENT_TIMESTAMP;
+
+INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json)
+VALUES ('e2e-cross-device-tenant', 'e2e-cross-device-tenant', 'e2e-cross-device-user', 0, '{}'::jsonb)
+ON CONFLICT (tenant_id, organization_id, user_id) DO NOTHING;

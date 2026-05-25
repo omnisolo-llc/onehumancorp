@@ -76,7 +76,7 @@ impl OnboardingAgent {
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+             ON CONFLICT (tenant_id, organization_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
