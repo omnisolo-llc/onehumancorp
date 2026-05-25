@@ -194,6 +194,16 @@ impl Tracker {
         }
     }
 
+    pub async fn process_payment(&self, _tenant_id: &str, amount_cents: i64) -> Result<String, String> {
+        if amount_cents >= 100000 {
+            tracing::info!("Routing payment to ACH to save on transaction fees.");
+            Ok("payment_routed_via_ach".to_string())
+        } else {
+            tracing::info!("Routing payment to standard Stripe CC.");
+            Ok("payment_routed_via_stripe_cc".to_string())
+        }
+    }
+
     pub fn get_tenant_tokens(&self, tenant_id: &str) -> i64 {
         if let Some(ref auditor) = self.auditor {
             auditor.get_tenant_tokens(tenant_id)
