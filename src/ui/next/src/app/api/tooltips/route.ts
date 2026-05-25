@@ -5,7 +5,7 @@ export async function GET() {
     "bio-input-tooltip": "Tell us what you sell and who your customers are. Keep it simple!",
     "generate-btn-tooltip": "Click here to have our AI build your ready-to-launch store.",
     "launch-btn-tooltip": "Make your store live on the internet so customers can visit.",
-    "team-activity-tooltip": "See exactly what your AI helpers are doing right now.",
+    "team-activity-tooltip": "See what your AI helpers are doing.",
     "referral-tooltip": "Share this link with friends. You earn credits if they sign up!",
     "swarm-online-tooltip": "Your AI helpers are working hard on your tasks right now.",
     "department-card-tooltip": "Click here to see tasks that need your approval.",
@@ -14,6 +14,6 @@ export async function GET() {
     "nav-setup-tooltip": "Set up your business info, logo, and how you get paid.",
     "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
-    "changelog-nav-tooltip": "See the latest updates and new features we just added."
+    "changelog-nav-tooltip": "See what's new in our latest updates."
   });
 }

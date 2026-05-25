@@ -291,14 +291,14 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "View the real-time actions performed by your AI workforce." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
+                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "See the work your AI helpers are doing right now." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <span className="font-bold text-blue-800 text-sm block">Tour: Get Paid</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
+                    <span className="font-bold text-blue-800 text-sm block">Tour: Turn On Your AI Helper</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
+                  <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Your AI helpers meet to plan before doing work." }, { targetId: "help-widget-container", message: "They brainstorm, refine the plan, and agree on how to do it." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                    <span className="font-bold text-blue-800 text-sm block">Tour: How AI Helpers Plan</span>
                   </button>
                   <button
                     id="kairos-walkthrough-btn"
@@ -308,7 +308,7 @@ export function HelpWidget() {
                     }}
                     className="w-full text-left bg-indigo-50 p-3 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
                   >
-                    <span className="font-bold text-indigo-800 text-sm block">Tour: KAIROS AI OS Orchestration</span>
+                    <span className="font-bold text-indigo-800 text-sm block">Tour: How AI Works Together</span>
                   </button>
                 </div>
               </div>
@@ -386,7 +386,7 @@ export function HelpWidget() {
                   <h4 className="font-bold text-gray-800 text-sm mb-1">New AI Store Builder</h4>
                   <p className="text-xs text-gray-600">You can now generate a complete storefront from just a short description of your business.</p>
                 </div>
-                <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in the latest OneHumanCorp updates.">
+                <WithTooltip id="changelog-nav-tooltip" defaultText="See what's new in our latest updates.">
                   <a href="/changelog" className="text-blue-600 text-sm font-bold hover:underline">Read full changelog →</a>
                 </WithTooltip>
               </div>
