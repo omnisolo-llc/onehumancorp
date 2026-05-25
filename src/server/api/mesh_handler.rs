@@ -25,21 +25,46 @@ pub async fn mesh_ws_handler(
 }
 
 #[derive(serde::Deserialize)]
+pub struct SIPPayload {
+    pub agent_id: Option<String>,
+    pub action: Option<String>,
+    pub status: Option<String>,
+    pub payload: Option<serde_json::Value>,
+    pub msg_id: Option<String>,
+}
+
+impl Into<MeshMessage> for SIPPayload {
+    fn into(self) -> MeshMessage {
+        let payload_bytes = match self.payload {
+            Some(p) => serde_json::to_vec(&p).unwrap_or_default(),
+            None => Vec::new(),
+        };
+        MeshMessage {
+            agent_id: self.agent_id.unwrap_or_default(),
+            action: self.action.unwrap_or_default(),
+            status: self.status.unwrap_or_default(),
+            payload: payload_bytes,
+            msg_id: self.msg_id.unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(serde::Deserialize)]
 pub struct BroadcastRequest {
     pub topic: String,
-    pub message: MeshMessage,
+    pub message: SIPPayload,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct DirectRequest {
     pub target_agent_id: String,
-    pub message: MeshMessage,
+    pub message: SIPPayload,
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]
 pub struct MailboxRequest {
     pub mailbox_id: String,
-    pub message: MeshMessage,
+    pub message: SIPPayload,
 }
 
 fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Response> {
@@ -63,6 +88,10 @@ pub async fn orchestration_broadcast_handler(
         return err_response;
     }
 
+    if let Err(err_response) = validate_sip_payload(&payload.topic, &payload.message, true) {
+        return err_response;
+    }
+
     match transport.publish(&payload.topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -80,12 +109,39 @@ pub async fn orchestration_tasks_stream_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
+fn validate_sip_payload(topic: &str, message: &SIPPayload, enforce_channel: bool) -> Result<(), axum::response::Response> {
+    let agent_id = message.agent_id.as_deref().unwrap_or("");
+    if !agent_id.starts_with("spiffe://") {
+        let error_res = serde_json::json!({ "error": "agent_id must be a valid SPIFFE ID" });
+        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+    }
+
+    if enforce_channel && topic != "mesh:tasks" && topic != "mesh:coordination" && topic != "mesh:presence" {
+        let error_res = serde_json::json!({ "error": "channel must be one of mesh:tasks, mesh:coordination, or mesh:presence" });
+        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+    }
+
+    if message.action.as_deref().unwrap_or("").is_empty() ||
+       message.status.as_deref().unwrap_or("").is_empty() ||
+       message.msg_id.as_deref().unwrap_or("").is_empty() ||
+       message.payload.is_none() {
+        let error_res = serde_json::json!({ "error": "missing core SIP fields" });
+        return Err((axum::http::StatusCode::BAD_REQUEST, axum::response::Json(error_res)).into_response());
+    }
+
+    Ok(())
+}
+
 pub async fn broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
+        return err_response;
+    }
+
+    if let Err(err_response) = validate_sip_payload(&payload.topic, &payload.message, true) {
         return err_response;
     }
 
@@ -108,6 +164,10 @@ pub async fn direct_handler(
     }
 
     let topic = format!("mesh:direct:{}", payload.target_agent_id);
+    if let Err(err_response) = validate_sip_payload(&topic, &payload.message, false) {
+        return err_response;
+    }
+
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -127,6 +187,10 @@ pub async fn mailbox_handler(
     }
 
     let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    if let Err(err_response) = validate_sip_payload(&topic, &payload.message, false) {
+        return err_response;
+    }
+
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -293,12 +357,12 @@ mod tests {
 
         let req_body = DirectRequest {
             target_agent_id: "agent-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
+            message: SIPPayload {
+                agent_id: Some("spiffe://test".to_string()),
+                action: Some("test_action".to_string()),
+                status: Some("ok".to_string()),
+                payload: Some(serde_json::json!("ws_test")),
+                msg_id: Some(uuid::Uuid::new_v4().to_string()),
             }
         };
 
@@ -336,12 +400,12 @@ mod tests {
 
         let req_body = MailboxRequest {
             mailbox_id: "mailbox-1".to_string(),
-            message: MeshMessage {
-                agent_id: "test".to_string(),
-                action: "test_action".to_string(),
-                status: "ok".to_string(),
-                payload: b"ws_test".to_vec(),
-                msg_id: uuid::Uuid::new_v4().to_string(),
+            message: SIPPayload {
+                agent_id: Some("spiffe://test".to_string()),
+                action: Some("test_action".to_string()),
+                status: Some("ok".to_string()),
+                payload: Some(serde_json::json!("ws_test")),
+                msg_id: Some(uuid::Uuid::new_v4().to_string()),
             }
         };
 
