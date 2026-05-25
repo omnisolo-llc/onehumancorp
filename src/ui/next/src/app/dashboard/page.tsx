@@ -361,8 +361,6 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && (
-<>
 {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
@@ -671,9 +669,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         </>
-)}
-{/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
                 <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>

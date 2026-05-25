@@ -227,6 +227,39 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByText("Business Snapshot")).toBeVisible();
   });
 
+  test('verify AI Business Insights section remains visible when Action Required is populated', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+
+    await expect(page.getByText("AI Business Insights")).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View AI Insights' })).toBeVisible();
+  });
+
+  test('verify Business Snapshot data reflects correct E2E database seeded metrics alongside Action Required items', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Action required must exist
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+
+    // Verify Business Snapshot is visible and has the real seeded DB data
+    // Data check: $114.99 total sales from E2E seed script
+    await expect(page.getByText("Today's Sales")).toBeVisible();
+    await expect(page.getByText("$114.99")).toBeVisible({ timeout: 10000 });
+  });
+
+  test('verify Business Snapshot remains visible when no actions are required', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+
+    // First approve the only seeded action item so we get into the 0 approvals state
+    const approveButton = page.locator('div.p-5').filter({ hasText: 'Draft email for review' }).getByRole('button', { name: 'Approve' });
+    await approveButton.click();
+    await expect(page.getByText("Action Required")).not.toBeVisible({ timeout: 10000 });
+
+    // Verify Business Snapshot is STILL visible
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+  });
+
   test('verify Team Activity waiting state is rendered', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByText("Team Activity")).toBeVisible({ timeout: 10000 });
@@ -234,4 +267,5 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
   });
+
 });
