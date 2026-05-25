@@ -80,6 +80,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    #[serde(skip)]
+    pub observability_provider: Option<Arc<dyn crate::observability::ObservabilityProvider>>,
 }
 
 impl Default for AgentRunConfig {
@@ -136,6 +138,7 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observability_provider: None,
         }
     }
 }
@@ -1534,8 +1537,18 @@ impl Agent {
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
             }
         }
+        let trace_id = if let Some(provider) = &final_cfg.observability_provider {
+            Some(provider.start_trace(initial_message).await)
+        } else {
+            None
+        };
+
         if final_cfg.enable_llmcompiler_plan_and_execute {
-            return self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+            let res = self.run_plan_and_execute(&final_cfg, initial_message, &session_tools, on_event).await;
+            if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                provider.end_trace(tid).await;
+            }
+            return res;
         }
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
@@ -1557,6 +1570,9 @@ impl Agent {
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
             on_event(AgentEvent::TaskError { error: err_msg.clone() });
+            if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                provider.end_trace(tid).await;
+            }
             return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
         }
 
@@ -1564,6 +1580,9 @@ impl Agent {
         if let Some(guard_cfg) = &final_cfg.guardrails {
             if let Err(e) = guard_cfg.check_input(initial_message) {
                 on_event(AgentEvent::TaskError { error: e.clone() });
+                if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                    provider.end_trace(tid).await;
+                }
                 return Err(e.into());
             }
         }
@@ -1602,7 +1621,11 @@ impl Agent {
         }
 
         if final_cfg.enable_langgraph_mechanic {
-            return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+            let res = self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
+            if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                provider.end_trace(tid).await;
+            }
+            return res;
         }
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
@@ -1806,6 +1829,9 @@ impl Agent {
                         if malformed_retries >= max_malformed_retries {
                              let err_msg = format!("Terminal condition reached: Malformed LLM response retries exhausted ({}).", max_malformed_retries);
                              on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                             if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                                 provider.end_trace(tid).await;
+                             }
                              return Err(err_msg.into());
                         }
                         let err_msg = format!("Malformed LLM response: {}. Agent retrying...", e);
@@ -1814,6 +1840,9 @@ impl Agent {
                         continue;
                     } else {
                         on_event(AgentEvent::TaskError { error: err.clone() });
+                        if let (Some(provider), Some(tid)) = (&final_cfg.observability_provider, &trace_id) {
+                            provider.end_trace(tid).await;
+                        }
                         return Err(err.into());
                     }
                 }
@@ -6212,4 +6241,51 @@ async fn test_stripe_retry_limit() {
     let lock = client.call_count.lock().await;
     // Exactly 3 calls: Turn 0 (Initial), Turn 1 (Retry 1), Turn 2 (Retry 2)
     assert_eq!(*lock, 3, "Expected exactly 3 tool calls");
+}
+
+#[tokio::test]
+async fn test_observability_provider() {
+    use crate::observability::{MockObservabilityProvider, ObservabilityProvider};
+
+    let client = std::sync::Arc::new(crate::llm::mock::MockLlmClient {
+        responses: tokio::sync::Mutex::new(vec![
+            crate::types::ChatResponse {
+                message: crate::types::Message::assistant("Hello observability!"),
+                usage: crate::types::Usage {
+                    input_tokens: 10,
+                    output_tokens: 5,
+                    cache_creation_input_tokens: 0,
+                    cache_read_input_tokens: 0,
+                },
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }
+        ]),
+        received_requests: tokio::sync::Mutex::new(Vec::new()),
+    });
+
+    let agent = Agent::new(client, vec![]);
+    let provider = std::sync::Arc::new(MockObservabilityProvider::new());
+
+    let mut cfg = AgentRunConfig::default();
+    cfg.observability_provider = Some(provider.clone() as std::sync::Arc<dyn ObservabilityProvider>);
+
+    let mut events = vec![];
+    let mut on_event = |e| { events.push(e); };
+
+    let result = agent.run(&cfg, "Test observability", &mut on_event).await;
+    assert!(result.is_ok());
+
+    let traces = provider.traces.lock().await;
+    assert_eq!(traces.len(), 1, "Expected exactly 1 trace to be created");
+    assert_eq!(traces[0].task, "Test observability");
+
+    let spans = provider.spans.lock().await;
+    assert_eq!(spans.len(), 1, "Expected exactly 1 span to be created");
+    assert_eq!(spans[0].name, "llm_chat");
+
+    let calls = provider.calls.lock().await;
+    assert_eq!(calls.len(), 1, "Expected exactly 1 LLM call to be logged");
+    assert_eq!(calls[0].usage.input_tokens, 10);
+    assert_eq!(calls[0].usage.output_tokens, 5);
 }

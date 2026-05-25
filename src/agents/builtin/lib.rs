@@ -58,6 +58,7 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
+pub mod observability;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod gpt_researcher;
