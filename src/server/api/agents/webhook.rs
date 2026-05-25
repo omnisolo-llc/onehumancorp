@@ -107,6 +107,7 @@ async fn handle_webhook(
             "draft_reply": draft_reply,
             "inbox_message_id": id,
         }),
+        None,
     ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),

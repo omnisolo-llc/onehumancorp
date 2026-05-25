@@ -87,6 +87,7 @@ impl Department for CustomerSuccessAgent {
                 event.tenant_id.clone(),
                 risk,
                 action_payload,
+                None,
             ).await.map(|_| ())?;
 
             return Ok(());
@@ -98,6 +99,7 @@ impl Department for CustomerSuccessAgent {
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
+            None,
         ).await.map(|_| ())
     }
 
@@ -114,7 +116,7 @@ impl Department for CustomerSuccessAgent {
     }
 
     async fn request_approval(&self, description: String, tenant_id: String, risk: ActionRisk) -> Result<ApprovalRequest, String> {
-        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({})).await
+        self.orchestrator.execute_action(self.department_type(), description.clone(), tenant_id.clone(), risk, serde_json::json!({}), None).await
     }
 }
 

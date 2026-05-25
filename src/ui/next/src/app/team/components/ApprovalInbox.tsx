@@ -82,7 +82,7 @@ export default function ApprovalInbox({
             approvals.map((req) => (
               <div
                 key={req.id}
-                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
+                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-[16px] p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span
@@ -318,13 +318,13 @@ export default function ApprovalInbox({
                 <div className="flex gap-3">
                   <button
                     onClick={() => onReject(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
+                    className="flex-1 min-h-[44px] py-3 px-4 rounded-[8px] font-semibold text-sm bg-gray-100 text-[#1D1D1F] hover:bg-gray-200 active:scale-[0.98] transition-all"
                   >
                     Reject / Edit
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
+                    className="flex-1 min-h-[44px] py-3 px-4 rounded-[8px] font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0071E3] shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                   >
                     Approve
                   </button>

@@ -126,6 +126,18 @@ test.describe("AI Agent Department UI Mocks", () => {
     ).toBeVisible();
   });
 
+  test("UI: Verify custom feature UI for abandoned_cart mock displays correctly", async ({
+    page,
+  }) => {
+    await page.goto("/team");
+
+    const salesCard = page.locator("button", { hasText: "The Salesperson" });
+    await salesCard.click();
+
+    await expect(page.locator("h1")).toContainText("The Salesperson");
+    await expect(page.getByText("Abandoned Cart Detected")).toBeVisible();
+  });
+
   test("UI: End-to-End CUJ - Order Placed event to Customer Success draft approval", async ({
     page,
     request,

@@ -45,6 +45,7 @@ mod tests {
             tenant_id.clone(),
             ActionRisk::DraftForReview,
             serde_json::json!({"test": "payload"}),
+            None,
         ).await;
 
         let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;

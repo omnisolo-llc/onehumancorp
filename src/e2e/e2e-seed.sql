@@ -53,12 +53,12 @@ SET username = EXCLUDED.username,
     tenant_id = EXCLUDED.tenant_id,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, feature_type, created_at, updated_at)
 VALUES
-('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
-('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', 'social_calendar', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', 'abandoned_cart', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
