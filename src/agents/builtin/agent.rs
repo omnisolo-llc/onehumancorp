@@ -78,7 +78,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_serverless_hibernation: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
-    pub permission_architecture: crate::types::PermissionArchitecture,
+    pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -134,7 +134,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_serverless_hibernation: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
-            permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             manually_approved_tool_calls: vec![],
         }
     }
@@ -2272,7 +2272,7 @@ impl Agent {
                 tracing::debug!("Master Catalog B.2: Executing {} mutating tool calls serially.", mutating_calls.len());
             }
             for tc in &mutating_calls {
-                if final_cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive {
+                if final_cfg.hil_spectrum == crate::types::HumanInLoopSpectrum::ApprovalOnMutate {
                     if !final_cfg.manually_approved_tool_calls.contains(&tc.id) {
                         on_event(AgentEvent::UserInterventionRequired { error: format!("Tool call {} requires manual approval.", tc.name) });
                         return Err(ToolError::UserFixable(format!("Tool call {} requires manual approval.", tc.name)).into());
