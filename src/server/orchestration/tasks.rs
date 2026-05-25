@@ -786,13 +786,16 @@ mod tests {
             async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-            async fn heartbeat(&self, _agent_id: &str, _status: &str) -> Result<(), String> { Ok(()) }
-            async fn report_health(&self) -> Result<(), String> { Ok(()) }
-            async fn get_node_id(&self) -> String { "dummy".to_string() }
-            async fn report_health_state(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
@@ -847,8 +850,11 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
@@ -862,13 +868,16 @@ mod tests {
             async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-            async fn heartbeat(&self, _agent_id: &str, _status: &str) -> Result<(), String> { Ok(()) }
-            async fn report_health(&self) -> Result<(), String> { Ok(()) }
-            async fn get_node_id(&self) -> String { "dummy".to_string() }
-            async fn report_health_state(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
@@ -962,8 +971,11 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
@@ -977,13 +989,16 @@ mod tests {
             async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-            async fn heartbeat(&self, _agent_id: &str, _status: &str) -> Result<(), String> { Ok(()) }
-            async fn report_health(&self) -> Result<(), String> { Ok(()) }
-            async fn get_node_id(&self) -> String { "dummy".to_string() }
-            async fn report_health_state(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
@@ -1030,9 +1045,12 @@ mod chaos_tests {
         async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
         async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
-        async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
-        async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-        async fn ping(&self) -> Result<(), String> { Ok(()) }
+            async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+
+
+
+
+
         async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
         async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
