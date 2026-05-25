@@ -4065,7 +4065,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             footer.style.backgroundColor = 'transparent';
                             footer.style.border = 'none';
                             footer.style.boxShadow = 'none';
-                            footer.innerHTML = `<a href="ohc://join?ref=storefront" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
+                            const tenant = localStorage.getItem('tenant_id') || 'storefront';
+                            footer.innerHTML = `<a href="ohc://join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
                             container.appendChild(footer);
                         }
 
