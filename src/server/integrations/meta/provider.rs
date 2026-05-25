@@ -49,3 +49,48 @@ impl MetaProvider {
         self.client.send_message(platform, to, body).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use async_trait::async_trait;
+
+    struct MockMetaClient;
+
+    #[async_trait]
+    impl MetaClientWrapper for MockMetaClient {
+        async fn send_message(&self, _platform: &str, _to: &str, _body: &str) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_meta_provider_new() {
+        let provider = MetaProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "meta");
+        assert_eq!(provider.metadata.category, "social");
+    }
+
+    #[test]
+    fn test_meta_provider_with_client() {
+        let mock_client = Arc::new(MockMetaClient);
+        let provider = MetaProvider::with_client(mock_client);
+        assert_eq!(provider.metadata.id, "meta");
+        assert_eq!(provider.metadata.category, "social");
+    }
+
+    #[test]
+    fn test_meta_provider_to_integration_provider() {
+        let provider = MetaProvider::new("test_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "meta");
+    }
+
+    #[tokio::test]
+    async fn test_meta_provider_send_message() {
+        let mock_client = Arc::new(MockMetaClient);
+        let provider = MetaProvider::with_client(mock_client);
+        let result = provider.send_message("whatsapp", "user", "hello").await;
+        assert!(result.is_ok());
+    }
+}

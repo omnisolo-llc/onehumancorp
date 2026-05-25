@@ -2,7 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
+import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
+import { InteractiveWalkthrough } from './Walkthrough';
 
 // --- Tooltip Registry & Component ---
 type TooltipContextType = {
@@ -157,42 +159,13 @@ export function WalkthroughProvider({ children }: { children: ReactNode }) {
   return (
     <WalkthroughContext.Provider value={{ startWalkthrough, nextStep, endWalkthrough }}>
       {children}
-      {activeStep && (
-        <div className="fixed inset-0 z-[100] pointer-events-none flex flex-col">
-          <div className="absolute inset-0 bg-transparent pointer-events-auto" onClick={endWalkthrough} />
-
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Highlight box */}
-            <div
-              className="absolute border-4 border-blue-500 rounded-xl transition-all duration-300 pointer-events-none shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] z-[100]"
-              style={{ ...highlightStyle, position: 'absolute' }}
-            />
-
-            <div className="pointer-events-auto fixed bottom-24 left-1/2 -translate-x-1/2 bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full z-[101]">
-               <div className="flex justify-between items-start mb-2">
-                 <h3 className="font-bold text-gray-900 text-lg">Quick Guide</h3>
-                 <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                   {currentStepIndex + 1} of {steps.length}
-                 </span>
-               </div>
-               <p className="text-gray-700 mb-6 leading-relaxed text-sm">{activeStep.message}</p>
-               <div className="flex justify-between items-center">
-                 <button
-                   onClick={endWalkthrough}
-                   className="text-gray-500 text-sm font-medium hover:text-gray-700 px-2 py-1"
-                 >
-                   Skip
-                 </button>
-                 <button
-                   onClick={nextStep}
-                   className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-md hover:bg-blue-700 active:scale-95 transition-all"
-                 >
-                   {currentStepIndex < steps.length - 1 ? "Next" : "Got it"}
-                 </button>
-               </div>
-            </div>
-          </div>
-        </div>
+      {steps.length > 0 && (
+        <InteractiveWalkthrough
+          steps={steps.map(s => ({ targetId: s.targetId, title: "Quick Guide", content: s.message, position: "top" }))}
+          isOpen={steps.length > 0}
+          onClose={endWalkthrough}
+          onComplete={endWalkthrough}
+        />
       )}
     </WalkthroughContext.Provider>
   );
@@ -206,10 +179,11 @@ export function useWalkthrough() {
 
 // --- Help Widget System ---
 export function HelpWidget() {
+  const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, showDocsLink?: boolean}[]>([
+  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
   const [chatInput, setChatInput] = useState("");
@@ -248,11 +222,11 @@ export function HelpWidget() {
       setChatMessages(prev => [...prev, { role: "user", text: val }]);
 
       try {
-        const response = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ message: val }) });
+        const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
         const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, linkUrl: data.link?.url, linkTitle: data.link?.title }]);
       } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now.", showDocsLink: true }]);
+        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
       }
     }
   };
@@ -326,6 +300,16 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
+                  <button
+                    id="kairos-walkthrough-btn"
+                    onClick={() => {
+                      setOpen(false);
+                      router.push("/kairos?walkthrough=true");
+                    }}
+                    className="w-full text-left bg-indigo-50 p-3 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
+                  >
+                    <span className="font-bold text-indigo-800 text-sm block">Tour: KAIROS AI OS Orchestration</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -342,9 +326,9 @@ export function HelpWidget() {
                     return msg.role === "bot" ? (
                       <div key={idx} className={className}>
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.showDocsLink && (
+                        {msg.linkUrl && msg.linkTitle && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href="/api-docs" className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
+                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>
                           </div>
                         )}
                       </div>

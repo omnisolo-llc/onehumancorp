@@ -65,7 +65,6 @@ pub use ::server_common as common;
 pub use ::server_ohc as ohc;
 pub mod builder;
 pub mod tools;
-
 pub mod workers;
 use crate::orchestration::mesh::TeammateMesh;
 
@@ -86,7 +85,6 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
-
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -641,6 +639,7 @@ impl HubService for MyHubService {
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
             "Starter" => 9.0,
@@ -655,8 +654,11 @@ impl HubService for MyHubService {
             tracing::info!("Optimized payment method to {:?} to save ${:.2} on transaction fees", optimal_pm, savings);
         }
 
+        let is_china = req.plan_id.ends_with("_china");
         let is_latam = req.plan_id.ends_with("_latam");
-        let url = if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
+        let url = if let Some(alipay_client) = alipay_client.filter(|_| is_china) {
+            alipay_client.create_checkout_preference(&req.plan_id, &tenant_id).await
+        } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
             mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else {
             client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
@@ -678,6 +680,7 @@ impl HubService for MyHubService {
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
         let _mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let _alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         client.cancel_subscription(&req.plan_id).await
             .map_err(|e| tonic::Status::internal(e))?;
@@ -1108,7 +1111,7 @@ impl HubService for MyHubService {
     async fn create_task(
         &self,
         request: Request<CreateTaskRequest>,
-    ) -> Result<Response<SharedTask>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
             "default_org".to_string(),
@@ -1118,7 +1121,7 @@ impl HubService for MyHubService {
             req.priority,
         ).map_err(|e| Status::internal(e))?;
         
-        Ok(Response::new(SharedTask {
+        Ok(Response::new(::server_ohc::orchestration::SharedTask {
             id: task.id,
             organization_id: task.organization_id,
             parent_plan_id: task.parent_plan_id,
@@ -1142,7 +1145,7 @@ impl HubService for MyHubService {
         }))
     }
 
-    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<SharedTask, Status>> + Send>>;
+    type PollTasksStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::SharedTask, Status>> + Send>>;
     
     async fn poll_tasks(
         &self,
@@ -1151,8 +1154,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
         
-        let mapped_tasks: Vec<Result<SharedTask, Status>> = tasks.into_iter().map(|task| {
-            Ok(SharedTask {
+        let mapped_tasks: Vec<Result<::server_ohc::orchestration::SharedTask, Status>> = tasks.into_iter().map(|task| {
+            Ok(::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -1231,8 +1234,8 @@ impl HubService for MyHubService {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
 
-        let mapped_tasks: Vec<SharedTask> = tasks.into_iter().map(|task| {
-            SharedTask {
+        let mapped_tasks: Vec<::server_ohc::orchestration::SharedTask> = tasks.into_iter().map(|task| {
+            ::server_ohc::orchestration::SharedTask {
                 id: task.id,
                 organization_id: task.organization_id,
                 parent_plan_id: task.parent_plan_id,
@@ -2022,8 +2025,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
-        .nest("/api/v1/booking", api::booking::router())
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
+        .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
@@ -2123,7 +2126,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(::server_auth::Store::new());
+    let store = std::sync::Arc::new(crate::auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
@@ -2700,7 +2703,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 16px;
-            max-width: 600px;
+            max-width: 375px;
             margin: 40px auto;
             overflow: hidden;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
@@ -2711,8 +2714,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             backdrop-filter: blur(30px) saturate(210%);
             -webkit-backdrop-filter: blur(30px) saturate(210%);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
         }
 
         #setup-screen > div {
@@ -2746,6 +2747,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 }
             }
+
+            /* Scribe: Documentation Feature Styles */
+            .tooltip-box { position: fixed; background: var(--text); color: var(--bg); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; font-family: inherit; line-height: 1.4; pointer-events: none; z-index: 9999; opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease; transform: translateY(4px); max-width: 250px; box-shadow: var(--shadow-md); }
+            .tooltip-box.show { opacity: 1; transform: translateY(0); }
+            #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
+            #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
+            #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
+            #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+            #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
+            .chat-msg { padding: 12px; border-radius: var(--radius-md); max-width: 85%; font-size: 14px; }
+            .chat-msg.user { background: var(--bg); align-self: flex-end; color: var(--text); border-bottom-right-radius: 4px; }
+            .chat-msg.ai { background: var(--primary-soft); align-self: flex-start; color: var(--text); border-bottom-left-radius: 4px; }
+            .chat-msg a { color: var(--primary); font-weight: 600; text-decoration: none; }
+            #ai-chat-input-container { display: flex; padding: 12px; border-top: 1px solid var(--border); gap: 8px; }
+            #ai-chat-input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; outline: none; }
+            #ai-chat-input:focus { border-color: var(--primary); }
+            #walkthrough-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9500; box-shadow: inset 0 0 0 9999px rgba(0,0,0,0.5); display: none; transition: all 0.3s ease; }
+            #walkthrough-bubble { position: fixed; background: white; color: var(--text); padding: 16px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); z-index: 9501; display: none; max-width: 300px; border-left: 4px solid var(--primary); }
+            #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
+            #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
+            #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
+            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .help-category-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--primary); }
+            .help-category-card h3 { margin: 0 0 8px 0; color: var(--primary); }
+            .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
+            .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
+            .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; }
+            .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
+            .video-info { padding: 12px; }
+            .video-info h4 { margin: 0 0 4px 0; }
+            .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
+            @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
                 </head>
                 <body>
@@ -2754,6 +2787,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
                         <a onclick="showScreen('setup-screen')" id="nav-setup">Setup</a>
                         <a onclick="showScreen('api-screen')">Connect Tools</a>
+                        <a onclick="showScreen('changelog-screen')" id="nav-changelog" placeholder="changelog-nav-tooltip">What's New</a>
                     </nav>
 
                     <div id="mobile-bottom-nav">
@@ -2763,7 +2797,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
                         <button class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share</button>
                         <span class="nav-item" onclick="showScreen('referral-dashboard-screen')">Share Store</span>
-                        <button class="nav-item" onclick="showScreen('settings-screen')">⚙️<br>Settings</button>
+                        <button class="nav-item" onclick="showScreen('help-screen')">❓<br>Help</button>
                     </div>
 
 
@@ -2862,6 +2896,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3>💬 WhatsApp</h3>
                             <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
                         </div>
+                        <!-- Business Analytics Widget with Soft Paywall -->
+                        <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Analytics</h3>
+                            </div>
+
+                            <!-- Basic Metrics (Free) -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Total Sales</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">$1,240</p>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.5); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.8);">
+                                    <p style="margin: 0; font-size: 13px; color: #86868B; font-weight: 500;">Visitors</p>
+                                    <p style="margin: 4px 0 0 0; font-size: 24px; font-weight: 700; color: #1D1D1F;">342</p>
+                                </div>
+                            </div>
+
+                            <!-- Advanced AI Insights (Locked / Soft Paywall) -->
+                            <div style="position: relative; padding: 24px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); background: linear-gradient(135deg, rgba(240,249,255,0.8) 0%, rgba(255,255,255,0.8) 100%);">
+                                <h4 style="margin: 0 0 12px 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 18px;">✨</span> Advanced AI Insights
+                                </h4>
+
+                                <div style="filter: blur(4px); opacity: 0.7; pointer-events: none; user-select: none;">
+                                    <p style="margin: 0 0 8px 0; font-size: 14px; color: #1D1D1F;">Customer retention dropped by 12% this week. We recommend launching a re-engagement email campaign.</p>
+                                    <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100%' height='60'><path d='M0,50 Q25,10 50,30 T100,10' fill='none' stroke='%230066ff' stroke-width='4'/></svg>" style="width: 100%; height: 60px; display: block;" />
+                                </div>
+
+                                <!-- CTA Overlay -->
+                                <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
+                                    <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
+                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="card glass">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Agent Activity</h3>
@@ -3192,10 +3263,75 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function updateApprovalSetting(deptId, isChecked) {
 
-                            alert(`Settings updated for ${deptId}.`);
+                        function updateApprovalSetting(deptId, isChecked) {
+                            const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                            fetch(`/api/agents/settings/${deptId}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ auto_approve_limits: isChecked ? 0.0 : 100.0, tone_of_voice: "professional" })
+                            }).then(() => {
+                                alert(`Settings updated for ${deptId}: auto-execute is now ${!isChecked}.`);
+                            }).catch(e => {
+                                console.error('Failed to update settings', e);
+                            });
                         }
+
+                        async function fetchApprovals() {
+                            try {
+                                const res = await fetch('/api/agents/approvals', {
+                                    method: 'GET',
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    const container = document.getElementById('approval-inbox');
+                                    if (!container) return;
+
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        data.pending_approvals.forEach(approval => {
+                                            container.innerHTML += `
+                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
+                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                </div>
+                                            `;
+                                        });
+                                    } else {
+                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error fetching approvals:', e);
+                            }
+                        }
+
+                        async function decideApproval(id, approved) {
+                            try {
+                                const res = await fetch('/api/agents/approvals/' + id, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ approved })
+                                });
+                                if (res.ok) {
+                                    fetchApprovals();
+                                } else {
+                                    alert('Failed to process approval.');
+                                }
+                            } catch (e) {
+                                console.error('Error processing approval:', e);
+                            }
+                        }
+
                     </script>
 
 
@@ -3210,14 +3346,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- Manychat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Ayrshare</h3>
+                                    <h3 style="margin: 0;">Manychat</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Social Media Inbox for Instagram, Facebook, and WhatsApp.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Manychat...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3230,14 +3366,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- Resend Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Listmonk</h3>
+                                    <h3 style="margin: 0;">Resend</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">AI-Powered Email Marketing and simple customer newsletters.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Resend...')">Connect</button>
+                            </div>
+
+                            <!-- Mercado Pago Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Alipay</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌏</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept payments from customers in China using Alipay.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Alipay...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3250,14 +3396,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Shippo Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">EasyPost</h3>
+                                    <h3 style="margin: 0;">Shippo</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to EasyPost...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Label Generation and real-time shipping rates.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3270,14 +3416,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Jitsi Meet</h3>
+                                    <h3 style="margin: 0;">Zoom</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Auto-Generated Meeting Links for online services.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Connect</button>
                             </div>
                         </div>
 
@@ -3429,6 +3575,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
+                    <!-- 💰 Miser: Cost Transparency Dashboard (for business owners) -->
                     <div id="cost-dashboard-screen" class="screen">
                         <h1>Cost & AI Usage</h1>
                         <p id="cost-dashboard-total">Total Costs: $0.00</p>
@@ -3679,6 +3826,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
 
                         <!-- Embed Setup Bottom Sheet -->
+                        <!-- Soft Paywall Modal -->
+                        <div id="soft-paywall-modal" class="bottom-sheet glass" style="padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto; z-index: 2000;">
+                            <div style="display: flex; justify-content: flex-end;">
+                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="background: transparent; border: none; font-size: 24px; cursor: pointer;">×</button>
+                            </div>
+                            <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
+                            <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+
+                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
+
+                            <div style="margin: 16px 0; color: var(--text-secondary); font-size: 14px;">OR</div>
+
+                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2;">
+                                🐦 Share on X to get 7 Days Free
+                            </button>
+                        </div>
+
                         <div id="embed-setup-sheet" class="bottom-sheet glass">
                             <div class="bottom-sheet-header">
                                 <h2>Embed Storefront</h2>
@@ -3961,11 +4126,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('embed-setup-sheet').classList.add('open');
                         }
 
+                        function closeSoftPaywall() {
+                            document.getElementById('soft-paywall-modal').classList.remove('open');
+                        }
+
+                        function claimTrialExtension() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+                            localStorage.setItem('has_pro', 'true');
+                            closeSoftPaywall();
+                            alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+                            // Re-run the campaign now that they have pro
+                            sendReviewCampaign();
+                        }
+
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
                         async function sendReviewCampaign() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const btn = document.getElementById('send-review-campaign-btn');
                             btn.textContent = 'Generating...';
                             btn.disabled = true;
@@ -4347,12 +4531,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            if (stepId === 3 && currentStep === 2) {
+                                let valid = false;
+                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
+                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
+                                });
+                                if (!valid) {
+                                    alert('Please select a business type');
+                                    return false;
+                                }
+                            }
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length > 0) valid = true; });
+                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -4363,14 +4557,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     alert('Please enter a product or service name');
                                     return false;
                                 }
-                                if (!priceInput || priceInput.value.trim().length === 0 || isNaN(parseFloat(priceInput.value))) {
-                                    alert('Please enter a valid price');
+                                if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
+                                    alert('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
-                                if (!emailInput || emailInput.value.trim().length === 0 || !emailInput.value.includes('@')) {
+                                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
                                     alert('Please enter a valid email address');
                                     return false;
                                 }
@@ -4632,20 +4827,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (id === 'dashboard-screen') {
                                 const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
                                 Promise.all([
-                                    fetch('/api/v1/dashboard/sales', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
-                                        body: JSON.stringify({ tenant_id: tenant })
-                                    }).then(res => res.json()),
                                     fetch('/api/v1/dashboard/metrics', {
                                         method: 'POST',
                                         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
                                         body: JSON.stringify({ tenant_id: tenant })
                                     }).then(res => res.json())
                                 ])
-                                .then(([salesData, metricsData]) => {
+                                .then(([metricsData]) => {
                                     const salesEl = document.getElementById('todays-sales');
-                                    if (salesEl) salesEl.innerText = '$' + salesData.total_sales.toFixed(2);
+                                    if (salesEl) salesEl.innerText = '$' + metricsData.total_sales.toFixed(2);
 
                                     const banner = document.getElementById('milestone-share-banner');
                                     const countEl = document.getElementById('milestone-customers-count');
@@ -4660,11 +4850,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             banner.classList.add('hidden');
                                         }
                                     }
+
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
+                                fetchApprovals();
                             }
 
                             if (id === 'my-plan-screen') {
+
                                 fetch('/api/billing/my-plan')
                                     .then(res => res.json())
                                     .then(data => {
@@ -4748,11 +4941,306 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const path = window.location.pathname;
                             const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
+
+                            if (screenId === 'setup-screen') {
+                                try {
+                                    const tenantId = localStorage.getItem('tenant_id') || 'test-tenant';
+                                    const userId = localStorage.getItem('user_id') || 'test-user';
+                                    const res = await fetch('/api/onboarding/state', {
+                                        headers: {
+                                            'X-Tenant-ID': tenantId,
+                                            'X-User-ID': userId
+                                        }
+                                    });
+                                    if (res.ok) {
+                                        const stateData = await res.json();
+                                        if (stateData && stateData.step) {
+                                            currentStep = stateData.step;
+                                            document.querySelectorAll('input').forEach(input => {
+                                                if (input.placeholder && stateData[input.placeholder]) {
+                                                    input.value = stateData[input.placeholder];
+                                                }
+                                            });
+                                            if (stateData.step > 1) {
+                                                // Wait for display updates before fast-forwarding to currentStep
+                                                setTimeout(() => nextStep(stateData.step), 100);
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Failed to load state', e);
+                                }
+                            }
+
                             showScreen(screenId);
-
-
                         };
+
+                        // Scribe: Tooltip Logic
+                        let tooltipRegistry = {};
+                        let activeTooltipTimeout = null;
+
+                        async function initTooltips() {
+                            try {
+                                const res = await fetch('/api/tooltips');
+                                tooltipRegistry = await res.json();
+                                const tbox = document.createElement('div');
+                                tbox.className = 'tooltip-box';
+                                tbox.id = 'dynamic-tooltip';
+                                document.body.appendChild(tbox);
+                                attachTooltipListeners();
+                            } catch(e) { console.error(e); }
+                        }
+
+                        function attachTooltipListeners() {
+                            const elements = document.querySelectorAll('[placeholder$="-tooltip"]');
+                            const tbox = document.getElementById('dynamic-tooltip');
+                            elements.forEach(el => {
+                                const key = el.getAttribute('placeholder');
+                                if(!tooltipRegistry[key]) return;
+                                const showTooltip = (e) => {
+                                    clearTimeout(activeTooltipTimeout);
+                                    tbox.textContent = tooltipRegistry[key];
+                                    tbox.classList.add('show');
+                                    const rect = el.getBoundingClientRect();
+                                    tbox.style.left = Math.max(8, rect.left + (rect.width/2) - (tbox.offsetWidth/2)) + 'px';
+                                    tbox.style.top = Math.max(8, rect.top - tbox.offsetHeight - 8) + 'px';
+                                };
+                                const hideTooltip = () => { activeTooltipTimeout = setTimeout(() => { tbox.classList.remove('show'); }, 100); };
+                                el.addEventListener('mouseenter', showTooltip);
+                                el.addEventListener('mouseleave', hideTooltip);
+                                el.addEventListener('touchstart', (e) => { activeTooltipTimeout = setTimeout(() => showTooltip(e), 500); });
+                                el.addEventListener('touchend', () => { clearTimeout(activeTooltipTimeout); hideTooltip(); });
+                            });
+                        }
+
+                        // Scribe: Help Chat Logic
+                        async function submitHelpQuery() {
+                            const input = document.getElementById('ai-chat-input');
+                            const messages = document.getElementById('ai-chat-messages');
+                            const query = input.value.trim();
+                            if(!query) return;
+                            const userMsg = document.createElement('div');
+                            userMsg.className = 'chat-msg user';
+                            userMsg.textContent = query;
+                            messages.appendChild(userMsg);
+                            input.value = '';
+                            messages.scrollTop = messages.scrollHeight;
+                            try {
+                                const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: query }) });
+                                const data = await res.json();
+                                const aiMsg = document.createElement('div');
+                                aiMsg.className = 'chat-msg ai';
+                                aiMsg.innerHTML = data.reply;
+                                if(data.link) aiMsg.innerHTML += '<br><br><a href='#' onclick="showScreen('help-screen'); document.getElementById('ai-chat-widget').style.display='none';">' + data.link_text + '</a>';
+                                messages.appendChild(aiMsg);
+                                messages.scrollTop = messages.scrollHeight;
+                            } catch(e) { console.error(e); }
+                        }
+
+                        // Scribe: Walkthrough Logic
+                        const walkthroughs = {
+                            'setup-store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
+                            'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
+                            'accept-payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                        };
+                        let currentTour = null, currentStepIndex = 0;
+
+                        function startWalkthrough(tourId) {
+                            if(!walkthroughs[tourId]) return;
+                            currentTour = walkthroughs[tourId]; currentStepIndex = 0;
+                            document.getElementById('walkthrough-overlay').style.display = 'block';
+                            document.getElementById('walkthrough-bubble').style.display = 'block';
+                            renderWalkthroughStep();
+                        }
+
+                        function renderWalkthroughStep() {
+                            if(!currentTour || currentStepIndex >= currentTour.length) { endWalkthrough(); return; }
+                            const step = currentTour[currentStepIndex];
+                            const target = document.getElementById(step.target) || document.querySelector(`[placeholder="${step.target}"]`);
+                            if(target) {
+                                const rect = target.getBoundingClientRect();
+                                const overlay = document.getElementById('walkthrough-overlay');
+                                overlay.style.boxShadow = `rgba(0, 0, 0, 0.5) 0px 0px 0px 9999px, rgba(0, 0, 0, 0) 0px 0px 0px 0px inset`;
+                                overlay.style.clipPath = `polygon(0% 0%, 0% 100%, ${rect.left}px 100%, ${rect.left}px ${rect.top}px, ${rect.right}px ${rect.top}px, ${rect.right}px ${rect.bottom}px, ${rect.left}px ${rect.bottom}px, ${rect.left}px 100%, 100% 100%, 100% 0%)`;
+                                const bubble = document.getElementById('walkthrough-bubble');
+                                document.getElementById('walkthrough-title').textContent = step.title;
+                                document.getElementById('walkthrough-text').textContent = step.text;
+                                bubble.style.left = (rect.right + 16) + 'px';
+                                bubble.style.top = rect.top + 'px';
+                                document.getElementById('walkthrough-next-btn').textContent = (currentStepIndex === currentTour.length - 1) ? 'Finish' : 'Next';
+                            } else nextWalkthroughStep();
+                        }
+
+                        function nextWalkthroughStep() { currentStepIndex++; renderWalkthroughStep(); }
+                        function endWalkthrough() { currentTour = null; currentStepIndex = 0; document.getElementById('walkthrough-overlay').style.display = 'none'; document.getElementById('walkthrough-bubble').style.display = 'none'; }
+
+                        // Scribe: Help Center & Videos Logic
+                        const helpTopics = [
+                            { id: 'getting-started', title: 'Getting Started', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
+                            { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️' },
+                            { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
+                            { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
+                            { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
+                        ];
+
+                        function renderHelpCenter() {
+                            const container = document.getElementById('help-categories-container');
+                            if(!container) return; container.innerHTML = '';
+
+                            // Add interactive tour buttons to the top of the help center
+                            const toursDiv = document.createElement('div');
+                            toursDiv.style.gridColumn = '1 / -1';
+                            toursDiv.innerHTML = `
+                                <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
+                                    <button class="secondary" onclick="startWalkthrough('setup-store')">🗺️ Tour: Setup Store</button>
+                                    <button class="secondary" onclick="startWalkthrough('activate-ai')">🗺️ Tour: AI Agents</button>
+                                    <button class="secondary" onclick="startWalkthrough('accept-payment')">🗺️ Tour: Payments</button>
+                                </div>
+                            `;
+                            container.appendChild(toursDiv);
+
+                            helpTopics.forEach(topic => {
+                                const card = document.createElement('div');
+                                card.className = 'help-category-card';
+                                card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
+                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                container.appendChild(card);
+                            });
+                        }
+
+                        function filterHelpCenter() {
+                            const query = document.getElementById('help-search').value.toLowerCase();
+                            document.querySelectorAll('.help-category-card').forEach(card => card.style.display = card.textContent.toLowerCase().includes(query) ? 'block' : 'none');
+                        }
+
+                        async function renderVideos() {
+                            try {
+                                const res = await fetch('/api/videos');
+                                const videos = await res.json();
+                                const container = document.getElementById('help-videos-container');
+                                if(!container) return; container.innerHTML = '';
+                                videos.forEach(vid => {
+                                    const card = document.createElement('div');
+                                    card.className = 'video-card';
+                                    card.innerHTML = `<div class="video-thumbnail">▶️</div><div class="video-info"><h4>${vid.title}</h4><p>${vid.duration}</p></div>`;
+                                    container.appendChild(card);
+                                });
+                            } catch(e) { console.error(e); }
+                        }
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            initTooltips();
+                            renderHelpCenter();
+                            renderVideos();
+                        });
                     </script>
+                    <!-- Scribe: Documentation HTML Scaffolding -->
+                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+
+                    <div id="ai-chat-widget">
+                        <div id="ai-chat-header">
+                            <span>Ask AI Help</span>
+                            <span style="cursor:pointer;" onclick="document.getElementById('ai-chat-widget').style.display='none'">✕</span>
+                        </div>
+                        <div id="ai-chat-messages">
+                            <div class="chat-msg ai">Hi! I am your AI Support Agent. How can I help you grow your business today?</div>
+                        </div>
+                        <div id="ai-chat-input-container">
+                            <input type="text" id="ai-chat-input" placeholder="Ask a question..." onkeypress="if(event.key === 'Enter') submitHelpQuery()">
+                            <button onclick="submitHelpQuery()">Send</button>
+                        </div>
+                    </div>
+
+                    <div id="walkthrough-overlay"></div>
+                    <div id="walkthrough-bubble">
+                        <h4 id="walkthrough-title">Step Title</h4>
+                        <p id="walkthrough-text">Step description goes here.</p>
+                        <div style="display:flex; gap:8px; justify-content:flex-end;">
+                            <button class="secondary" onclick="endWalkthrough()">Skip</button>
+                            <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
+                        </div>
+                    </div>
+
+                    <!-- Help Center Screen -->
+                    <div id="help-screen" class="screen">
+                        <h1>Help Center</h1>
+                        <p>Find answers, watch tutorials, and learn how to grow your business.</p>
+                        <div style="margin-bottom: 24px; display: flex; gap: 12px;">
+                            <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
+                            <button onclick="document.getElementById('ai-chat-widget').style.display='flex'">Ask AI</button>
+                        </div>
+
+                        <h2>Topics</h2>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 32px;" id="help-categories-container"></div>
+
+                        <h2>Video Tutorials</h2>
+                        <div class="video-grid" id="help-videos-container"></div>
+                    </div>
+
+                    <!-- Changelog Screen -->
+                    <div id="changelog-screen" class="screen">
+                        <h1>What's New</h1>
+                        <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
+                        <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+                            <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
+                            <div>
+                                <h3>Version 2.4 - AI Agents Update</h3>
+                                <p>We've supercharged your AI workforce! You can now adjust their autonomy levels and track their real-time activity.</p>
+                                <ul>
+                                    <li><strong>Approval Inbox:</strong> Review and approve tasks before your agents execute them.</li>
+                                    <li><strong>Autonomy Limits:</strong> Set exactly how much money agents can spend automatically.</li>
+                                    <li><strong>Help Center:</strong> A brand new searchable guide to everything in the app.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <h3>Version 2.3 - Mobile Builder</h3>
+                            <p>Edit your storefront on the go with our completely redesigned mobile experience.</p>
+                        </div>
+                    </div>
+
+                    <!-- API Docs Screen -->
+                    <div id="api-docs-screen" class="screen">
+                        <h1>OHC API Reference <span style="font-size: 14px; background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; vertical-align: middle;">v1.0</span></h1>
+                        <p>Interactive API reference for developers integrating with OHC endpoints.</p>
+                        <div class="card" style="border-left: 4px solid var(--accent-green);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                <h3 style="margin: 0;"><span style="background: var(--accent-green); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">GET</span> /api/v1/dashboard/metrics</h3>
+                                <span>▼</span>
+                            </div>
+                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <p>Retrieve store performance and active customer metrics.</p>
+                                <h4>Response</h4>
+                                <pre style="background: var(--bg); padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 13px;"><code>{
+  "active_customers": 42,
+  "total_revenue": 1250.00
+}</code></pre>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--accent-green);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                <h3 style="margin: 0;"><span style="background: var(--accent-green); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">GET</span> /api/agents/approvals</h3>
+                                <span>▼</span>
+                            </div>
+                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <p>List pending AI agent tasks requiring human approval.</p>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left: 4px solid var(--primary);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
+                                <h3 style="margin: 0;"><span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">POST</span> /api/chat</h3>
+                                <span>▼</span>
+                            </div>
+                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
+                                <p>Interact with the AI Help Agent.</p>
+                                <h4>Request Body</h4>
+                                <pre style="background: var(--bg); padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 13px;"><code>{
+  "message": "string"
+}</code></pre>
+                            </div>
+                        </div>
+                    </div>
                 </body>
             </html>
         "#,
@@ -4760,3 +5248,4 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     axum::response::Html(content)
 }
 pub mod crypto;
+// resolves #9690

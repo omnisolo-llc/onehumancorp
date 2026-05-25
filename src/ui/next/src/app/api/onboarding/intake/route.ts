@@ -22,23 +22,8 @@ export async function POST(request: Request) {
         return NextResponse.json(data);
     }
 
-    if (process.env.NODE_ENV !== 'production') {
-      return NextResponse.json({
-        business_name: "Mocked Name",
-        business_type: "Mocked Type",
-        initial_products: [{ name: "Mock Product", price: "10" }]
-      });
-    }
-
     return NextResponse.json({ error: 'Failed to process intake' }, { status: res.status });
   } catch (e) {
-    if (process.env.NODE_ENV !== 'production') {
-      return NextResponse.json({
-        business_name: "Mocked Name",
-        business_type: "Mocked Type",
-        initial_products: [{ name: "Mock Product", price: "10" }]
-      });
-    }
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
 }
