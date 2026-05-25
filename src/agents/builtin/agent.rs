@@ -80,6 +80,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub observability: Option<std::sync::Arc<crate::observability::ObservabilityRegistry>>,
 }
 
 impl Default for AgentRunConfig {
@@ -136,6 +137,7 @@ enable_llmcompiler_plan_and_execute: false,
             long_term_memory: None,
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             manually_approved_tool_calls: vec![],
+            observability: None,
         }
     }
 }
@@ -1568,6 +1570,10 @@ impl Agent {
             }
         }
 
+        if let Some(obs) = &cfg.observability {
+            obs.on_run_start(&cfg.agent_id, "default_run_id", initial_message);
+        }
+
         on_event(AgentEvent::RunStarted { iteration: 0 });
 
         ::server_telemetry::record_agent_execution_trace(&cfg.agent_id, "run");
@@ -1783,6 +1789,10 @@ impl Agent {
             // Intelligent Context Truncation to save tokens
             let req = ohc_builtin_agent_llm::truncate_chat_request(req, 10000); // Limit history to ~10k words
 
+            if let Some(obs) = &final_cfg.observability {
+                obs.on_llm_start("default_run_id", &req.system);
+            }
+
             let llm_span = info_span!(
                 "llm_interaction",
                 agent_id = %final_cfg.agent_id,
@@ -1794,7 +1804,12 @@ impl Agent {
             );
 
             let resp = match self.llm.chat(req).instrument(llm_span.clone()).await {
-                Ok(r) => r,
+                Ok(r) => {
+                    if let Some(obs) = &final_cfg.observability {
+                        obs.on_llm_end("default_run_id", &r.message.content);
+                    }
+                    r
+                },
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
@@ -2037,6 +2052,9 @@ impl Agent {
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
+                if let Some(obs) = &final_cfg.observability {
+                    obs.on_run_end(&final_cfg.agent_id, "default_run_id", &last_assistant_content);
+                }
                 return Ok(last_assistant_content);
             }
 
@@ -2094,6 +2112,7 @@ impl Agent {
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
                 let cfg_max_retries = final_cfg.max_retries;
+                let obs_clone = final_cfg.observability.clone();
 
                 let tool_span = info_span!(
                     "tool_execution",
@@ -2101,8 +2120,15 @@ impl Agent {
                     tool_name = %tc_clone.name,
                 );
 
+                if let Some(obs) = &obs_clone {
+                    obs.on_tool_start("default_run_id", &tc_clone);
+                }
+
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
+                        if let Some(obs) = &obs_clone {
+                            obs.on_tool_end("default_run_id", &tc_clone.id, &e.to_string());
+                        }
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
@@ -2110,6 +2136,9 @@ impl Agent {
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
+                                if let Some(obs) = &obs_clone {
+                                    obs.on_tool_end("default_run_id", &tc_clone.id, &r);
+                                }
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
@@ -2119,10 +2148,16 @@ impl Agent {
                                     tokio::time::sleep(backoff).await;
                                     continue;
                                 } else {
+                                    if let Some(obs) = &obs_clone {
+                                        obs.on_tool_end("default_run_id", &tc_clone.id, &msg);
+                                    }
                                     return (tc_clone, Err(ToolError::Transient(msg)));
                                 }
                             }
                             Err(e) => {
+                                if let Some(obs) = &obs_clone {
+                                    obs.on_tool_end("default_run_id", &tc_clone.id, &e.to_string());
+                                }
                                 return (tc_clone, Err(e));
                             }
                         }
@@ -2167,6 +2202,9 @@ impl Agent {
                         };
                     }
                     Err(ToolError::LlmRecoverable(msg)) => {
+                                if let Some(obs) = &final_cfg.observability {
+                                    obs.on_tool_end("default_run_id", &tc.id, &msg);
+                                }
                         let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                         *count += 1;
                         if *count > std::cmp::min(final_cfg.max_retries, 2) {
@@ -2356,6 +2394,9 @@ impl Agent {
                             }
                         }
                         Err(ToolError::LlmRecoverable(msg)) => {
+                            if let Some(obs) = &final_cfg.observability {
+                                obs.on_tool_end("default_run_id", &tc.id, &msg);
+                            }
                             let count = tool_error_counts.entry(tc.name.clone()).or_insert(0);
                             *count += 1;
                             if *count > std::cmp::min(final_cfg.max_retries, 2) {
@@ -2429,20 +2470,32 @@ impl Agent {
                         }
                         Err(ToolError::UserFixable(msg)) => {
                             let err = format!("USER_FIXABLE: {}", msg);
+                            if let Some(obs) = &final_cfg.observability {
+                                obs.on_tool_end("default_run_id", &tc.id, &err);
+                            }
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::Fatal(msg)) => {
                             let err = format!("Fatal tool error: {}", msg);
+                            if let Some(obs) = &final_cfg.observability {
+                                obs.on_tool_end("default_run_id", &tc.id, &err);
+                            }
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::Unexpected(msg)) => {
                             let err = format!("Unexpected tool error: {}", msg);
+                            if let Some(obs) = &final_cfg.observability {
+                                obs.on_tool_end("default_run_id", &tc.id, &err);
+                            }
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
                         Err(ToolError::HandoffRequested(target)) => {
+                            if let Some(obs) = &final_cfg.observability {
+                                obs.on_tool_end("default_run_id", &tc.id, &format!("Handoff requested to {}", target));
+                            }
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
                             return Ok(format!("Handoff requested to {}", target));
                         }
@@ -2628,6 +2681,9 @@ impl Agent {
 
         // Hit max iterations.
         let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
+        if let Some(obs) = &final_cfg.observability {
+            obs.on_run_end(&final_cfg.agent_id, "default_run_id", &err_msg);
+        }
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
         return Err(err_msg.into());
     }

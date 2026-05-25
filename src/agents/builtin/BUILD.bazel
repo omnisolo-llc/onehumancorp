@@ -58,6 +58,7 @@ rust_library(
         "harness.rs",
         "hibernation.rs",
         "langgraph.rs",
+        "observability.rs",
         "autogen.rs",
         "ruflo.rs",
         "lib.rs",
@@ -217,6 +218,7 @@ rust_binary(
         "registry",
         "gpt_researcher",
         "local_provider",
+        "observability",
     ]
 ]
 
