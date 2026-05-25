@@ -4009,7 +4009,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
                             { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
                             { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
-                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } },
+                            { id: 'b5', type: 'Customer Referral', content: { title: 'Refer a Friend', offer: 'Get 10% off your next order!' } }
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
@@ -4051,6 +4052,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     } else if (block.type === 'TestimonialBlock') {
                                         const testimonials = block.content.testimonials || [];
                                         innerHtml += `<p>${testimonials.join(' ')}</p>`;
+                                    } else if (block.type === 'Customer Referral' || block.type === 'CustomerReferralBlock') {
+                                        const escapeHtml = (unsafe) => {
+                                            return (unsafe || '').toString()
+                                                 .replace(/&/g, "&amp;")
+                                                 .replace(/</g, "&lt;")
+                                                 .replace(/>/g, "&gt;")
+                                                 .replace(/"/g, "&quot;")
+                                                 .replace(/'/g, "&#039;");
+                                        };
+                                        innerHtml += `<div style="padding:16px; border:1px dashed var(--primary); border-radius:8px; text-align:center; margin-top: 16px;">
+                                            <p><strong>${escapeHtml(block.content.title)}</strong></p>
+                                            <p>${escapeHtml(block.content.offer)}</p>
+                                            <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
+                                            <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
+                                        </div>`;
                                     }
                                 }
                                 el.innerHTML = innerHtml;
@@ -4207,7 +4223,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 block_type: b.type === 'Hero' ? 'HeroBlock' :
                                             b.type === 'Product Grid' ? 'ProductGridBlock' :
                                             b.type === 'Service List' ? 'ServiceBookingBlock' :
-                                            b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+                                            b.type === 'Testimonials' ? 'TestimonialBlock' :
+                                            b.type === 'Customer Referral' ? 'CustomerReferralBlock' : b.type,
                                 content: b.content,
                                 sort_order: i
                             }));
