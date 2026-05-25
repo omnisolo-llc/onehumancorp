@@ -54,6 +54,6 @@ ohc-cli autodream prune --max-age 2h
 This ensures that the ephemeral `agent_session_data` older than two hours is safely truncated, freeing up storage while relying on the Vector DB for long-term semantic recall.
 
 ---
-*For a high-level architectural overview, see the [AutoDream Pipeline Visual Walkthrough](./autodream_pipeline.md).*
+*For a high-level architectural overview, see the [AutoDream Pipeline Visual Walkthrough](../technical/features/kairos/autodream_pipeline.md).*
 
 </div>

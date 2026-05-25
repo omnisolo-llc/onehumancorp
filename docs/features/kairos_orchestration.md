@@ -1,10 +1,4 @@
-<style>
-body {
-  backdrop-filter: blur(20px) saturate(200%);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'Outfit', 'Inter', sans-serif;
-}
-</style>
+<div markdown="1" style="backdrop-filter: blur(20px) saturate(200%); font-family: Outfit, Inter, sans-serif; border: 1px solid rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 12px; background: rgba(255, 255, 255, 0.05);">
 
 # KAIROS Orchestration
 
@@ -55,3 +49,6 @@ body {
     1.  `AutoDreamWorker` queries `shared_tasks` where `status = 'COMPLETED'`.
     2.  Invokes `MinimaxClient` LLM to generate `[]float32` embeddings.
     3.  Upserts memory vector into Postgres (`VECTOR(1536)`).
+
+
+</div>

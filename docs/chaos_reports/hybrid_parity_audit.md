@@ -29,5 +29,5 @@ Chaos benchmark tests were added into `src/server/benchmarks/chaos_bench.rs` suc
 
 
 ### Grafana Visualizations
-![Latency Histogram](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
-![Error Rates](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==)
+![Latency Histogram](#
+![Error Rates](#
