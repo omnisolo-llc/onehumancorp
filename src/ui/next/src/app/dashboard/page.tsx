@@ -362,9 +362,7 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {approvals.length === 0 && (
-<>
-{/* Business Snapshot */}
+         {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -672,8 +670,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         </>
-)}
 {/* Swarm Observability / Team Activity Panel */}
          <section>
             <div className="flex items-center justify-between mb-4">
