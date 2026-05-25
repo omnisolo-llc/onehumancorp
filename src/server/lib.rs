@@ -3150,9 +3150,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Google Calendar Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Google Calendar account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Google Calendar</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3346,44 +3346,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Manychat Integration -->
+                            <!-- Meta Graph API Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Manychat</h3>
+                                    <h3 style="margin: 0;">Meta Graph API</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Social Media Inbox for Instagram, Facebook, and WhatsApp.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Manychat...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Centralizes inquiries from Instagram, Facebook, and WhatsApp into a single OHC unified inbox.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Meta Graph API...')">Connect</button>
                             </div>
 
-                            <!-- Cal.com Integration -->
+                            <!-- Google Calendar Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Cal.com</h3>
+                                    <h3 style="margin: 0;">Google Calendar</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Config Booking & Calendar Sync.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Synchronizes OHC bookings directly with your existing Google Calendar.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Google Calendar...')">Connect</button>
                             </div>
 
-                            <!-- Resend Integration -->
+                            <!-- Native Email Campaign Manager Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Resend</h3>
+                                    <h3 style="margin: 0;">Native Email Campaign Manager</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">AI-Powered Email Marketing and simple customer newsletters.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Resend...')">Connect</button>
-                            </div>
-
-                            <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Alipay</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌏</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept payments from customers in China using Alipay.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Alipay...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Allows automated customer outreach natively within OHC.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Native Email Campaign Manager...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3393,7 +3383,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- Shippo Integration -->
@@ -3403,7 +3393,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Label Generation and real-time shipping rates.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Shippo...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3423,7 +3413,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Auto-Generated Meeting Links for online services.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Zoom...')">Connect</button>
                             </div>
                         </div>
 
