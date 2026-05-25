@@ -4,7 +4,7 @@ test.describe('Viral Storefront E2E', () => {
   test('exposes referral share entry points for storefront growth', async ({ page }) => {
     await page.goto('/referrals');
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
-    await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
+    await expect(page.locator('#referral-link')).toContainText('https://ohc.app/join?ref=DEFAULT');
     await expect(page.getByRole('button', { name: /Share to Instagram/ })).toBeVisible();
   });
 
@@ -20,7 +20,7 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/storefront-builder');
     await expect(page.locator('.powered-by-footer')).toBeVisible();
     await expect(page.locator('.powered-by-footer')).toContainText('⚡ Powered by OHC');
-    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'ohc://join?ref=storefront');
+    await expect(page.locator('.powered-by-footer a')).toHaveAttribute('href', 'https://ohc.app/join?ref=storefront');
   });
 
   test('provides an embed widget snippet for storefront sharing', async ({ page }) => {
@@ -45,6 +45,6 @@ test.describe('Viral Storefront E2E', () => {
     const footer = page.locator('.footer');
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
+    await expect(footer.locator('a')).toHaveAttribute('href', 'https://ohc.app/join?ref=embed');
   });
 });

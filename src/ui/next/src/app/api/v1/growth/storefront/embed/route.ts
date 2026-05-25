@@ -25,7 +25,7 @@ export async function GET() {
         <p class="desc">A great product description.</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-          ⚡ Powered by OHC <a href="ohc://join?ref=embed">Create yours</a>
+          ⚡ Powered by OHC <a href="https://ohc.app/join?ref=embed">Create yours</a>
         </div>
       </div>
     </body>

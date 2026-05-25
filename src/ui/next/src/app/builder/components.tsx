@@ -182,7 +182,7 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="py-6 bg-gray-50 flex flex-col items-center justify-center border-t border-gray-100">
         <a
-          href={`ohc://join?ref=${tenantId}`}
+          href={`https://ohc.app/join?ref=${tenantId}`}
           className="group flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
         >
           <span className="font-inter">Powered by</span>

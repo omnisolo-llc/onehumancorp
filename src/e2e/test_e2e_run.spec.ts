@@ -19,7 +19,7 @@ test('verify checklist and referral routing', async ({ page }) => {
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Referrals' }).click();
   await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
-  await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
+  await expect(page.locator('#referral-link')).toContainText('https://ohc.app/join?ref=DEFAULT');
 });
 
 test('verify website builder publish sheet', async ({ page }) => {
