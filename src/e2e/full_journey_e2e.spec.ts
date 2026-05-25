@@ -51,7 +51,7 @@ test.describe('Onboarding Guide E2E Journey', () => {
     await page.click('button:has-text("Publish my business")');
 
     // Wait for the success state/confetti
-    await expect(page.locator('text=/CONFETTI.*SUCCESS/i')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Success! Your business is live!' })).toBeVisible({ timeout: 10000 });
 
     // 10. Welcome Checklist
     const viewChecklistBtn = page.locator('text="View Welcome Checklist →"');

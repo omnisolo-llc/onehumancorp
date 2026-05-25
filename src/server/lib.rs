@@ -2813,6 +2813,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
+                        <div class="card glass" style="background: rgba(255, 59, 48, 0.1); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 59, 48, 0.2); border-radius: 16px;">
+                            <h3 style="font-weight: bold; margin: 0; color: #FF3B30;">Action Required: Connect Stripe to accept payments.</h3>
+                        </div>
                         <h1>Dashboard</h1>
 
                         <!-- Milestone Viral Share Loop Banner -->
@@ -3681,7 +3684,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="setup-screen" class="screen glass">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            <h1>10-Minute Setup Wizard</h1>
+                            <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -3759,7 +3762,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
-                            <h1>🎉 Success! Your business is live! 🎉</h1>
+                            <h1>Success! Your business is live!</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
                             <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
