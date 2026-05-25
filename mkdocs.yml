@@ -40,6 +40,7 @@ nav:
       - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
       - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
       - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
+      - Storefront Builder Architecture: features/storefront_builder_architecture.md
   - Technical:
       - Architecture Overview: technical/architecture/architecture-overview.md
       - System Overview: technical/architecture/system-overview.md
@@ -61,6 +62,7 @@ nav:
   - Research:
       - Research: technical/research/index.md
   - Reports:
+      - OneHumanCorp (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
       - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
       - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
       - Market Research Report: reports/ohc_market_research_report.md

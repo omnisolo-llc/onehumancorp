@@ -95,6 +95,9 @@ use std::pin::Pin;
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
 use std::sync::Arc;
+// OTP Cache for verification
+pub static OTP_STORE: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>> = std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
 use hub::Hub;
 
 static TELEMETRY_CHAN: OnceLock<mpsc::Sender<Box<dyn FnOnce() + Send>>> = OnceLock::new();
@@ -1584,7 +1587,7 @@ impl HubService for MyHubService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
+        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
@@ -1597,6 +1600,35 @@ impl HubService for MyHubService {
             Err(e) => Err(Status::internal(e)),
         }
     }
+}
+
+pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
+    let store = crate::settings::Store::new();
+    let settings = store.get();
+
+    let should_send = match event_type {
+        "failed_payment" => settings.sms_alert_failed_payment,
+        "new_order" => settings.sms_alert_new_order,
+        "urgent_booking" => settings.sms_alert_urgent_booking,
+        _ => false,
+    };
+
+    if !should_send {
+        return Ok(());
+    }
+
+    if let Some(phone) = settings.sms_critical_phone {
+        let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+        let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+        let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+
+        let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+
+        if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
+            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+        }
+    }
+    Ok(())
 }
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
@@ -1681,9 +1713,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
-    // Start Token Forecast Worker
-    let token_forecast_worker = Arc::new(crate::workers::token_forecast::TokenForecastWorker::new(db.clone()));
-    token_forecast_worker.start();
+    // Start Token Forecast Engine
+    let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
+    forecaster.start();
 
     // Start Agent Memory Pipeline
     let memory_embedding_api = Arc::new(crate::workers::agent_memory_pipeline::DefaultMemoryEmbeddingApi::new());
@@ -1927,7 +1959,83 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 
     let db_for_sales = db.clone();
+    let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            // Generate OTP securely
+            let otp = format!("{:06}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos() % 900000 + 100000);
+
+            {
+                let mut store = crate::OTP_STORE.lock().unwrap();
+                if store.len() > 1000 {
+                    store.retain(|_, (_, time)| time.elapsed().as_secs() < 300); // 5 mins expiry
+                }
+                store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
+            }
+
+            let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+            let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+            let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+
+            let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+
+            let body = format!("Your OHC verification code is {}", otp);
+            let phone_clone = phone.clone();
+
+            // Fire and forget gracefully
+            tokio::spawn(async move {
+                let res = provider.send_sms(&phone_clone, &from_number, &body).await;
+                if let Err(e) = res {
+                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                }
+            });
+
+            axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
+        }))
+        .route("/api/settings/sms-confirm", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
+
+                let valid = {
+                    let mut store = crate::OTP_STORE.lock().unwrap();
+                    if let Some((stored_otp, time)) = store.get(&phone) {
+                        if stored_otp == otp && time.elapsed().as_secs() < 300 {
+                            store.remove(&phone);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                };
+
+                if valid {
+                    axum::response::Json(serde_json::json!({ "success": true }))
+                } else {
+                    axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))
+                }
+            }
+        }))
+        .route("/api/settings/sms-preferences", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
+                let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
+                let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
+                    tracing::error!("Failed to save SMS preferences: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
@@ -2338,17 +2446,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         .glass {
                             background: rgba(255, 255, 255, 0.65);
-                            border: 1px solid rgba(255, 255, 255, 0.4);
-                            box-shadow: var(--shadow-md);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
                             border-radius: 16px;
+                            box-shadow: var(--shadow-md);
                         }
                         body.dark-theme .glass {
                             background: rgba(22, 22, 26, 0.7);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -2755,6 +2863,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
         #setup-screen > div {
             transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+            position: relative;
         }
 
         #setup-screen button, #setup-screen input {
@@ -2805,12 +2916,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             #walkthrough-bubble h4 { margin: 0 0 8px 0; font-size: 16px; }
             #walkthrough-bubble p { margin: 0 0 12px 0; font-size: 14px; color: var(--text-secondary); }
             #walkthrough-bubble button { padding: 6px 12px; font-size: 13px; margin-top: 8px; }
-            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+            .help-category-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; padding: 20px; cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
             .help-category-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); border-color: var(--primary); }
             .help-category-card h3 { margin: 0 0 8px 0; color: var(--primary); }
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
             .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
-            .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; display: flex; flex-direction: column; }
+            .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
             .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
             .video-info { padding: 12px; }
             .video-info h4 { margin: 0 0 4px 0; }
@@ -3486,6 +3597,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Closing Greeting</p>
                         <input type="text" placeholder="e.g. See you soon!" />
                         <label><input type="checkbox"> Enable Push Notifications</label>
+
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);" />
+
+                        <h2>Global SMS Notifications for Critical Alerts</h2>
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Get immediate text alerts for urgent business events.</p>
+                        <div style="margin-bottom: 12px;">
+                            <input type="text" id="sms-critical-phone" placeholder="Mobile Phone Number (e.g. +1234567890)" style="width: 100%; max-width: 300px; margin-bottom: 8px;" />
+                            <br/>
+                            <button onclick="verifySmsNumber()" id="btn-verify-sms" style="background: var(--primary); color: white;">Verify Number</button>
+                        </div>
+
+                        <div id="sms-otp-container" style="display: none; margin-bottom: 12px; background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2);">
+                            <p style="font-size: 14px; margin-bottom: 8px;">A 6-digit code has been sent. Enter it below:</p>
+                            <input type="text" id="sms-critical-otp" placeholder="123456" style="width: 100px; margin-right: 8px;" />
+                            <button onclick="confirmSmsNumber()" style="background: var(--accent-green); color: white;">Confirm OTP</button>
+                        </div>
+                        <div id="sms-verified-badge" style="display: none; margin-bottom: 12px; color: var(--accent-green); font-weight: 600; font-size: 14px;">
+                            ✓ Number Verified
+                        </div>
+
+                        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <label><input type="checkbox" id="sms-alert-urgent-booking" onchange="saveSmsPreferences()"> Urgent Bookings</label>
+                            <label><input type="checkbox" id="sms-alert-failed-payment" onchange="saveSmsPreferences()"> Failed Payments</label>
+                            <label><input type="checkbox" id="sms-alert-new-order" onchange="saveSmsPreferences()"> New Orders</label>
+                        </div>
                         <p>Timezone</p>
                         <select><option>UTC</option><option>EST</option></select>
                         <p>Language</p>
@@ -3725,7 +3861,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-2" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
+                            <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
                             <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
@@ -3736,8 +3872,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-3" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
+                            <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
+                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
@@ -3745,18 +3881,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-4" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-digital" style="width: auto; margin: 0;"> 📄 Digital Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-services" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-subscriptions" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
                         <div id="step-5" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
+                            <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -3769,9 +3905,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-7" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
+                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
+                            <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
+                            <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" style="display: none;">
@@ -3814,7 +3950,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
+                            <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
                             <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
                             <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
@@ -3953,19 +4089,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const state = { step: currentStep };
                                 Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
-                                    if (input.placeholder) {
-                                        if (input.type === 'checkbox') {
-                                            state[input.placeholder] = input.checked;
-                                        } else {
-                                            state[input.placeholder] = input.value;
-                                        }
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    if (input.type === 'checkbox') {
+                                        state[key] = input.checked;
                                     } else {
-                                        // fallback for inputs without placeholder
-                                        if (input.type === 'checkbox') {
-                                            state['checkbox_' + index] = input.checked;
-                                        } else {
-                                            state['input_' + index] = input.value;
-                                        }
+                                        state[key] = input.value;
                                     }
                                 });
 
@@ -4033,9 +4161,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         }
                                     }
                                 });
-                                // Restore step if needed
-                                if (state.step && state.step > 1) {
-                                    nextStep(state.step);
+                                // Restore screen visually without calling nextStep to avoid validation
+                                if (currentStep && currentStep !== 1) {
+                                    document.getElementById('step-1').style.display = 'none';
+                                    const currentStepEl = document.getElementById(`step-${currentStep}`);
+                                    if (currentStepEl) {
+                                        currentStepEl.style.display = 'block';
+                                        currentStepEl.classList.remove('hidden');
+                                    }
                                 }
 
                                 // Restore onboardingState
@@ -4646,13 +4779,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (typeof stepId === 'number' && stepId > currentStep) {
                                     document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
                                         // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && !input.placeholder.includes("0.00") && input.value.trim().length < 3) {
-                                            // wait, the reviewer said NOT to use placeholder includes.
-                                            // Let's just validate inputs that don't have inputmode="decimal"
-                                            if (input.getAttribute('inputmode') !== 'decimal') {
-                                                input.style.border = "2px solid #FF3B30";
-                                                hasError = true;
-                                            }
+                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
+                                            input.style.border = "2px solid #FF3B30";
+                                            hasError = true;
                                         } else {
                                             input.style.border = "";
                                         }
@@ -4663,9 +4792,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 try {
                                     const stateData = { step: stepId };
 
-                                    document.querySelectorAll('input').forEach(input => {
-                                        if (input.placeholder && input.value) {
-                                            stateData[input.placeholder] = input.value;
+                                    const allInputs = document.querySelectorAll('#setup-screen input');
+                                    allInputs.forEach((input, idx) => {
+                                        const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + idx : 'input_' + idx);
+                                        if (input.type === 'checkbox') {
+                                            stateData[key] = input.checked;
+                                        } else {
+                                            stateData[key] = input.value;
                                         }
                                     });
                                     localStorage.setItem('ohc_wizard_state', JSON.stringify(stateData));
@@ -5039,6 +5172,96 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         };
 
                         // Scribe: Tooltip Logic
+                        async function verifySmsNumber() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            if (!phone) {
+                                alert("Please enter a valid phone number.");
+                                return;
+                            }
+
+                            const btn = document.getElementById('btn-verify-sms');
+                            const originalText = btn.textContent;
+                            btn.textContent = "Sending...";
+                            btn.disabled = true;
+
+                            try {
+                                const res = await fetch('/api/settings/sms-verify', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone: phone })
+                                });
+
+                                if (res.ok) {
+                                    document.getElementById('sms-otp-container').style.display = 'block';
+                                    btn.textContent = "Resend Code";
+                                } else {
+                                    alert("Failed to send verification SMS. Check format or backend configuration.");
+                                    btn.textContent = originalText;
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Network error. Please try again.");
+                                btn.textContent = originalText;
+                            }
+                            btn.disabled = false;
+                        }
+
+                        async function saveSmsPreferences() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            const urgent_booking = document.getElementById('sms-alert-urgent-booking').checked;
+                            const failed_payment = document.getElementById('sms-alert-failed-payment').checked;
+                            const new_order = document.getElementById('sms-alert-new-order').checked;
+
+                            try {
+                                await fetch('/api/settings/sms-preferences', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone, urgent_booking, failed_payment, new_order })
+                                });
+                            } catch (e) {
+                                console.error("Could not save SMS preferences", e);
+                            }
+                        }
+
+                        async function confirmSmsNumber() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            const otp = document.getElementById('sms-critical-otp').value;
+                            if (!otp) {
+                                alert("Please enter the OTP.");
+                                return;
+                            }
+
+                            try {
+                                const res = await fetch('/api/settings/sms-confirm', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone, otp })
+                                });
+
+                                if (res.ok) {
+                                    document.getElementById('sms-otp-container').style.display = 'none';
+                                    document.getElementById('btn-verify-sms').style.display = 'none';
+                                    document.getElementById('sms-critical-phone').disabled = true;
+                                    document.getElementById('sms-verified-badge').style.display = 'block';
+                                    await saveSmsPreferences();
+                                } else {
+                                    alert("Invalid OTP.");
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Network error.");
+                            }
+                        }
+
                         let tooltipRegistry = {};
                         let activeTooltipTimeout = null;
 

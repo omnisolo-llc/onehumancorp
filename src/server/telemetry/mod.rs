@@ -1,3 +1,5 @@
+pub mod forecaster;
+
 pub use ::server_config as config;
 use chrono::Utc;
 use opentelemetry::global;
@@ -347,6 +349,21 @@ pub async fn record_autodream_sync(
     .await
 }
 
+pub async fn record_token_burn_rate_predicted_24h(
+    pool: &PgPool,
+    org_id: &str,
+    forecast: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_token_burn_rate_predicted_24h",
+        "gauge",
+        forecast,
+        serde_json::json!({ "organization_id": org_id }),
+    )
+    .await
+}
+
 pub async fn record_autodream_sync_error(
     pool: &PgPool,
     count: f32,
@@ -562,21 +579,6 @@ pub async fn record_queue_length(
         "gauge",
         delta as f32,
         payload,
-    )
-    .await
-}
-
-pub async fn record_token_usage_forecast(
-    pool: &PgPool,
-    org_id: &str,
-    forecast: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_token_burn_rate_forecast",
-        "gauge",
-        forecast,
-        serde_json::json!({ "organization_id": org_id }),
     )
     .await
 }
