@@ -4,5 +4,6 @@ filegroup(
     visibility = [
         "//deploy:__pkg__",
         "//src/server:__pkg__",
+        "//src/server/db:__pkg__",
     ],
 )
