@@ -6,7 +6,17 @@ import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
+import { Suspense } from "react";
+
 export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <KairosDashboardContent />
+    </Suspense>
+  );
+}
+
+function KairosDashboardContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([

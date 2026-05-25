@@ -6,90 +6,6 @@ import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough } from './Walkthrough';
 
-// --- Tooltip Registry & Component ---
-type TooltipContextType = {
-  registerTooltip: (id: string, text: string) => void;
-  getTooltip: (id: string) => string | undefined;
-};
-
-const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
-
-export function TooltipRegistryProvider({ children }: { children: ReactNode }) {
-  const [tooltips, setTooltips] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    fetch("/api/tooltips")
-      .then(res => res.json())
-      .then(data => setTooltips(prev => ({ ...data, ...prev })))
-      .catch(() => {});
-  }, []);
-
-  const registerTooltip = (id: string, text: string) => {
-    setTooltips((prev) => ({ ...prev, [id]: text }));
-  };
-
-  const getTooltip = (id: string) => tooltips[id];
-
-  return (
-    <TooltipContext.Provider value={{ registerTooltip, getTooltip }}>
-      {children}
-    </TooltipContext.Provider>
-  );
-}
-
-export function useTooltipRegistry() {
-  const context = useContext(TooltipContext);
-  if (!context) throw new Error("useTooltipRegistry must be used within TooltipRegistryProvider");
-  return context;
-}
-
-export function Tooltip({ id, defaultText, children }: { id?: string; defaultText: string; children: ReactNode }) {
-  const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Use context safely, fallback if used outside provider
-  const context = useContext(TooltipContext);
-
-  // Register tooltip on mount if ID is provided and registry exists
-  useEffect(() => {
-    if (id && context && !context.getTooltip(id)) {
-      context.registerTooltip(id, defaultText);
-    }
-  }, [id, defaultText, context]);
-
-  // Determine text to display: Try registry first, fallback to defaultText
-  const displayText = (id && context && context.getTooltip(id)) || defaultText;
-
-  const handleMouseEnter = () => setVisible(true);
-  const handleMouseLeave = () => setVisible(false);
-
-  const handleTouchStart = () => {
-    timeoutRef.current = setTimeout(() => setVisible(true), 500); // long press
-  };
-  const handleTouchEnd = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setVisible(false);
-  };
-
-  return (
-    <div
-      className="relative inline-block w-full"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      {children}
-      {visible && (
-        <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none text-center leading-tight">
-          {displayText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // --- Walkthrough System ---
 type Step = {
@@ -182,11 +98,7 @@ export function HelpWidget() {
   const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
-  const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
-    { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
-  ]);
-  const [chatInput, setChatInput] = useState("");
+  const [tab, setTab] = useState<"center" | "videos" | "whatsnew">("center");
   const [searchQuery, setSearchQuery] = useState("");
 
   const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
@@ -215,26 +127,10 @@ export function HelpWidget() {
       .catch(() => {});
   }, []);
 
-  const handleChatSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && chatInput.trim()) {
-      const val = chatInput.trim();
-      setChatInput("");
-      setChatMessages(prev => [...prev, { role: "user", text: val }]);
-
-      try {
-        const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-        const data = await response.json();
-        setChatMessages(prev => [...prev, { role: "bot", text: data.reply, linkUrl: data.link?.url, linkTitle: data.link?.title }]);
-      } catch (err) {
-        setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
-      }
-    }
-  };
-
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-[90]">
-        <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
+      <div className="fixed bottom-6 left-6 z-[90]">
+        <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Video Tutorials, and Release Notes.">
           <button
             onClick={() => setOpen(!open)}
             className="w-14 h-14 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all"
@@ -248,11 +144,10 @@ export function HelpWidget() {
       </div>
 
       {open && (
-        <div id="help-widget-container" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
+        <div id="help-widget-container" className="fixed bottom-24 left-4 sm:left-6 w-[calc(100vw-32px)] sm:w-[350px] h-[75vh] sm:h-[500px] max-h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden z-[90] border border-gray-100 transition-all">
           <div className="flex border-b border-gray-200">
             {[
               { id: "center", label: "Help" },
-              { id: "chat", label: "Ask AI" },
               { id: "videos", label: "Videos" },
               { id: "whatsnew", label: "New" }
             ].map((t) => (
@@ -309,45 +204,6 @@ export function HelpWidget() {
                     className="w-full text-left bg-indigo-50 p-3 rounded-xl shadow-sm border border-indigo-100 hover:bg-indigo-100 transition-colors"
                   >
                     <span className="font-bold text-indigo-800 text-sm block">Tour: KAIROS AI OS Orchestration</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {tab === "chat" && (
-              <div className="flex flex-col h-full">
-                <div className="flex-1 space-y-4 overflow-y-auto pr-2 pb-2">
-                  {chatMessages.map((msg, idx) => {
-                    const className = `p-3 rounded-2xl text-sm w-4/5 ${
-                      msg.role === "bot"
-                        ? "bg-blue-50 text-blue-900 rounded-tl-none"
-                        : "bg-gray-100 text-gray-800 rounded-tr-none ml-auto"
-                    }`;
-                    return msg.role === "bot" ? (
-                      <div key={idx} className={className}>
-                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
-                        {msg.linkUrl && msg.linkTitle && (
-                          <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">{msg.linkTitle}</a>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div key={idx} className={className}>{msg.text}</div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 flex gap-2 pt-2 border-t border-gray-100">
-                  <input
-                    type="text"
-                    placeholder="Ask anything..."
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={handleChatSubmit}
-                    className="flex-1 p-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </div>
               </div>
