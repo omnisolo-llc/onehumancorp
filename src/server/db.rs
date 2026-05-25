@@ -322,6 +322,7 @@ impl DB {
                         description TEXT NOT NULL,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         action_risk TEXT NOT NULL,
+                        payload TEXT DEFAULT '{}',
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
