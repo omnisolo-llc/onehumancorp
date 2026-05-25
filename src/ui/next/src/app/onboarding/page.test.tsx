@@ -11,6 +11,8 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
+      mode: 'guided',
+      bio: '',
       businessType: '',
       businessName: '',
       businessCategory: '',
@@ -46,6 +48,29 @@ describe('OnboardingWizard', () => {
       expect(useOnboardingStore.getState().step).toBe(2);
       expect(useOnboardingStore.getState().businessType).toBe('Bakery');
       expect(useOnboardingStore.getState().businessName).toBe('My Bakery');
+    });
+  });
+
+  it('can toggle instant mode and validate bio', async () => {
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({})
+    });
+
+    render(<OnboardingWizard />);
+
+    const instantBtn = screen.getByRole('button', { name: /Instant Setup/i });
+    instantBtn.click();
+
+    await waitFor(() => {
+        expect(useOnboardingStore.getState().mode).toBe('instant');
+    });
+
+    const generateBtn = screen.getByRole('button', { name: /Generate Draft/i });
+    generateBtn.click();
+
+    await waitFor(() => {
+        expect(screen.getByText('Please provide a bit more detail about your business (at least 10 characters).')).toBeInTheDocument();
     });
   });
 });

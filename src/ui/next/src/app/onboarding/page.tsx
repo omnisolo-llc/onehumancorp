@@ -9,6 +9,8 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
+    mode, setMode,
+    bio, setBio,
     businessType, setBusinessType,
     businessName, setBusinessName,
     businessCategory, setBusinessCategory,
@@ -52,10 +54,14 @@ export default function OnboardingWizard() {
               if (data.template) setTemplate(data.template);
               if (data.domain) setDomain(data.domain);
               if (data.intakeData) setIntakeData(data.intakeData);
+              if (data.mode) setMode(data.mode);
+              if (data.bio) setBio(data.bio);
               if (data.startResult) setStartResult(data.startResult);
 
               lastSyncState.current = JSON.stringify({
                 step: data.step,
+                mode: data.mode || mode,
+                bio: data.bio || bio,
                 businessType: data.businessType || businessType,
                 businessName: data.businessName || businessName,
                 businessCategory: data.businessCategory || businessCategory,
@@ -86,6 +92,8 @@ export default function OnboardingWizard() {
 
     const currentStateStr = JSON.stringify({
       step,
+      mode,
+      bio,
       businessType,
       businessName,
       businessCategory,
@@ -157,19 +165,28 @@ export default function OnboardingWizard() {
   };
 
   const handleIntakeSubmit = async () => {
-    if (!businessCategory.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (businessCategory.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
-      return;
+    if (mode === 'instant') {
+      if (!bio.trim() || bio.trim().length < 10) {
+        setError("Please provide a bit more detail about your business (at least 10 characters).");
+        return;
+      }
+    } else {
+      if (!businessCategory.trim()) {
+        setError("Please describe your niche.");
+        return;
+      }
+      if (businessCategory.trim().length < 5) {
+        setError("Niche description must be at least 5 characters.");
+        return;
+      }
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
+    const combinedDescription = mode === 'instant'
+      ? bio
+      : `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -297,25 +314,69 @@ export default function OnboardingWizard() {
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
+              <div className="flex justify-center mb-8">
+                <div className="bg-white/30 backdrop-blur-sm p-1 rounded-full inline-flex border border-white/40">
+                  <button
+                    onClick={() => setMode('guided')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${mode === 'guided' ? 'bg-white text-[#0066FF] shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    Guided Setup
+                  </button>
+                  <button
+                    onClick={() => setMode('instant')}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${mode === 'instant' ? 'bg-white text-[#0066FF] shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    Instant Setup ⚡️
+                  </button>
+                </div>
+              </div>
+
+              {mode === 'instant' ? (
+                <>
+                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Tell us about your business</h2>
+                  <p className="text-gray-500 text-sm mb-6">Write a short paragraph about what you do, and we'll generate everything else.</p>
+                  <textarea
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="e.g. I run a local bakery called Maya's Cakes. I sell custom vegan wedding cakes and cupcakes for $25."
+                    className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm resize-none h-40"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleIntakeSubmit}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex justify-center items-center disabled:opacity-70"
+                  >
+                    {isLoading ? (
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      "Generate Draft"
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
+                  <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+                  <input
+                    type="text"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
+                    placeholder="e.g. Sell cakes, plumbing"
+                    className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                    autoFocus
+                    enterKeyHint="next"
+                    autoComplete="off"
+                  />
+                  <button
+                    onClick={handleNext}
+                    className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Next
+                  </button>
+                </>
+              )}
             </div>
           )}
 

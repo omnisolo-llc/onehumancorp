@@ -6,6 +6,8 @@ describe('useOnboardingStore', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
+      mode: 'guided',
+      bio: '',
       businessType: '',
       businessName: '',
       businessCategory: '',
@@ -23,6 +25,8 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
+    expect(state.mode).toBe('guided');
+    expect(state.bio).toBe('');
     expect(state.businessName).toBe('');
     expect(state.businessCategory).toBe('');
     expect(state.firstProductName).toBe('');
@@ -88,6 +92,16 @@ describe('useOnboardingStore', () => {
   it('should update startResult', () => {
     useOnboardingStore.getState().setStartResult({ result: 'test' });
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
+  });
+
+  it('should update mode', () => {
+    useOnboardingStore.getState().setMode('instant');
+    expect(useOnboardingStore.getState().mode).toBe('instant');
+  });
+
+  it('should update bio', () => {
+    useOnboardingStore.getState().setBio('test bio');
+    expect(useOnboardingStore.getState().bio).toBe('test bio');
   });
 
   it('should persist state to localStorage', () => {

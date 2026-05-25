@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
+  mode: 'instant' | 'guided';
+  bio: string;
   businessType: string;
   businessName: string;
   businessCategory: string;
@@ -25,6 +27,8 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
+  setMode: (mode: 'instant' | 'guided') => void;
+  setBio: (bio: string) => void;
   setStartResult: (result: any) => void;
 }
 
@@ -32,6 +36,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
+  mode: 'guided',
+  bio: '',
   businessType: '',
   businessName: '',
   businessCategory: '',
@@ -53,6 +59,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   setDomain: (domain) => set({ domain }),
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
+  setMode: (mode) => set({ mode }),
+  setBio: (bio) => set({ bio }),
   setIntakeData: (intakeData) => set({ intakeData }),
       setStartResult: (startResult) => set({ startResult }),
     }),
