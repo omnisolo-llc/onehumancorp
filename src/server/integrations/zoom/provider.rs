@@ -36,6 +36,10 @@ impl ZoomProvider {
     pub async fn create_meeting(&self, topic: &str) -> Result<String, String> {
         self._client.create_meeting(topic).await
     }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
 }
 
 #[cfg(test)]

@@ -20,6 +20,7 @@ pub struct IntegrationsRegistry {
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
+    manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
@@ -57,6 +58,7 @@ impl IntegrationsRegistry {
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -210,6 +212,10 @@ impl IntegrationsRegistry {
         if integration_id == "calendly" {
             let mut clients = self.calendly_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calendly::provider::CalendlyProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "manychat" {
+            let mut clients = self.manychat_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
         if integration_id == "cal_com" {
             let mut clients = self.cal_com_clients.write().unwrap();
@@ -374,6 +380,21 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn mailchimp_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "mailchimp" {
+                let clients = self.mailchimp_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_event_types(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "calendly" {
@@ -385,6 +406,17 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.fetch_event_types().await;
+        }
+        let client = {
+            if integration_id == "manychat" {
+                let clients = self.manychat_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(_) = client {
+            return Ok(vec![]);
         }
         Err("integration not found or not supported".to_string())
     }
@@ -478,6 +510,21 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn shippo_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn create_meeting(&self, integration_id: &str, topic: &str) -> Result<String, String> {
         let client = {
             if integration_id == "zoom" {
@@ -519,6 +566,21 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_booking_link(event_type).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn zoom_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
         }
         Err("integration not found or not supported".to_string())
     }

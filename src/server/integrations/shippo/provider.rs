@@ -40,6 +40,10 @@ impl ShippoProvider {
     pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
         self._client.purchase_label(rate_id).await
     }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
 }
 
 #[cfg(test)]

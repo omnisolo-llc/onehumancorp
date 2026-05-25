@@ -70,6 +70,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
     catalog.push(calendly_provider.to_integration_provider());
 
+    let manychat_provider = crate::integrations::manychat::provider::ManychatProvider::new("dummy_token".to_string());
+    catalog.push(manychat_provider.to_integration_provider());
+
     let mailchimp_provider = crate::integrations::mailchimp::provider::MailchimpProvider::new("dummy_token".to_string());
     catalog.push(mailchimp_provider.to_integration_provider());
 

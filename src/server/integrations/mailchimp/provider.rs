@@ -40,6 +40,10 @@ impl MailchimpProvider {
     pub async fn send_campaign(&self, audience: &str, body: &str) -> Result<(), String> {
         self._client.send_campaign(audience, body).await
     }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
 }
 
 #[cfg(test)]

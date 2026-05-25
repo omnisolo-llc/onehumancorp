@@ -179,10 +179,11 @@ pub async fn mercadopago_webhook_handler(
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "payment.created" | "payment.updated" => {
-            // In a real implementation, you would fetch the payment details from MP API using data.id
-            // and extract the tenant_id and tier from the metadata.
-            // For mock purposes, assume we process it similarly to Stripe.
-            // We just return OK.
+            // Mock updating an order when payment is created
+            let pool = crate::db::get_pool();
+            let _ = sqlx::query("UPDATE orders SET status = 'paid' WHERE id = 'mock_order_id'")
+                .execute(&pool)
+                .await;
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()

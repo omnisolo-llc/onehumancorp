@@ -26,6 +26,7 @@ filegroup(
         "//src/server/integrations/shippo:srcs",
         "//src/server/integrations/zoom:srcs",
         "//src/server/integrations/calendly:srcs",
+        "//src/server/integrations/manychat:srcs",
         "//src/server/integrations/mailchimp:srcs",
         "//src/server/integrations/ayrshare:srcs",
         "//src/server/integrations/listmonk:srcs",

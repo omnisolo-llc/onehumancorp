@@ -10,4 +10,8 @@ impl ZoomClient {
     pub async fn create_meeting(&self, _topic: &str) -> Result<String, String> {
         Ok("https://zoom.us/j/mock_meeting_123".to_string())
     }
+
+    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
+        Ok(())
+    }
 }
