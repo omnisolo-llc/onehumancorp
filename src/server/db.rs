@@ -15,6 +15,7 @@ pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
@@ -129,10 +130,44 @@ impl DB {
             let key = if let Some(k) = database_url.split("key=").nth(1) {
                 k.split('&').next().unwrap_or("").to_string()
             } else {
-                std::env::var("OHC_SQLITE_KEY").expect("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
+                std::env::var("OHC_SQLITE_KEY").unwrap_or_else(|_| {
+                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
+                    if secret_path.exists() {
+                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                            if !bytes.trim().is_empty() {
+                                return bytes.trim().to_string();
+                            }
+                        }
+                    }
+
+                    let mut key_bytes = [0u8; 32];
+                    use rand::RngCore;
+                    rand::thread_rng().fill_bytes(&mut key_bytes);
+                    let new_key = hex::encode(key_bytes);
+
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::OpenOptionsExt;
+                        use std::io::Write;
+                        if let Ok(mut file) = std::fs::OpenOptions::new()
+                            .write(true)
+                            .create(true)
+                            .mode(0o600)
+                            .open(secret_path)
+                        {
+                            let _ = file.write_all(new_key.as_bytes());
+                        }
+                    }
+                    #[cfg(not(unix))]
+                    {
+                        let _ = std::fs::write(secret_path, &new_key);
+                    }
+
+                    new_key
+                })
             };
 
-            if key.is_empty() {
+            if key.trim().is_empty() {
                 panic!("CRITICAL SECURITY ERROR: OHC_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.");
             }
 
@@ -167,7 +202,7 @@ impl DB {
             let max_attempts = 30;
             let pool = loop {
                 match sqlx::postgres::PgPoolOptions::new()
-                    .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+                    .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
                     .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
                     .acquire_timeout(std::time::Duration::from_millis(2000))
                     .connect(&pg_url)
@@ -1223,24 +1258,26 @@ mod e2e_tenant_isolation_tests {
     }
 
     #[tokio::test]
-    async fn test_before_acquire_does_not_reset_tenant() {
+    async fn test_before_acquire_resets_tenant() {
         // Security Regression Test: Ensure PgPoolOptions are created
-        // without a global before_acquire that sets app.current_tenant to ''
+        // with a global before_acquire that sets app.current_tenant to ''
         if std::env::var("DATABASE_URL").is_err() {
             return;
         }
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 
         // Create a basic pool using our implementation logic
-        let pool_opts = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool_opts = sqlx::postgres::PgPoolOptions::new()
+            .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) });
 
-        // We can't trivially introspect the options object cleanly to confirm there is no before_acquire hook,
-        // but we verify that the pool options can be built successfully and doesn't inherently inject a tenant reset.
-        let _pool = pool_opts.connect_lazy(database_url).unwrap();
+        let pool = pool_opts.connect(database_url).await.unwrap();
 
-        // If the pool initialized without the `before_acquire` hook, this is a success.
-        // Discarding `DISCARD ALL` safely scopes context explicitly for each execution.
-        assert!(true, "Verified PgPoolOptions handles initialization securely without leaky app.current_tenant override.");
+        // Check if the tenant was reset
+        let mut conn = pool.acquire().await.unwrap();
+        let row: (Option<String>,) = sqlx::query_as("SELECT current_setting('app.current_tenant', true)")
+            .fetch_one(&mut *conn).await.unwrap();
+
+        assert_eq!(row.0.unwrap_or_default(), "", "Verified PgPoolOptions handles initialization securely with app.current_tenant reset.");
     }
 }
