@@ -159,18 +159,6 @@ impl ClaudeSubagentSpawner {
         self.parent_agent.run(&sum_config, &prompt, &mut on_event).await
     }
 
-
-    ",
-            raw_output
-        );
-
-        let mut sum_config = config.clone();
-        sum_config.developer_instructions = "You are a summarizing agent. Your job is to return 1k-2k token condensed summaries of subagent outputs.".to_string();
-
-        let mut on_event = |_| {};
-        self.parent_agent.run(&sum_config, &prompt, &mut on_event).await
-    }
-
     #[tokio::test]
     async fn test_claude_subagent_fork() {
         let parent_client = Arc::new(MockLlmClient {
