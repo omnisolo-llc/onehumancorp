@@ -80,6 +80,7 @@ where
         .route("/campaign/send", post(handle_send_campaign))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
+        .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
@@ -251,6 +252,45 @@ async fn handle_storefront_embed(
 </html>
 "##);
     axum::response::Html(html)
+}
+
+async fn handle_og_card(
+    axum::extract::Query(query): axum::extract::Query<StorefrontEmbedQuery>,
+) -> impl IntoResponse {
+    let name = query.product_name.as_deref().unwrap_or("Premium Product");
+    let price = query.price.as_deref().unwrap_or("$49.99");
+    let bg_color = if query.theme.as_deref() == Some("dark") { "#1a1a1a" } else { "#ffffff" };
+    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#000000" };
+    let accent_color = "#0066ff";
+
+    let escape_html = |s: &str| {
+        s.replace("&", "&amp;")
+         .replace("<", "&lt;")
+         .replace(">", "&gt;")
+         .replace("\"", "&quot;")
+         .replace("'", "&#x27;")
+    };
+
+    let safe_name = escape_html(name);
+    let safe_price = escape_html(price);
+
+    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="{bg_color}" />
+  <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
+
+  <text x="100" y="200" font-family="sans-serif" font-size="80" font-weight="bold" fill="{text_color}">{safe_name}</text>
+  <text x="100" y="300" font-family="sans-serif" font-size="60" fill="{accent_color}">{safe_price}</text>
+
+  <rect x="100" y="450" width="300" height="80" fill="{accent_color}" rx="10" />
+  <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
+
+  <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
+</svg>"##);
+
+    (
+        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+        svg,
+    )
 }
 
 async fn handle_check_milestones(
