@@ -1,23 +1,27 @@
 use reqwest::Client;
 
-pub struct ZoomClient {
+pub struct SendGridClient {
     pub api_key: String,
     http_client: Client,
 }
 
-impl ZoomClient {
+impl SendGridClient {
     pub fn new(api_key: String) -> Self {
-        ZoomClient {
+        Self {
             api_key,
             http_client: Client::new(),
         }
     }
 
-    pub async fn create_meeting(&self, topic: &str) -> Result<String, String> {
-        let url = "https://api.zoom.us/v2/users/me/meetings";
+    pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        let url = "https://api.sendgrid.com/v3/mail/send";
         let payload = serde_json::json!({
-            "topic": topic,
-            "type": 2
+            "personalizations": [{
+                "to": [{"email": to}]
+            }],
+            "from": {"email": "no-reply@onehumancorp.com"},
+            "subject": subject,
+            "content": [{"type": "text/plain", "value": body}]
         });
 
         let res = self.http_client.post(url)
@@ -29,9 +33,9 @@ impl ZoomClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("https://zoom.us/j/mock_meeting_123".to_string())
+                    Ok(())
                 } else {
-                    Err(format!("Zoom API error: {}", resp.status()))
+                    Err(format!("SendGrid API error: {}", resp.status()))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),
