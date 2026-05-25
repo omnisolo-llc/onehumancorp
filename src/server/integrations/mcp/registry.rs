@@ -284,8 +284,8 @@ mod tests {
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
 
         // Testing PostgreSQL RLS using before_acquire
-        let pool_tenant_a = PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool_tenant_a = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .acquire_timeout(Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
@@ -297,8 +297,8 @@ mod tests {
             .connect_lazy(database_url)
             .unwrap();
 
-        let pool_tenant_b = PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool_tenant_b = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
             .acquire_timeout(Duration::from_millis(50))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {

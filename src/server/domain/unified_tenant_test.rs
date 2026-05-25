@@ -8,7 +8,7 @@ mod tests {
         // According to the problem description:
         // "Write backend E2E tests verifying that queries attempting to access data from a different tenant_id return zero rows."
 
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
+        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 

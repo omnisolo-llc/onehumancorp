@@ -110,7 +110,7 @@ mod tests {
             .unwrap();
 
         let db = Arc::new(crate::db::DB {
-            pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: crate::db::DbStore::Sqlite(pool),
         });
 

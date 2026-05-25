@@ -14,7 +14,7 @@ mod tests {
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-        let pg_pool = PgPoolOptions::new()
+        let pg_pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url)
             .await;
 
@@ -117,7 +117,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
 
-    let pg_pool = sqlx::postgres::PgPoolOptions::new()
+    let pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .connect(&database_url)
         .await;
 

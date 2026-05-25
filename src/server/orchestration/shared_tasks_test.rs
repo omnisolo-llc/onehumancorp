@@ -16,7 +16,7 @@ async fn test_shared_task_orchestrator() {
     }
 
     let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
@@ -91,7 +91,7 @@ async fn test_shared_task_orchestrator_sqlite() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
         .connect_lazy("postgres://postgres:postgres@localhost:5432/postgres")
         .unwrap();
 
@@ -154,7 +154,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
     .await
     .unwrap();
 
-    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://postgres:postgres@localhost:5432/postgres").unwrap();
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
@@ -217,7 +217,7 @@ async fn test_shared_task_orchestrator_dependencies() {
     }
 
     let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+
         .acquire_timeout(std::time::Duration::from_millis(50))
         .connect_lazy(&db_url)
         .unwrap();
