@@ -162,11 +162,17 @@ impl std::fmt::Display for ToolError {
 
 impl std::error::Error for ToolError {}
 
-/// Permission Architecture: Permissive (auto-approve) vs Restrictive (require approval)
+/// SOTA Harness Patterns (2025-2026): 5. Human-in-loop as spectrum -> not binary autonomy vs control
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PermissionArchitecture {
-    /// Auto-approve all tools
-    Permissive,
-    /// Require explicit user approval for mutating tools
-    Restrictive,
+pub enum HumanInLoopSpectrum {
+    /// Operates without human intervention except for strictly defined high-risk tools.
+    Autonomous,
+    /// Requires human approval for tools that modify state (the classic "Restrictive" mode).
+    ApprovalOnMutate,
+    /// Requires human explicit approval before executing any tool, including read-only ones.
+    ApprovalOnAll,
+    /// Expects the human to actively review and optionally edit the tool arguments before execution.
+    CollaborativeEdit,
+    /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
+    Supervisory,
 }
