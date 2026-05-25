@@ -15,7 +15,6 @@ rust_library(
         "pubsub.rs",
         "output_parser.rs",
         "types.rs",
-        "code_native.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",
@@ -82,7 +81,6 @@ rust_library(
         "service.rs",
         "consolidation_worker.rs",
         "gpt_researcher.rs",
-        "deerflow_subagents.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -205,7 +203,6 @@ rust_binary(
         "budget",
         "caveman",
         "checkpointer",
-        "deerflow",
         "codex_runner",
         "verification_loops",
         "guardrails",
@@ -217,6 +214,8 @@ rust_binary(
         "consolidation_worker",
         "ruflo",
         "observability",
+        "observability",
+
         "output_parser",
         "pubsub",
 
