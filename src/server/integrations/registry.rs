@@ -62,6 +62,7 @@ impl IntegrationsRegistry {
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            buffer_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -522,7 +523,37 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+    pub async fn buffer_get_messages(&self, integration_id: &str) -> Result<Vec<String>, String> {
+        let client = {
+            if integration_id == "buffer" {
+                let clients = self.buffer_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.get_messages().await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn buffer_reply_message(&self, integration_id: &str, message_id: &str, reply: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "buffer" {
+                let clients = self.buffer_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.reply_message(message_id, reply).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
 }
+
 
 async fn send_telegram_message(bot_token: String, chat_id: String, text: String) {
     let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
