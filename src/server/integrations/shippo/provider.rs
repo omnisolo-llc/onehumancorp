@@ -62,7 +62,7 @@ mod tests {
 }
 
 impl ShippoProvider {
-    pub async fn generate_and_email_label(&self, rate_id: &str, email: &str) -> Result<String, String> {
+    pub async fn generate_and_email_label(&self, rate_id: &str, _email: &str) -> Result<String, String> {
         let label_url = self.purchase_label(rate_id).await?;
         // Mock emailing tracking numbers to the customer
         Ok(label_url)

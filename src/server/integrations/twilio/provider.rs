@@ -96,12 +96,12 @@ mod tests {
 }
 
 impl TwilioProvider {
-    pub async fn is_opted_out(&self, phone: &str) -> bool {
+    pub async fn is_opted_out(&self, _phone: &str) -> bool {
         // In a real app, query the DB for user communication preferences
         false
     }
 
-    pub async fn handle_opt_out(&self, phone: &str) -> Result<(), String> {
+    pub async fn handle_opt_out(&self, _phone: &str) -> Result<(), String> {
         // Handle STOP messages by updating DB
         Ok(())
     }
