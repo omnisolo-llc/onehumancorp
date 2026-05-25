@@ -70,7 +70,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -149,7 +149,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(http_requests_total[5m])",
@@ -165,7 +165,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -178,7 +178,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, method, path) (rate(http_request_duration_seconds_bucket[5m])))",
           "legendFormat": "{{method}} {{path}}",
@@ -259,7 +259,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -272,7 +272,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_token_usage_total[5m])) by (model, type)",
           "legendFormat": "{{model}} - {{type}}",
@@ -340,7 +340,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -353,7 +353,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
@@ -421,7 +421,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -434,7 +434,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
@@ -593,7 +593,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -606,7 +606,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_agent_api_calls_total[5m])) by (role, api)",
           "legendFormat": "{{role}} - {{api}}",
@@ -674,7 +674,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -687,7 +687,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_agent_api_errors_total[5m])) by (role, api)",
           "legendFormat": "{{role}} - {{api}}",
@@ -755,7 +755,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -834,7 +834,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum by(role) (rate(ohc_agent_api_errors_total[5m]))",
@@ -850,7 +850,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -929,7 +929,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum by(api) (rate(ohc_agent_api_errors_total[5m]))",
@@ -1017,7 +1017,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1030,7 +1030,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "histogram_quantile(0.95, sum by (le, transition) (rate(ohc_agent_transition_latency_seconds_bucket[5m])))",
           "legendFormat": "{{transition}}",
@@ -1098,7 +1098,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1177,7 +1177,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_tool_autocorrection_total[5m])) by (status, role)",
@@ -1193,7 +1193,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1272,7 +1272,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum by (le, phase) (rate(ohc_deliberation_phase_duration_seconds_bucket[5m])))",
@@ -1453,7 +1453,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -1472,7 +1472,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_postgres_skip_locked_total[1m])) by (operation)",
           "legendFormat": "{{operation}}",
@@ -1540,7 +1540,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1619,7 +1619,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(ohc_postgres_lock_contention_total[5m])",
@@ -1808,7 +1808,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1887,7 +1887,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_autodream_memories_ingested_total[5m]))",
@@ -1898,7 +1898,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_autodream_memories_compressed_total[5m]))",
@@ -2076,7 +2076,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2155,7 +2155,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum by (error) (rate(ohc_autodream_sync_errors_total[5m]))",
@@ -2171,7 +2171,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2250,7 +2250,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum by (error) (rate(ohc_autodream_ingestion_error_total[5m]))",
@@ -2261,7 +2261,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum by (error) (rate(ohc_autodream_compression_error_total[5m]))",
@@ -2277,7 +2277,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2356,7 +2356,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_autodream_consolidation_total[5m]))",
@@ -2385,7 +2385,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -2398,7 +2398,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_cache_hits_total[5m])) by (cache_type)",
           "legendFormat": "Hits - {{cache_type}}",
@@ -2407,7 +2407,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_cache_misses_total[5m])) by (cache_type)",
           "legendFormat": "Misses - {{cache_type}}",
@@ -2554,7 +2554,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2633,7 +2633,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_cache_hits_total[5m]))",
@@ -2644,7 +2644,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_cache_misses_total[5m]))",
@@ -2660,7 +2660,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -2739,7 +2739,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "histogram_quantile(0.95, sum by (le, model) (rate(ohc_llm_network_latency_seconds_bucket[5m])))",
@@ -2755,7 +2755,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -2768,7 +2768,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rate(ohc_api_rate_limit_exceeded_total[5m])) by (endpoint)",
           "legendFormat": "{{endpoint}}",
@@ -3250,7 +3250,7 @@
       "title": "Sub-Agent Queue Length",
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "targets": [
         {
@@ -3327,7 +3327,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3409,7 +3409,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "ohc_task_queue_length",
@@ -3422,7 +3422,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3504,7 +3504,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
@@ -3517,7 +3517,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3599,7 +3599,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_task_failed_total[5m])) by (error)",
@@ -3612,7 +3612,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3694,7 +3694,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_redis_redlock_total[5m])) by (operation)",
@@ -3720,7 +3720,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3799,7 +3799,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "rate(ohc_minimax_api_latency_seconds[5m])",
@@ -3815,7 +3815,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "Prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -3894,7 +3894,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_minimax_api_calls_total[5m]))",
@@ -3905,7 +3905,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "editorMode": "code",
           "expr": "sum(rate(ohc_minimax_api_errors_total[5m]))",
@@ -4312,7 +4312,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "Prometheus"
+            "uid": "${datasource}"
           },
           "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
