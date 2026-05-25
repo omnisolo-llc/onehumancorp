@@ -3346,14 +3346,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Manychat Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Manychat</h3>
+                                    <h3 style="margin: 0;">Ayrshare</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified Social Media Inbox for Instagram, Facebook, and WhatsApp.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Manychat...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
@@ -3366,24 +3366,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
-                            <!-- Resend Integration -->
+                            <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Resend</h3>
+                                    <h3 style="margin: 0;">Listmonk</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">AI-Powered Email Marketing and simple customer newsletters.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Resend...')">Connect</button>
-                            </div>
-
-                            <!-- Mercado Pago Integration -->
-                            <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Alipay</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌏</span>
-                                </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept payments from customers in China using Alipay.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Alipay...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Listmonk...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3393,17 +3383,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mercado Pago...')">Connect</button>
                             </div>
 
-                            <!-- Shippo Integration -->
+                            <!-- EasyPost Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Shippo</h3>
+                                    <h3 style="margin: 0;">EasyPost</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Automated Label Generation and real-time shipping rates.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to EasyPost...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3416,14 +3406,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
-                            <!-- Zoom Integration -->
+                            <!-- Jitsi Meet Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Zoom</h3>
+                                    <h3 style="margin: 0;">Jitsi Meet</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Auto-Generated Meeting Links for online services.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Zoom...')">Connect</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Jitsi Meet...')">Connect</button>
                             </div>
                         </div>
 
