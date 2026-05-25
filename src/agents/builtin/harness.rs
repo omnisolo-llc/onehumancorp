@@ -27,6 +27,10 @@ pub struct Policy {
 pub struct Config {
     #[serde(rename = "defaultPolicy")]
     pub default_policy: Policy,
+    #[serde(rename = "enableSeccomp")]
+    pub enable_seccomp: Option<bool>,
+    #[serde(rename = "seccompBpfPath")]
+    pub seccomp_bpf_path: Option<String>,
 }
 
 #[async_trait]
@@ -177,11 +181,13 @@ pub trait HarnessBackend: Send + Sync {
 
 pub struct LocalBackend {
     validator: Arc<ASTValidator>,
+    enable_seccomp: bool,
+    seccomp_bpf_path: Option<String>,
 }
 
 impl LocalBackend {
-    pub fn new(validator: Arc<ASTValidator>) -> Self {
-        LocalBackend { validator }
+    pub fn new(validator: Arc<ASTValidator>, enable_seccomp: bool, seccomp_bpf_path: Option<String>) -> Self {
+        LocalBackend { validator, enable_seccomp, seccomp_bpf_path }
     }
 
     pub fn is_bwrap_available(&self) -> bool {
@@ -266,6 +272,14 @@ impl LocalBackend {
             args.push("--bind".to_string());
             args.push("/var/run/ohc_proxy.sock".to_string());
             args.push("/var/run/ohc_proxy.sock".to_string());
+        }
+
+        // Seccomp BPF Unix Socket Blocking
+        if self.enable_seccomp {
+            if let Some(path) = &self.seccomp_bpf_path {
+                args.push("--seccomp".to_string());
+                args.push(path.to_string());
+            }
         }
 
         args.push("--".to_string());
@@ -456,7 +470,11 @@ pub struct Manager {
 impl Manager {
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
-        let local_backend = Arc::new(LocalBackend::new(validator.clone()));
+        let local_backend = Arc::new(LocalBackend::new(
+            validator.clone(),
+            config.enable_seccomp.unwrap_or(false),
+            config.seccomp_bpf_path.clone(),
+        ));
         let docker_backend = Arc::new(DockerBackend::new());
         let ssh_backend = Arc::new(SshBackend::new());
         let singularity_backend = Arc::new(SingularityBackend::new());
@@ -583,7 +601,7 @@ mod tests {
     #[test]
     fn test_get_bwrap_args() {
         let validator = Arc::new(ASTValidator::new());
-        let runner = LocalBackend::new(validator);
+        let runner = LocalBackend::new(validator, false, None);
         let policy = Policy {
             allowed_paths: vec!["/home/user".to_string()],
             read_only_paths: vec!["/etc".to_string()],
@@ -604,9 +622,21 @@ mod tests {
     }
 
     #[test]
+    fn test_get_bwrap_args_with_seccomp() {
+        let validator = Arc::new(ASTValidator::new());
+        let runner = LocalBackend::new(validator, true, Some("/path/to/filter.bpf".to_string()));
+        let policy = Policy::default();
+
+        let args = runner.get_bwrap_args("ls", &policy);
+
+        assert!(args.contains(&"--seccomp".to_string()));
+        assert!(args.contains(&"/path/to/filter.bpf".to_string()));
+    }
+
+    #[test]
     fn test_policy_allow_read_deny_write() {
         let validator = Arc::new(ASTValidator::new());
-        let runner = LocalBackend::new(validator);
+        let runner = LocalBackend::new(validator, false, None);
         let policy = Policy {
             allow_read: vec!["/opt".to_string()],
             deny_write: vec!["/tmp/protected".to_string()],
