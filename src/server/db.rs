@@ -280,7 +280,7 @@ impl DB {
                         subscription_tier TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'synced,
+                        _sync_status TEXT DEFAULT 'synced',
                         version INTEGER DEFAULT 1
                     );
 
@@ -294,7 +294,7 @@ impl DB {
                         is_active BOOLEAN NOT NULL DEFAULT 1,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'synced,
+                        _sync_status TEXT DEFAULT 'synced',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, id),
                         FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE
@@ -308,7 +308,7 @@ impl DB {
                         phone TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'synced,
+                        _sync_status TEXT DEFAULT 'synced',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, id),
                         FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE
@@ -323,7 +323,7 @@ impl DB {
                         scheduled_for TIMESTAMP,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'synced,
+                        _sync_status TEXT DEFAULT 'synced',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, id),
                         FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE,
@@ -339,7 +339,7 @@ impl DB {
                         unit_price TEXT NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'synced,
+                        _sync_status TEXT DEFAULT 'synced',
                         version INTEGER DEFAULT 1,
                         PRIMARY KEY (tenant_id, id),
                         FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE,
