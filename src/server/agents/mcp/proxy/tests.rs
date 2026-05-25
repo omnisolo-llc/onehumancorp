@@ -39,3 +39,22 @@ async fn test_proxy_tunnel() {
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 }
+
+#[tokio::test]
+async fn test_hybrid_context_tool() {
+    use super::client::HybridContextTool;
+
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        .max_connections(1)
+        .acquire_timeout(std::time::Duration::from_millis(1))
+        .connect_lazy("postgres://invalid:invalid@localhost:1/test")
+        .unwrap();
+
+    let tool = HybridContextTool::new(pool);
+    let (success, _, err) = tool.execute("{\"some\":\"context\"}").await;
+
+    // It should fail due to invalid DB URL, but this covers the execution logic
+    assert!(!success);
+    assert!(err.contains("pool") || err.contains("connect") || err.contains("error") || err.contains("closed") || err.contains("timed out"));
+}

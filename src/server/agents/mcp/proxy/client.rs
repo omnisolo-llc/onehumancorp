@@ -12,6 +12,26 @@ use std::sync::Arc;
 use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
 use crate::orchestration::local_sandbox::LocalSandbox;
 
+pub struct HybridContextTool {
+    pool: sqlx::PgPool,
+}
+
+impl HybridContextTool {
+    pub fn new(pool: sqlx::PgPool) -> Self {
+        Self { pool }
+    }
+
+    pub async fn execute(&self, payload: &str) -> (bool, String, String) {
+        let payload_val: serde_json::Value = serde_json::from_str(payload)
+            .unwrap_or_else(|_| serde_json::json!({ "raw": payload }));
+
+        match ::server_telemetry::buffer_metric(&self.pool, "hybrid_ui_context", "event", 1.0, payload_val).await {
+            Ok(_) => (true, "{\"status\":\"success\"}".to_string(), "".to_string()),
+            Err(e) => (false, "".to_string(), e.to_string()),
+        }
+    }
+}
+
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
     spiffe_id: String,
@@ -46,7 +66,7 @@ impl LocalProxyClient {
         // Initial registration
         let reg = RegisterProxyRequest {
             spiffe_id: self.spiffe_id.clone(),
-            supported_tools: vec!["shell".to_string(), "fs_read".to_string(), "fs_write".to_string()],
+            supported_tools: vec!["shell".to_string(), "fs_read".to_string(), "fs_write".to_string(), "hybrid_context".to_string()],
         };
         let _ = tx.send(ProxyToServer {
             request_id: "init".to_string(),
@@ -125,6 +145,10 @@ impl LocalProxyClient {
                                     } else {
                                         (false, "".to_string(), "Invalid params for fs_write".to_string())
                                     }
+                                }
+                                "hybrid_context" => {
+                                    let tool = HybridContextTool::new(crate::db::get_pool().clone());
+                                    tool.execute(&req.params).await
                                 }
                                 _ => (false, "".to_string(), format!("Unknown tool: {}", req.tool_id)),
                             };

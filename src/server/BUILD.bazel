@@ -173,6 +173,7 @@ rust_binary(
         "orchestration",
         "interop",
         "workers",
+        "agents",
     ]
 ]
 
