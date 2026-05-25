@@ -10,24 +10,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "category": "Business",
-    "createUpdaterArtifacts": true,
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico",
-      "icons/icon.png"
-    ],
-    "macOS": {
-      "minimumSystemVersion": "12.0"
-    },
-    "windows": {
-      "wix": {
-        "template": "wix/per-user-main.wxs"
-      }
-    }
+    "category": "Business"
   },
   "app": {
     "withGlobalTauri": true,
@@ -42,14 +25,6 @@
     ],
     "security": {
       "csp": null
-    }
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "TAURI_SIGNING_PUBLIC_KEY_PLACEHOLDER",
-      "endpoints": [
-        "https://github.com/onehumancorp/mono/releases/latest/download/latest.json"
-      ]
     }
   }
 }

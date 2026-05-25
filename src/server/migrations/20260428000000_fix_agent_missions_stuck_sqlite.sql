@@ -1,6 +1,15 @@
 -- Reconstruction of the agent_missions table to persist the STUCK enum constraint safely.
 -- We must retain all critical columns (updated_at, synced_to_cloud, organization_id, etc.).
 
+-- We ensure any missing columns are added first so the SELECT statement does not fail.
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS cloud_mission_id TEXT;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS sync_error TEXT;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS last_synced_at TIMESTAMP;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS _sync_status TEXT DEFAULT 'pending';
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS version INTEGER DEFAULT 1;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS mission_log TEXT;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS organization_id TEXT DEFAULT 'system';
+
 -- 1. Rename existing table to _temp_agent_missions
 ALTER TABLE agent_missions RENAME TO _temp_agent_missions;
 
@@ -22,8 +31,7 @@ CREATE TABLE agent_missions (
     organization_id TEXT NOT NULL DEFAULT 'system'
 );
 
--- 3. Copy the data back.
--- Some previous schemas had organization_id, some used tenant_id. We copy what we can.
+-- 3. Copy the data back explicitly.
 INSERT INTO agent_missions (
     id, status, payload, created_at, updated_at, tenant_id,
     cloud_mission_id, sync_error, last_synced_at, synced_to_cloud,

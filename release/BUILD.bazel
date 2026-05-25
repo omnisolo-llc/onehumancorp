@@ -90,7 +90,7 @@ pkg_deb(
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version = "0.4.45",
+    version = "0.4.42",
 )
 
 pkg_rpm(
@@ -101,12 +101,11 @@ pkg_rpm(
     license = "Apache-2.0",
     release = "1",
     summary = "One Human Corp application bundle",
-    tags = ["manual"],
     target_compatible_with = select({
         ":linux_with_rpmbuild": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version = "0.4.45",
+    version = "0.4.42",
 )
 
 filegroup(

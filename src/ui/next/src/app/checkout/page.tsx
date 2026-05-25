@@ -29,19 +29,6 @@ export default function CheckoutPage() {
           </button>
 
           <button
-            onClick={() => {
-              alert('Connecting to Stripe Terminal...');
-              setTimeout(() => {
-                alert('Tap successful! Payment processed.');
-                router.push('/dashboard');
-              }, 1500);
-            }}
-            className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
-          >
-            Tap to Pay (Stripe Terminal)
-          </button>
-
-          <button
             onClick={() => router.push('/pricing')}
             className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
           >
