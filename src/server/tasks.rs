@@ -506,6 +506,8 @@ mod tests {
         let payload: serde_json::Value = serde_json::from_str(&fetched.payload).unwrap();
         assert_eq!(payload["error"], "Task was rejected by user");
     }
+}
+
     #[tokio::test]
     async fn test_approve_task_integration() {
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
@@ -536,5 +538,3 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
     }
-
-}

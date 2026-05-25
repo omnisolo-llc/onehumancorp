@@ -15,8 +15,8 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Meta Graph API' })).toBeVisible();
-    await expect(page.getByText('Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Ayrshare' })).toBeVisible();
+    await expect(page.getByText('Unified API for posting and retrieving messages across social networks.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
@@ -26,17 +26,17 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EasyPost' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
-    await expect(page.getByText('Automated Label Generation and real-time shipping rates.')).toBeVisible();
+    await expect(page.getByText('Painless Shipping Labels & Tracking.')).toBeVisible();
     await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
-    await expect(page.getByText('AI-Powered Email Marketing and simple customer newsletters.')).toBeVisible();
-    await expect(page.getByText('Auto-Generated Meeting Links for online services.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Listmonk' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jitsi Meet' })).toBeVisible();
+    await expect(page.getByText('Embedded, No-Jargon Email Campaigns.')).toBeVisible();
+    await expect(page.getByText('Zero-Setup Online Lessons and video conferencing.')).toBeVisible();
   });
 
   test('displays global sms notifications card', async ({ page }) => {
@@ -44,10 +44,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
   });
 
-  test('can connect Meta Graph API', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Meta Graph API' }).getByRole('button', { name: 'Connect' });
+  test('can connect Ayrshare', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Ayrshare' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Meta Graph API...');
+      expect(dialog.message()).toContain('Connecting to Ayrshare...');
       dialog.accept();
     });
     await connectButton.click();
@@ -62,23 +62,23 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await connectButton.click();
   });
 
-  test('can connect Resend and Mercado Pago', async ({ page }) => {
-    const resendBtn = page.locator('div.card.glass').filter({ hasText: 'Resend' }).getByRole('button', { name: 'Connect' });
+  test('can connect Listmonk and Mercado Pago', async ({ page }) => {
+    const listmonkBtn = page.locator('div.card.glass').filter({ hasText: 'Listmonk' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
-    await resendBtn.click();
+    await listmonkBtn.click();
 
     const mercadoBtn = page.locator('div.card.glass').filter({ hasText: 'Mercado Pago' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
     await mercadoBtn.click();
   });
 
-  test('can connect Shippo, Twilio, and Zoom', async ({ page }) => {
+  test('can connect EasyPost, Twilio, and Jitsi', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    const shippoBtn = page.locator('div.card.glass').filter({ hasText: 'Shippo' }).getByRole('button', { name: 'Connect' });
-    await shippoBtn.click();
+    const epBtn = page.locator('div.card.glass').filter({ hasText: 'EasyPost' }).getByRole('button', { name: 'Connect' });
+    await epBtn.click();
     const twBtn = page.locator('div.card.glass').filter({ hasText: 'Twilio' }).getByRole('button', { name: 'Connect' });
     await twBtn.click();
-    const zoomBtn = page.locator('div.card.glass').filter({ hasText: 'Zoom' }).getByRole('button', { name: 'Connect' });
-    await zoomBtn.click();
+    const jitsiBtn = page.locator('div.card.glass').filter({ hasText: 'Jitsi Meet' }).getByRole('button', { name: 'Connect' });
+    await jitsiBtn.click();
   });
 });

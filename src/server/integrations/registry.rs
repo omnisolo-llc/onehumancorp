@@ -11,20 +11,20 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
-    instances: RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
-    pull_requests: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
-    issues: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::Issue>>>,
+    messages: RwLock<std::collections::HashMap<String, Vec<ChatMessage>>>,
+    instances: RwLock<std::collections::HashMap<String, IntegrationInstance>>,
+    pull_requests: RwLock<std::collections::HashMap<String, Vec<PullRequest>>>,
+    issues: RwLock<std::collections::HashMap<String, Vec<Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
+    manychat_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::manychat::provider::ManychatProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
-    alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
@@ -38,7 +38,7 @@ impl IntegrationsRegistry {
         let mut instances = std::collections::HashMap::new();
         for provider in crate::integrations::catalog::get_catalog() {
             let id = provider.metadata.id.clone();
-            instances.insert(id.clone(), ::server_ohc::orchestration::IntegrationInstance {
+            instances.insert(id.clone(), IntegrationInstance {
                 id: id.clone(),
                 name: provider.metadata.name.clone(),
                 category: provider.metadata.category.clone(),
@@ -56,12 +56,12 @@ impl IntegrationsRegistry {
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -72,20 +72,20 @@ impl IntegrationsRegistry {
     }
 
     // Chat methods
-    pub fn test_connection(&self, integration_id: &str, _creds: ::server_ohc::orchestration::ChatTestRequest) -> Result<(), String> {
+    pub fn test_connection(&self, integration_id: &str, _creds: ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
         }
         Ok(())
     }
 
-    pub fn chat_messages(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::ChatMessage> {
+    pub fn chat_messages(&self, integration_id: &str) -> Vec<ChatMessage> {
         let msgs = self.messages.read().unwrap();
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
-        let msg = ::server_ohc::orchestration::ChatMessage {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<ChatMessage, String> {
+        let msg = ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
             channel: channel.to_string(),
             from_agent: from_agent.to_string(),
@@ -130,6 +130,19 @@ impl IntegrationsRegistry {
                          }
                      }
                  }
+                 "manychat" => {
+                     let clients = self.manychat_clients.read().unwrap();
+                     if let Some(client) = clients.get(integration_id) {
+                         let client = client.clone();
+                         let to = channel.to_string();
+                         let text = content.to_string();
+                         tokio::spawn(async move {
+                             if let Err(e) = client.send_message("instagram", &to, &text).await {
+                                 tracing::error!("Failed to send Manychat message: {}", e);
+                             }
+                         });
+                     }
+                 }
                  "meta" => {
                      if !creds.api_token.is_empty() {
                          let to = if !creds.chat_id.is_empty() { creds.chat_id.clone() } else { channel.to_string() };
@@ -157,19 +170,19 @@ impl IntegrationsRegistry {
     }
 
     // Integration methods
-    pub fn instances(&self) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
+    pub fn instances(&self) -> Vec<IntegrationInstance> {
         let insts = self.instances.read().unwrap();
         insts.values().cloned().collect()
     }
 
-    pub fn instances_by_category(&self, category: &str) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
+    pub fn instances_by_category(&self, category: &str) -> Vec<IntegrationInstance> {
         let insts = self.instances.read().unwrap();
         insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
-    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ::server_ohc::orchestration::ConnectIntegrationRequest) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ConnectIntegrationRequest) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
-        let inst = ::server_ohc::orchestration::IntegrationInstance {
+        let inst = IntegrationInstance {
             id: integration_id.to_string(),
             name: integration_id.to_string(),
             category: "default".to_string(),
@@ -207,6 +220,10 @@ impl IntegrationsRegistry {
                 creds.api_token.clone()
             )));
         }
+        if integration_id == "manychat" {
+            let mut clients = self.manychat_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
+        }
         if integration_id == "calendly" {
             let mut clients = self.calendly_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::calendly::provider::CalendlyProvider::new(creds.api_token.clone())));
@@ -222,10 +239,6 @@ impl IntegrationsRegistry {
         if integration_id == "mailchimp" {
             let mut clients = self.mailchimp_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mailchimp::provider::MailchimpProvider::new(creds.api_token.clone())));
-        }
-        if integration_id == "alipay" {
-            let mut clients = self.alipay_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::alipay::provider::AlipayProvider::new(creds.api_token.clone())));
         }
         if integration_id == "mercadopago" {
             let mut clients = self.mercadopago_clients.write().unwrap();
@@ -259,7 +272,7 @@ impl IntegrationsRegistry {
         Ok(inst)
     }
 
-    pub fn disconnect(&self, integration_id: &str) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn disconnect(&self, integration_id: &str) -> Result<IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         if let Some(inst) = insts.get_mut(integration_id) {
             inst.status = "disconnected".to_string();
@@ -268,13 +281,13 @@ impl IntegrationsRegistry {
         Err("integration not found".to_string())
     }
 
-    pub fn pull_requests(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::PullRequest> {
+    pub fn pull_requests(&self, integration_id: &str) -> Vec<PullRequest> {
         let prs = self.pull_requests.read().unwrap();
         prs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
-        let pr = ::server_ohc::orchestration::PullRequest {
+    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<PullRequest, String> {
+        let pr = PullRequest {
             id: format!("pr-{}", Utc::now().timestamp()),
             title: title.to_string(),
             body: body.to_string(),
@@ -291,7 +304,7 @@ impl IntegrationsRegistry {
         Ok(pr)
     }
 
-    pub fn merge_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn merge_pull_request(&self, pr_id: &str) -> Result<PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -302,7 +315,7 @@ impl IntegrationsRegistry {
         Err("pr not found".to_string())
     }
 
-    pub fn close_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn close_pull_request(&self, pr_id: &str) -> Result<PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -313,13 +326,13 @@ impl IntegrationsRegistry {
         Err("pr not found".to_string())
     }
 
-    pub fn issues(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::Issue> {
+    pub fn issues(&self, integration_id: &str) -> Vec<Issue> {
         let issues = self.issues.read().unwrap();
         issues.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<::server_ohc::orchestration::Issue, String> {
-        let issue = ::server_ohc::orchestration::Issue {
+    pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<Issue, String> {
+        let issue = Issue {
             id: format!("issue-{}", Utc::now().timestamp()),
             title: title.to_string(),
             description: description.to_string(),
@@ -337,7 +350,7 @@ impl IntegrationsRegistry {
         Ok(issue)
     }
 
-    pub fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -348,7 +361,7 @@ impl IntegrationsRegistry {
         Err("issue not found".to_string())
     }
 
-    pub fn assign_issue(&self, issue_id: &str, assignee: &str) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn assign_issue(&self, issue_id: &str, assignee: &str) -> Result<Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -419,21 +432,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn alipay_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "alipay" {
-                let clients = self.alipay_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_checkout_preference(price_id, tenant_id).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn mercadopago_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
         let client = {
             if integration_id == "mercadopago" {
@@ -448,6 +446,7 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+
     pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "shippo" {

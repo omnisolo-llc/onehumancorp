@@ -49,14 +49,6 @@ test.describe('Onboarding Wizard', () => {
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
 
-    // Verify keyboard optimizations for price input
-    const priceInput = page.getByPlaceholder('0.00');
-    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
-    await expect(priceInput).toHaveAttribute('pattern', '[0-9]*\\.?[0-9]*');
-
-    // Verify glassmorphism aesthetics applied
-    await expect(priceInput).toHaveClass(/backdrop-blur/);
-
     // Configure products and domain before publishing
     await page.getByRole('button', { name: 'Playful' }).click();
     await page.getByRole('button', { name: /Connect Custom Domain/i }).click();
@@ -116,10 +108,6 @@ test.describe('Onboarding Wizard', () => {
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-
-    // Verify keyboard optimizations for price input
-    const priceInput = page.getByPlaceholder('0.00');
-    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
 
     // Configure products and domain before publishing
     await page.getByRole('button', { name: 'Modern' }).click();

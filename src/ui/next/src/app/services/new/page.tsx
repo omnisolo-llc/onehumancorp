@@ -8,14 +8,40 @@ export default function NewServicePage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState('monthly');
   const [price, setPrice] = useState('');
+  const [duration, setDuration] = useState('60');
+  const [availability, setAvailability] = useState('Mon-Fri 9-5');
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title) return;
-    setSaved(true);
-    setTimeout(() => {
-      window.location.href = '/dashboard';
-    }, 1500);
+
+    try {
+      const response = await fetch('/api/v1/booking/services', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          description,
+          price_cents: Math.round(parseFloat(price || '0') * 100),
+          duration_minutes: parseInt(duration || '60', 10),
+          availability,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save service');
+      }
+
+      setSaved(true);
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 1500);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
   };
 
   const generateDescription = () => {
@@ -39,6 +65,12 @@ export default function NewServicePage() {
         </Link>
         <h1 className="text-2xl font-bold">Add Service</h1>
       </div>
+
+      {error && (
+        <div className="bg-red-50 text-red-600 p-3 mb-4 rounded-md text-sm border border-red-200">
+          {error}
+        </div>
+      )}
 
       <div className="space-y-4">
         <div>
@@ -71,18 +103,41 @@ export default function NewServicePage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-          <div className="relative">
-            <span className="absolute left-3 top-2 text-gray-500">$</span>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+            <div className="relative">
+              <span className="absolute left-3 top-2 text-gray-500">$</span>
+              <input
+                type="number"
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                className="w-full border rounded p-2 pl-8 text-black"
+                placeholder="0.00"
+              />
+            </div>
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
             <input
               type="number"
-              value={price}
-              onChange={e => setPrice(e.target.value)}
-              className="w-full border rounded p-2 pl-8 text-black"
-              placeholder="0.00"
+              value={duration}
+              onChange={e => setDuration(e.target.value)}
+              className="w-full border rounded p-2 text-black"
+              placeholder="60"
             />
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+          <input
+            type="text"
+            value={availability}
+            onChange={e => setAvailability(e.target.value)}
+            className="w-full border rounded p-2 text-black"
+            placeholder="e.g. Mon-Fri 9-5"
+          />
         </div>
 
         <div className="border-t pt-4 mt-4">

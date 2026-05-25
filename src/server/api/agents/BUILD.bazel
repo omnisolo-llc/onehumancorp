@@ -1,10 +1,8 @@
-
 filegroup(
     name = "srcs",
     srcs = [
         "approvals.rs",
         "webhook.rs",
-        "settings.rs",
         "hire.rs",
         "mission/mod.rs",
         "mission/handoff.rs",

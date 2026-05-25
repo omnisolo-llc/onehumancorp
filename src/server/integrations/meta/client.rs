@@ -72,8 +72,4 @@ mod tests {
         let client = RealMetaClient::new("token".to_string());
         assert_eq!(client.access_token, "token");
     }
-
-    // Because send_message issues a real network request using reqwest,
-    // we omit a full unit test calling it here to prevent external dependencies and network flakes in the test suite.
-    // Provider tests cover the mock path.
 }

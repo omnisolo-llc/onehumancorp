@@ -22,15 +22,10 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
-  const lastSyncState = useRef("");
-
-  const [isLoaded, setIsLoaded] = React.useState(false);
+  const isInitialMount = useRef(true);
 
   // Load state from backend on initial mount
   useEffect(() => {
-    if (isLoaded) return;
-
-    // Zustand's persist middleware automatically loads the state from local storage before this.
     const loadState = async () => {
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
@@ -41,64 +36,29 @@ export default function OnboardingWizard() {
         if (res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
-            // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step && data.step >= step) {
-              setStep(data.step);
-              if (data.businessType) setBusinessType(data.businessType);
-              if (data.businessName) setBusinessName(data.businessName);
-              if (data.businessCategory) setBusinessCategory(data.businessCategory);
-              if (data.firstProductName) setFirstProductName(data.firstProductName);
-              if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
-              if (data.template) setTemplate(data.template);
-              if (data.domain) setDomain(data.domain);
-              if (data.intakeData) setIntakeData(data.intakeData);
-              if (data.startResult) setStartResult(data.startResult);
-
-              lastSyncState.current = JSON.stringify({
-                step: data.step,
-                businessType: data.businessType || businessType,
-                businessName: data.businessName || businessName,
-                businessCategory: data.businessCategory || businessCategory,
-                firstProductName: data.firstProductName || firstProductName,
-                firstProductPrice: data.firstProductPrice || firstProductPrice,
-                template: data.template || template,
-                domain: data.domain || domain,
-                intakeData: data.intakeData || intakeData,
-                startResult: data.startResult || startResult
-              });
-            }
+            if (data.step) setStep(data.step);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessCategory) setBusinessCategory(data.businessCategory);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.template) setTemplate(data.template);
+            if (data.domain) setDomain(data.domain);
+            if (data.intakeData) setIntakeData(data.intakeData);
+            if (data.startResult) setStartResult(data.startResult);
           }
         }
       } catch (err) {
         console.error("Failed to load onboarding state", err);
-      } finally {
-        setIsLoaded(true);
       }
     };
-
     loadState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded]); // Only run once to load
+  }, [setStep, setBusinessType, setBusinessName, setBusinessCategory, setFirstProductName, setFirstProductPrice, setTemplate, setDomain, setIntakeData, setStartResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
-    if (!isLoaded) return;
-
-    const currentStateStr = JSON.stringify({
-      step,
-      businessType,
-      businessName,
-      businessCategory,
-      firstProductName,
-      firstProductPrice,
-      template,
-      domain,
-      intakeData,
-      startResult
-    });
-
-    // Only sync if state actually changed from last sync
-    if (currentStateStr === lastSyncState.current) {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
       return;
     }
 
@@ -109,17 +69,27 @@ export default function OnboardingWizard() {
         await fetch('/api/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: currentStateStr
+          body: JSON.stringify({
+            step,
+            businessType,
+            businessName,
+            businessCategory,
+            firstProductName,
+            firstProductPrice,
+            template,
+            domain,
+            intakeData,
+            startResult
+          })
         });
-        lastSyncState.current = currentStateStr;
       } catch (err) {
         console.error("Failed to sync onboarding state", err);
       }
     };
 
-    const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
+    const timer = setTimeout(syncState, 500); // Debounce sync
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -248,23 +218,16 @@ export default function OnboardingWizard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5));
+          background: rgba(255, 255, 255, 0.45);
           backdrop-filter: blur(40px) saturate(250%);
-          -webkit-backdrop-filter: blur(40px) saturate(250%);
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          box-shadow:
-            0 8px 32px 0 rgba(31, 38, 135, 0.1),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
-            background: linear-gradient(135deg, rgba(35, 35, 40, 0.8), rgba(22, 22, 26, 0.7));
-            backdrop-filter: blur(40px) saturate(250%);
-            -webkit-backdrop-filter: blur(40px) saturate(250%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow:
-              0 8px 32px 0 rgba(0, 0, 0, 0.4),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
           }
           .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
             color: #F5F5F7;
@@ -273,13 +236,9 @@ export default function OnboardingWizard() {
             color: #A1A1A6;
           }
           .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.4);
+            background: rgba(0, 0, 0, 0.3);
             color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-          }
-          .glass-container input:focus, .glass-container textarea:focus {
-            box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5), inset 0 2px 4px rgba(0,0,0,0.2);
+            border-color: rgba(255, 255, 255, 0.2);
           }
         }
         .animate-fade-in {
@@ -317,14 +276,14 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
               />
               <button
                 onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
               >
                 Next
               </button>
@@ -341,7 +300,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -349,13 +308,13 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all"
                 >
                   Next
                 </button>
@@ -373,7 +332,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-gray-200 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none transition-all text-lg mb-4 bg-white/80"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -381,14 +340,14 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleIntakeSubmit}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-blue-700 active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -410,7 +369,7 @@ export default function OnboardingWizard() {
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
-                <div className="bg-white/40 backdrop-blur-md p-5 rounded-[16px] border border-white/50 shadow-sm space-y-3">
+                <div className="bg-white/80 p-5 rounded-[16px] border border-gray-100 shadow-sm space-y-3">
                    <h3 className="font-bold text-gray-900 font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
@@ -419,7 +378,7 @@ export default function OnboardingWizard() {
                          type="text"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
                          placeholder="e.g. Custom Cake"
                        />
                      </div>
@@ -427,11 +386,9 @@ export default function OnboardingWizard() {
                        <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Price</label>
                        <input
                          type="text"
-                         inputMode="decimal"
-                         pattern="[0-9]*\.?[0-9]*"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-gray-200 focus:border-[#0066FF] outline-none bg-white text-gray-900"
                          placeholder="0.00"
                        />
                      </div>
@@ -446,7 +403,7 @@ export default function OnboardingWizard() {
                        <button
                          key={t}
                          onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
                        >
                          {t}
                        </button>
@@ -460,14 +417,14 @@ export default function OnboardingWizard() {
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
                      >
                        <span>Free OHC Domain</span>
                        <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
                      </button>
                      <button
                        onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-blue-50 text-[#0066FF] font-bold' : 'border-gray-200 bg-white/80 text-gray-700 hover:border-gray-300'} transition-all text-sm`}
                      >
                        <span>Connect Custom Domain</span>
                        <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
@@ -479,7 +436,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[8px] font-bold bg-gray-100 text-gray-600 hover:bg-gray-200 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -487,7 +444,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-[#34C759] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#2eb350] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -520,7 +477,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 backdrop-blur-md text-[#1D1D1F] border border-white/50 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white text-[#1D1D1F] border border-gray-200 p-4 rounded-[8px] font-bold shadow-sm hover:bg-gray-50 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
