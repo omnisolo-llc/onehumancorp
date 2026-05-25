@@ -95,6 +95,9 @@ use std::pin::Pin;
 use tokio::sync::mpsc;
 use std::sync::OnceLock;
 use std::sync::Arc;
+// OTP Cache for verification
+pub static OTP_STORE: std::sync::LazyLock<std::sync::Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>> = std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
+
 use hub::Hub;
 
 static TELEMETRY_CHAN: OnceLock<mpsc::Sender<Box<dyn FnOnce() + Send>>> = OnceLock::new();
@@ -1599,6 +1602,35 @@ impl HubService for MyHubService {
     }
 }
 
+pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
+    let store = crate::settings::Store::new();
+    let settings = store.get();
+
+    let should_send = match event_type {
+        "failed_payment" => settings.sms_alert_failed_payment,
+        "new_order" => settings.sms_alert_new_order,
+        "urgent_booking" => settings.sms_alert_urgent_booking,
+        _ => false,
+    };
+
+    if !should_send {
+        return Ok(());
+    }
+
+    if let Some(phone) = settings.sms_critical_phone {
+        let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+        let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+        let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+
+        let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+
+        if let Err(e) = provider.send_sms(&phone, &from_number, message).await {
+            tracing::warn!("Failed to dispatch critical SMS to {}: {}. Expected if Twilio is not configured.", phone, e);
+        }
+    }
+    Ok(())
+}
+
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     let use_json = std::env::var("LOG_FORMAT").unwrap_or_default() == "json";
@@ -1908,7 +1940,83 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 
     let db_for_sales = db.clone();
+    let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            // Generate OTP securely
+            let otp = format!("{:06}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos() % 900000 + 100000);
+
+            {
+                let mut store = crate::OTP_STORE.lock().unwrap();
+                if store.len() > 1000 {
+                    store.retain(|_, (_, time)| time.elapsed().as_secs() < 300); // 5 mins expiry
+                }
+                store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
+            }
+
+            let account_sid = std::env::var("TWILIO_ACCOUNT_SID").unwrap_or_else(|_| "dummy_sid".to_string());
+            let auth_token = std::env::var("TWILIO_AUTH_TOKEN").unwrap_or_else(|_| "dummy_token".to_string());
+            let from_number = std::env::var("TWILIO_FROM_NUMBER").unwrap_or_else(|_| "+1234567890".to_string());
+
+            let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
+
+            let body = format!("Your OHC verification code is {}", otp);
+            let phone_clone = phone.clone();
+
+            // Fire and forget gracefully
+            tokio::spawn(async move {
+                let res = provider.send_sms(&phone_clone, &from_number, &body).await;
+                if let Err(e) = res {
+                    tracing::warn!("Failed to send SMS to {}: {}. This is expected if Twilio is not configured.", phone_clone, e);
+                }
+            });
+
+            axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
+        }))
+        .route("/api/settings/sms-confirm", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
+
+                let valid = {
+                    let mut store = crate::OTP_STORE.lock().unwrap();
+                    if let Some((stored_otp, time)) = store.get(&phone) {
+                        if stored_otp == otp && time.elapsed().as_secs() < 300 {
+                            store.remove(&phone);
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                };
+
+                if valid {
+                    axum::response::Json(serde_json::json!({ "success": true }))
+                } else {
+                    axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))
+                }
+            }
+        }))
+        .route("/api/settings/sms-preferences", axum::routing::post({
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
+                let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
+                let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
+
+                if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
+                    tracing::error!("Failed to save SMS preferences: {}", e);
+                    return axum::response::Json(serde_json::json!({ "success": false }));
+                }
+                axum::response::Json(serde_json::json!({ "success": true }))
+            }
+        }))
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
@@ -3461,6 +3569,31 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Closing Greeting</p>
                         <input type="text" placeholder="e.g. See you soon!" />
                         <label><input type="checkbox"> Enable Push Notifications</label>
+
+                        <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);" />
+
+                        <h2>Global SMS Notifications for Critical Alerts</h2>
+                        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Get immediate text alerts for urgent business events.</p>
+                        <div style="margin-bottom: 12px;">
+                            <input type="text" id="sms-critical-phone" placeholder="Mobile Phone Number (e.g. +1234567890)" style="width: 100%; max-width: 300px; margin-bottom: 8px;" />
+                            <br/>
+                            <button onclick="verifySmsNumber()" id="btn-verify-sms" style="background: var(--primary); color: white;">Verify Number</button>
+                        </div>
+
+                        <div id="sms-otp-container" style="display: none; margin-bottom: 12px; background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2);">
+                            <p style="font-size: 14px; margin-bottom: 8px;">A 6-digit code has been sent. Enter it below:</p>
+                            <input type="text" id="sms-critical-otp" placeholder="123456" style="width: 100px; margin-right: 8px;" />
+                            <button onclick="confirmSmsNumber()" style="background: var(--accent-green); color: white;">Confirm OTP</button>
+                        </div>
+                        <div id="sms-verified-badge" style="display: none; margin-bottom: 12px; color: var(--accent-green); font-weight: 600; font-size: 14px;">
+                            ✓ Number Verified
+                        </div>
+
+                        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <label><input type="checkbox" id="sms-alert-urgent-booking" onchange="saveSmsPreferences()"> Urgent Bookings</label>
+                            <label><input type="checkbox" id="sms-alert-failed-payment" onchange="saveSmsPreferences()"> Failed Payments</label>
+                            <label><input type="checkbox" id="sms-alert-new-order" onchange="saveSmsPreferences()"> New Orders</label>
+                        </div>
                         <p>Timezone</p>
                         <select><option>UTC</option><option>EST</option></select>
                         <p>Language</p>
@@ -4985,6 +5118,96 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         };
 
                         // Scribe: Tooltip Logic
+                        async function verifySmsNumber() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            if (!phone) {
+                                alert("Please enter a valid phone number.");
+                                return;
+                            }
+
+                            const btn = document.getElementById('btn-verify-sms');
+                            const originalText = btn.textContent;
+                            btn.textContent = "Sending...";
+                            btn.disabled = true;
+
+                            try {
+                                const res = await fetch('/api/settings/sms-verify', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone: phone })
+                                });
+
+                                if (res.ok) {
+                                    document.getElementById('sms-otp-container').style.display = 'block';
+                                    btn.textContent = "Resend Code";
+                                } else {
+                                    alert("Failed to send verification SMS. Check format or backend configuration.");
+                                    btn.textContent = originalText;
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Network error. Please try again.");
+                                btn.textContent = originalText;
+                            }
+                            btn.disabled = false;
+                        }
+
+                        async function saveSmsPreferences() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            const urgent_booking = document.getElementById('sms-alert-urgent-booking').checked;
+                            const failed_payment = document.getElementById('sms-alert-failed-payment').checked;
+                            const new_order = document.getElementById('sms-alert-new-order').checked;
+
+                            try {
+                                await fetch('/api/settings/sms-preferences', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone, urgent_booking, failed_payment, new_order })
+                                });
+                            } catch (e) {
+                                console.error("Could not save SMS preferences", e);
+                            }
+                        }
+
+                        async function confirmSmsNumber() {
+                            const phone = document.getElementById('sms-critical-phone').value;
+                            const otp = document.getElementById('sms-critical-otp').value;
+                            if (!otp) {
+                                alert("Please enter the OTP.");
+                                return;
+                            }
+
+                            try {
+                                const res = await fetch('/api/settings/sms-confirm', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                    },
+                                    body: JSON.stringify({ phone, otp })
+                                });
+
+                                if (res.ok) {
+                                    document.getElementById('sms-otp-container').style.display = 'none';
+                                    document.getElementById('btn-verify-sms').style.display = 'none';
+                                    document.getElementById('sms-critical-phone').disabled = true;
+                                    document.getElementById('sms-verified-badge').style.display = 'block';
+                                    await saveSmsPreferences();
+                                } else {
+                                    alert("Invalid OTP.");
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("Network error.");
+                            }
+                        }
+
                         let tooltipRegistry = {};
                         let activeTooltipTimeout = null;
 
