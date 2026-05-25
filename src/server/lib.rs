@@ -4654,9 +4654,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             if (stepId === 'generating') {
-                                // Premium transition simulation to provide perceived value
-                                await new Promise(resolve => setTimeout(resolve, 2000));
-
                                 if (prevStep === 3 || prevStep === 5) {
                                     nextStep(prevStep);
                                     return;
