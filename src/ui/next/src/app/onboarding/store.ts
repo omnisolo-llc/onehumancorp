@@ -3,9 +3,7 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
-  businessType: string;
-  businessName: string;
-  businessCategory: string;
+  businessBio: string;
   firstProductName: string;
   firstProductPrice: string;
   template: string;
@@ -15,9 +13,7 @@ interface OnboardingState {
   intakeData: any;
   startResult: any;
   setStep: (step: number) => void;
-  setBusinessType: (type: string) => void;
-  setBusinessName: (name: string) => void;
-  setBusinessCategory: (category: string) => void;
+  setBusinessBio: (bio: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
   setTemplate: (template: string) => void;
@@ -32,32 +28,28 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-  businessType: '',
-  businessName: '',
-  businessCategory: '',
-  firstProductName: '',
-  firstProductPrice: '',
-  template: 'Modern',
-  domain: 'free',
-  isLoading: false,
-  error: '',
-  intakeData: null,
-  startResult: null,
-  setStep: (step) => set({ step }),
-  setBusinessType: (businessType) => set({ businessType }),
-  setBusinessName: (businessName) => set({ businessName }),
-  setBusinessCategory: (businessCategory) => set({ businessCategory }),
-  setFirstProductName: (firstProductName) => set({ firstProductName }),
-  setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-  setTemplate: (template) => set({ template }),
-  setDomain: (domain) => set({ domain }),
-  setIsLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setIntakeData: (intakeData) => set({ intakeData }),
+      businessBio: '',
+      firstProductName: '',
+      firstProductPrice: '',
+      template: 'Modern',
+      domain: 'free',
+      isLoading: false,
+      error: '',
+      intakeData: null,
+      startResult: null,
+      setStep: (step) => set({ step }),
+      setBusinessBio: (businessBio) => set({ businessBio }),
+      setFirstProductName: (firstProductName) => set({ firstProductName }),
+      setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setTemplate: (template) => set({ template }),
+      setDomain: (domain) => set({ domain }),
+      setIsLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
+      setIntakeData: (intakeData) => set({ intakeData }),
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage', // name of the item in the storage (must be unique)
+      name: 'onboarding-storage',
     }
   )
 );

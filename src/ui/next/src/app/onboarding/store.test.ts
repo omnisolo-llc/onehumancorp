@@ -6,9 +6,7 @@ describe('useOnboardingStore', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      businessType: '',
-      businessName: '',
-      businessCategory: '',
+      businessBio: '',
       firstProductName: '',
       firstProductPrice: '',
       template: 'Modern',
@@ -23,8 +21,7 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
-    expect(state.businessName).toBe('');
-    expect(state.businessCategory).toBe('');
+    expect(state.businessBio).toBe('');
     expect(state.firstProductName).toBe('');
     expect(state.firstProductPrice).toBe('');
     expect(state.template).toBe('Modern');
@@ -40,14 +37,9 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('should update businessName', () => {
-    useOnboardingStore.getState().setBusinessName('Test Name');
-    expect(useOnboardingStore.getState().businessName).toBe('Test Name');
-  });
-
-  it('should update businessCategory', () => {
-    useOnboardingStore.getState().setBusinessCategory('Test Category');
-    expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
+  it('should update businessBio', () => {
+    useOnboardingStore.getState().setBusinessBio('Test Bio');
+    expect(useOnboardingStore.getState().businessBio).toBe('Test Bio');
   });
 
   it('should update firstProductName', () => {
@@ -92,11 +84,11 @@ describe('useOnboardingStore', () => {
 
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().setBusinessBio('Persisted Bio');
 
     // The state is persisted in localStorage under 'onboarding-storage'
     const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
     expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessName).toBe('Persisted Name');
+    expect(storedState.state.businessBio).toBe('Persisted Bio');
   });
 });
