@@ -21,7 +21,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Calendly' })).toBeVisible();
     await expect(page.getByText('Zero-Config Booking & Calendar Sync.')).toBeVisible();
   });
 
@@ -33,15 +33,20 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Resend' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mailchimp' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
-    await expect(page.getByText('AI-Powered Email Marketing and simple customer newsletters.')).toBeVisible();
+    await expect(page.getByText('Keep marketing lists in sync automatically.')).toBeVisible();
     await expect(page.getByText('Auto-Generated Meeting Links for online services.')).toBeVisible();
   });
 
   test('displays global sms notifications card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Twilio SMS' })).toBeVisible();
+    await expect(page.getByText('Abstracted developer SMS notifications for the unified inbox.')).toBeVisible();
+  });
+
+  test('displays whatsapp integration card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'WhatsApp Business API' })).toBeVisible();
+    await expect(page.getByText('Manage WhatsApp messages in the unified inbox.')).toBeVisible();
   });
 
   test('can connect Meta Graph API', async ({ page }) => {
@@ -53,32 +58,38 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await connectButton.click();
   });
 
-  test('can connect Cal.com', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Cal.com' }).getByRole('button', { name: 'Connect' });
+  test('can connect Calendly', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Calendly' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Cal.com...');
+      expect(dialog.message()).toContain('Connecting to Calendly...');
       dialog.accept();
     });
     await connectButton.click();
   });
 
-  test('can connect Resend and Mercado Pago', async ({ page }) => {
-    const resendBtn = page.locator('div.card.glass').filter({ hasText: 'Resend' }).getByRole('button', { name: 'Connect' });
+  test('can connect Mailchimp and Mercado Pago', async ({ page }) => {
+    const mailchimpBtn = page.locator('div.card.glass').filter({ hasText: 'Mailchimp' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
-    await resendBtn.click();
+    await mailchimpBtn.click();
 
     const mercadoBtn = page.locator('div.card.glass').filter({ hasText: 'Mercado Pago' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
     await mercadoBtn.click();
   });
 
-  test('can connect Shippo, Twilio, and Zoom', async ({ page }) => {
+  test('can connect Shippo, Twilio SMS, and Zoom', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
     const shippoBtn = page.locator('div.card.glass').filter({ hasText: 'Shippo' }).getByRole('button', { name: 'Connect' });
     await shippoBtn.click();
-    const twBtn = page.locator('div.card.glass').filter({ hasText: 'Twilio' }).getByRole('button', { name: 'Connect' });
+    const twBtn = page.locator('div.card.glass').filter({ hasText: 'Twilio SMS' }).getByRole('button', { name: 'Connect' });
     await twBtn.click();
     const zoomBtn = page.locator('div.card.glass').filter({ hasText: 'Zoom' }).getByRole('button', { name: 'Connect' });
     await zoomBtn.click();
+  });
+
+  test('can connect WhatsApp Business API', async ({ page }) => {
+    page.on('dialog', dialog => dialog.accept());
+    const waBtn = page.locator('div.card.glass').filter({ hasText: 'WhatsApp Business API' }).getByRole('button', { name: 'Connect' });
+    await waBtn.click();
   });
 });

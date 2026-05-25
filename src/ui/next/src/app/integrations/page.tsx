@@ -7,12 +7,13 @@ export default function Integrations() {
 
   const integrations = [
     { id: "meta", name: "Meta Graph API", category: "marketing", status: "disconnected", icon: "📱", description: "Unified Native Social Media Inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📨", description: "AI-Powered Email Marketing and simple customer newsletters." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "✉️", description: "Keep marketing lists in sync automatically." },
     { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Automated Label Generation and real-time shipping rates." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generated Meeting Links for online services." }
+    { id: "twilio", name: "Twilio SMS", category: "operations", status: "disconnected", icon: "💬", description: "Abstracted developer SMS notifications for the unified inbox." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Auto-Generated Meeting Links for online services." },
+    { id: "whatsapp", name: "WhatsApp Business API", category: "marketing", status: "disconnected", icon: "💬", description: "Manage WhatsApp messages in the unified inbox." }
   ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
