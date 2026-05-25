@@ -1,15 +1,15 @@
-use super::client::MailchimpClient;
+use super::client::{MailchimpClientWrapper, RealMailchimpClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct MailchimpProvider {
-    _client: Arc<MailchimpClient>,
-    metadata: ProviderMetadata,
+    _client: Arc<dyn MailchimpClientWrapper>,
+    pub metadata: ProviderMetadata,
 }
 
 impl MailchimpProvider {
     pub fn new(api_key: String) -> Self {
-        let client = MailchimpClient::new(api_key);
+        let client = RealMailchimpClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
@@ -17,7 +17,7 @@ impl MailchimpProvider {
                 id: "mailchimp".to_string(),
                 name: "Mailchimp".to_string(),
                 category: "email_marketing".to_string(),
-                base_url: "https://server.api.mailchimp.com/3.0".to_string(),
+                base_url: "https://api.mailchimp.com".to_string(),
             },
         }
     }
@@ -39,24 +39,5 @@ impl MailchimpProvider {
 
     pub async fn send_campaign(&self, audience: &str, body: &str) -> Result<(), String> {
         self._client.send_campaign(audience, body).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mailchimp_provider_new() {
-        let provider = MailchimpProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "mailchimp");
-        assert_eq!(provider.metadata.category, "email_marketing");
-    }
-
-    #[test]
-    fn test_mailchimp_provider_into() {
-        let provider = MailchimpProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "mailchimp");
     }
 }

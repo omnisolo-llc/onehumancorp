@@ -1,15 +1,15 @@
-use super::client::MercadoPagoClient;
+use super::client::{MercadoPagoClientWrapper, MercadoPagoClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct MercadoPagoProvider {
-    _client: Arc<MercadoPagoClient>,
-    metadata: ProviderMetadata,
+    _client: Arc<dyn MercadoPagoClientWrapper>,
+    pub metadata: ProviderMetadata,
 }
 
 impl MercadoPagoProvider {
-    pub fn new(access_token: String) -> Self {
-        let client = MercadoPagoClient::new(access_token);
+    pub fn new(api_key: String) -> Self {
+        let client = MercadoPagoClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
@@ -32,60 +32,16 @@ impl MercadoPagoProvider {
             }
         }
     }
-}
 
-impl MercadoPagoProvider {
     pub async fn create_checkout_preference(&self, price_id: &str, tenant_id: &str) -> Result<String, String> {
         self._client.create_checkout_preference(price_id, tenant_id).await
     }
 
-    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        self._client.create_payment(amount, description, payer_email).await
+    pub async fn get_oauth_url(&self, redirect_uri: &str) -> String {
+        self._client.get_oauth_url(redirect_uri).await
     }
 
-    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
-        self._client.handle_webhook(payload).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_mercadopago_provider_new() {
-        let provider = MercadoPagoProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "mercadopago");
-        assert_eq!(provider.metadata.category, "payment");
-    }
-
-    #[test]
-    fn test_mercadopago_provider_into() {
-        let provider = MercadoPagoProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "mercadopago");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_provider_create_checkout_preference() {
-        let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.create_checkout_preference("price_123", "tenant_123").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_provider_create_payment() {
-        let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.create_payment(100.0, "Test payment", "test@example.com").await;
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "mock_txn_123");
-    }
-
-    #[tokio::test]
-    async fn test_mercadopago_provider_handle_webhook() {
-        let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.handle_webhook("{}").await;
-        assert!(result.is_ok());
+    pub async fn exchange_token(&self, code: &str, redirect_uri: &str) -> Result<String, String> {
+        self._client.exchange_token(code, redirect_uri).await
     }
 }

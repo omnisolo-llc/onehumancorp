@@ -123,7 +123,7 @@ impl IntegrationsRegistry {
                          if let Some(client) = clients.get(integration_id) {
                              let client = client.clone();
                              tokio::spawn(async move {
-                                 if let Err(e) = client.send_sms(&to, &from, &text).await {
+                                 if let Err(e) = client.send_sms(&to, &text).await {
                                      tracing::error!("Failed to send Twilio SMS: {}", e);
                                  }
                              });
@@ -188,7 +188,7 @@ impl IntegrationsRegistry {
         });
         if integration_id == "twilio" {
             let mut clients = self.twilio_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone(), creds.api_token.clone())));
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::twilio::provider::TwilioProvider::new(creds.bot_token.clone())));
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();

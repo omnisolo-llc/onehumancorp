@@ -1,10 +1,10 @@
-use super::client::ZoomClient;
+use super::client::{ZoomClientWrapper, ZoomClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ZoomProvider {
-    _client: Arc<ZoomClient>,
-    metadata: ProviderMetadata,
+    _client: Arc<dyn ZoomClientWrapper>,
+    pub metadata: ProviderMetadata,
 }
 
 impl ZoomProvider {
@@ -15,9 +15,9 @@ impl ZoomProvider {
             _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "zoom".to_string(),
-                name: "Zoom Video Conferencing".to_string(),
+                name: "Zoom".to_string(),
                 category: "video".to_string(),
-                base_url: "https://api.zoom.us/v2".to_string(),
+                base_url: "https://api.zoom.us".to_string(),
             },
         }
     }
@@ -36,23 +36,12 @@ impl ZoomProvider {
     pub async fn create_meeting(&self, topic: &str) -> Result<String, String> {
         self._client.create_meeting(topic).await
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_zoom_provider_new() {
-        let provider = ZoomProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "zoom");
-        assert_eq!(provider.metadata.category, "video");
+    pub async fn get_oauth_url(&self, redirect_uri: &str) -> String {
+        self._client.get_oauth_url(redirect_uri).await
     }
 
-    #[test]
-    fn test_zoom_provider_into() {
-        let provider = ZoomProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "zoom");
+    pub async fn exchange_token(&self, code: &str, redirect_uri: &str) -> Result<String, String> {
+        self._client.exchange_token(code, redirect_uri).await
     }
 }

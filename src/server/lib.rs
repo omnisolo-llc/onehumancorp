@@ -638,7 +638,7 @@ impl HubService for MyHubService {
         let stripe_key = std::env::var("STRIPE_API_KEY")
             .map_err(|_| tonic::Status::failed_precondition("STRIPE_API_KEY is required"))?;
         let client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| crate::integrations::mercadopago::client::MercadoPagoClient::new(token));
+        let mercadopago_client = std::env::var("MERCADOPAGO_ACCESS_TOKEN").ok().map(|token| std::sync::Arc::new(crate::integrations::mercadopago::client::MercadoPagoClient::new(token)));
         let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
@@ -659,7 +659,7 @@ impl HubService for MyHubService {
         let url = if let Some(alipay_client) = alipay_client.filter(|_| is_china) {
             alipay_client.create_checkout_preference(&req.plan_id, &tenant_id).await
         } else if let Some(mp_client) = mercadopago_client.filter(|_| is_latam) {
-            mp_client.create_checkout_preference(&req.plan_id, &tenant_id).await
+            crate::integrations::mercadopago::client::MercadoPagoClientWrapper::create_checkout_preference(mp_client.as_ref(), &req.plan_id, &tenant_id).await
         } else {
             client.create_checkout_session(&req.plan_id, &tenant_id, amount).await
         }
@@ -2028,6 +2028,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
+        .nest("/api/agents/manychat_webhook", api::agents::manychat_webhook::router(dept_orchestrator.clone()))
+        .nest("/api/agents/manychat", api::agents::manychat_oauth::router())
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,

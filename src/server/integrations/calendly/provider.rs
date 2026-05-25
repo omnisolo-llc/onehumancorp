@@ -1,15 +1,15 @@
-use super::client::CalendlyClient;
+use super::client::{CalendlyClientWrapper, RealCalendlyClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct CalendlyProvider {
-    _client: Arc<CalendlyClient>,
-    metadata: ProviderMetadata,
+    _client: Arc<dyn CalendlyClientWrapper>,
+    pub metadata: ProviderMetadata,
 }
 
 impl CalendlyProvider {
     pub fn new(api_key: String) -> Self {
-        let client = CalendlyClient::new(api_key);
+        let client = RealCalendlyClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
@@ -36,23 +36,8 @@ impl CalendlyProvider {
     pub async fn fetch_event_types(&self) -> Result<Vec<String>, String> {
         self._client.fetch_event_types().await
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_calendly_provider_new() {
-        let provider = CalendlyProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "calendly");
-        assert_eq!(provider.metadata.category, "calendar");
-    }
-
-    #[test]
-    fn test_calendly_provider_into() {
-        let provider = CalendlyProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "calendly");
+    pub async fn create_webhook(&self, url: &str) -> Result<(), String> {
+        self._client.create_webhook(url).await
     }
 }

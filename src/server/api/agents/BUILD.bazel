@@ -4,6 +4,8 @@ filegroup(
     srcs = [
         "approvals.rs",
         "webhook.rs",
+        "manychat_webhook.rs",
+        "manychat_oauth.rs",
         "settings.rs",
         "hire.rs",
         "mission/mod.rs",

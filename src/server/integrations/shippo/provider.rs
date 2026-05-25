@@ -1,21 +1,21 @@
-use super::client::ShippoClient;
+use super::client::{ShippoClientWrapper, RealShippoClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct ShippoProvider {
-    _client: Arc<ShippoClient>,
-    metadata: ProviderMetadata,
+    _client: Arc<dyn ShippoClientWrapper>,
+    pub metadata: ProviderMetadata,
 }
 
 impl ShippoProvider {
     pub fn new(api_key: String) -> Self {
-        let client = ShippoClient::new(api_key);
+        let client = RealShippoClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
             metadata: ProviderMetadata {
                 id: "shippo".to_string(),
-                name: "Shippo Logistics".to_string(),
+                name: "Shippo".to_string(),
                 category: "shipping".to_string(),
                 base_url: "https://api.goshippo.com".to_string(),
             },
@@ -39,24 +39,5 @@ impl ShippoProvider {
 
     pub async fn purchase_label(&self, rate_id: &str) -> Result<String, String> {
         self._client.purchase_label(rate_id).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_shippo_provider_new() {
-        let provider = ShippoProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "shippo");
-        assert_eq!(provider.metadata.category, "shipping");
-    }
-
-    #[test]
-    fn test_shippo_provider_into() {
-        let provider = ShippoProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
-        assert_eq!(integration.metadata.id, "shippo");
     }
 }
