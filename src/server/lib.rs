@@ -4463,13 +4463,29 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             btn.disabled = true;
 
                             try {
+                                const reviewRes = await fetch('/api/v1/growth/campaign/generate-review', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        order_id: '8922',
+                                        customer_name: 'Sarah',
+                                        product_name: 'Signature Coffee Blend'
+                                    })
+                                });
+
+                                let body = 'We hope you loved your recent purchase. Please leave a review.';
+                                if (reviewRes.ok) {
+                                    const data = await reviewRes.json();
+                                    body = data.message;
+                                }
+
                                 const response = await fetch('/api/v1/growth/campaign/send', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
                                         name: 'Automated Review Request',
                                         subject: 'How did we do? Leave a review!',
-                                        body: 'We hope you loved your recent purchase. Please leave a review.',
+                                        body: body,
                                         target_segment: 'recent_buyers_no_review'
                                     })
                                 });
@@ -4482,6 +4498,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 } else {
                                     btn.textContent = '✨ Send AI Review Requests';
                                     btn.disabled = false;
+                                    // Use a better UI feedback instead of alert if possible, or gracefully fallback
+                                    console.error('Failed to send campaign');
                                     alert('Failed to send campaign');
                                 }
                             } catch (e) {
