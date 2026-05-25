@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Grandmother UX End-to-End Flow Validation', () => {
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
   test('first-time user sees plain language dashboard headers', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page.getByText('Welcome back, Human.')).toBeVisible();

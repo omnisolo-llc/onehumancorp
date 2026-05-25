@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Grandmother Test - Plain Language Check', () => {
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
   test('should display login page with form', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();

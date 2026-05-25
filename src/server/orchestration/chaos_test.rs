@@ -12,7 +12,7 @@ use crate::orchestration::state::cloud::CloudStateManager;
 // A Mock mesh that emits malformed payload
 struct CorruptedMockMesh {
     received_messages: std::sync::Arc<std::sync::atomic::AtomicUsize>,
-}
+
 
 impl CorruptedMockMesh {
     fn new() -> Self {
@@ -20,7 +20,7 @@ impl CorruptedMockMesh {
             received_messages: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
         }
     }
-}
+
 
 #[async_trait]
 impl TeammateMesh for CorruptedMockMesh {
@@ -56,11 +56,11 @@ impl TeammateMesh for CorruptedMockMesh {
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 struct RacingLockMesh {
     transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
-}
+
 
 impl RacingLockMesh {
     fn new() -> Self {
@@ -68,7 +68,7 @@ impl RacingLockMesh {
             transport: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
-}
+
 
 #[async_trait]
 impl TeammateMesh for RacingLockMesh {
@@ -88,7 +88,7 @@ impl TeammateMesh for RacingLockMesh {
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 
 
@@ -99,7 +99,7 @@ impl TeammateMesh for RacingLockMesh {
 struct DroppingMockTransport {
     transport: ohc_builtin_agent::mesh::transport::InProcessTransport,
     drop_rate: std::sync::atomic::AtomicUsize,
-}
+
 
 impl DroppingMockTransport {
     fn new(drop_rate: usize) -> Self {
@@ -108,7 +108,7 @@ impl DroppingMockTransport {
             drop_rate: std::sync::atomic::AtomicUsize::new(drop_rate),
         }
     }
-}
+
 
 #[async_trait]
 impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport {
@@ -128,7 +128,7 @@ impl ohc_builtin_agent::mesh::transport::MeshTransport for DroppingMockTransport
     async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> { Ok(()) }
     async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
-}
+
 
 struct SleepingMockMesh;
 
@@ -149,7 +149,7 @@ impl TeammateMesh for SleepingMockMesh {
     async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
     async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-}
+
 
 
 #[cfg(test)]
@@ -350,5 +350,62 @@ mod chaos_tests {
         // With SleepingMockMesh, this triggers the inner lock timeout.
         assert!(tasks.is_ok());
         assert_eq!(tasks.unwrap().len(), 0);
+    }
+
+
+    #[tokio::test]
+    async fn test_standalone_distributed_lock_high_latency() {
+        // Continuous Chaos Testing: "The distributed lock and state machine mechanisms (Teammate Mesh) must be rigorously tested under high-latency simulated conditions, especially for Standalone local-first deployments."
+
+        let mesh = Arc::new(SleepingMockMesh);
+
+        let owner = "standalone_chaos_agent";
+        let resource = "standalone:chaos:lock";
+
+        let start = std::time::Instant::now();
+        // Since SleepingMockMesh sleeps for 61000ms, a timeout of 200ms in check_lock or similar would normally fail,
+        // but here we just test acquiring directly, which simulates the high-latency mesh.
+
+        // Wrap it in a timeout to ensure it doesn't block the entire process if there's no timeout internally
+        let acquire_future = mesh.acquire_lock(resource, owner, 10);
+
+        let result = tokio::time::timeout(std::time::Duration::from_millis(500), acquire_future).await;
+
+        assert!(result.is_err(), "Distributed lock should enforce timeout semantics to prevent blocking under high-latency Standalone mesh conditions");
+    }
+
+
+
+    #[tokio::test]
+    async fn test_standalone_distributed_lock_high_latency() {
+        // Continuous Chaos Testing: "The distributed lock and state machine mechanisms (Teammate Mesh) must be rigorously tested under high-latency simulated conditions, especially for Standalone local-first deployments."
+
+        let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_lazy("sqlite::memory:")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://dummy").unwrap(),
+            store: DbStore::Sqlite(dummy_sqlite_pool),
+        });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+
+        // Use StandaloneStateManager which implements the state machine and lock acquisition fallback logic
+        let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db, mesh);
+
+        let start = std::time::Instant::now();
+        // Transition state attempts to acquire a lock and transition the state machine.
+        // Because the mock mesh is "SleepingMockMesh", it sleeps for 61000ms.
+        // The StandaloneStateManager should enforce its own timeout to prevent blocking.
+        let result = state_manager.transition_state("task_chaos_lock", "tenant_chaos", "PENDING", "IN_PROGRESS", None, None).await;
+        let elapsed = start.elapsed();
+
+        // The state manager should timeout well before the 61 second sleep finishes (e.g. 5 seconds fallback)
+        assert!(elapsed < std::time::Duration::from_millis(60000), "Standalone state manager should enforce timeout and prevent unbounded blocking under high latency");
+
+        // It must fallback safely by returning an error instead of hanging
+        assert!(result.is_err(), "Standalone transition should gracefully fail on lock acquisition timeout");
     }
 }

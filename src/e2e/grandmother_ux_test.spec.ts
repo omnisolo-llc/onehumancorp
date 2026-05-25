@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures';
 
 test.describe('Grandmother UX Fixes E2E tests', () => {
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
+  test.setTimeout(30000); // Enforce 30-second completion metric for core CUJ
+
   test('login screen uses plain language labels', async ({ page }) => {
     await page.goto('/login');
     await expect(page.getByText('One Human Corp')).toBeVisible();
