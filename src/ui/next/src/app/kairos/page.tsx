@@ -6,7 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
-export default function KairosDashboard() {
+import { Suspense } from 'react';
+
+function KairosDashboardContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([
@@ -132,12 +134,12 @@ export default function KairosDashboard() {
 
                 <div className="space-y-4">
                     <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                        <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-1">Knowledge Density</div>
-                        <div className="text-2xl font-bold text-purple-900">842.5 MB</div>
+                        <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-1">Customer Insights</div>
+                        <div className="text-2xl font-bold text-purple-900">842 Items</div>
                     </div>
                     <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                        <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Semantic Clusters</div>
-                        <div className="text-2xl font-bold text-indigo-900">12 Active</div>
+                        <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Business Patterns Recognized</div>
+                        <div className="text-2xl font-bold text-indigo-900">12 Patterns</div>
                     </div>
                 </div>
             </div>
@@ -158,5 +160,13 @@ export default function KairosDashboard() {
         }
       `}} />
     </div>
+  );
+}
+
+export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500 font-inter">Loading KAIROS...</div>}>
+      <KairosDashboardContent />
+    </Suspense>
   );
 }
