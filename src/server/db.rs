@@ -510,6 +510,14 @@ impl DB {
                         version INTEGER DEFAULT 1,
                         topic TEXT DEFAULT ''
                     );
+                    CREATE TABLE IF NOT EXISTS autodream_memories_master (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        task_id TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
@@ -773,6 +781,39 @@ impl DB {
                 .await?; }
         };
 
+        Ok(())
+    }
+
+    pub async fn insert_autodream_memory_master(
+        &self,
+        id: &str,
+        tenant_id: &str,
+        task_id: &str,
+        content: &str,
+        embedding: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO autodream_memories_master (id, tenant_id, task_id, content, embedding) VALUES (?, ?, ?, ?, ?)")
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO autodream_memories_master (id, tenant_id, task_id, content, embedding) VALUES ($1, $2, $3, $4, $5::vector)")
+                    .bind(id)
+                    .bind(tenant_id)
+                    .bind(task_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
         Ok(())
     }
 

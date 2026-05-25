@@ -223,6 +223,73 @@ impl AutoDreamWorker {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_consolidate_epoch");
         debug!("AutoDream: consolidating epoch...");
+
+        let consolidator = AutoDreamConsolidator {};
+        consolidator.consolidate(&self.db).await?;
+
+        Ok(())
+    }
+}
+
+pub struct AutoDreamConsolidator {}
+
+impl AutoDreamConsolidator {
+    pub async fn consolidate(&self, db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+        let query = "
+            SELECT t.id, t.tenant_id, t.payload, t.deliberation_log
+            FROM shared_tasks t
+            LEFT JOIN autodream_memories_master m ON t.id = m.task_id
+            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            LIMIT 50
+        ";
+
+        let mut extracted_tasks = Vec::new();
+
+        match &db.store {
+            crate::db::DbStore::Postgres => {
+                let tasks = sqlx::query(query).fetch_all(&db.pool).await?;
+                for row in tasks {
+                    let task_id: String = row.get("id");
+                    let tenant_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+                    extracted_tasks.push((task_id, tenant_id, payload, log));
+                }
+            }
+            crate::db::DbStore::Sqlite(sqlite_pool) => {
+                let tasks = sqlx::query(query).fetch_all(sqlite_pool).await?;
+                for row in tasks {
+                    let task_id: String = row.get("id");
+                    let tenant_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    let log: Option<String> = row.try_get("deliberation_log").unwrap_or(None);
+                    extracted_tasks.push((task_id, tenant_id, payload, log));
+                }
+            }
+        }
+
+        let llm_client = crate::minimax::LocalLLMClient::new();
+
+        for (task_id, tenant_id, payload, log) in extracted_tasks {
+            let content = format!("Task Payload:\n{}\nDeliberation Log:\n{}", payload, log.unwrap_or_default());
+
+            match llm_client.generate_embedding(&content).await {
+                Ok(embedding) => {
+                    let emb_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                    let mem_id = uuid::Uuid::new_v4().to_string();
+
+                    if let Err(e) = db.insert_autodream_memory_master(&mem_id, &tenant_id, &task_id, &content, &emb_str).await {
+                        debug!("AutoDream: failed to insert memory master: {}", e);
+                    } else {
+                        debug!("AutoDream: consolidated memory master for task {}", task_id);
+                    }
+                }
+                Err(e) => {
+                    debug!("AutoDream: failed to generate embedding for memory master: {}", e);
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -563,10 +630,26 @@ mod tests {
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect(sqlite_url).await
         {
-            let db_sqlite = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool) });
+            let db_sqlite = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Sqlite(sqlite_pool.clone()) });
+
+            // Set up schema
+            sqlx::query("CREATE TABLE shared_tasks (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, status TEXT NOT NULL, payload TEXT, deliberation_log TEXT, title TEXT NOT NULL, dependencies TEXT NOT NULL DEFAULT '[]')")
+                .execute(&sqlite_pool).await.unwrap();
+            sqlx::query("CREATE TABLE autodream_memories_master (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, task_id TEXT NOT NULL, content TEXT NOT NULL, embedding BLOB, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+                .execute(&sqlite_pool).await.unwrap();
+
+            // Insert a COMPLETED task
+            sqlx::query("INSERT INTO shared_tasks (id, tenant_id, status, payload, title) VALUES ('task1', 'tenant1', 'COMPLETED', 'test payload', 'Test Task')")
+                .execute(&sqlite_pool).await.unwrap();
+
             let worker_sqlite = AutoDreamWorker::new(db_sqlite);
             let result = worker_sqlite.consolidate_epoch().await;
             assert!(result.is_ok());
+
+            // Assert exactly one memory was created
+            let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM autodream_memories_master")
+                .fetch_one(&sqlite_pool).await.unwrap();
+            assert_eq!(count.0, 1);
         }
     }
 
