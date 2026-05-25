@@ -335,10 +335,10 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let mut final_meetings = Vec::new();
-        let mut final_agents_payload = Vec::new();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
+        let final_meetings;
+        let final_agents_payload;
 
         if !req.mobile_optimized {
             let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
@@ -431,6 +431,30 @@ impl DashboardService for MyDashboardService {
                         role: ::server_ohc::common::Role::Unspecified as i32,
                         status: ::server_ohc::common::AgentStatus::Idle as i32,
                         organization_id: a.organization_id,
+                    }
+                })
+                .collect::<Vec<_>>();
+
+            final_meetings = out_meetings;
+        } else {
+            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .cloned()
+                .collect();
+
+            final_agents_payload = _filtered_agents
+                .into_iter()
+                .map(|a| {
+                    ::server_ohc::agent::Agent {
+                        id: a.id,
+                        name: String::new(),
+                        role: ::server_ohc::common::Role::Unspecified as i32,
+                        status: ::server_ohc::common::AgentStatus::Idle as i32,
+                        organization_id: String::new(),
                     }
                 })
                 .collect::<Vec<_>>();
