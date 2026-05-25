@@ -361,7 +361,7 @@
           "refId": "A"
         }
       ],
-      "title": "Token Burn Rate Forecast",
+      "title": "Token Forecasting",
       "type": "timeseries",
       "fieldConfig": {
         "defaults": {
@@ -442,7 +442,7 @@
           "refId": "A"
         }
       ],
-      "title": "Token Burn Rate Forecast",
+      "title": "Token Forecasting",
       "type": "timeseries",
       "fieldConfig": {
         "defaults": {
@@ -4300,7 +4300,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Token Burn Rate Forecast",
+      "title": "Token Forecasting",
       "gridPos": {
         "h": 8,
         "w": 12,

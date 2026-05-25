@@ -29,6 +29,7 @@ impl TokenForecastWorker {
     }
 
     pub async fn calculate_token_burn_rate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        // We look back over the full 24h history for accuracy, but calculate actual rate of change between measurements.
         let threshold = chrono::Utc::now() - chrono::Duration::hours(24);
         let rows = sqlx::query("SELECT value, labels_json FROM telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1")
             .bind(threshold)
@@ -74,6 +75,7 @@ impl TokenForecastWorker {
                                 ema_rate = alpha * current_rate + (1.0 - alpha) * ema_rate;
                             }
                         }
+                        // To forecast correctly for the next 30 days based on per-minute intervals
                         let forecast = hist.last().unwrap() + (ema_rate * 43200.0) as i64;
                         forecasts_to_record.push((org_id.clone(), forecast as f32));
                     }

@@ -1426,6 +1426,12 @@ impl HubService for MyHubService {
             occurred_at_unix: Utc::now().timestamp(),
             meeting_id: String::new(),
         };
+
+        let _permit = if let Some(sem) = &self.hub.standalone_write_semaphore {
+            Some(sem.acquire().await.unwrap())
+        } else {
+            None
+        };
         
         match self.hub.clone().publish(msg) {
             Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),

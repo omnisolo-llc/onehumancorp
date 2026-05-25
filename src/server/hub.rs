@@ -43,6 +43,7 @@ pub struct Hub {
     agent_cache: RwLock<Option<Arc<Vec<Agent>>>>,
     meetings_cache: RwLock<Option<Arc<Vec<MeetingRoom>>>>,
     referral_tracker: Arc<crate::services::growth::referrals::ReferralTracker>,
+    pub standalone_write_semaphore: Option<Arc<tokio::sync::Semaphore>>,
 }
 
 impl Hub {
@@ -56,6 +57,12 @@ impl Hub {
         let (caps_tx, _) = broadcast::channel(100);
         let redis_client = if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) != "true" {
             std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok())
+        } else {
+            None
+        };
+
+        let standalone_write_semaphore = if std::env::var("OHC_STANDALONE").unwrap_or_default() == "true" {
+            Some(Arc::new(tokio::sync::Semaphore::new(1)))
         } else {
             None
         };
@@ -119,6 +126,7 @@ impl Hub {
             event_log_tx,
             redis_client,
             referral_tracker: Arc::new(crate::services::growth::referrals::ReferralTracker::new()),
+            standalone_write_semaphore,
         }
     }
 
@@ -474,7 +482,15 @@ impl Hub {
             meeting_id: String::new(),
         };
 
-        self.publish(msg)?;
+        if let Some(sem) = &self.standalone_write_semaphore {
+            let _permit = tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(sem.acquire())
+            }).unwrap();
+            let result = self.clone().publish(msg)?;
+            return Ok(format!("{} | Result: {}", sub_agent_id, k8s_result));
+        }
+
+        let result = self.clone().publish(msg)?;
 
         Ok(format!("{} | Result: {}", sub_agent_id, k8s_result))
     }
