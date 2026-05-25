@@ -24,10 +24,12 @@ pub struct IntegrationsRegistry {
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
+    stripe_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::stripe::provider::StripeProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
+    hootsuite_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::hootsuite::provider::HootsuiteProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
@@ -61,10 +63,12 @@ impl IntegrationsRegistry {
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            stripe_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            hootsuite_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -231,6 +235,10 @@ impl IntegrationsRegistry {
             let mut clients = self.mercadopago_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mercadopago::provider::MercadoPagoProvider::new(creds.api_token.clone())));
         }
+        if integration_id == "stripe" {
+            let mut clients = self.stripe_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::stripe::provider::StripeProvider::new(creds.api_token.clone())));
+        }
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
@@ -242,6 +250,10 @@ impl IntegrationsRegistry {
         if integration_id == "ayrshare" {
             let mut clients = self.ayrshare_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::ayrshare::provider::AyrshareProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "hootsuite" {
+            let mut clients = self.hootsuite_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::hootsuite::provider::HootsuiteProvider::new(creds.api_token.clone())));
         }
         if integration_id == "listmonk" {
             let mut clients = self.listmonk_clients.write().unwrap();
@@ -374,6 +386,21 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "twilio" {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_sms(to, from, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_event_types(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "calendly" {
@@ -448,6 +475,67 @@ impl IntegrationsRegistry {
         }
         Err("integration not found or not supported".to_string())
     }
+
+    pub async fn stripe_create_checkout_session(&self, integration_id: &str, price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+        let client = {
+            if integration_id == "stripe" {
+                let clients = self.stripe_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_checkout_session(price_id, customer_id, amount_usd).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn stripe_get_subscription(&self, integration_id: &str, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+        let client = {
+            if integration_id == "stripe" {
+                let clients = self.stripe_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.get_subscription(subscription_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn stripe_list_invoices(&self, integration_id: &str, customer_id: &str) -> Result<Vec<crate::integrations::stripe::client::StripeInvoice>, String> {
+        let client = {
+            if integration_id == "stripe" {
+                let clients = self.stripe_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.list_invoices(customer_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn stripe_cancel_subscription(&self, integration_id: &str, subscription_id: &str) -> Result<crate::integrations::stripe::client::StripeSubscription, String> {
+        let client = {
+            if integration_id == "stripe" {
+                let clients = self.stripe_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.cancel_subscription(subscription_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_rates(&self, integration_id: &str, weight: f64, dimensions: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "shippo" {
@@ -504,6 +592,21 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.create_event(summary, start_time, end_time).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn post_social_message(&self, integration_id: &str, message: &str, platforms: Vec<&str>) -> Result<(), String> {
+        if integration_id == "ayrshare" {
+            let clients = self.ayrshare_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.post_message(message, platforms).await;
+            }
+        } else if integration_id == "hootsuite" {
+            let clients = self.hootsuite_clients.read().unwrap();
+            if let Some(c) = clients.get(integration_id).cloned() {
+                return c.post_message(message, platforms).await;
+            }
         }
         Err("integration not found or not supported".to_string())
     }

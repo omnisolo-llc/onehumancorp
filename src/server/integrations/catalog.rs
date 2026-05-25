@@ -63,6 +63,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
     catalog.push(mercadopago_provider.to_integration_provider());
 
+    let stripe_provider = crate::integrations::stripe::provider::StripeProvider::new("dummy_token".to_string());
+    catalog.push(stripe_provider.to_integration_provider());
+
     let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
     catalog.push(alipay_provider.to_integration_provider());
 
@@ -75,6 +78,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
 
     let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
     catalog.push(ayrshare_provider.to_integration_provider());
+
+    let hootsuite_provider = crate::integrations::hootsuite::provider::HootsuiteProvider::new("dummy_token".to_string());
+    catalog.push(hootsuite_provider.to_integration_provider());
 
     let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
     catalog.push(listmonk_provider.to_integration_provider());
