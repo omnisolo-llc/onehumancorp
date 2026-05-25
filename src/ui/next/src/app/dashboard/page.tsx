@@ -277,7 +277,7 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
-                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
+                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'CustomerSuccess' : approval.department} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
