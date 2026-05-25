@@ -14,6 +14,8 @@ interface OnboardingState {
   error: string;
   intakeData: any;
   startResult: any;
+  isInstantMode: boolean;
+  instantBio: string;
   setStep: (step: number) => void;
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
@@ -26,6 +28,8 @@ interface OnboardingState {
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
   setStartResult: (result: any) => void;
+  setIsInstantMode: (mode: boolean) => void;
+  setInstantBio: (bio: string) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -43,6 +47,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   error: '',
   intakeData: null,
   startResult: null,
+  isInstantMode: false,
+  instantBio: '',
   setStep: (step) => set({ step }),
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
@@ -55,6 +61,8 @@ export const useOnboardingStore = create<OnboardingState>()(
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),
       setStartResult: (startResult) => set({ startResult }),
+      setIsInstantMode: (isInstantMode) => set({ isInstantMode }),
+      setInstantBio: (instantBio) => set({ instantBio }),
     }),
     {
       name: 'onboarding-storage', // name of the item in the storage (must be unique)

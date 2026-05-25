@@ -17,6 +17,8 @@ describe('useOnboardingStore', () => {
       error: '',
       intakeData: null,
       startResult: null,
+      isInstantMode: false,
+      instantBio: '',
     });
   });
 
@@ -33,6 +35,8 @@ describe('useOnboardingStore', () => {
     expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
     expect(state.startResult).toBeNull();
+    expect(state.isInstantMode).toBe(false);
+    expect(state.instantBio).toBe('');
   });
 
   it('should update step', () => {
@@ -88,6 +92,16 @@ describe('useOnboardingStore', () => {
   it('should update startResult', () => {
     useOnboardingStore.getState().setStartResult({ result: 'test' });
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
+  });
+
+  it('should update isInstantMode', () => {
+    useOnboardingStore.getState().setIsInstantMode(true);
+    expect(useOnboardingStore.getState().isInstantMode).toBe(true);
+  });
+
+  it('should update instantBio', () => {
+    useOnboardingStore.getState().setInstantBio('Test Bio');
+    expect(useOnboardingStore.getState().instantBio).toBe('Test Bio');
   });
 
   it('should persist state to localStorage', () => {

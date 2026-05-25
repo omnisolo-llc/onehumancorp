@@ -19,7 +19,9 @@ export default function OnboardingWizard() {
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
-    startResult, setStartResult
+    startResult, setStartResult,
+    isInstantMode, setIsInstantMode,
+    instantBio, setInstantBio
   } = useOnboardingStore();
 
   const lastSyncState = useRef("");
@@ -64,7 +66,9 @@ export default function OnboardingWizard() {
                 template: data.template || template,
                 domain: data.domain || domain,
                 intakeData: data.intakeData || intakeData,
-                startResult: data.startResult || startResult
+                startResult: data.startResult || startResult,
+                isInstantMode: data.isInstantMode ?? isInstantMode,
+                instantBio: data.instantBio || instantBio
               });
             }
           }
@@ -94,7 +98,9 @@ export default function OnboardingWizard() {
       template,
       domain,
       intakeData,
-      startResult
+      startResult,
+      isInstantMode,
+      instantBio
     });
 
     // Only sync if state actually changed from last sync
@@ -119,7 +125,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult, isInstantMode, instantBio]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -154,6 +160,41 @@ export default function OnboardingWizard() {
     }
     setError("");
     setStep(step + 1);
+  };
+
+  const handleInstantSubmit = async () => {
+    if (!instantBio.trim() || instantBio.trim().length < 10) {
+      setError("Please provide a bit more detail (at least 10 characters).");
+      return;
+    }
+
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/onboarding/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: instantBio })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setIntakeData(data);
+        if (data.initial_products && data.initial_products.length > 0) {
+          setFirstProductName(data.initial_products[0].name);
+          setFirstProductPrice(data.initial_products[0].price);
+        }
+        setStep(4);
+      } else {
+        setError("Failed to generate storefront. Please try again.");
+      }
+    } catch (err) {
+      setError("An error occurred during generation.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleIntakeSubmit = async () => {
@@ -296,26 +337,68 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
+            <div className="flex flex-col flex-1 justify-center animate-fade-in relative">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-1">
+                    {isInstantMode ? "Instant Build (AI)" : "What do you do?"}
+                  </h2>
+                  <p className="text-gray-500 text-sm">
+                    {isInstantMode
+                      ? "Tell us about your business in a few sentences."
+                      : "Tell us what you sell or the services you provide."}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsInstantMode(!isInstantMode)}
+                  className="px-3 py-1.5 text-xs font-bold rounded-full bg-white/50 border border-white/60 text-[#0066FF] hover:bg-white/80 transition-all shadow-sm"
+                >
+                  {isInstantMode ? "Switch to Standard Setup" : "⚡ Instant Build"}
+                </button>
+              </div>
+
+              {isInstantMode ? (
+                <>
+                  <textarea
+                    value={instantBio}
+                    onChange={(e) => setInstantBio(e.target.value)}
+                    placeholder="e.g. I am Maya, I bake custom vegan wedding cakes in Portland. I need a modern store."
+                    className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm min-h-[120px] resize-none"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleInstantSubmit}
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  >
+                    {isLoading ? (
+                      <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                    ) : (
+                      "✨ Generate Storefront"
+                    )}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
+                    placeholder="e.g. Sell cakes, plumbing"
+                    className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                    autoFocus
+                    enterKeyHint="next"
+                    autoComplete="off"
+                  />
+                  <button
+                    onClick={handleNext}
+                    className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  >
+                    Next
+                  </button>
+                </>
+              )}
             </div>
           )}
 

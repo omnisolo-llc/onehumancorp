@@ -73,6 +73,44 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
 
+  test('Instant Build Flow', async ({ page }) => {
+    // 0. Start from UI Login
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('instant@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
+
+    // Wait for Dashboard
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // 1. Acquisition & Onboarding start
+    await page.goto('/onboarding');
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+
+    // Switch to Instant Mode
+    await page.getByRole('button', { name: "⚡ Instant Build" }).click();
+    await expect(page.getByRole('heading', { name: "Instant Build (AI)" })).toBeVisible();
+
+    // Fill bio
+    await page.getByPlaceholder('e.g. I am Maya, I bake custom vegan wedding cakes in Portland. I need a modern store.').fill('I am Alex, I offer plumbing services in Seattle. I fix pipes and leaks.');
+
+    // Generate Storefront
+    await page.getByRole('button', { name: "✨ Generate Storefront" }).click();
+
+    // 2. Wait for it to jump directly to Ready to Launch!
+    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
+
+    // Configure products and domain before publishing
+    await page.getByRole('button', { name: 'Minimal' }).click();
+
+    // Publish
+    await page.getByRole('button', { name: /Publish Now/i }).click();
+
+    // 3. Activation
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+  });
+
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
     // 0. Start from UI Login
     await page.goto('/login');
