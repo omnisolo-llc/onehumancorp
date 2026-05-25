@@ -576,12 +576,23 @@ export default function BuilderPage() {
               }}
               onDragStart={(e) => {
                 setDraggedIndex(i);
-                setStartY(e.touches[0].clientY);
+                if ('touches' in e) {
+                  setStartY(e.touches[0].clientY);
+                } else if ('clientY' in e) {
+                  setStartY((e as React.DragEvent).clientY);
+                }
                 setSelectedBlockIndex(i);
               }}
               onDragOver={(e) => {
                 if (draggedIndex === null) return;
-                const currentY = e.touches[0].clientY;
+                let currentY = 0;
+                if ('touches' in e) {
+                  currentY = e.touches[0].clientY;
+                } else if ('clientY' in e) {
+                  currentY = (e as React.DragEvent).clientY;
+                } else {
+                  return;
+                }
                 const diff = currentY - startY;
                 if (Math.abs(diff) > 50) {
                   const newIndex = diff > 0 ? i + 1 : i - 1;
