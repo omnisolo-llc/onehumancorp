@@ -7,21 +7,19 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
 
     // Set mock credentials to ensure deterministic tenant ID
     await page1.addInitScript(() => {
-      localStorage.setItem('tenant_id', 'e2e-cross-device-tenant');
-      localStorage.setItem('user_id', 'e2e-cross-device-user');
+      localStorage.setItem('tenant_id', 'e2e-cross-device-tenant-v2');
+      localStorage.setItem('user_id', 'e2e-cross-device-user-v2');
     });
 
     // 1. Visit the builder on Device 1
-    await page1.goto('/website-builder');
-    await expect(page1.locator('#setup-screen')).toBeVisible();
+    await page1.goto('/onboarding');
+    await expect(page1.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // 2. Start flow and type business name
-    await page1.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page1.getByRole('button', { name: /Online Store/ }).click();
-    await page1.getByPlaceholder('What is your business called?').fill('Maya\'s Cross-Device Bakery');
+    // 2. Start flow and type business type
+    await page1.getByPlaceholder('e.g. Sell cakes, plumbing').fill('Sell custom cakes');
 
-    // Wait for the debounce saveWizardState to trigger
-    await page1.waitForTimeout(1000);
+    // Wait for the debounce syncState to trigger (it has a 1000ms delay in page.tsx)
+    await page1.waitForTimeout(2000);
 
     // Close context 1 to prove we aren't relying on it
     await context1.close();
@@ -32,15 +30,15 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
 
     // Set the SAME tenant ID, but nothing else (empty wizard state in localstorage)
     await page2.addInitScript(() => {
-      localStorage.setItem('tenant_id', 'e2e-cross-device-tenant');
-      localStorage.setItem('user_id', 'e2e-cross-device-user');
+      localStorage.setItem('tenant_id', 'e2e-cross-device-tenant-v2');
+      localStorage.setItem('user_id', 'e2e-cross-device-user-v2');
     });
 
-    await page2.goto('/website-builder');
-    await expect(page2.locator('#setup-screen')).toBeVisible();
+    await page2.goto('/onboarding');
+    await expect(page2.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByPlaceholder('What is your business called?')).toHaveValue('Maya\'s Cross-Device Bakery', { timeout: 10000 });
+    // The backend should restore the state and fill the input
+    await expect(page2.getByPlaceholder('e.g. Sell cakes, plumbing')).toHaveValue('Sell custom cakes', { timeout: 10000 });
 
     await context2.close();
   });
