@@ -202,6 +202,7 @@ rust_binary(
         "budget",
         "caveman",
         "checkpointer",
+        "deerflow",
         "codex_runner",
         "verification_loops",
         "guardrails",
