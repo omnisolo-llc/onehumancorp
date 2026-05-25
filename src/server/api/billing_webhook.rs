@@ -30,7 +30,7 @@ pub struct StripeEventData {
 }
 
 pub async fn stripe_webhook_handler(
-    State(_state): State<WebhookState>,
+    State(state): State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
 
@@ -81,7 +81,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool)
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +124,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&*pool)
+                            .execute(pool)
                             .await
                             .map(|_| ())
                     }
@@ -174,7 +174,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    State(_state): State<WebhookState>,
+    State(state): State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -228,9 +228,13 @@ fn verify_webhook_signature(headers: &axum::http::HeaderMap, _secret: &str) -> b
 
 
 pub async fn razorpay_webhook_handler(
-    State(_state): State<WebhookState>,
+    headers: axum::http::HeaderMap,
+    State(state): State<WebhookState>,
     Json(payload): Json<RazorpayEvent>,
 ) -> impl IntoResponse {
+    if !verify_webhook_signature(&headers, "razorpay_secret") {
+        return StatusCode::UNAUTHORIZED.into_response();
+    }
     match payload.event.as_str() {
         "payment.captured" => {
             let order_id = &payload.payload.payment.entity.order_id;
@@ -240,7 +244,7 @@ pub async fn razorpay_webhook_handler(
                 DbStore::Sqlite(pool) => {
                     sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
                         .bind(order_id)
-                        .execute(&*pool)
+                        .execute(pool)
                         .await
                         .map(|_| ())
                 }
@@ -287,7 +291,7 @@ pub struct CalComAttendee {
 }
 
 pub async fn calcom_webhook_handler(
-    State(_state): State<WebhookState>,
+    State(state): State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
     match payload.triggerEvent.as_str() {
@@ -318,7 +322,7 @@ pub struct ResendEventData {
 }
 
 pub async fn resend_webhook_handler(
-    State(_state): State<WebhookState>,
+    State(state): State<WebhookState>,
     Json(payload): Json<ResendEvent>,
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
@@ -341,7 +345,7 @@ pub struct AyrshareEvent {
 }
 
 pub async fn ayrshare_webhook_handler(
-    State(_state): State<WebhookState>,
+    State(state): State<WebhookState>,
     Json(payload): Json<AyrshareEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
