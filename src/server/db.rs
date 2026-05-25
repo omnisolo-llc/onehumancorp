@@ -1,4 +1,6 @@
 use sqlx::PgPool;
+pub mod models;
+
 use sqlx::sqlite::{SqlitePoolOptions, SqliteConnectOptions};
 use sqlx::SqlitePool;
 use std::str::FromStr;
@@ -269,6 +271,80 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS tenant (
+                        id TEXT PRIMARY KEY,
+                        business_name TEXT NOT NULL,
+                        owner_email TEXT NOT NULL,
+                        subscription_tier TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'synced,
+                        version INTEGER DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS product (
+                        id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        price TEXT NOT NULL,
+                        stock_level INTEGER NOT NULL,
+                        is_active BOOLEAN NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'synced,
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS customer (
+                        id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        email TEXT,
+                        phone TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'synced,
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS order_booking (
+                        id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        total_amount TEXT NOT NULL,
+                        scheduled_for TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'synced,
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE,
+                        FOREIGN KEY (tenant_id, customer_id) REFERENCES customer(tenant_id, id) ON DELETE CASCADE
+                    );
+
+                    CREATE TABLE IF NOT EXISTS order_item (
+                        id TEXT NOT NULL,
+                        tenant_id TEXT NOT NULL,
+                        order_id TEXT NOT NULL,
+                        product_id TEXT NOT NULL,
+                        quantity INTEGER NOT NULL,
+                        unit_price TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'synced,
+                        version INTEGER DEFAULT 1,
+                        PRIMARY KEY (tenant_id, id),
+                        FOREIGN KEY (tenant_id) REFERENCES tenant(id) ON DELETE CASCADE,
+                        FOREIGN KEY (tenant_id, order_id) REFERENCES order_booking(tenant_id, id) ON DELETE CASCADE,
+                        FOREIGN KEY (tenant_id, product_id) REFERENCES product(tenant_id, id) ON DELETE CASCADE
                     );
 
                     CREATE TABLE IF NOT EXISTS shared_tasks_v4 (

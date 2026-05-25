@@ -47,7 +47,7 @@ futures = { workspace = true }
 urlencoding = "2"
 qrcode = { version = "0.14", default-features = false }
 async-recursion = "1"
-sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros", "rust_decimal"] }
 opentelemetry = { version = "0.27", features = ["metrics", "trace"] }
 opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
 opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
@@ -63,6 +63,7 @@ prost-types = { workspace = true }
 tempfile = "3.27.0"
 tree-sitter = "0.26.8"
 tree-sitter-bash = "0.25.1"
+rust_decimal = "1.42.0"
 
 [build-dependencies]
 tonic-build = "0.12"
