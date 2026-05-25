@@ -406,8 +406,8 @@ impl IntegrationsRegistry {
 
     pub async fn send_campaign(&self, integration_id: &str, audience: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "sendgrid" {
-                let clients = self.sendgrid_clients.read().unwrap();
+            if integration_id == "mailchimp" {
+                let clients = self.mailchimp_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
                 None
