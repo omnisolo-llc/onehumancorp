@@ -52,3 +52,4 @@ body {
 }
 </style>
 ```
+resolves #4296
