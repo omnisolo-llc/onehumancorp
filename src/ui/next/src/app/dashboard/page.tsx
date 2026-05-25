@@ -6,6 +6,17 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [showSoftPaywall, setShowSoftPaywall] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
+  const [campaignSuccess, setCampaignSuccess] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+        setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
+  }, []);
+
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
@@ -195,6 +206,33 @@ export default function Dashboard() {
         if (ws) ws.close();
     };
   }, []);
+
+  const handleSendCampaign = () => {
+    if (!hasPro) {
+      setShowSoftPaywall(true);
+      return;
+    }
+
+    setIsSendingCampaign(true);
+    setTimeout(() => {
+      setIsSendingCampaign(false);
+      setCampaignSuccess(true);
+    }, 1500);
+  };
+
+  const claimTrialExtension = () => {
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('has_pro', 'true');
+    }
+    setHasPro(true);
+    setShowSoftPaywall(false);
+    setTimeout(() => {
+      alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+      handleSendCampaign();
+    }, 500);
+  };
 
   const handleApprove = async (id: string, approved: boolean) => {
     try {
@@ -386,6 +424,39 @@ export default function Dashboard() {
 
             </div>
          </section>
+
+         {/* Automated AI Review Requests Growth Loop */}
+         <section className="mb-6">
+            <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                        Automated AI Review Requests
+                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                            New Growth Loop
+                        </span>
+                    </h3>
+                </div>
+                <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
+                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                </p>
+
+                {campaignSuccess ? (
+                    <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                    </div>
+                ) : (
+                    <button
+                        onClick={handleSendCampaign}
+                        disabled={isSendingCampaign}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
+                        style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+                    >
+                        {isSendingCampaign ? 'Generating drafts...' : '✨ Send AI Review Requests'}
+                    </button>
+                )}
+            </div>
+         </section>
+
 
          {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
          <section className="mb-8">
@@ -947,6 +1018,49 @@ export default function Dashboard() {
                 Maybe later
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Soft Paywall Modal */}
+      {showSoftPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
+              >
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+
+            <div className="text-5xl mb-4">✨</div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+            </p>
+
+            <button
+              onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
+              className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
+              style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+            >
+              Upgrade to Pro
+            </button>
+
+            <div className="my-4 text-gray-400 font-medium text-sm">OR</div>
+
+            <button
+              onClick={claimTrialExtension}
+              className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm hover:bg-gray-50 flex items-center justify-center gap-2"
+              style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+              Share on X to get 7 Days Free
+            </button>
           </div>
         </div>
       )}
