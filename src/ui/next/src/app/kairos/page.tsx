@@ -1,12 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
 export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div className="p-12 text-center text-gray-500">Loading Kairos...</div>}>
+      <KairosContent />
+    </Suspense>
+  );
+}
+
+function KairosContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([

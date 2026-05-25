@@ -15,7 +15,7 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
     test('2. Verify Team Activity layout uses glassmorphism and Apple styling', async ({ page }) => {
         await page.goto('/dashboard');
 
-        const activityPanelHeader = page.locator('h2').filter({ hasText: 'Team Activity' });
+        const activityPanelHeader = page.locator('h2').filter({ hasText: 'Swarm Vitality Dashboard' });
         await expect(activityPanelHeader).toBeVisible();
 
         // Check for Swarm Online pill
@@ -34,7 +34,7 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
         expect(pageText.toLowerCase()).not.toContain('payload');
 
         // It should use friendly terms
-        await expect(page.locator('text=Team Activity')).toBeVisible();
+        await expect(page.locator('h2:has-text("Swarm Vitality Dashboard")')).toBeVisible();
         await expect(page.locator('text=Swarm Online')).toBeVisible();
     });
 
@@ -61,7 +61,7 @@ test.describe('Agent Teammate Mesh Dashboard - UI/UX', () => {
         const businessSnapshot = page.locator('h2').filter({ hasText: 'Business Snapshot' });
         await expect(businessSnapshot).toBeVisible();
 
-        const teamActivity = page.locator('h2').filter({ hasText: 'Team Activity' });
+        const teamActivity = page.locator('h2').filter({ hasText: 'Swarm Vitality Dashboard' });
         await expect(teamActivity).toBeVisible();
     });
 
