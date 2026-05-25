@@ -8,7 +8,6 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
-  const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
@@ -175,7 +174,6 @@ export default function Dashboard() {
 
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
-                setTodaysSales(metricsData.total_sales);
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
             }
@@ -363,59 +361,63 @@ export default function Dashboard() {
 
          {approvals.length === 0 && (
 <>
-{/* Business Snapshot */}
-         <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
-                </div>
-
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
-                </div>
-
-            </div>
-         </section>
-
-         {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
+{/* Business Action Feed */}
          <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Business Insights</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
-                        <span className="text-xs font-medium text-yellow-600">Pro Feature</span>
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Your Feed</h2>
+            <div className="flex flex-col gap-4">
+
+                {/* Pending Orders Alert */}
+                {pendingOrders > 0 && (
+                <div className="flex items-center justify-between p-4 bg-white/70 backdrop-blur-md rounded-[16px] border border-blue-100 shadow-sm transition-all hover:bg-white/90 cursor-pointer">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-xl">
+                            📦
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-900 font-outfit text-lg">{pendingOrders} New {pendingOrders === 1 ? 'Order' : 'Orders'}</h3>
+                            <p className="text-sm text-gray-500 font-inter">Action required to fulfill.</p>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fcfbf8)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Unlock Advanced Store Analytics</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Discover hidden trends in your sales data. Our AI analyzes customer behavior to recommend exactly what to sell next and how to price it for maximum profit.</p>
-                    <button
-                        onClick={() => setShowUpgradeModal(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-                        View AI Insights
+                    <button className="px-4 py-2 bg-[#0066FF] text-white font-bold rounded-[8px] text-sm shadow-sm hover:bg-[#0052cc] transition-colors">
+                        View
                     </button>
                 </div>
-                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
-                   {/* Decorative visual */}
-                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
-                   <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
-                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                   </div>
+                )}
+
+                {/* AI Weekly Report */}
+                <div className="flex items-center justify-between p-4 bg-white/70 backdrop-blur-md rounded-[16px] border border-purple-100 shadow-sm transition-all hover:bg-white/90 cursor-pointer">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 text-xl">
+                            📊
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-gray-900 font-outfit text-lg">Weekly Report Ready</h3>
+                            <p className="text-sm text-gray-500 font-inter">AI Insights: Traffic is up 12%!</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setShowUpgradeModal(true)}
+                        className="px-4 py-2 bg-white text-purple-600 border border-purple-200 font-bold rounded-[8px] text-sm shadow-sm hover:bg-purple-50 transition-colors"
+                    >
+                        Read
+                    </button>
                 </div>
+
+                {/* Approvals Empty State / Everything Good */}
+                {pendingOrders === 0 && (
+                <div className="flex items-center justify-between p-4 bg-green-50/70 backdrop-blur-md rounded-[16px] border border-green-100 shadow-sm transition-all">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl">
+                            ✅
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-green-900 font-outfit text-lg">You're all caught up!</h3>
+                            <p className="text-sm text-green-700 font-inter">No pending actions right now.</p>
+                        </div>
+                    </div>
+                </div>
+                )}
+
             </div>
          </section>
 
