@@ -20,8 +20,8 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto">
-      <div className="flex items-center mb-4">
+    <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
+      <div className="flex items-center mb-4 border-b pb-2">
         <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
           &lt; Back
         </Link>
