@@ -63,10 +63,53 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
         let mobile_optimized = req.mobile_optimized;
+        let org_id_agents = req.organization_id.clone();
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
-                Ok::<_, String>(hub1.get_agents().await)
+                let agents = hub1.get_agents().await;
+
+                let (optimized_agents, original_prompts_len, compressed_prompts_len) = tokio::task::spawn_blocking(move || {
+                    let mut original_prompts_len = 0;
+                    let mut compressed_prompts_len = 0;
+                    let mut optimized_agents = Vec::new();
+
+                    if !mobile_optimized {
+                        let org_agents = agents.iter().filter(|a| {
+                            a.organization_id == org_id_agents
+                                || a.id.starts_with(&format!("{}-", org_id_agents))
+                        });
+
+                        for agent in org_agents {
+                            let prompt = &agent.name;
+                            let orig_len = prompt.len();
+                            if orig_len > 0 {
+                                original_prompts_len += orig_len;
+                                let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                                compressed_prompts_len += compressed.len();
+
+                                optimized_agents.push(::server_ohc::agent::Agent {
+                                    id: agent.id.clone(),
+                                    name: compressed,
+                                    role: ::server_ohc::common::Role::Unspecified as i32,
+                                    status: ::server_ohc::common::AgentStatus::Idle as i32,
+                                    organization_id: agent.organization_id.clone(),
+                                });
+                            } else {
+                                optimized_agents.push(::server_ohc::agent::Agent {
+                                    id: agent.id.clone(),
+                                    name: String::new(),
+                                    role: ::server_ohc::common::Role::Unspecified as i32,
+                                    status: ::server_ohc::common::AgentStatus::Idle as i32,
+                                    organization_id: agent.organization_id.clone(),
+                                });
+                            }
+                        }
+                    }
+                    (optimized_agents, original_prompts_len, compressed_prompts_len)
+                }).await.map_err(|e| e.to_string())?;
+
+                Ok::<_, String>((hub1.get_agents().await, optimized_agents, original_prompts_len, compressed_prompts_len))
             }),
             tokio::task::spawn_blocking(move || {
                 Ok::<_, String>(hub2.get_meetings())
@@ -105,10 +148,10 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
+                                    description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                                    fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                                     metadata_json: if mobile_optimized {
                                         "{}".to_string()
                                     } else {
@@ -131,10 +174,10 @@ impl DashboardService for MyDashboardService {
                                         .try_get("organization_id")
                                         .unwrap_or_default(),
                                     name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
+                                    description: if mobile_optimized { String::new() } else { r.try_get("description").unwrap_or_default() },
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: if mobile_optimized { String::new() } else { r.try_get("currency").unwrap_or_else(|_| "USD".to_string()) },
+                                    fulfillment_strategy: if mobile_optimized { String::new() } else { r.try_get("fulfillment_strategy").unwrap_or_default() },
                                     metadata_json: if mobile_optimized {
                                         "{}".to_string()
                                     } else {
@@ -176,10 +219,10 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                    organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                                     product_id: "".to_string(),
                                     amount_cents: (amount_real * 100.0) as i64,
-                                    status: r.try_get("status").unwrap_or_default(),
+                                    status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                                     created_at_unix: 0,
                                 };
                                 results.push(o);
@@ -192,10 +235,10 @@ impl DashboardService for MyDashboardService {
                                 let amount_real: f64 = r.try_get("total_amount").unwrap_or(0.0);
                                 let o = ::server_ohc::app::Order {
                                     id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r.try_get("tenant_id").unwrap_or_default(),
+                                    organization_id: if mobile_optimized { String::new() } else { r.try_get("tenant_id").unwrap_or_default() },
                                     product_id: "".to_string(),
                                     amount_cents: (amount_real * 100.0) as i64,
-                                    status: r.try_get("status").unwrap_or_default(),
+                                    status: if mobile_optimized { String::new() } else { r.try_get("status").unwrap_or_default() },
                                     created_at_unix: 0,
                                 };
                                 results.push(o);
@@ -263,7 +306,7 @@ impl DashboardService for MyDashboardService {
             })
         );
 
-        let agents = agents_res
+        let (agents, optimized_agents, mut original_prompts_len, mut compressed_prompts_len) = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
         let _meetings = meetings_res
@@ -282,35 +325,6 @@ impl DashboardService for MyDashboardService {
         let org = org_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-
-        let products = if req.mobile_optimized {
-            products
-                .into_iter()
-                .map(|p| ::server_ohc::organization::Product {
-                    description: String::new(),
-                    metadata_json: String::new(),
-                    fulfillment_strategy: String::new(),
-                    currency: String::new(),
-                    ..p
-                })
-                .collect()
-        } else {
-            products
-        };
-
-        let orders = if req.mobile_optimized {
-            orders
-                .into_iter()
-                .map(|o| ::server_ohc::app::Order {
-                    product_id: String::new(),
-                    status: String::new(),
-                    organization_id: String::new(),
-                    ..o
-                })
-                .collect()
-        } else {
-            orders
-        };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
@@ -341,15 +355,6 @@ impl DashboardService for MyDashboardService {
         let mut final_statuses = Vec::new();
 
         if !req.mobile_optimized {
-            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .cloned()
-                .collect();
-
             let mut status_map = std::collections::HashMap::new();
             for a in agents.iter() {
                 *status_map.entry(a.status.clone()).or_insert(0) += 1;
@@ -358,30 +363,6 @@ impl DashboardService for MyDashboardService {
                 .into_iter()
                 .map(|(status, count)| StatusCount { status, count })
                 .collect();
-
-            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-            let mut original_prompts_len = 0;
-            let mut compressed_prompts_len = 0;
-
-            let org_agents: Vec<_> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .collect();
-
-            for agent in org_agents {
-                let prompt = &agent.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-
-                    compressed_prompts_len += compressed.len();
-                }
-            }
 
             if let Some(ref o) = org {
                 let prompt = &o.name;
@@ -420,20 +401,7 @@ impl DashboardService for MyDashboardService {
                 agents: agent_summaries,
             });
 
-            final_agents_payload = _filtered_agents
-                .into_iter()
-                .map(|a| {
-                    let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
-
-                    ::server_ohc::agent::Agent {
-                        id: a.id,
-                        name: compressed_name,
-                        role: ::server_ohc::common::Role::Unspecified as i32,
-                        status: ::server_ohc::common::AgentStatus::Idle as i32,
-                        organization_id: a.organization_id,
-                    }
-                })
-                .collect::<Vec<_>>();
+            final_agents_payload = optimized_agents;
 
             final_meetings = out_meetings;
         }
