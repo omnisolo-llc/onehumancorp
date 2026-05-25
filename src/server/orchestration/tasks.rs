@@ -787,6 +787,17 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -850,6 +861,17 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -869,6 +891,17 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -971,6 +1004,17 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -990,6 +1034,17 @@ mod tests {
             async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
             async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1046,6 +1101,17 @@ mod chaos_tests {
         async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
         async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
             async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+            async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+            async fn ping(&self) -> Result<(), String> { Ok(()) }
+
+
+
+
+
+
+
+
+
 
 
 
