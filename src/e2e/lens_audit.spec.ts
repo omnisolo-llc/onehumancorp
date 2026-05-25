@@ -234,4 +234,54 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
   });
+
+  test('verify Team Activity section remains visible while Action Required is present', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
+
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Team Activity")).toBeVisible();
+  });
+
+  test('verify Store Embed widget section remains visible while Action Required is present', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
+
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Embed Your Store")).toBeVisible();
+  });
+
+  test('verify Products Monetization section remains visible while Action Required is present', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
+
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Products', exact: true })).toBeVisible();
+  });
+
+  test('verify Extend Your Trial section remains visible while Action Required is present', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
+
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Extend Your Trial")).toBeVisible();
+  });
+
+  test('verify Top Action Banner (Stripe Setup) remains visible while Action Required is present', async ({ page }) => {
+    await page.goto('/');
+    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
+    await dashboardLink.click();
+    await expect(page).toHaveURL(/.*\/dashboard/);
+
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Complete Stripe Setup")).toBeVisible();
+  });
 });
