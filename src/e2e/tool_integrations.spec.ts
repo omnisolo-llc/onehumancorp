@@ -15,70 +15,70 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Ayrshare' })).toBeVisible();
-    await expect(page.getByText('Unified API for posting and retrieving messages across social networks.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'ManyChat' })).toBeVisible();
+    await expect(page.getByText('Unified Social Inbox for Instagram, Facebook, and WhatsApp.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
-    await expect(page.getByText('Zero-Config Booking & Calendar Sync.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Calendly' })).toBeVisible();
+    await expect(page.getByText('Automated Scheduling for your clients.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'EasyPost' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Mercado Pago' })).toBeVisible();
-    await expect(page.getByText('Painless Shipping Labels & Tracking.')).toBeVisible();
-    await expect(page.getByText('Accept credit cards and local payment methods in Latin America.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Shippo' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Stripe' })).toBeVisible();
+    await expect(page.getByText('Automated Shipping Label Generation.')).toBeVisible();
+    await expect(page.getByText('Simple Invoice Payments via Stripe.')).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Listmonk' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Jitsi Meet' })).toBeVisible();
-    await expect(page.getByText('Embedded, No-Jargon Email Campaigns.')).toBeVisible();
-    await expect(page.getByText('Zero-Setup Online Lessons and video conferencing.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Mailchimp' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Zoom' })).toBeVisible();
+    await expect(page.getByText('Keep Mailchimp Contacts in Sync.')).toBeVisible();
+    await expect(page.getByText('Auto-Generate Zoom Links for Meetings.')).toBeVisible();
   });
 
   test('displays global sms notifications card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Twilio' })).toBeVisible();
-    await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
+    await expect(page.getByText('Automated Appointment Reminders via Twilio SMS.')).toBeVisible();
   });
 
-  test('can connect Ayrshare', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Ayrshare' }).getByRole('button', { name: 'Connect' });
+  test('can connect ManyChat', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'ManyChat' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Ayrshare...');
+      expect(dialog.message()).toContain('Connecting to ManyChat...');
       dialog.accept();
     });
     await connectButton.click();
   });
 
-  test('can connect Cal.com', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Cal.com' }).getByRole('button', { name: 'Connect' });
+  test('can connect Calendly', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Calendly' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Cal.com...');
+      expect(dialog.message()).toContain('Connecting to Calendly...');
       dialog.accept();
     });
     await connectButton.click();
   });
 
-  test('can connect Listmonk and Mercado Pago', async ({ page }) => {
-    const listmonkBtn = page.locator('div.card.glass').filter({ hasText: 'Listmonk' }).getByRole('button', { name: 'Connect' });
+  test('can connect Mailchimp and Stripe', async ({ page }) => {
+    const mailchimpBtn = page.locator('div.card.glass').filter({ hasText: 'Mailchimp' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
-    await listmonkBtn.click();
+    await mailchimpBtn.click();
 
-    const mercadoBtn = page.locator('div.card.glass').filter({ hasText: 'Mercado Pago' }).getByRole('button', { name: 'Connect' });
+    const stripeBtn = page.locator('div.card.glass').filter({ hasText: 'Stripe' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => dialog.accept());
-    await mercadoBtn.click();
+    await stripeBtn.click();
   });
 
-  test('can connect EasyPost, Twilio, and Jitsi Meet', async ({ page }) => {
+  test('can connect Shippo, Twilio, and Zoom', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    const easypostBtn = page.locator('div.card.glass').filter({ hasText: 'EasyPost' }).getByRole('button', { name: 'Connect' });
-    await easypostBtn.click();
+    const shippoBtn = page.locator('div.card.glass').filter({ hasText: 'Shippo' }).getByRole('button', { name: 'Connect' });
+    await shippoBtn.click();
     const twBtn = page.locator('div.card.glass').filter({ hasText: 'Twilio' }).getByRole('button', { name: 'Connect' });
     await twBtn.click();
-    const jitsiBtn = page.locator('div.card.glass').filter({ hasText: 'Jitsi Meet' }).getByRole('button', { name: 'Connect' });
-    await jitsiBtn.click();
+    const zoomBtn = page.locator('div.card.glass').filter({ hasText: 'Zoom' }).getByRole('button', { name: 'Connect' });
+    await zoomBtn.click();
   });
 });
