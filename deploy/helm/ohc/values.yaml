@@ -10,7 +10,7 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 5
+    minReplicas: 3
     maxReplicas: 200
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
@@ -55,7 +55,7 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 5
+    minReplicas: 3
     maxReplicas: 200
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
