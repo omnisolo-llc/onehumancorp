@@ -87,13 +87,13 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
         img
     };
 
-    let mut webp_data = Vec::new();
-    let mut cursor = Cursor::new(&mut webp_data);
-
-    // We use a default quality for WebP encoding
     // 💰 Miser: Implement image auto-resizing and WebP conversion for product photos
     // This reduces storage compression and CDN transit costs significantly.
-    resized.write_to(&mut cursor, image::ImageFormat::WebP).map_err(|e| e.to_string())?;
+    // We use lossy WebP encoding (quality 80.0) to achieve significant cost reduction.
+    let dynamic_img = image::DynamicImage::ImageRgba8(resized.into_rgba8());
+    let encoder = webp::Encoder::from_image(&dynamic_img).map_err(|e| e.to_string())?;
+    let webp_memory = encoder.encode(80.0);
+    let webp_data = webp_memory.to_vec();
 
     Ok((webp_data, "image/webp".to_string()))
 }
