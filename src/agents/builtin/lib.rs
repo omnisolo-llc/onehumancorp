@@ -35,6 +35,7 @@ pub mod memory_exhaustive_tests;
 pub mod autogen;
 pub mod ralph_loop;
 pub mod ruflo;
+pub mod sona;
 
 pub use ohc_builtin_agent_llm as llm;
 pub use ohc_builtin_agent_tools as tools;

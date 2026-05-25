@@ -318,6 +318,7 @@ pub struct Agent {
     pub memory_store: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
+    pub sona_memory: std::sync::RwLock<crate::sona::SonaMemory>,
 }
 
 impl Agent {
@@ -332,6 +333,7 @@ impl Agent {
             memory_store: None,
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
+            sona_memory: std::sync::RwLock::new(crate::sona::SonaMemory::new()),
         }
     }
 
@@ -1478,6 +1480,7 @@ impl Agent {
                 memory_store: Some(ltm.clone()),
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
+                sona_memory: std::sync::RwLock::new(crate::sona::SonaMemory::new()),
             };
             self_with_memory = &owned_agent;
         }
@@ -1485,6 +1488,14 @@ impl Agent {
         let session_tools = self_with_memory.tools.clone();
 
         let mut final_cfg = cfg.clone();
+
+        let mut used_tools: Vec<String> = Vec::new();
+
+        // SONA Pattern Injection
+        if let Ok(sona) = self.sona_memory.read() {
+            let original_developer_instructions = final_cfg.developer_instructions.clone();
+            final_cfg.developer_instructions = sona.inject_into_prompt(&original_developer_instructions, initial_message);
+        }
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
@@ -1915,6 +1926,10 @@ impl Agent {
                     KeyValue::new("agent_id", final_cfg.agent_id.clone()),
                     KeyValue::new("tool_name", tc.name.clone())
                 ]);
+            }
+
+            for tc in &tool_calls {
+                used_tools.push(tc.name.clone());
             }
 
             // Terminal condition: no tool calls.
@@ -2536,6 +2551,15 @@ impl Agent {
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
             if iteration == max_iterations - 1 || tool_calls.is_empty() {
+                // SONA Pattern Auto-Recording (record successful task trajectories)
+                // Assumes successful completion if there are no tool calls left and not forcefully stopped by iteration max.
+                if tool_calls.is_empty() && !last_assistant_content.is_empty() {
+                    if let Ok(mut sona) = self.sona_memory.write() {
+                        let tool_seq: Vec<String> = used_tools.iter().cloned().collect();
+                        sona.record_trajectory(initial_message.to_string(), tool_seq, last_assistant_content.clone());
+                    }
+                }
+
                 // This is the last iteration or no more tool calls (terminal)
                 // We'll store the final thought in long-term memory if configured
                 if !last_assistant_content.is_empty() {

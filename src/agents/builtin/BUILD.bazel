@@ -15,6 +15,7 @@ rust_library(
         "pubsub.rs",
         "output_parser.rs",
         "types.rs",
+        "sona.rs",
     ],
     crate_name = "ohc_builtin_agent_core",
     edition = "2024",
