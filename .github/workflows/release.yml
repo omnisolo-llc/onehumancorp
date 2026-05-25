@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  schedule:
-    - cron: "0 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -152,31 +150,32 @@ jobs:
 
   build-desktop-installers:
     name: Build desktop installers (${{ matrix.name }})
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
           - name: windows-x86_64
             runner: windows-latest
-            bundles: msi,nsis
-            patterns: "*.msi *.exe"
+            os_name: windows
+            arch: x86_64
             install_linux_deps: false
-          - name: macos-aarch64
+          - name: macos-universal
             runner: macos-15
-            bundles: dmg
-            patterns: "*.dmg"
-            install_linux_deps: false
-          - name: macos-x86_64
-            runner: macos-15-intel
-            bundles: dmg
-            patterns: "*.dmg"
+            os_name: macos
+            arch: universal
             install_linux_deps: false
           - name: linux-x86_64
-            runner: ubuntu-latest
-            bundles: deb,rpm
-            patterns: "*.deb *.rpm"
+            runner: ubuntu-22.04
+            os_name: linux
+            arch: x86_64
+            install_linux_deps: true
+          - name: linux-arm64
+            runner: ubuntu-22.04-arm
+            os_name: linux
+            arch: arm64
             install_linux_deps: true
     steps:
       - uses: actions/checkout@v6
@@ -187,13 +186,20 @@ jobs:
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends --fix-missing \
-            build-essential pkg-config libssl-dev \
-            libdbus-1-dev libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
+            build-essential pkg-config libssl-dev curl wget file \
+            libdbus-1-dev libglib2.0-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
-            ca-certificates curl git patchelf rpm
+            ca-certificates git patchelf rpm xdg-utils
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev \
+            || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Add macOS universal Rust targets
+        if: matrix.os_name == 'macos'
+        run: |
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
@@ -245,8 +251,56 @@ jobs:
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
           echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
 
+      - name: Prepare release version and updater signing
+        env:
+          TAURI_SIGNING_PUBLIC_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION" || ( "$GITHUB_REF_NAME" != v* && "$VERSION" == "$GITHUB_REF_NAME" ) ]]; then
+            VERSION="0.0.0-${GITHUB_RUN_NUMBER}"
+          fi
+
+          if [[ -z "${TAURI_SIGNING_PUBLIC_KEY_SECRET:-}" || -z "${TAURI_SIGNING_PRIVATE_KEY_SECRET:-}" ]]; then
+            echo "TAURI_SIGNING_PUBLIC_KEY and TAURI_SIGNING_PRIVATE_KEY GitHub secrets are required for updater-signed desktop release artifacts." >&2
+            exit 1
+          fi
+
+          export VERSION
+          node <<'NODE'
+          const fs = require('fs');
+          const version = process.env.VERSION;
+          const pubkey = process.env.TAURI_SIGNING_PUBLIC_KEY_SECRET;
+          const configPath = 'src/ui/tauri/tauri.conf.json';
+          const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+          config.version = version;
+          config.plugins ??= {};
+          config.plugins.updater ??= {};
+          config.plugins.updater.pubkey = pubkey;
+          fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+          const cargoPath = 'src/ui/tauri/Cargo.toml';
+          let cargo = fs.readFileSync(cargoPath, 'utf8');
+          cargo = cargo.replace(/^version = ".*"$/m, `version = "${version}"`);
+          fs.writeFileSync(cargoPath, cargo);
+          NODE
+
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<__TAURI_SIGNING_PRIVATE_KEY__"
+            printf '%s\n' "$TAURI_SIGNING_PRIVATE_KEY_SECRET"
+            echo "__TAURI_SIGNING_PRIVATE_KEY__"
+          } >> "$GITHUB_ENV"
+
+          if [[ -n "${TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET:-}" ]]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=$TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET" >> "$GITHUB_ENV"
+          fi
+          echo "OHC_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
+
       - name: Install macOS signing assets
-        if: runner.os == 'macOS'
+        if: matrix.os_name == 'macos'
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -256,6 +310,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           KEYCHAIN_PASSWORD: ${{ secrets.APPLE_KEYCHAIN_PASSWORD }}
         run: |
+          set -euo pipefail
           for name in MACOS_CERTIFICATE_BASE64 MACOS_CERTIFICATE_PASSWORD MACOS_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID KEYCHAIN_PASSWORD; do
             if [[ -z "${!name}" ]]; then
               echo "$name is required to sign and notarize macOS release artifacts" >&2
@@ -266,13 +321,16 @@ jobs:
           certificate_path="$RUNNER_TEMP/ohc-macos-signing.p12"
           keychain_path="$RUNNER_TEMP/ohc-macos-signing.keychain-db"
 
+          ORIGINAL_DEFAULT_KEYCHAIN="$(security default-keychain -d user | tr -d '"' | xargs)"
+          echo "ORIGINAL_DEFAULT_KEYCHAIN=$ORIGINAL_DEFAULT_KEYCHAIN" >> "$GITHUB_ENV"
           echo "$MACOS_CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
           security set-keychain-settings -lut 21600 "$keychain_path"
+          security default-keychain -s "$keychain_path"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
           security import "$certificate_path" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
           security list-keychain -d user -s "$keychain_path" $(security list-keychains -d user | sed s/\"//g)
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
 
           {
             echo "APPLE_SIGNING_IDENTITY=$MACOS_SIGNING_IDENTITY"
@@ -281,32 +339,145 @@ jobs:
             echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
           } >> "$GITHUB_ENV"
 
-      - name: Build Tauri installer
-        run: cargo tauri build --bundles "${{ matrix.bundles }}"
+      - name: Build Tauri desktop bundles
         working-directory: src/ui/tauri
-
-      - name: Collect desktop installer artifacts
         run: |
+          set -euo pipefail
+          case "${{ matrix.os_name }}" in
+            macos)
+              cargo tauri build --target universal-apple-darwin
+              ;;
+            windows)
+              cargo tauri build --bundles msi
+              ;;
+            linux)
+              cargo tauri build --bundles appimage,deb,rpm
+              ;;
+            *)
+              echo "Unsupported desktop OS: ${{ matrix.os_name }}" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Prepare macOS release assets
+        if: matrix.os_name == 'macos'
+        run: |
+          set -euo pipefail
           mkdir -p dist
-          roots=()
-          for root in target src/ui/tauri/target; do
-            if [[ -d "$root/release/bundle" ]]; then
-              roots+=("$root/release/bundle")
-            fi
-          done
-          if [[ ${#roots[@]} -eq 0 ]]; then
-            echo "No Tauri bundle directory found" >&2
+          VERSION_TAG="$GITHUB_REF_NAME"
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
+          if [[ ! -d "$BUNDLE_ROOT" ]]; then
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+          fi
+
+          APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
+          DMG_PATH="$(find "$BUNDLE_ROOT/dmg" -type f -name '*.dmg' | head -1 || true)"
+          TAR_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.tar.gz' -type f | head -1 || true)"
+          if [[ -z "$APP_PATH" || -z "$DMG_PATH" || -z "$TAR_PATH" ]]; then
+            echo "Missing macOS .app/.dmg/.tar.gz artifacts under $BUNDLE_ROOT" >&2
+            find "$BUNDLE_ROOT" -maxdepth 4 \( -type f -o -type d \) >&2
             exit 1
           fi
-          for pattern in ${{ matrix.patterns }}; do
-            while IFS= read -r artifact; do
-              cp "$artifact" "dist/${{ matrix.name }}-$(basename "$artifact")"
-            done < <(find "${roots[@]}" -type f -name "$pattern")
-          done
-          if ! find dist -type f | grep -q .; then
-            echo "No desktop installer artifacts matched ${{ matrix.patterns }}" >&2
+
+          cp "$DMG_PATH" "dist/OHC-${VERSION_TAG}-macOS.dmg"
+          cp "$TAR_PATH" "dist/OHC-${VERSION_TAG}-macOS.tar.gz"
+          if [[ -f "$TAR_PATH.sig" ]]; then
+            cp "$TAR_PATH.sig" "dist/OHC-${VERSION_TAG}-macOS.tar.gz.sig"
+          else
+            echo "Missing macOS updater signature: $TAR_PATH.sig" >&2
             exit 1
           fi
+          ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" "dist/OHC-${VERSION_TAG}-macOS.zip"
+          ls -lh dist/
+
+      - name: Verify macOS signing and notarization
+        if: matrix.os_name == 'macos'
+        run: |
+          set -euo pipefail
+          BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
+          if [[ ! -d "$BUNDLE_ROOT" ]]; then
+            BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+          fi
+          APP_PATH="$(find "$BUNDLE_ROOT/macos" -maxdepth 1 -name '*.app' -type d | head -1 || true)"
+          DMG_PATH="$(find dist -maxdepth 1 -name '*.dmg' -type f | head -1 || true)"
+          if [[ -z "$APP_PATH" || -z "$DMG_PATH" ]]; then
+            echo "Missing macOS artifacts for verification" >&2
+            exit 1
+          fi
+
+          xcrun stapler staple "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          spctl -a -t exec -vv "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+
+          xcrun stapler staple "$DMG_PATH"
+          codesign --verify --verbose=2 "$DMG_PATH"
+          spctl -a -t open --context context:primary-signature -vv "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
+      - name: Prepare Windows release assets
+        if: matrix.os_name == 'windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $versionTag = $env:GITHUB_REF_NAME
+
+          $msi = Get-ChildItem -Path 'src/ui/tauri/target/release/bundle' -Recurse -Include *.msi -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($null -eq $msi) {
+            throw 'No Windows MSI installer found'
+          }
+          $msiDest = "OHC-$versionTag-Windows.msi"
+          Copy-Item $msi.FullName (Join-Path dist $msiDest)
+          if (Test-Path "$($msi.FullName).sig") {
+            Copy-Item "$($msi.FullName).sig" (Join-Path dist "$msiDest.sig")
+          } else {
+            throw "Missing Windows updater signature: $($msi.FullName).sig"
+          }
+
+          $exeCandidates = @(
+            'src/ui/tauri/target/release/app.exe',
+            'src/ui/tauri/target/x86_64-pc-windows-msvc/release/app.exe'
+          )
+          $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if ($null -eq $exe) {
+            throw 'No Windows executable found for portable package'
+          }
+          $portableDir = 'dist/OHC-Portable'
+          New-Item -ItemType Directory -Force -Path $portableDir | Out-Null
+          Copy-Item $exe (Join-Path $portableDir 'OHC.exe')
+          @('# OHC portable build marker', 'portable=true') | Set-Content -Path (Join-Path $portableDir 'portable.ini') -Encoding UTF8
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "dist/OHC-$versionTag-Windows-Portable.zip" -Force
+          Remove-Item -Recurse -Force $portableDir
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Prepare Linux release assets
+        if: matrix.os_name == 'linux'
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          VERSION_TAG="$GITHUB_REF_NAME"
+          ARCH="${{ matrix.arch }}"
+          BUNDLE_ROOT="src/ui/tauri/target/release/bundle"
+
+          APPIMAGE="$(find "$BUNDLE_ROOT" -type f -name '*.AppImage' | head -1 || true)"
+          DEB="$(find "$BUNDLE_ROOT" -type f -name '*.deb' | head -1 || true)"
+          RPM="$(find "$BUNDLE_ROOT" -type f -name '*.rpm' | head -1 || true)"
+          if [[ -z "$APPIMAGE" || -z "$DEB" || -z "$RPM" ]]; then
+            echo "Missing Linux AppImage/deb/rpm artifacts under $BUNDLE_ROOT" >&2
+            find "$BUNDLE_ROOT" -maxdepth 4 -type f >&2
+            exit 1
+          fi
+
+          cp "$APPIMAGE" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage"
+          if [[ -f "$APPIMAGE.sig" ]]; then
+            cp "$APPIMAGE.sig" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.AppImage.sig"
+          else
+            echo "Missing Linux AppImage updater signature: $APPIMAGE.sig" >&2
+            exit 1
+          fi
+          cp "$DEB" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.deb"
+          cp "$RPM" "dist/OHC-${VERSION_TAG}-Linux-${ARCH}.rpm"
           ls -lh dist/
 
       - name: Generate desktop installer checksums
@@ -325,6 +496,16 @@ jobs:
           name: desktop-${{ matrix.name }}
           path: dist/
           retention-days: 7
+
+      - name: Clean up Apple signing keychain
+        if: matrix.os_name == 'macos' && always()
+        run: |
+          if [[ -n "${ORIGINAL_DEFAULT_KEYCHAIN:-}" ]]; then
+            security default-keychain -s "$ORIGINAL_DEFAULT_KEYCHAIN" || true
+          fi
+          if [[ -f "$RUNNER_TEMP/ohc-macos-signing.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/ohc-macos-signing.keychain-db" || true
+          fi
 
   build-mobile-artifacts:
     name: Build mobile artifacts (${{ matrix.name }})
@@ -585,12 +766,14 @@ jobs:
           cat checksums.txt
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             dist/*.tar.gz
+            dist/*.sig
             dist/*.tar
             dist/*.zip
+            dist/*.AppImage
             dist/*.deb
             dist/*.rpm
             dist/*.msi
@@ -601,10 +784,109 @@ jobs:
             dist/*.ipa
             dist/checksums.txt
           generate_release_notes: true
+          body: |
+            ## OHC ${{ github.ref_name }}
+
+            ### Download & Installation
+
+            - **Windows**: `OHC-${{ github.ref_name }}-Windows.msi` or `OHC-${{ github.ref_name }}-Windows-Portable.zip`
+            - **macOS**: `OHC-${{ github.ref_name }}-macOS.dmg`, `OHC-${{ github.ref_name }}-macOS.zip`, or updater/Homebrew artifact `OHC-${{ github.ref_name }}-macOS.tar.gz`
+            - **Linux x86_64**: `OHC-${{ github.ref_name }}-Linux-x86_64.AppImage`, `.deb`, or `.rpm`
+            - **Linux ARM64**: `OHC-${{ github.ref_name }}-Linux-arm64.AppImage`, `.deb`, or `.rpm`
+
+            `latest.json` is uploaded after artifact publication for the Tauri desktop updater.
           draft: false
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  assemble-latest-json:
+    name: Assemble latest.json
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    needs: publish-release
+    permissions:
+      contents: write
+    timeout-minutes: 15
+    steps:
+      - name: Download release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          gh release download "$GITHUB_REF_NAME" --dir dl --repo "$GITHUB_REPOSITORY"
+          ls -lh dl
+
+      - name: Generate latest.json
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          PUB_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BASE_URL="https://github.com/$REPO/releases/download/$TAG"
+
+          mac_url=""; mac_sig=""
+          win_url=""; win_sig=""
+          linux_x64_url=""; linux_x64_sig=""
+          linux_arm64_url=""; linux_arm64_sig=""
+
+          shopt -s nullglob
+          for sig in dl/*.sig; do
+            base="${sig%.sig}"
+            fname="$(basename "$base")"
+            sig_content="$(tr -d '\r\n' < "$sig")"
+            case "$fname" in
+              *-macOS.tar.gz)
+                mac_url="$BASE_URL/$fname"; mac_sig="$sig_content" ;;
+              *-Windows.msi)
+                win_url="$BASE_URL/$fname"; win_sig="$sig_content" ;;
+              *-Linux-x86_64.AppImage)
+                linux_x64_url="$BASE_URL/$fname"; linux_x64_sig="$sig_content" ;;
+              *-Linux-arm64.AppImage)
+                linux_arm64_url="$BASE_URL/$fname"; linux_arm64_sig="$sig_content" ;;
+            esac
+          done
+
+          export VERSION PUB_DATE TAG
+          export mac_url mac_sig win_url win_sig linux_x64_url linux_x64_sig linux_arm64_url linux_arm64_sig
+
+          node <<'NODE'
+          const fs = require('fs');
+          const env = process.env;
+          const latest = {
+            version: env.VERSION,
+            notes: `Release ${env.TAG}`,
+            pub_date: env.PUB_DATE,
+            platforms: {}
+          };
+
+          function add(key, url, signature) {
+            if (url && signature) latest.platforms[key] = { signature, url };
+          }
+
+          add('darwin-aarch64', env.mac_url, env.mac_sig);
+          add('darwin-x86_64', env.mac_url, env.mac_sig);
+          add('windows-x86_64', env.win_url, env.win_sig);
+          add('linux-x86_64', env.linux_x64_url, env.linux_x64_sig);
+          add('linux-aarch64', env.linux_arm64_url, env.linux_arm64_sig);
+
+          if (Object.keys(latest.platforms).length === 0) {
+            throw new Error('No signed updater artifacts found for latest.json');
+          }
+
+          fs.writeFileSync('latest.json', `${JSON.stringify(latest, null, 2)}\n`);
+          NODE
+          cat latest.json
+
+      - name: Upload latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload "$GITHUB_REF_NAME" latest.json --clobber --repo "$GITHUB_REPOSITORY"
 
   push-docker:
     name: Push container images
