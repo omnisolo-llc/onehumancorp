@@ -122,35 +122,19 @@ export default function OnboardingWizard() {
   }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
-    if (step === 1) {
-      if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
-      if (!businessName.trim()) {
-        setError("Please enter your business name.");
-        return;
-      }
-      if (businessName.trim().length < 3) {
-        setError("Business name must be at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 3) {
-      if (!businessCategory.trim()) {
-        setError("Please describe your niche.");
-        return;
-      }
-      if (businessCategory.trim().length < 5) {
-        setError("Niche description must be at least 5 characters.");
-        return;
-      }
+    switch (step) {
+      case 1:
+        if (!businessType.trim()) return setError("Please describe what you sell.");
+        if (businessType.trim().length < 3) return setError("Please enter at least 3 characters.");
+        break;
+      case 2:
+        if (!businessName.trim()) return setError("Please enter your business name.");
+        if (businessName.trim().length < 3) return setError("Business name must be at least 3 characters.");
+        break;
+      case 3:
+        if (!businessCategory.trim()) return setError("Please describe your niche.");
+        if (businessCategory.trim().length < 5) return setError("Niche description must be at least 5 characters.");
+        break;
     }
     setError("");
     setStep(step + 1);
@@ -305,7 +289,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/20 ring-1 ring-white/30 dark:ring-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-md"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -329,10 +313,10 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/20 ring-1 ring-white/30 dark:ring-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-md"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="organization"
               />
               <div className="flex gap-3">
                 <button
@@ -361,7 +345,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/20 ring-1 ring-white/30 dark:ring-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-md"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"

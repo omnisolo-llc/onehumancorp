@@ -135,4 +135,42 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
     await expect(page.locator('text=1 Action Required: Connect Stripe to accept payments.')).toBeVisible();
   });
+
+  test('Cross-device resilience (State Sync)', async ({ page }) => {
+    // 0. Start from UI Login
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('member@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('MemberPass123!');
+    await page.locator('button:has-text("Login")').first().click();
+
+    // Wait for Dashboard
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    // 1. Navigate to onboarding
+    await page.goto('/onboarding');
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Tech Support");
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 2
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Quick Tech Fix");
+
+    // 2. Reload the page to simulate navigating away or cross-device resume
+    // We wait 1.5 seconds to ensure debounce syncs to backend
+    await page.waitForTimeout(1500);
+    await page.reload();
+
+    // 3. Verify state is recovered correctly to Step 2
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    await expect(page.getByPlaceholder("e.g. Maya's Cakes")).toHaveValue("Quick Tech Fix");
+
+    // Go back to step 1 to ensure businessType is also preserved
+    await page.getByRole('button', { name: /Back/i }).click();
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+    await expect(page.getByPlaceholder("e.g. Sell cakes, plumbing")).toHaveValue("Tech Support");
+  });
 });
