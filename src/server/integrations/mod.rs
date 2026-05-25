@@ -26,5 +26,3 @@ pub mod listmonk;
 pub mod easypost;
 pub mod jitsi;
 pub mod alipay;
-
-pub mod razorpay;

@@ -80,7 +80,6 @@ rust_library(
         "service.rs",
         "consolidation_worker.rs",
         "gpt_researcher.rs",
-        "deerflow_subagents.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",

@@ -355,7 +355,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_token_burn_rate_predicted_24h",
+          "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
@@ -436,7 +436,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_token_burn_rate_predicted_24h",
+          "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
@@ -4314,7 +4314,7 @@
             "type": "prometheus",
             "uid": "Prometheus"
           },
-          "expr": "ohc_token_burn_rate_predicted_24h",
+          "expr": "ohc_token_burn_rate_forecast",
           "legendFormat": "{{organization_id}}",
           "range": true,
           "refId": "A"
