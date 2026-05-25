@@ -10,11 +10,12 @@ body {
 
 .ohc-hybrid-panel {
     backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
     background: rgba(255, 255, 255, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.4);
     font-family: 'Outfit', 'Inter', sans-serif;
     color: #ffffff;
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 24px;
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
@@ -22,13 +23,18 @@ body {
 .mac-glass-container {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(30px) saturate(210%);
+  -webkit-backdrop-filter: blur(30px) saturate(210%);
   border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
-  .mac-glass-container {
+  .mac-glass-container,
+  .ohc-hybrid-panel {
     background: rgba(22, 22, 26, 0.7);
     backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
 }
