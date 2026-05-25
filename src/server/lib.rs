@@ -3678,7 +3678,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -3686,7 +3686,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none;">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" placeholder="Business type" style="border-radius: 8px;" />
                             <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
@@ -3697,7 +3697,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
                             <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none;">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Give your business a name</h1>
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
@@ -3705,7 +3705,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none;">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📦 Physical Products</label>
@@ -3716,7 +3716,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none;">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Add your first product or service</h1>
                             <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
@@ -3724,20 +3724,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none;">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>How do you want to receive payments?</h1>
                             <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
                             <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
                             <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none;">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Create your account</h1>
                             <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
                             <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none;">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Select a Template</h1>
                             <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
                             <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
@@ -3748,17 +3748,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none;">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Choose your domain</h1>
                             <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
                             <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
                             <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none;">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>Ready to launch!</h1>
                             <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none;">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
                             <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
@@ -4583,13 +4583,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (typeof stepId === 'number' && stepId > currentStep) {
                                     document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
                                         // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && !input.placeholder.includes("0.00") && input.value.trim().length < 3) {
-                                            // wait, the reviewer said NOT to use placeholder includes.
-                                            // Let's just validate inputs that don't have inputmode="decimal"
-                                            if (input.getAttribute('inputmode') !== 'decimal') {
-                                                input.style.border = "2px solid #FF3B30";
-                                                hasError = true;
-                                            }
+                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
+                                            input.style.border = "2px solid #FF3B30";
+                                            hasError = true;
                                         } else {
                                             input.style.border = "";
                                         }
