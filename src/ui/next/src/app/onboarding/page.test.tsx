@@ -30,7 +30,7 @@ describe('OnboardingWizard', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          step: 2,
+          step: 1,
           businessType: 'Bakery',
           businessName: 'My Bakery'
         })
@@ -43,7 +43,7 @@ describe('OnboardingWizard', () => {
     render(<OnboardingWizard />);
 
     await waitFor(() => {
-      expect(useOnboardingStore.getState().step).toBe(2);
+      expect(useOnboardingStore.getState().step).toBe(1);
       expect(useOnboardingStore.getState().businessType).toBe('Bakery');
       expect(useOnboardingStore.getState().businessName).toBe('My Bakery');
     });

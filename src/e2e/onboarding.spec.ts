@@ -19,32 +19,28 @@ test.describe('Onboarding Wizard', () => {
     // For now we'll navigate directly to onboarding after login as a user starting the wizard
     await page.goto('/onboarding');
 
-    // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+    // Wait for the AI message 1
+    await expect(page.getByText("What do you do?")).toBeVisible();
 
     // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
+    await page.locator('input[name="chatInput"]').fill("Sell custom cakes");
+    await page.locator('input[name="chatInput"]').press('Enter');
 
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    // Wait for the AI message 2
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
     // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Maya's Cakes");
+    await page.locator('input[name="chatInput"]').fill("Maya's Cakes");
+    await page.locator('input[name="chatInput"]').press('Enter');
 
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 3
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
+    // Wait for the AI message 3
+    await expect(page.getByText("what's your niche?")).toBeVisible();
 
     // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
+    await page.locator('input[name="chatInput"]').fill("I bake custom vegan cakes");
 
-    // Click Generate Draft
-    await page.getByRole('button', { name: /Generate Draft/i }).click();
+    // Press enter to generate
+    await page.locator('input[name="chatInput"]').press('Enter');
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
@@ -87,32 +83,26 @@ test.describe('Onboarding Wizard', () => {
     // 1. Acquisition & Onboarding start
     await page.goto('/onboarding');
 
-    // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
+    // Wait for the AI message 1
+    await expect(page.getByText("What do you do?")).toBeVisible();
 
     // Fill in the business type
-    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
+    await page.locator('input[name="chatInput"]').fill("Plumbing");
+    await page.locator('input[name="chatInput"]').press('Enter');
 
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 2
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    // Wait for the AI message 2
+    await expect(page.getByText("What's the name of your business?")).toBeVisible();
 
     // Fill in the business name
-    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Carlos Plumbing");
+    await page.locator('input[name="chatInput"]').fill("Carlos Plumbing");
+    await page.locator('input[name="chatInput"]').press('Enter');
 
-    // Click Next
-    await page.getByRole('button', { name: /Next/i }).click();
-
-    // Step 3
-    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
+    // Wait for the AI message 3
+    await expect(page.getByText("what's your niche?")).toBeVisible();
 
     // Fill in the niche
-    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I fix pipes and leaks");
-
-    // Click Generate Draft
-    await page.getByRole('button', { name: /Generate Draft/i }).click();
+    await page.locator('input[name="chatInput"]').fill("I fix pipes and leaks");
+    await page.locator('input[name="chatInput"]').press('Enter');
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
