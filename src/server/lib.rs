@@ -3719,7 +3719,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="step-5" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
                             <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
+                            <input type="text" inputmode="decimal" pattern="[0-9]*\.?[0-9]*" class="backdrop-blur" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
                             <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
                             <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
                             <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
@@ -4583,13 +4583,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (typeof stepId === 'number' && stepId > currentStep) {
                                     document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
                                         // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && !input.placeholder.includes("0.00") && input.value.trim().length < 3) {
-                                            // wait, the reviewer said NOT to use placeholder includes.
-                                            // Let's just validate inputs that don't have inputmode="decimal"
-                                            if (input.getAttribute('inputmode') !== 'decimal') {
-                                                input.style.border = "2px solid #FF3B30";
-                                                hasError = true;
-                                            }
+                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
+                                            input.style.border = "2px solid #FF3B30";
+                                            hasError = true;
                                         } else {
                                             input.style.border = "";
                                         }
