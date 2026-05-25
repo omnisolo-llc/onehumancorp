@@ -254,8 +254,17 @@ async fn handle_storefront_embed(
 }
 
 async fn handle_check_milestones(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
+    Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
+    let tenant_id = claims.organization_id.unwrap_or_else(|| "my-store".to_string());
+
+    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&state.pool)
+        .await
+        .unwrap_or(0);
+
     let milestones = vec![
         Milestone {
             id: "1".to_string(),
@@ -273,7 +282,7 @@ async fn handle_check_milestones(
             id: "3".to_string(),
             title: "🎉 10th Order!".to_string(),
             description: "You've successfully processed your 10th order on OHC.".to_string(),
-            reached: true,
+            reached: count >= 10,
         },
     ];
     Json(MilestonesResponse { milestones })
