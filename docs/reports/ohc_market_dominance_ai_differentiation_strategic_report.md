@@ -68,11 +68,14 @@ graph TD
 ## 8. Appendix: Deep Dive
 
 ### Extended Research Matrix
-1. **Core E-commerce**: Excellent out of the box. Fast checkout, good tax calculation.
-2. **Subscriptions**: Requires a 3rd party app.
-3. **Email Marketing**: Basic templates included.
-4. **B2B Features**: Only available on enterprise tiers.
-5. **Point of Sale (POS)**: Excellent hardware integration.
-6. **Digital Products**: Supported natively.
-7. **AI**: Helpful for text generation but not fully autonomous.
-8. **International**: Complex to configure properly.
+
+| Capability | Shopify | Wix | Squarespace | OHC (Advantage) |
+|------------|---------|-----|-------------|-----------------|
+| **Core E-commerce** | Excellent out of the box. Fast checkout, good tax calculation. | Good for simple stores, lacks depth. | Good for basic needs, design-focused. | **AI-managed taxes & shipping, 10-minute mobile setup.** |
+| **Subscriptions** | Requires a 3rd party app. | Built-in but basic. | Supported natively on higher tiers. | **Zero-config subscription billing engine.** |
+| **Email Marketing** | Basic templates included. | Basic built-in tools. | Paid add-on. | **Autonomous retention agent, smart follow-ups.** |
+| **B2B Features** | Only available on enterprise tiers. | Limited. | Poor/Non-existent. | **Unified AI quoting and dynamic invoicing.** |
+| **Point of Sale (POS)** | Excellent hardware integration. | Basic integrations available. | Square integration only. | **Offline-first mobile POS, native tap-to-pay.** |
+| **Digital Products** | Supported natively. | Supported. | Supported natively. | **Secure digital product delivery engine.** |
+| **AI** | Helpful for text generation but not fully autonomous. | ADI for initial setup (one-time). | Basic content generation. | **Fully autonomous agents for Operations, Marketing, etc.** |
+| **International** | Complex to configure properly. | Basic multi-lingual support. | Poor localization options. | **Instant localized invoicing, fully multilingual.** |
