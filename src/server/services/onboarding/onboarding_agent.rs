@@ -154,8 +154,9 @@ impl OnboardingAgent {
         });
 
         let agent_clone_seed = self.clone();
+        let selected_agents = req.selected_agents.clone();
         let seed_future = tokio::task::spawn(async move {
-            agent_clone_seed.seed_default_agents(&org_id_clone2).await
+            agent_clone_seed.seed_default_agents(&org_id_clone2, selected_agents).await
         });
 
         let org_id_clone3 = org_id.clone();
@@ -2411,7 +2412,7 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    async fn seed_default_agents(&self, org_id: &str) -> Result<(), String> {
+    async fn seed_default_agents(&self, org_id: &str, selected_agents: Vec<String>) -> Result<(), String> {
         let default_agents = vec![
             ("Operations", "The Manager", "Operations"),
             ("Marketing & Advertising", "The Promoter", "Marketing"),
@@ -2423,6 +2424,11 @@ impl OnboardingAgent {
         ];
 
         for (name, role, role_id) in default_agents {
+            // If selected_agents is not empty, only seed those that match the role
+            if !selected_agents.is_empty() && !selected_agents.contains(&role.to_string()) {
+                continue;
+            }
+
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
             sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)

@@ -10,6 +10,7 @@ interface OnboardingState {
   firstProductPrice: string;
   template: string;
   domain: string;
+  selectedAgents: string[];
   isLoading: boolean;
   error: string;
   intakeData: any;
@@ -22,6 +23,8 @@ interface OnboardingState {
   setFirstProductPrice: (price: string) => void;
   setTemplate: (template: string) => void;
   setDomain: (domain: string) => void;
+  setSelectedAgents: (agents: string[]) => void;
+  toggleAgent: (agent: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
@@ -39,6 +42,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   firstProductPrice: '',
   template: 'Modern',
   domain: 'free',
+  selectedAgents: ['The Manager', 'The Promoter', 'The Salesperson'],
   isLoading: false,
   error: '',
   intakeData: null,
@@ -51,6 +55,12 @@ export const useOnboardingStore = create<OnboardingState>()(
   setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
   setTemplate: (template) => set({ template }),
   setDomain: (domain) => set({ domain }),
+  setSelectedAgents: (selectedAgents) => set({ selectedAgents }),
+  toggleAgent: (agent) => set((state) => ({
+    selectedAgents: state.selectedAgents.includes(agent)
+      ? state.selectedAgents.filter((a) => a !== agent)
+      : [...state.selectedAgents, agent],
+  })),
   setIsLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),

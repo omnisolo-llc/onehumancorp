@@ -13,6 +13,7 @@ describe('useOnboardingStore', () => {
       firstProductPrice: '',
       template: 'Modern',
       domain: 'free',
+      selectedAgents: ['The Manager', 'The Promoter', 'The Salesperson'],
       isLoading: false,
       error: '',
       intakeData: null,
@@ -29,6 +30,7 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductPrice).toBe('');
     expect(state.template).toBe('Modern');
     expect(state.domain).toBe('free');
+    expect(state.selectedAgents).toEqual(['The Manager', 'The Promoter', 'The Salesperson']);
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.intakeData).toBeNull();
@@ -78,6 +80,19 @@ describe('useOnboardingStore', () => {
   it('should update error', () => {
     useOnboardingStore.getState().setError('Test Error');
     expect(useOnboardingStore.getState().error).toBe('Test Error');
+  });
+
+  it('should update selectedAgents', () => {
+    useOnboardingStore.getState().setSelectedAgents(['The Manager']);
+    expect(useOnboardingStore.getState().selectedAgents).toEqual(['The Manager']);
+  });
+
+  it('should toggleAgent', () => {
+    // Current: Manager, Promoter, Salesperson
+    useOnboardingStore.getState().toggleAgent('The Ambassador');
+    expect(useOnboardingStore.getState().selectedAgents).toContain('The Ambassador');
+    useOnboardingStore.getState().toggleAgent('The Manager');
+    expect(useOnboardingStore.getState().selectedAgents).not.toContain('The Manager');
   });
 
   it('should update intakeData', () => {

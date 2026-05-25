@@ -8,6 +8,10 @@ global.fetch = vi.fn();
 describe('OnboardingWizard', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    (global.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({})
+    });
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
@@ -47,5 +51,24 @@ describe('OnboardingWizard', () => {
       expect(useOnboardingStore.getState().businessType).toBe('Bakery');
       expect(useOnboardingStore.getState().businessName).toBe('My Bakery');
     });
+  });
+
+  it('renders step 1 by default', () => {
+    render(<OnboardingWizard />);
+    expect(screen.getByText('What do you do?')).toBeDefined();
+  });
+
+  it('renders AI Team selection at step 5', async () => {
+    useOnboardingStore.setState({ step: 5 });
+    render(<OnboardingWizard />);
+    expect(screen.getByText('Your AI Team')).toBeDefined();
+    expect(screen.getByText('The Manager')).toBeDefined();
+  });
+
+  it('renders launch screen at step 6', async () => {
+    useOnboardingStore.setState({ step: 6, businessName: 'Test Biz' });
+    render(<OnboardingWizard />);
+    expect(screen.getByText('Ready to Launch?')).toBeDefined();
+    expect(screen.getByText('Test Biz')).toBeDefined();
   });
 });
