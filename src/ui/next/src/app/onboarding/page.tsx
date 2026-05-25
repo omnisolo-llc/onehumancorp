@@ -112,10 +112,6 @@ export default function OnboardingWizard() {
         setError("Please enter at least 3 characters.");
         return;
       }
-      if (!/^[a-zA-Z0-9\s,\.'-]+$/.test(businessType)) {
-        setError("Please use only letters, numbers, spaces, and basic punctuation.");
-        return;
-      }
     }
     if (step === 2) {
       if (!businessName.trim()) {
@@ -126,10 +122,6 @@ export default function OnboardingWizard() {
         setError("Business name must be at least 3 characters.");
         return;
       }
-      if (!/^[a-zA-Z0-9\s\.'&-]+$/.test(businessName)) {
-        setError("Business name contains invalid characters.");
-        return;
-      }
     }
     if (step === 3) {
       if (!businessCategory.trim()) {
@@ -138,10 +130,6 @@ export default function OnboardingWizard() {
       }
       if (businessCategory.trim().length < 5) {
         setError("Niche description must be at least 5 characters.");
-        return;
-      }
-      if (!/^[a-zA-Z0-9\s,\.'-]+$/.test(businessCategory)) {
-        setError("Please use only letters, numbers, spaces, and basic punctuation.");
         return;
       }
     }
