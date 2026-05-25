@@ -2243,6 +2243,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             <html>
                 <head>
                     <title>OneHuman Corp</title>
+                    <meta property="og:title" content="OneHuman Corp - Start Your Business" />
+                    <meta property="og:image" content="https://ohc.store/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=My+Store" />
+                    <meta property="og:description" content="Discover great products and services powered by OHC." />
+                    <meta name="twitter:card" content="summary_large_image" />
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
                     <style>
                         :root {
@@ -2372,6 +2376,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 32px;
                             max-width: 1120px;
                             margin: 0 auto;
+                            animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                        }
+                        @keyframes fadeIn {
+                            from { opacity: 0; transform: translateY(10px); }
+                            to { opacity: 1; transform: translateY(0); }
                         }
                         #dashboard-screen {
                             max-width: 1180px;
@@ -3820,6 +3829,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
 
                             <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
+
+                            <div class="card glass" style="margin-top: 24px; border-left: 4px solid #0066ff;">
+                                <h3>Social Share Card (OG)</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate a beautiful "Powered by OHC" image to share your store on social media.</p>
+                                <button onclick="generateOgCard()" style="width: 100%; margin-bottom: 16px;" class="secondary">Preview Share Card</button>
+                                <div id="og-card-preview-container" style="display: none; text-align: center;">
+                                    <img id="og-card-img" src="" style="width: 100%; max-width: 400px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;" />
+                                    <button onclick="shareOgCardToX()" style="width: 100%; background: #000; color: white;">Share to X (Twitter)</button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Block Editor Bottom Sheet -->
@@ -4120,6 +4139,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                             closeBottomSheet();
                             renderStorefrontPreview();
+                        }
+
+                        function generateOgCard() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const productName = storefrontDraftState.find(b => b.type === 'Hero')?.content?.title || 'My Store';
+                            const imgUrl = `/api/v1/growth/storefront/og-card?tenant=${encodeURIComponent(tenant)}&product_name=${encodeURIComponent(productName)}`;
+                            const imgEl = document.getElementById('og-card-img');
+                            imgEl.src = imgUrl;
+                            document.getElementById('og-card-preview-container').style.display = 'block';
+                        }
+
+                        function shareOgCardToX() {
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const text = encodeURIComponent('Check out my new store!');
+                            const url = encodeURIComponent(`https://ohc.store/join?ref=${tenant}`);
+                            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
                         }
 
                         function showDomainSetup() {
