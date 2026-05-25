@@ -23,6 +23,9 @@ export default function Dashboard() {
 
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
+  const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
+  const [generatedReview, setGeneratedReview] = useState<string>("");
+  const [isGeneratingReview, setIsGeneratingReview] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
@@ -38,6 +41,25 @@ export default function Dashboard() {
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
+
+  const generateReviewRequest = async () => {
+    setIsGeneratingReview(true);
+    setShowReviewModal(true);
+    try {
+      const res = await fetch('/api/v1/growth/reviews/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant: typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'My Store' : 'My Store', customerName: 'Sarah' })
+      });
+      const data = await res.json();
+      setGeneratedReview(data.message);
+    } catch (e) {
+      console.error(e);
+      setGeneratedReview("Failed to generate review request. Please try again.");
+    } finally {
+      setIsGeneratingReview(false);
+    }
+  };
 
   const openReferralModal = async () => {
     setIsGeneratingReferral(true);
@@ -472,6 +494,26 @@ export default function Dashboard() {
                 </div>
             </div>
          </section>
+
+
+         {/* Growth Loop: Automated Review Campaigns */}
+         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+            <div className="flex justify-between items-start mb-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 shadow-inner">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                </div>
+                <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Automated Growth</span>
+            </div>
+            <h3 className="font-bold text-gray-900 mb-1">AI Review Campaigns</h3>
+            <p className="text-sm text-gray-500 mb-4 line-clamp-2">Turn happy customers into 5-star reviews automatically.</p>
+            <div className="flex justify-between items-center">
+                <div className="text-2xl font-bold text-gray-900">4.9<span className="text-sm text-gray-500 font-normal ml-1">avg</span></div>
+                <button onClick={generateReviewRequest} className="text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg transition-colors">
+                    Generate AI Review Request
+                </button>
+            </div>
+         </div>
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
@@ -1077,6 +1119,65 @@ export default function Dashboard() {
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                   X (Twitter)
                 </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Review Request Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-blue-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-10"></div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-blue-600">
+                ⭐
+              </div>
+              <button
+                onClick={() => {
+                  setShowReviewModal(false);
+                  setGeneratedReview("");
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">AI Review Request</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              We've drafted a personalized message to ask your recent customer, Sarah, for a review. You can copy it to send via email or SMS.
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Draft Message</label>
+                <div className="flex flex-col gap-2">
+                  {isGeneratingReview ? (
+                    <div className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-8 flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <textarea
+                        readOnly
+                        value={generatedReview}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                        rows={6}
+                    />
+                  )}
+
+                  <button
+                    disabled={isGeneratingReview || !generatedReview}
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedReview);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black disabled:bg-gray-300 disabled:text-gray-500'}`}
+                  >
+                    {copied ? 'Copied!' : 'Copy to Clipboard'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
