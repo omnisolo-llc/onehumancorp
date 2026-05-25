@@ -141,6 +141,29 @@ impl ClaudeSubagentSpawner {
         self.summarize_output(&raw_output, config).await
     }
 
+    async fn summarize_output(
+        &self,
+        raw_output: &str,
+        config: &AgentRunConfig,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let prompt = format!(
+            "Condense the following subagent output into a 1k-2k token summary, preserving key findings, actionable items, and any critical data. Do not include the full context.\n\nSubagent Output:\n{}",
+            raw_output
+        );
+
+        let req = ohc_builtin_agent_core::types::ChatRequest {
+            model: config.model.clone(),
+            system: "You are a subagent summarizer. Your job is to condense subagent outputs into 1k-2k token summaries.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(prompt)],
+            tools: vec![],
+            max_tokens: 2048,
+            temperature: 0.1,
+        };
+
+        let response = self.parent_agent.llm.chat(req).await?;
+        Ok(response.message.content)
+    }
+
     #[tokio::test]
     async fn test_claude_subagent_fork() {
         let parent_client = Arc::new(MockLlmClient {
