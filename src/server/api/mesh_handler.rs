@@ -24,7 +24,7 @@ pub async fn mesh_ws_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct SIPPayload {
     pub agent_id: Option<String>,
     pub action: Option<String>,
