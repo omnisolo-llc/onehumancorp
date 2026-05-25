@@ -34,9 +34,14 @@ export default function Dashboard() {
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
   const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+  const [tenant, setTenant] = useState<string>("my-store");
 
   useEffect(() => {
-    setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    if (typeof window !== 'undefined') {
+      const storedTenant = localStorage.getItem('tenant') || 'my-store';
+      setTenant(storedTenant);
+      setReferralLink(`https://ohc.store/join?ref=${storedTenant}`);
+    }
   }, []);
 
   const openReferralModal = async () => {
@@ -157,16 +162,16 @@ export default function Dashboard() {
 
     const fetchMetrics = async () => {
         try {
-            const token = localStorage.getItem('token') || 'test-token';
-            const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+            const token = typeof localStorage !== 'undefined' ? localStorage.getItem('token') || 'test-token' : 'test-token';
+            const currentTenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
 
             const [metricsRes, invitesRes] = await Promise.all([
                 fetch('/api/v1/dashboard/metrics', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ tenant_id: tenant })
+                    body: JSON.stringify({ tenant_id: currentTenant })
                 }),
-                fetch(`/api/v1/growth/team-invites/metrics?team_id=${tenant}`, {
+                fetch(`/api/v1/growth/team-invites/metrics?team_id=${currentTenant}`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
@@ -469,6 +474,57 @@ export default function Dashboard() {
                    <div className="relative w-20 h-20 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                    </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Social Share Cards */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Share Cards</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Automated Social Virality</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let your customers share your store. We automatically generate a branded Open Graph image for social media that drives traffic back to your business.</p>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="bg-white/60 p-4 rounded-xl border border-gray-100">
+                            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Meta Tags</label>
+                            <div className="flex items-center gap-2">
+                                <input type="text" readOnly value={`<meta property="og:image" content="https://ohc.app/api/v1/growth/social-card?tenant=${tenant}" />`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(`<meta property="og:image" content="https://ohc.app/api/v1/growth/social-card?tenant=${tenant}" />`);
+                                        alert('Copied HTML tags!');
+                                    }}
+                                    className="px-3 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg hover:bg-black transition-colors"
+                                >
+                                    Copy HTML
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="w-full md:w-64 flex-shrink-0">
+                    <div className="bg-white rounded-xl shadow-md p-4 border border-purple-100 relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <img
+                          src={`/api/v1/growth/social-card?tenant=${tenant}`}
+                          alt="Social Share Card"
+                          className="w-full rounded border border-gray-200"
+                        />
+                        <div className="mt-3 text-center">
+                            <a href={`/api/v1/growth/social-card?tenant=${tenant}`} target="_blank" className="text-xs font-semibold text-purple-600 hover:text-purple-700 uppercase tracking-wide">
+                                Preview Card →
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
          </section>
@@ -980,13 +1036,13 @@ export default function Dashboard() {
                 <div className="flex flex-col gap-2">
                   <textarea
                     readOnly
-                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
+                    value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`}
                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 focus:outline-none font-mono text-xs"
                     rows={4}
                   />
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
+                      navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${tenant}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
                       setTimeout(() => setEmbedCopied(false), 2000);
                     }}

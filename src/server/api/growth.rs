@@ -71,6 +71,47 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+fn escape_xml(s: &str) -> String {
+    s.replace("&", "&amp;")
+     .replace("<", "&lt;")
+     .replace(">", "&gt;")
+     .replace("\"", "&quot;")
+     .replace("'", "&apos;")
+}
+
+async fn handle_social_card(
+    axum::extract::Query(query): axum::extract::Query<std::collections::HashMap<String, String>>,
+) -> impl IntoResponse {
+    let tenant = query.get("tenant").map(|s| s.as_str()).unwrap_or("my-store");
+    let safe_tenant = escape_xml(tenant);
+    let title = escape_xml(&format!("{} Store", tenant));
+
+    let svg = format!(
+        r##"<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <text x="600" y="250" font-family="sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">
+    {}
+  </text>
+  <text x="600" y="350" font-family="sans-serif" font-size="40" fill="rgba(255, 255, 255, 0.8)" text-anchor="middle">
+    Premium Products &amp; Services
+  </text>
+  <rect x="0" y="550" width="1200" height="80" fill="rgba(0, 0, 0, 0.2)" />
+  <text x="600" y="600" font-family="sans-serif" font-size="30" font-weight="bold" fill="#FBBF24" text-anchor="middle">
+    ⚡ Powered by OHC (ohc.store/join?ref={})
+  </text>
+</svg>"##,
+        title, safe_tenant
+    );
+
+    ([(axum::http::header::CONTENT_TYPE, "image/svg+xml")], svg)
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -88,6 +129,7 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
+        .route("/social-card", get(handle_social_card))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
