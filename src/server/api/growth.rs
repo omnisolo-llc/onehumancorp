@@ -244,7 +244,7 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <a href="ohc://join?ref=embed" target="_blank">⚡ Powered by OHC</a>
         </div>
     </div>
 </body>
