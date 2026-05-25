@@ -277,7 +277,7 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
-                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
+                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'CustomerSuccess' : approval.department} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
@@ -286,7 +286,7 @@ export default function Dashboard() {
                                         <button
                                             onClick={() => handleApprove(approval.id, false)}
                                             className="px-4 py-2 font-medium transition-colors hover:opacity-80"
-                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
+                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.05)' }}
                                         >
                                             Reject
                                         </button>

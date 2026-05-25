@@ -57,6 +57,7 @@ INSERT INTO agent_approvals (id, tenant_id, department, description, status, act
 VALUES
 ('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
+('e2e-approval-review', 'e2e-tenant', 'CustomerSuccess', '3 customers haven''t reviewed their orders. Request reviews?', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-social', 'e2e-tenant', 'marketing', 'Generated 7-day social media plan for Vegan Celebration Cake', 'PENDING', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 ('e2e-approval-cart', 'e2e-tenant', 'sales', 'Abandoned cart recovery: 10% discount for Sarah', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE
