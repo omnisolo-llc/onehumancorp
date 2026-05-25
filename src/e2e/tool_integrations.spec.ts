@@ -44,6 +44,17 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByText('Reliable SMS alerts for new orders and customer notifications.')).toBeVisible();
   });
 
+  test('displays newly added integration cards', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Ayrshare' })).toBeVisible();
+    await expect(page.getByText('Unified API for posting and retrieving messages across social networks.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Listmonk' })).toBeVisible();
+    await expect(page.getByText('Embedded, No-Jargon Email Campaigns.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'EasyPost' })).toBeVisible();
+    await expect(page.getByText('Painless Shipping Labels & Tracking.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Jitsi Meet' })).toBeVisible();
+    await expect(page.getByText('Zero-Setup Online Lessons and video conferencing.')).toBeVisible();
+  });
+
   test('can connect Meta Graph API', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Meta Graph API' }).getByRole('button', { name: 'Connect' });
     page.once('dialog', dialog => {
@@ -80,5 +91,17 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await twBtn.click();
     const zoomBtn = page.locator('div.card.glass').filter({ hasText: 'Zoom' }).getByRole('button', { name: 'Connect' });
     await zoomBtn.click();
+  });
+
+  test('can connect Ayrshare, Listmonk, EasyPost, Jitsi Meet', async ({ page }) => {
+    page.on('dialog', dialog => dialog.accept());
+    const ayrshareBtn = page.locator('div.card.glass').filter({ hasText: 'Ayrshare' }).getByRole('button', { name: 'Connect' });
+    await ayrshareBtn.click();
+    const listmonkBtn = page.locator('div.card.glass').filter({ hasText: 'Listmonk' }).getByRole('button', { name: 'Connect' });
+    await listmonkBtn.click();
+    const easypostBtn = page.locator('div.card.glass').filter({ hasText: 'EasyPost' }).getByRole('button', { name: 'Connect' });
+    await easypostBtn.click();
+    const jitsiBtn = page.locator('div.card.glass').filter({ hasText: 'Jitsi Meet' }).getByRole('button', { name: 'Connect' });
+    await jitsiBtn.click();
   });
 });
