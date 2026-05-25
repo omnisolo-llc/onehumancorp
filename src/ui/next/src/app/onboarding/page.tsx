@@ -33,8 +33,13 @@ export default function OnboardingWizard() {
     // Zustand's persist middleware automatically loads the state from local storage before this.
     const loadState = async () => {
       try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
+        let tenantId = 'storefront';
+        let userId = 'test-user';
+        if (typeof window !== 'undefined') {
+          tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+          userId = localStorage.getItem('user_id') || 'test-user';
+        }
+
         const res = await fetch('/api/onboarding/state', {
           headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
         });
@@ -104,8 +109,12 @@ export default function OnboardingWizard() {
 
     const syncState = async () => {
       try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
+        let tenantId = 'storefront';
+        let userId = 'test-user';
+        if (typeof window !== 'undefined') {
+          tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+          userId = localStorage.getItem('user_id') || 'test-user';
+        }
         await fetch('/api/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
@@ -235,41 +244,6 @@ export default function OnboardingWizard() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
-        .glass-container {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5));
-          backdrop-filter: blur(40px) saturate(250%);
-          -webkit-backdrop-filter: blur(40px) saturate(250%);
-          border: 1px solid rgba(255, 255, 255, 0.6);
-          box-shadow:
-            0 8px 32px 0 rgba(31, 38, 135, 0.1),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-        }
-        @media (prefers-color-scheme: dark) {
-          .glass-container {
-            background: linear-gradient(135deg, rgba(35, 35, 40, 0.8), rgba(22, 22, 26, 0.7));
-            backdrop-filter: blur(40px) saturate(250%);
-            -webkit-backdrop-filter: blur(40px) saturate(250%);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            box-shadow:
-              0 8px 32px 0 rgba(0, 0, 0, 0.4),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-          }
-          .glass-container h1, .glass-container h2, .glass-container .text-gray-900 {
-            color: #F5F5F7;
-          }
-          .glass-container p, .glass-container .text-gray-500 {
-            color: #A1A1A6;
-          }
-          .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.4);
-            color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-          }
-          .glass-container input:focus, .glass-container textarea:focus {
-            box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5), inset 0 2px 4px rgba(0,0,0,0.2);
-          }
-        }
         .animate-fade-in {
           animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -278,11 +252,11 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden backdrop-blur-md bg-white/40 dark:bg-black/40 border border-white/50 dark:border-white/10">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
-           <h1 className="text-xl font-bold font-outfit text-gray-900">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 text-[#0066FF] rounded-full">
+           <h1 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">OHC Setup</h1>
+           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-[#0066FF] dark:text-blue-400 rounded-full">
              Step {Math.min(step, 4)} of 4
            </div>
         </div>
@@ -290,22 +264,22 @@ export default function OnboardingWizard() {
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded-xl">
               {error}
             </div>
           )}
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What do you do?</h2>
-              <p className="text-gray-500 text-sm mb-6">Tell us what you sell or the services you provide.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">What do you do?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Tell us what you sell or the services you provide.</p>
               <input
                 type="text"
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] dark:focus:border-blue-500 focus:ring-2 focus:ring-[#0066FF]/30 dark:focus:ring-blue-500/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/40 backdrop-blur-md shadow-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -321,15 +295,15 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 text-sm mb-6">Don't worry, you can change this later.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">What's the name of your business?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Don't worry, you can change this later.</p>
               <input
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] dark:focus:border-blue-500 focus:ring-2 focus:ring-[#0066FF]/30 dark:focus:ring-blue-500/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/40 backdrop-blur-md shadow-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -337,7 +311,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 dark:bg-white/10 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 transition-all"
                 >
                   Back
                 </button>
@@ -353,15 +327,15 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">What's your niche?</h2>
-              <p className="text-gray-500 text-sm mb-6">Products, services, or bookings.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">What's your niche?</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Products, services, or bookings.</p>
               <input
                 type="text"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[12px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] dark:focus:border-blue-500 focus:ring-2 focus:ring-[#0066FF]/30 dark:focus:ring-blue-500/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/40 backdrop-blur-md shadow-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -369,7 +343,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 dark:bg-white/10 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 transition-all"
                 >
                   Back
                 </button>
@@ -390,36 +364,36 @@ export default function OnboardingWizard() {
 
           {step === 4 && intakeData && (
             <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
-                <span className="text-3xl text-[#0066FF]">✨</span>
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
+                <span className="text-3xl text-[#0066FF] dark:text-blue-400">✨</span>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2 text-center shrink-0">Ready to Launch!</h2>
-              <p className="text-gray-500 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2 text-center shrink-0">Ready to Launch!</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
-                <div className="bg-white/40 backdrop-blur-md p-5 rounded-[16px] border border-white/50 shadow-sm space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit">First Product/Service</h3>
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm space-y-3">
+                   <h3 className="font-bold text-gray-900 dark:text-gray-100 font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
-                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Name</label>
+                       <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Name</label>
                        <input
                          type="text"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[10px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] dark:focus:border-blue-500 focus:ring-2 focus:ring-[#0066FF]/30 dark:focus:ring-blue-500/30 outline-none bg-white/60 dark:bg-black/60 backdrop-blur-sm text-gray-900 dark:text-gray-100 shadow-inner transition-all placeholder-gray-400 dark:placeholder-gray-500"
                          placeholder="e.g. Custom Cake"
                        />
                      </div>
                      <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1 block">Price</label>
+                       <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block">Price</label>
                        <input
                          type="text"
                          inputMode="decimal"
                          pattern="[0-9]*\.?[0-9]*"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[10px] border border-white/50 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 backdrop-blur-sm text-gray-900 shadow-inner transition-all"
+                         className="w-full p-3 rounded-[10px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] dark:focus:border-blue-500 focus:ring-2 focus:ring-[#0066FF]/30 dark:focus:ring-blue-500/30 outline-none bg-white/60 dark:bg-black/60 backdrop-blur-sm text-gray-900 dark:text-gray-100 shadow-inner transition-all placeholder-gray-400 dark:placeholder-gray-500"
                          placeholder="0.00"
                        />
                      </div>
@@ -428,13 +402,13 @@ export default function OnboardingWizard() {
 
                 {/* Template Selection */}
                 <div className="space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Choose a Template</h3>
+                   <h3 className="font-bold text-gray-900 dark:text-gray-100 font-outfit pl-1">Choose a Template</h3>
                    <div className="grid grid-cols-2 gap-3">
                      {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
                        <button
                          key={t}
                          onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                         className={`p-3 rounded-[12px] border ${template === t ? 'border-[#0066FF] dark:border-blue-500 bg-white/70 dark:bg-white/20 backdrop-blur-md text-[#0066FF] dark:text-blue-400 font-bold shadow-sm' : 'border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-md text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/30'} transition-all text-sm`}
                        >
                          {t}
                        </button>
@@ -444,18 +418,18 @@ export default function OnboardingWizard() {
 
                 {/* Domain Selection */}
                 <div className="space-y-3">
-                   <h3 className="font-bold text-gray-900 font-outfit pl-1">Domain Name</h3>
+                   <h3 className="font-bold text-gray-900 dark:text-gray-100 font-outfit pl-1">Domain Name</h3>
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] dark:border-blue-500 bg-white/70 dark:bg-white/20 backdrop-blur-md text-[#0066FF] dark:text-blue-400 font-bold shadow-sm' : 'border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-md text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/30'} transition-all text-sm`}
                      >
                        <span>Free OHC Domain</span>
                        <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
                      </button>
                      <button
                        onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 bg-white/40 backdrop-blur-md text-gray-700 hover:border-white/80'} transition-all text-sm`}
+                       className={`p-4 rounded-[12px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] dark:border-blue-500 bg-white/70 dark:bg-white/20 backdrop-blur-md text-[#0066FF] dark:text-blue-400 font-bold shadow-sm' : 'border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-md text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/30'} transition-all text-sm`}
                      >
                        <span>Connect Custom Domain</span>
                        <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
@@ -467,7 +441,7 @@ export default function OnboardingWizard() {
               <div className="flex gap-3 mt-auto">
                 <button
                   onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 backdrop-blur-sm text-gray-700 hover:bg-white/70 shadow-sm border border-white/40 transition-all"
+                  className="px-6 py-4 rounded-[12px] font-bold bg-white/50 dark:bg-white/10 backdrop-blur-sm text-gray-700 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 transition-all"
                   disabled={isLoading}
                 >
                   Edit
@@ -489,26 +463,26 @@ export default function OnboardingWizard() {
 
           {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-20 h-20 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-10 h-10 text-[#34C759] dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You're Live!</h2>
-              <p className="text-gray-500 text-sm mb-8 px-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100 mb-2">You're Live!</h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
 
               <div className="w-full space-y-3 mt-auto">
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] dark:bg-white dark:text-black text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 backdrop-blur-md text-[#1D1D1F] border border-white/50 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-black/70 backdrop-blur-md text-[#1D1D1F] dark:text-white border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-black/90 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
