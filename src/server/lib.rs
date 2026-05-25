@@ -2875,6 +2875,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('settings-screen')">Settings</button>
                             <button onclick="showScreen('my-plan-screen')">Billing</button>
                             <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
+                            <button onclick="showScreen('review-campaigns-screen')">Review Campaigns ⭐️</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
                             <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
@@ -2981,6 +2982,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="nav-item">Analytics</button>
                             <button class="nav-item">Stats</button>
                             <button class="nav-item">Distribute</button>
+                        </div>
+                    </div>
+
+                    <!-- Review Campaigns -->
+                    <div id="review-campaigns-screen" class="screen glass" style="display: none; margin-bottom: 80px;">
+                        <h1>Automated Review Campaigns ⭐️</h1>
+                        <p>Turn customers into advocates. Generate highly-converting, personalized review request emails using AI.</p>
+
+                        <div class="card glass">
+                            <label for="review-product" style="display: block; margin-bottom: 8px; font-weight: 500;">Product to Feature (Optional)</label>
+                            <input type="text" id="review-product" placeholder="e.g. Signature Coffee Blend" style="width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+
+                            <label for="review-audience" style="display: block; margin-bottom: 8px; font-weight: 500;">Target Audience</label>
+                            <select id="review-audience" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
+                                <option value="recent">Recent Buyers (Last 14 Days)</option>
+                                <option value="loyal">Repeat Customers</option>
+                                <option value="all">All Past Customers</option>
+                            </select>
+
+                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateReviewCampaign()">Drafting with AI...</button>
+                        </div>
+
+                        <div id="review-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
+                            <h3 style="color: var(--primary); margin-top: 0;">✨ AI Generated Draft</h3>
+                            <div id="review-content" style="font-size: 14px; line-height: 1.6; color: #333; white-space: pre-wrap; font-family: monospace; background: #f9fafb; padding: 16px; border-radius: 8px; border: 1px solid #e5e7eb;"></div>
+
+                            <button id="review-send-btn" class="primary" style="width: 100%; font-size: 16px; padding: 16px; margin-top: 16px; background: #111827;" onclick="sendReviewCampaign()">Send to Audience</button>
+                            <div id="review-sent-msg" style="display: none; width: 100%; padding: 16px; background: #ecfdf5; color: #047857; text-align: center; border-radius: 8px; margin-top: 16px; font-weight: bold;"></div>
                         </div>
                     </div>
 
@@ -4398,6 +4427,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'referral-dashboard-screen': '/referrals',
                             'inbox-screen': '/inbox',
                             'seasonal-promo-screen': '/seasonal-promos',
+                            'review-campaigns-screen': '/review-campaigns',
                             'meetings-screen': '/meetings',
                             'meeting-room-screen': '/meetings/room/1',
                             'cost-dashboard-screen': '/cost-dashboard'
@@ -4789,6 +4819,48 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('promo-result').style.display = 'block';
                         }
 
+                        function generateReviewCampaign() {
+                            const productInput = document.getElementById('review-product').value;
+                            const audienceInput = document.getElementById('review-audience').value;
+
+                            const product = productInput.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            const productName = product ? product : 'recent purchase';
+
+                            document.getElementById('review-content').textContent = `Subject: How are you loving your ${productName}?
+
+Hi [Customer Name],
+
+Thank you so much for shopping with us! We noticed you recently received your ${productName} and we hope you are absolutely loving it.
+
+As a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review.
+
+Click here to leave a review: [Review Link]
+
+To say thanks, we'll send you a 10% discount code for your next purchase as soon as your review is published!
+
+Warmly,
+The Store Team`;
+
+                            document.getElementById('review-result').style.display = 'block';
+                            document.getElementById('review-send-btn').style.display = 'block';
+                            document.getElementById('review-sent-msg').style.display = 'none';
+
+                            let count = 48;
+                            if (audienceInput === 'loyal') count = 12;
+                            if (audienceInput === 'all') count = 156;
+
+                            document.getElementById('review-send-btn').textContent = `Send to Audience (${count} Customers)`;
+                            document.getElementById('review-send-btn').dataset.count = count;
+                        }
+
+                        function sendReviewCampaign() {
+                            const count = document.getElementById('review-send-btn').dataset.count || 48;
+                            document.getElementById('review-send-btn').style.display = 'none';
+                            const msg = document.getElementById('review-sent-msg');
+                            msg.textContent = `✅ Campaign sent to ${count} customers!`;
+                            msg.style.display = 'block';
+                        }
+
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
@@ -4886,7 +4958,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
+                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'review-campaigns-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
