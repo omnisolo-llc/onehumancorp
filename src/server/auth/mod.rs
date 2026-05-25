@@ -140,29 +140,14 @@ impl Store {
                     }
                 }
 
-                let sqlite_key_opt = std::env::var("OHC_SQLITE_KEY").ok().or_else(|| {
-                    let secret_path = std::path::Path::new(".ohc_sqlite_key");
-                    if secret_path.exists() {
-                        if let Ok(bytes) = std::fs::read_to_string(secret_path) {
-                            if !bytes.trim().is_empty() {
-                                return Some(bytes.trim().to_string());
-                            }
-                        }
-                    }
-                    None
-                });
-
-                let new_secret = if let Some(sqlite_key) = sqlite_key_opt {
+                let new_secret = if let Ok(sqlite_key) = std::env::var("OHC_SQLITE_KEY") {
                     tracing::debug!("falling back to generated JWT secret; deriving from OHC_SQLITE_KEY for determinism; writing to .ohc_jwt_secret for persistence");
                     let mut mac = HmacSha256::new_from_slice(b"ohc_jwt_derivation_salt").expect("HMAC can take key of any size");
                     mac.update(sqlite_key.as_bytes());
                     mac.finalize().into_bytes().to_vec()
                 } else {
                     tracing::debug!("falling back to generated JWT secret; writing to .ohc_jwt_secret for persistence");
-                    let mut key_bytes = [0u8; 32];
-                    use rand::RngCore;
-                    rand::thread_rng().fill_bytes(&mut key_bytes);
-                    key_bytes.to_vec()
+                    panic!("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.")
                 };
 
                 #[cfg(unix)]
@@ -477,9 +462,6 @@ impl Store {
                 };
                 if oidc_cfg.enabled {
                     let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
-                    if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                    }
                     if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }
@@ -503,9 +485,6 @@ impl Store {
                     if ::server_config::get().multitenant && data.claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
                         return Err("Invalid token: organization_id is required in cloud mode".to_string());
                     }
-                    if ::server_config::get().multitenant && data.claims.organization_id.as_deref() == Some("system") {
-                        return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                    }
                     if self.is_revoked(&data.claims.jti, &data.claims.organization_id.clone().unwrap_or_default()) {
                         return Err("token revoked".to_string());
                     }
@@ -524,9 +503,6 @@ impl Store {
                         }
                     };
                     if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
-                        if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
-                            return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
-                        }
                         if self.is_revoked(&claims.jti, &claims.organization_id.clone().unwrap_or_default()) {
                             return Err("token revoked".to_string());
                         }

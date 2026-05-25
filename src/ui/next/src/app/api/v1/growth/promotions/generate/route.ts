@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     const randomPromo = promotions[Math.floor(Math.random() * promotions.length)];
     const message = randomPromo.replace('{tenant}', tenantName);
 
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     return NextResponse.json({ message });
   } catch (error) {
     console.error("Error generating promotion:", error);
