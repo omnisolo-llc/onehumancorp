@@ -21,6 +21,9 @@ export default function Dashboard() {
   const [reviewLeft, setReviewLeft] = useState<boolean>(false);
   const [productAdded, setProductAdded] = useState<boolean>(false);
 
+  // Profile Menu State
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
@@ -29,6 +32,8 @@ export default function Dashboard() {
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [referralLink, setReferralLink] = useState<string>("");
+  const [meshMode, setMeshMode] = useState<string>('standalone');
+  const [meshChecklist, setMeshChecklist] = useState<string[]>([]);
 
   const [loyaltyEnabled, setLoyaltyEnabled] = useState<boolean>(false);
   const [enablingLoyalty, setEnablingLoyalty] = useState<boolean>(false);
@@ -109,6 +114,20 @@ export default function Dashboard() {
       }
     }
     fetchApprovals();
+
+    async function fetchHealth() {
+      try {
+        const res = await fetch('/api/v1/health');
+        const data = await res.json();
+        if (data) {
+          if (data.mode) setMeshMode(data.mode);
+          if (data.checklist) setMeshChecklist(data.checklist);
+        }
+      } catch (e) {
+        console.error("Failed to fetch health", e);
+      }
+    }
+    fetchHealth();
 
     // Connect to Teammate Mesh WebSocket for real-time swarm activity
 
@@ -240,14 +259,61 @@ export default function Dashboard() {
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+             <Link href="/agents" className="hidden md:flex px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                 AC
+
+             {/* Profile Menu relative container */}
+             <div className="relative">
+                 <button
+                     onClick={() => setShowProfileMenu(!showProfileMenu)}
+                     aria-label="Profile Menu"
+                     aria-expanded={showProfileMenu}
+                     className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 hover:ring-2 hover:ring-blue-300 transition-all focus:outline-none"
+                 >
+                     AC
+                 </button>
+
+                 {/* Profile Dropdown */}
+                 {showProfileMenu && (
+                     <div className="absolute right-0 mt-3 w-72 rounded-2xl p-4 shadow-2xl font-inter flex flex-col gap-4 border border-gray-100" style={{ background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(30px) saturate(210%)', zIndex: 60 }}>
+                         <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+                             <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-md font-bold text-gray-600">
+                                 AC
+                             </div>
+                             <div className="flex flex-col text-left">
+                                 <span className="text-sm font-semibold text-gray-900">Acme Corp</span>
+                                 <span className="text-xs text-gray-500">owner@acme.com</span>
+                             </div>
+                         </div>
+
+                         <div className="flex items-center justify-between py-2">
+                             <div className="flex flex-col text-left">
+                                 <span className="text-sm font-medium text-gray-900">Advanced Developer Settings</span>
+                                 <span className="text-xs text-gray-500">Reveal technical details</span>
+                             </div>
+                             <button
+                                 onClick={() => {
+                                     const newVal = !showAdvanced;
+                                     setShowAdvanced(newVal);
+                                     if (typeof localStorage !== 'undefined') localStorage.setItem('advanced_developer_settings', String(newVal));
+                                 }}
+                                 aria-label="Toggle Advanced Developer Settings"
+                                 className={`w-10 h-6 rounded-full transition-colors duration-300 relative flex-shrink-0 ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
+                             >
+                                 <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 shadow-sm ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                             </button>
+                         </div>
+                     </div>
+                 )}
              </div>
          </nav>
       </header>
+
+      {/* Dismiss profile menu when clicking outside (simple overlay) */}
+      {showProfileMenu && (
+          <div className="fixed inset-0 z-40" onClick={() => setShowProfileMenu(false)}></div>
+      )}
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
@@ -256,15 +322,6 @@ export default function Dashboard() {
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-blue-500' : 'bg-gray-300'}`}
-                        >
-                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
-                        </button>
-                    </div>
                 </div>
                 <div className="flex flex-col gap-4">
                     {approvals.map(approval => {
@@ -742,10 +799,21 @@ export default function Dashboard() {
          <section>
             <div className="flex items-center justify-between mb-4">
                 <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
-                <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                    <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
-                    <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
-                </div></WithTooltip>
+                <div className="flex items-center gap-3">
+                  {showAdvanced && (
+                    <WithTooltip id="mesh-mode-tooltip" defaultText="Displays the current Teammate Mesh interop transport layer.">
+                      <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                          <span className="text-xs font-medium" style={{ color: '#0066FF' }}>
+                              Transport: {meshMode === 'cloud' ? 'Redis (Cloud)' : (meshChecklist.some(c => c.includes('SQLite')) ? 'IPC/Memory (Standalone)' : 'Memory (Standalone)')}
+                          </span>
+                      </div>
+                    </WithTooltip>
+                  )}
+                  <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                      <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#34C759' }}></div>
+                      <span className="text-xs font-medium" style={{ color: '#34C759' }}>Swarm Online</span>
+                  </div></WithTooltip>
+                </div>
             </div>
 
             <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
