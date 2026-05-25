@@ -1,4 +1,5 @@
 use serde::Serialize;
+use sqlx::Row;
 
 #[derive(Serialize)]
 pub struct Customer360Response {
