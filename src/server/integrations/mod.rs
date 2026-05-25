@@ -28,3 +28,4 @@ pub mod jitsi;
 pub mod alipay;
 
 pub mod razorpay;
+pub mod manychat;
