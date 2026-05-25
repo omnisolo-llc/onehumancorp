@@ -3678,32 +3678,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass">
+
+                    <style>
+                        @media (prefers-color-scheme: dark) {
+                            #setup-screen {
+                                background: rgba(22, 22, 26, 0.7) !important;
+                                border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                                color: #F5F5F7 !important;
+                            }
+                        }
+                    </style>
+                    <div id="setup-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);">
+
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="padding: 20px;">
                             <h1>Your business, live in minutes.</h1>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px; background: #0066FF; color: white; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">⚡ Instant Build (AI) →</button>
                         </div>
                         <div id="step-2" class="hidden" style="display: none;">
                             <h1>What kind of business are you building?</h1>
-                            <input type="text" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <input type="text" placeholder="Business type" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <button onclick="nextStep(3)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-3" class="hidden" style="display: none;">
                             <h1>Give your business a name</h1>
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <input type="text" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Generate Description</button>
+                            <button onclick="nextStep(4)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
+                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-4" class="hidden" style="display: none;">
                             <h1>What do you sell?</h1>
@@ -3713,34 +3724,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
                                 <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
                             </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep(5)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-5" class="hidden" style="display: none;">
                             <h1>Add your first product or service</h1>
-                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
+                            <input type="text" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <input type="text" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <button onclick="nextStep('generating')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Generate AI Description</button>
+                            <button onclick="nextStep(6)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-6" class="hidden" style="display: none;">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
+                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Online</button>
+                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-7" class="hidden" style="display: none;">
                             <h1>Create your account</h1>
-                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
+                            <input type="text" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <input type="email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <input type="password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <button onclick="nextStep(8)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
                         </div>
                         <div id="step-8" class="hidden" style="display: none;">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
+                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Modern</button>
+                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Bold</button>
                             <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
                                 <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
@@ -3750,19 +3761,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-9" class="hidden" style="display: none;">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Next →</button>
                         </div>
                         <div id="step-10" style="display: none;">
                             <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);"><span>Publish my business</span> <span>→</span></button>
                         </div>
                         <div id="step-100" style="display: none;">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
+                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
@@ -3772,14 +3783,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
-                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <input type="text" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px; border: 1px solid rgba(0,0,0,0.2); background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); padding: 12px; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); outline: none;" onfocus="this.style.borderColor='#0066FF'; this.style.boxShadow='0 0 0 2px rgba(0,102,255,0.3)';" onblur="this.style.borderColor='rgba(0,0,0,0.2)'; this.style.boxShadow='none';" />
+                            <button onclick="generateAI()" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; background: rgba(255,255,255,0.5); backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); color: #1D1D1F; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Back</button>
                         </div>
                         <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -3792,7 +3803,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background: #0066FF; color: white; border: 1px solid rgba(255, 255, 255, 0.4); box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);">Continue to Dashboard →</button>
                         </div>
                     </div>
 
