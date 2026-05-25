@@ -80,7 +80,7 @@ impl AutoDreamPipeline {
 
         for row in tasks {
             let task_id: String = row.get("id");
-            let tenant_id: String = row.get("organization_id");
+            let organization_id: String = row.get("organization_id");
             let agent_id: Option<String> = row.try_get("assigned_agent_id").unwrap_or(None);
 
             let payload: String = row.try_get("payload").unwrap_or_default();
@@ -119,7 +119,7 @@ impl AutoDreamPipeline {
 
                         self.db.insert_autodream_memory(
                             &mem_id,
-                            &tenant_id,
+                            &organization_id,
                             agent_id.as_deref().unwrap_or("system"),
                             &task_id,
                             &chunk,

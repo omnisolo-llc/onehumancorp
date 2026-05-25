@@ -20,7 +20,7 @@ SET name = EXCLUDED.name,
     tier = EXCLUDED.tier,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
+INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, created_at, updated_at)
 VALUES
   (
     'e2e-admin-user',
@@ -50,10 +50,10 @@ SET username = EXCLUDED.username,
     password_hash = EXCLUDED.password_hash,
     roles = EXCLUDED.roles,
     active = EXCLUDED.active,
-    tenant_id = EXCLUDED.tenant_id,
+    organization_id = EXCLUDED.organization_id,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agent_approvals (id, tenant_id, department, description, status, action_risk, created_at, updated_at)
+INSERT INTO agent_approvals (id, organization_id, department, description, status, action_risk, created_at, updated_at)
 VALUES
 ('e2e-approval-1', 'e2e-tenant', 'customer_success', 'Draft email for review', 'PENDING', 'HIGH', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 ,
@@ -63,7 +63,7 @@ ON CONFLICT (id) DO UPDATE
 SET status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO agents (id, tenant_id, name, role, status, provider_type, region)
+INSERT INTO agents (id, organization_id, name, role, status, provider_type, region)
 VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'Marketing Pro', 'Marketing assistant', 'Active', 'minimax', 'us'),
   ('e2e-agent-ops', 'e2e-tenant', 'Ops Helper', 'Operations assistant', 'Active', 'minimax', 'us')
@@ -74,7 +74,7 @@ SET name = EXCLUDED.name,
     provider_type = EXCLUDED.provider_type,
     region = EXCLUDED.region;
 
-INSERT INTO customers (id, tenant_id, name, email, phone, preferences)
+INSERT INTO customers (id, organization_id, name, email, phone, preferences)
 VALUES
   ('e2e-customer-ava', 'e2e-tenant', 'Ava Customer', 'ava@example.com', '+15550101010', '{"diet":"vegan"}'::jsonb),
   ('e2e-customer-ben', 'e2e-tenant', 'Ben Buyer', 'ben@example.com', '+15550101011', '{}'::jsonb)
@@ -85,7 +85,7 @@ SET name = EXCLUDED.name,
     preferences = EXCLUDED.preferences,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO products (id, tenant_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
+INSERT INTO products (id, organization_id, title, description, type, price, price_cents, currency, inventory_count, metadata)
 VALUES
   ('e2e-product-cake', 'e2e-tenant', 'Vegan Celebration Cake', 'Plant-based celebration cake for local pickup.', 'physical', 39.99, 3999, 'USD', 12, '{"seeded_by":"e2e"}'::jsonb),
   ('e2e-product-class', 'e2e-tenant', 'Cake Decorating Class', 'Hands-on decorating session for small groups.', 'booking', 75.00, 7500, 'USD', 8, '{"seeded_by":"e2e"}'::jsonb)
@@ -100,7 +100,7 @@ SET title = EXCLUDED.title,
     metadata = EXCLUDED.metadata,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO orders (id, tenant_id, customer_id, total_amount, status)
+INSERT INTO orders (id, organization_id, customer_id, total_amount, status)
 VALUES
   ('e2e-order-1', 'e2e-tenant', 'e2e-customer-ava', 39.99, 'ready'),
   ('e2e-order-2', 'e2e-tenant', 'e2e-customer-ben', 75.00, 'pending')
@@ -110,7 +110,7 @@ SET customer_id = EXCLUDED.customer_id,
     status = EXCLUDED.status,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO shared_tasks (id, tenant_id, title, description, status, agent_id, priority, payload)
+INSERT INTO shared_tasks (id, organization_id, title, description, status, agent_id, priority, payload)
 VALUES
   ('e2e-task-restock', 'e2e-tenant', 'Prepare weekend inventory', 'Review seeded orders and prep ingredients.', 'PENDING', 'e2e-agent-ops', 'P1', '{"source":"database_seed"}'),
   ('e2e-task-social', 'e2e-tenant', 'Draft weekly promotion', 'Create a promotion for vegan celebration cakes.', 'PENDING', 'e2e-agent-marketing', 'P2', '{"source":"database_seed"}')
@@ -123,13 +123,13 @@ SET title = EXCLUDED.title,
     payload = EXCLUDED.payload,
     updated_at = CURRENT_TIMESTAMP;
 
-INSERT INTO meeting_rooms (id, tenant_id, agenda, participants)
+INSERT INTO meeting_rooms (id, organization_id, agenda, participants)
 VALUES ('e2e-room-ops', 'e2e-tenant', 'Daily operations check-in', '["Marketing Pro","Ops Helper"]')
 ON CONFLICT (id) DO UPDATE
 SET agenda = EXCLUDED.agenda,
     participants = EXCLUDED.participants;
 
-INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content, meeting_id)
+INSERT INTO agent_inbox (agent_id, organization_id, message_id, from_agent, to_agent, type, content, meeting_id)
 VALUES
   ('e2e-agent-marketing', 'e2e-tenant', 'e2e-message-vegan-options', 'customer', 'e2e-agent-marketing', 'customer_question', 'Do you have vegan options for birthday cakes?', 'e2e-room-ops')
 ON CONFLICT DO NOTHING;
