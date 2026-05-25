@@ -387,6 +387,58 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Nudge: Storefront Analytics & Growth Insights */}
+         <section className="mt-8 mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Storefront Analytics & Growth Insights</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                        <span className="text-xs font-medium text-blue-600">Goal Tracker</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1 w-full">
+                    <div className="flex justify-between items-end mb-2">
+                        <div>
+                            <h3 className="text-lg font-bold font-outfit text-gray-900">Race to 10 Orders! 🚀</h3>
+                            <p className="text-sm text-gray-600">You are 3 orders away from your first major milestone.</p>
+                        </div>
+                        <div className="text-right">
+                            <span className="text-2xl font-bold font-outfit text-blue-600">7</span>
+                            <span className="text-sm text-gray-500 font-medium"> / 10</span>
+                        </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-gray-100 rounded-full h-3 mb-6 overflow-hidden">
+                        <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full" style={{ width: '70%' }}></div>
+                    </div>
+
+                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl shadow-sm">
+                                💡
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-gray-900 text-sm">Need a boost?</h4>
+                                <p className="text-xs text-gray-600">Stores that share their link on social media see a 40% increase in traffic.</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText("Check out my new store! https://mybusiness.ohc.store");
+                                alert("Store link copied! Share it on your favorite social network.");
+                            }}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors whitespace-nowrap w-full sm:w-auto"
+                        >
+                            Copy Store Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
