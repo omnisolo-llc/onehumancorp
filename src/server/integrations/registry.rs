@@ -30,7 +30,7 @@ pub struct IntegrationsRegistry {
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
-    jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
+    sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -67,7 +67,7 @@ impl IntegrationsRegistry {
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -251,9 +251,9 @@ impl IntegrationsRegistry {
             let mut clients = self.easypost_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::easypost::provider::EasyPostProvider::new(creds.api_token.clone())));
         }
-        if integration_id == "jitsi" {
-            let mut clients = self.jitsi_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
+        if integration_id == "sendgrid" {
+            let mut clients = self.sendgrid_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
         Ok(inst)
@@ -406,8 +406,8 @@ impl IntegrationsRegistry {
 
     pub async fn send_campaign(&self, integration_id: &str, audience: &str, body: &str) -> Result<(), String> {
         let client = {
-            if integration_id == "mailchimp" {
-                let clients = self.mailchimp_clients.read().unwrap();
+            if integration_id == "sendgrid" {
+                let clients = self.sendgrid_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
                 None
@@ -415,6 +415,66 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.send_campaign(audience, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn send_message(&self, integration_id: &str, platform: &str, to: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "meta" {
+                let clients = self.meta_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_message(platform, to, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn send_sms(&self, integration_id: &str, to: &str, from: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "twilio" {
+                let clients = self.twilio_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_sms(to, from, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "mercadopago" {
+                let clients = self.mercadopago_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_payment(amount, description, payer_email).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "mercadopago" {
+                let clients = self.mercadopago_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -519,6 +579,36 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_booking_link(event_type).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "sendgrid" {
+                let clients = self.sendgrid_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.send_email(to, subject, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn create_shipment(&self, integration_id: &str, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "easypost" {
+                let clients = self.easypost_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_shipment(to_address, from_address, parcel_details).await;
         }
         Err("integration not found or not supported".to_string())
     }
