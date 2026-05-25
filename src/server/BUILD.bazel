@@ -168,6 +168,7 @@ rust_binary(
         "powersync",
         "scheduler",
         "settings",
+        "sip",
         "tasks",
         "ultraplan",
         "orchestration",
