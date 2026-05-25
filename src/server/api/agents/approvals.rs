@@ -34,6 +34,7 @@ pub struct DecisionResponse {
     pub success: bool,
 }
 
+// Mobile-optimized API endpoint for 1-tap approvals
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,

@@ -155,6 +155,7 @@ impl DepartmentOrchestrator {
         }
     }
 
+    // Central event bus for pub/sub messaging across departments
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
         let topic = format!("department_event:{}", event.event_type);
         let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;
@@ -250,6 +251,7 @@ impl DepartmentOrchestrator {
 
     }
 
+    // Draft-for-Review state machine implementation
     pub async fn execute_action(
         &self,
         department: DepartmentType,
