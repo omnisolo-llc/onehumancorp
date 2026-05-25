@@ -1851,6 +1851,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
+async fn generate_manychat_draft_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let draft = "Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.";
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "draft": draft }))).into_response()
+}
+
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
     let pool = crate::db::get_pool();
@@ -1909,6 +1915,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/meetings", axum::routing::get(ui_handler))
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
+        .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -2622,7 +2629,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border-left-color: var(--primary) !important;
                             color: var(--text) !important;
                         }
-                        #facebook-integration {
+                        #manychat-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -2881,20 +2888,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
                             <button onclick="alert(&quot;What's New&quot;)">What's New</button>
-                            <button id="integrations-btn" onclick="document.getElementById('facebook-integration').style.display='block'; document.getElementById('instagram-integration').style.display='block'; document.getElementById('whatsapp-integration').style.display='block';">Integrations</button>
+                            <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="facebook-integration" class="card glass" style="display: none;">
-                            <h3>📘 Facebook</h3>
-                            <button onclick="alert('Configure Facebook'); showScreen('inbox-screen')">Configure</button>
-                        </div>
-                        <div id="instagram-integration" class="card glass" style="display: none;">
-                            <h3>📸 Instagram</h3>
-                            <button onclick="alert('Configure Instagram'); showScreen('inbox-screen')">Configure</button>
-                        </div>
-                        <div id="whatsapp-integration" class="card glass" style="display: none;">
-                            <h3>💬 WhatsApp</h3>
-                            <button onclick="alert('Configure WhatsApp'); showScreen('inbox-screen')">Configure</button>
+                        <div id="manychat-integration" class="card glass" style="display: none;">
+                            <h3>💬 Manychat</h3>
+                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
+                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
