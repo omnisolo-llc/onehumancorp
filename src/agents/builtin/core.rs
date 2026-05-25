@@ -8,3 +8,4 @@ pub mod types;
 pub mod output_parser;
 
 pub mod hnsw_memory;
+pub mod code_native;
