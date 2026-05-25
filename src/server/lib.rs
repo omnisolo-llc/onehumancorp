@@ -3081,18 +3081,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
                         </div>
 
-                        <!-- Automated AI Review Requests -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.</p>
-                            <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
-                                ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
-                            </div>
-                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
-                        </div>
-
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -3833,7 +3821,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
@@ -4137,52 +4124,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
                             // Re-run the campaign now that they have pro
-                            sendReviewCampaign();
                         }
 
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
                         }
 
-                        async function sendReviewCampaign() {
-                            if (localStorage.getItem('has_pro') !== 'true') {
-                                document.getElementById('soft-paywall-modal').classList.add('open');
-                                return;
-                            }
-
-                            const btn = document.getElementById('send-review-campaign-btn');
-                            btn.textContent = 'Generating...';
-                            btn.disabled = true;
-
-                            try {
-                                const response = await fetch('/api/v1/growth/campaign/send', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        name: 'Automated Review Request',
-                                        subject: 'How did we do? Leave a review!',
-                                        body: 'We hope you loved your recent purchase. Please leave a review.',
-                                        target_segment: 'recent_buyers_no_review'
-                                    })
-                                });
-
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    document.getElementById('review-emails-sent').textContent = data.emails_sent;
-                                    document.getElementById('review-campaign-success').style.display = 'block';
-                                    btn.style.display = 'none';
-                                } else {
-                                    btn.textContent = '✨ Send AI Review Requests';
-                                    btn.disabled = false;
-                                    alert('Failed to send campaign');
-                                }
-                            } catch (e) {
-                                console.error('Failed to send review campaign', e);
-                                btn.textContent = '✨ Send AI Review Requests';
-                                btn.disabled = false;
-                                alert('Failed to send campaign');
-                            }
-                        }
 
                         function closeDomainSetup() {
                             document.getElementById('domain-setup-sheet').classList.remove('open');
