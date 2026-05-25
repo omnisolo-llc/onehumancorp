@@ -451,6 +451,12 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        let limit_status = self.hub.tracker().check_product_quota(&req.organization_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+            is_allowed: true,
+            soft_limit_reached: false,
+            user_message: None,
+        });
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
@@ -460,6 +466,9 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            soft_limit_reached: limit_status.soft_limit_reached,
+            upgrade_message: limit_status.user_message.unwrap_or_default(),
+            is_allowed: limit_status.is_allowed,
         }))
     }
 

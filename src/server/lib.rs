@@ -258,11 +258,15 @@ struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
+    soft_limit_reached: bool,
+    upgrade_message: String,
+    is_allowed: bool,
 }
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
+    hub: std::sync::Arc<Hub>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpMetricsRequest>,
 ) -> axum::response::Response {
@@ -293,7 +297,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
+    let (active_customers_res, pending_orders_res, sales_res, limit_status) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -311,6 +315,13 @@ async fn http_metrics_handler(
                 .bind(&tenant_id)
                 .fetch_one(&db.pool)
                 .await
+        },
+        async {
+            hub.tracker().check_product_quota(&tenant_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            })
         }
     );
 
@@ -320,7 +331,14 @@ async fn http_metrics_handler(
 
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
+        axum::Json(HttpMetricsResponse {
+            active_customers,
+            pending_orders,
+            total_sales,
+            soft_limit_reached: limit_status.soft_limit_reached,
+            upgrade_message: limit_status.user_message.unwrap_or_default(),
+            is_allowed: limit_status.is_allowed
+        }),
     )
         .into_response()
 }
@@ -2010,7 +2028,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::routing::post({
                 let db = db_for_sales.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
+                let hub_clone = hub.clone();
+                move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, hub_clone, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))

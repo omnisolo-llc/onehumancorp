@@ -14,6 +14,10 @@ export default function Dashboard() {
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
+  const [softLimitReached, setSoftLimitReached] = useState<boolean>(false);
+  const [upgradeMessage, setUpgradeMessage] = useState<string>("You have reached the 10 Products Limit on the Free plan. Upgrade to the Starter plan to add more products and unlock unlimited potential.");
+  const [isAllowed, setIsAllowed] = useState<boolean>(true);
+  const [showSoftLimitNotification, setShowSoftLimitNotification] = useState<boolean>(false);
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -175,9 +179,21 @@ export default function Dashboard() {
 
             if (metricsRes.ok) {
                 const metricsData = await metricsRes.json();
-                setTodaysSales(metricsData.total_sales);
-                setActiveCustomers(metricsData.active_customers);
-                setPendingOrders(metricsData.pending_orders);
+                setTodaysSales(metricsData.total_sales || 0);
+                setActiveCustomers(metricsData.active_customers || 0);
+                setPendingOrders(metricsData.pending_orders || 0);
+                if (metricsData.soft_limit_reached !== undefined) {
+                    setSoftLimitReached(metricsData.soft_limit_reached);
+                    if (metricsData.soft_limit_reached) {
+                        setShowSoftLimitNotification(true);
+                    }
+                }
+                if (metricsData.upgrade_message) {
+                    setUpgradeMessage(metricsData.upgrade_message);
+                }
+                if (metricsData.is_allowed !== undefined) {
+                    setIsAllowed(metricsData.is_allowed);
+                }
             }
 
             if (invitesRes.ok) {
@@ -241,6 +257,33 @@ export default function Dashboard() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+        {/* Soft Limit Notification */}
+        {showSoftLimitNotification && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-md flex justify-between items-start shadow-sm">
+            <div className="flex gap-3 items-start">
+              <div className="text-yellow-500 text-xl">💡</div>
+              <div>
+                <h3 className="text-yellow-800 font-bold font-outfit text-sm">Message from The Advisor</h3>
+                <p className="text-yellow-700 text-sm mt-1">{upgradeMessage}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded font-semibold text-xs hover:bg-yellow-200 transition-colors border border-yellow-300"
+              >
+                View Upgrade Options
+              </button>
+              <button
+                onClick={() => setShowSoftLimitNotification(false)}
+                className="text-yellow-500 hover:text-yellow-700"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
@@ -520,7 +563,7 @@ export default function Dashboard() {
                 </div>
                 <button
                     onClick={() => {
-                        if (productCount >= 10) {
+                        if (!isAllowed || productCount >= 10) {
                             setShowPaywallModal(true);
                         } else {
                             setProductCount(prev => prev + 1);
@@ -794,7 +837,7 @@ export default function Dashboard() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You've hit your limit!</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              You have reached the <strong className="text-gray-900">10 Products Limit</strong> on the Free plan. Upgrade to the Starter plan to add more products and unlock unlimited potential.
+              {upgradeMessage}
             </p>
 
             <div className="space-y-3">
@@ -802,7 +845,7 @@ export default function Dashboard() {
                 href="/pricing"
                 className="block w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
               >
-                Upgrade to Starter
+                Upgrade Options
               </Link>
               <button
                 onClick={() => setShowPaywallModal(false)}

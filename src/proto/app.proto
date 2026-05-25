@@ -39,6 +39,9 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  bool soft_limit_reached = 9;
+  string upgrade_message = 10;
+  bool is_allowed = 11;
 }
 
 message GetDashboardRequest {
