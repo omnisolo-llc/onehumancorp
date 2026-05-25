@@ -8,6 +8,7 @@ filegroup(
         "hire.rs",
         "mission/mod.rs",
         "mission/handoff.rs",
+        "chat.rs",
         "mod.rs",
     ],
     visibility = ["//src/server/api:__pkg__"],
