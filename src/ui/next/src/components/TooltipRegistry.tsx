@@ -1,4 +1,5 @@
 "use client";
+import { invoke } from "@tauri-apps/api/core";
 
 import React, { createContext, useContext, useState, ReactNode, useRef, useEffect } from 'react';
 
@@ -21,7 +22,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {});
+    if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) { invoke("get_tooltips").then((data: any) => setTooltips(data)).catch(() => {}); } else { fetch("/api/tooltips").then(r => r.json()).then(data => setTooltips(data)).catch(() => {}); }
   }, []);
 
   return (

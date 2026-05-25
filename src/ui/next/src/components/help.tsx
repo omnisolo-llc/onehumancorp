@@ -1,4 +1,5 @@
 "use client";
+import { invoke } from "@tauri-apps/api/core";
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import DOMPurify from 'dompurify';
@@ -18,8 +19,7 @@ export function TooltipRegistryProvider({ children }: { children: ReactNode }) {
   const [tooltips, setTooltips] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    fetch("/api/tooltips")
-      .then(res => res.json())
+    ((typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) ? invoke("get_tooltips") : fetch("/api/tooltips").then(res => res.json()))
       .then(data => setTooltips(prev => ({ ...data, ...prev })))
       .catch(() => {});
   }, []);
@@ -192,8 +192,7 @@ export function HelpWidget() {
   const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
 
   useEffect(() => {
-    fetch("/api/help")
-      .then(res => res.json())
+    ((typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) ? invoke("get_help_articles") : fetch("/api/help").then(res => res.json()))
       .then(data => {
         if (data && data.length > 0) setHelpArticles(data);
       })
@@ -207,8 +206,7 @@ export function HelpWidget() {
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
 
   useEffect(() => {
-    fetch("/api/videos")
-      .then(res => res.json())
+    ((typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) ? invoke("get_videos") : fetch("/api/videos").then(res => res.json()))
       .then(data => {
         if (data && data.length > 0) setVideos(data);
       })
@@ -222,8 +220,13 @@ export function HelpWidget() {
       setChatMessages(prev => [...prev, { role: "user", text: val }]);
 
       try {
-        const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-        const data = await response.json();
+        let data: any;
+        if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+            data = await invoke("chat_help", { message: val });
+        } else {
+            const response = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
+            data = await response.json();
+        }
         setChatMessages(prev => [...prev, { role: "bot", text: data.reply, linkUrl: data.link?.url, linkTitle: data.link?.title }]);
       } catch (err) {
         setChatMessages(prev => [...prev, { role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);

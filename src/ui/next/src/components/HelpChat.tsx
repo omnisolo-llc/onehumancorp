@@ -1,4 +1,5 @@
 "use client";
+import { invoke } from "@tauri-apps/api/core";
 
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -32,22 +33,24 @@ export function HelpChat() {
     const userMessage: Message = { id: Date.now().toString(), sender: 'user', text: inputValue };
     setMessages(prev => [...prev, userMessage]);
     setInputValue("");    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: inputValue })
-      });
-
-      if (!response.ok) throw new Error("Failed to fetch");
-
-      const data = await response.json();
-
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'agent',
-        text: data.reply,
-        link: data.link
-      }]);
+      if (typeof window !== "undefined" && (window as any).__TAURI_INTERNALS__) {
+          const data: any = await invoke("chat_help", { message: inputValue });
+          setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), sender: 'agent', text: data.reply, link: data.link }]);
+      } else {
+          const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: inputValue })
+          });
+          if (!response.ok) throw new Error("Failed to fetch");
+          const data = await response.json();
+          setMessages(prev => [...prev, {
+            id: (Date.now() + 1).toString(),
+            sender: 'agent',
+            text: data.reply,
+            link: data.link
+          }]);
+      }
     } catch (err) {
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),

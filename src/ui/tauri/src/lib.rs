@@ -209,6 +209,89 @@ fn endpoint_url(base_url: &str, endpoint: &str) -> String {
     format!("{}/{}", base_url.trim_end_matches('/'), endpoint)
 }
 
+
+#[tauri::command]
+async fn get_tooltips() -> std::collections::HashMap<String, String> {
+    let mut m = std::collections::HashMap::new();
+    m.insert("bio-input-tooltip".to_string(), "Tell us what you sell and who your customers are. Keep it simple!".to_string());
+    m.insert("generate-btn-tooltip".to_string(), "Click here to have our AI build your ready-to-launch store.".to_string());
+    m.insert("launch-btn-tooltip".to_string(), "Make your store live on the internet so customers can visit.".to_string());
+    m.insert("team-activity-tooltip".to_string(), "See exactly what your AI helpers are doing right now.".to_string());
+    m.insert("referral-tooltip".to_string(), "Share this link with friends. You earn credits if they sign up!".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI helpers are working hard on your tasks right now.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click here to see tasks that need your approval.".to_string());
+    m.insert("nav-dashboard-tooltip".to_string(), "Check your sales, recent orders, and how your store is doing.".to_string());
+    m.insert("nav-agents-tooltip".to_string(), "See your AI team, give them tasks, or hire new helpers.".to_string());
+    m.insert("nav-setup-tooltip".to_string(), "Set up your business info, logo, and how you get paid.".to_string());
+    m.insert("credit-tooltip".to_string(), "Get free credits for premium tools by inviting a friend.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here for guides, videos, and to ask our AI.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See the latest updates and new features we just added.".to_string());
+    m
+}
+
+#[derive(serde::Serialize)]
+struct HelpArticle {
+    title: String,
+    desc: String,
+    link: Option<String>,
+}
+
+#[tauri::command]
+async fn get_help_articles() -> Vec<HelpArticle> {
+    vec![
+        HelpArticle { title: "Getting Started".into(), desc: "Learn how to easily set up your store and accept your first payment.".into(), link: Some("/help/getting-started".into()) },
+        HelpArticle { title: "My Store".into(), desc: "Add products, track what's in stock, and change how your store looks.".into(), link: Some("/help/my-store".into()) },
+        HelpArticle { title: "Getting Paid".into(), desc: "Set up how you get paid, view deposits, and handle simple taxes.".into(), link: Some("/help/payments".into()) },
+        HelpArticle { title: "Your AI Helpers".into(), desc: "Learn how to hire AI helpers and give them tasks to do.".into(), link: Some("/help/ai-agents".into()) },
+        HelpArticle { title: "Finding Customers".into(), desc: "Send emails to customers and grow your business easily.".into(), link: Some("/help/marketing".into()) },
+        HelpArticle { title: "Account & Billing".into(), desc: "View your bills, manage your plan, and invite team members.".into(), link: Some("/help/account-billing".into()) }
+    ]
+}
+
+#[derive(serde::Serialize)]
+struct VideoTutorial {
+    id: i32,
+    title: String,
+    duration: String,
+}
+
+#[tauri::command]
+async fn get_videos() -> Vec<VideoTutorial> {
+    vec![
+        VideoTutorial { id: 1, title: "How to set up your first store easily".into(), duration: "1:20".into() },
+        VideoTutorial { id: 2, title: "Linking your own website name".into(), duration: "0:45".into() },
+        VideoTutorial { id: 3, title: "Getting paid for the first time".into(), duration: "1:10".into() },
+        VideoTutorial { id: 4, title: "Hiring your first AI helper".into(), duration: "1:05".into() },
+        VideoTutorial { id: 5, title: "Adding and editing your products".into(), duration: "0:55".into() },
+        VideoTutorial { id: 6, title: "Sending emails to your customers".into(), duration: "1:15".into() },
+        VideoTutorial { id: 7, title: "Seeing how much you sold".into(), duration: "0:50".into() },
+        VideoTutorial { id: 8, title: "What to do when you get an order".into(), duration: "1:00".into() },
+        VideoTutorial { id: 9, title: "Changing colors and logos".into(), duration: "1:25".into() },
+        VideoTutorial { id: 10, title: "Adding staff to your account".into(), duration: "0:40".into() }
+    ]
+}
+
+#[derive(serde::Serialize)]
+struct Link {
+    url: String,
+    title: String,
+}
+
+#[derive(serde::Serialize)]
+struct ChatReply {
+    reply: String,
+    link: Option<Link>,
+}
+
+#[tauri::command]
+async fn chat_help(message: String) -> ChatReply {
+    ChatReply {
+        reply: "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".into(),
+        link: Some(Link { url: "/help".into(), title: "Read the full article →".into() })
+    }
+}
+
+
 #[cfg(ohc_bazel_tauri_context)]
 macro_rules! tauri_build_context {
     () => {
@@ -235,6 +318,10 @@ pub fn run() {
             load_ai_provider,
             save_ai_provider,
             test_ai_provider,
+            get_tooltips,
+            get_help_articles,
+            get_videos,
+            chat_help,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
