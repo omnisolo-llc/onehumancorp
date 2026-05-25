@@ -214,6 +214,7 @@ rust_binary(
         "ruflo",
         "output_parser",
         "pubsub",
+        "mesh/transport",
         "registry",
         "gpt_researcher",
         "local_provider",

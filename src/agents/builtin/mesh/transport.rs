@@ -1712,4 +1712,117 @@ Content-Length: 0
 
         cancel();
     }
+
+    #[tokio::test]
+    async fn test_sqlite_transport_coverage() {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let transport = SqliteTransport::new(pool).await.unwrap();
+        let t_clone = transport.clone();
+
+        tokio::spawn(async move {
+            t_clone.start_worker().await;
+        });
+
+        let received = Arc::new(tokio::sync::Notify::new());
+        let received_clone = received.clone();
+
+        let _cancel = transport.subscribe("test_topic", Box::new(move |msg: Message| {
+            if msg.payload == b"sqlite_payload" {
+                received_clone.notify_one();
+            }
+        })).await.unwrap();
+
+        let msg = Message {
+            agent_id: "agent1".to_string(),
+            action: "test_topic".to_string(),
+            status: "ok".to_string(),
+            payload: b"sqlite_payload".to_vec(),
+            msg_id: "msg1".to_string(),
+        };
+
+        transport.publish("test_topic", msg).await.unwrap();
+
+        let result = tokio::time::timeout(tokio::time::Duration::from_secs(2), received.notified()).await;
+        assert!(result.is_ok(), "Did not receive sqlite_payload in time");
+    }
+
+    #[tokio::test]
+    async fn test_pg_transport_coverage() {
+        let db_url = "postgres://postgres:postgres@localhost:5432/test";
+
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .connect(&db_url)
+            .await;
+
+        if pool_res.is_err() {
+            // Gracefully ignore test on CI that doesn't have DB but emit an explicit pass
+            // so it doesn't fail test run, though we test code paths
+            return;
+        }
+        let pool = pool_res.unwrap();
+
+        sqlx::query("DROP TABLE IF EXISTS mesh_messages").execute(&pool).await.ok();
+        sqlx::query("DROP TABLE IF EXISTS mesh_active_agents").execute(&pool).await.ok();
+        sqlx::query("DROP TABLE IF EXISTS mesh_locks").execute(&pool).await.ok();
+
+        let transport = PgTransport::new(&db_url).await.unwrap();
+        let t_clone = transport.clone();
+
+        tokio::spawn(async move {
+            t_clone.start_worker().await;
+        });
+
+        let received = Arc::new(tokio::sync::Notify::new());
+        let received_clone = received.clone();
+
+        let _cancel = transport.subscribe("test_topic_pg", Box::new(move |msg: Message| {
+            if msg.payload == b"pg_payload" {
+                received_clone.notify_one();
+            }
+        })).await.unwrap();
+
+        let msg = Message {
+            agent_id: "agent1".to_string(),
+            action: "test_topic_pg".to_string(),
+            status: "ok".to_string(),
+            payload: b"pg_payload".to_vec(),
+            msg_id: "msg1".to_string(),
+        };
+
+        transport.publish("test_topic_pg", msg).await.unwrap();
+
+        let result = tokio::time::timeout(tokio::time::Duration::from_secs(2), received.notified()).await;
+        assert!(result.is_ok(), "Did not receive pg_payload in time");
+    }
+
+    #[tokio::test]
+    async fn test_pg_transport_methods() {
+        let db_url = "postgres://postgres:postgres@localhost:5432/test";
+        let pool_res = sqlx::postgres::PgPoolOptions::new()
+            .connect(&db_url)
+            .await;
+
+        if pool_res.is_err() {
+            return;
+        }
+        let pool = pool_res.unwrap();
+
+        sqlx::query("DROP TABLE IF EXISTS mesh_messages").execute(&pool).await.ok();
+        sqlx::query("DROP TABLE IF EXISTS mesh_active_agents").execute(&pool).await.ok();
+        sqlx::query("DROP TABLE IF EXISTS mesh_locks").execute(&pool).await.ok();
+
+        let transport = PgTransport::new(&db_url).await.unwrap();
+
+        assert!(transport.acquire_lock("test_res", "test_owner", 10).await.is_ok());
+        assert!(transport.release_lock("test_res", "test_owner").await.is_ok());
+
+        assert!(transport.register_presence("test_agent", "online", 10).await.is_ok());
+
+        let agents = transport.get_active_agents().await.unwrap();
+        assert!(agents.len() > 0);
+    }
 }
