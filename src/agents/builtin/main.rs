@@ -155,15 +155,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Ok(resp) => {
                 let inner = resp.into_inner();
                 if !inner.error.is_empty() {
-                    eprintln!("{}", inner.error);
+                    tracing::error!("{}", inner.error);
                     std::process::exit(1);
                 } else {
-                    println!("{}", inner.result);
+                    tracing::info!("{}", inner.result);
                     return Ok(());
                 }
             }
             Err(e) => {
-                eprintln!("Subagent dispatch error: {}", e);
+                tracing::error!("Subagent dispatch error: {}", e);
                 std::process::exit(1);
             }
         }

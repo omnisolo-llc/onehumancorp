@@ -20,7 +20,7 @@ impl RealTwilioClient {
 impl TwilioClientWrapper for RealTwilioClient {
     async fn send_sms(&self, to: &str, _from: &str, body: &str) -> Result<(), String> {
         // Mock send sms
-        println!("Sending SMS via Twilio to {}: {}", to, body);
+        tracing::info!("Sending SMS via Twilio to {}: {}", to, body);
         Ok(())
     }
 }

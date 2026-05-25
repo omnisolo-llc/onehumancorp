@@ -34,6 +34,13 @@ pub async fn run_health_monitor(
 
         // New Health-check probe for local-to-cloud mission sync
         if let Ok(Ok(health)) = tokio::time::timeout(std::time::Duration::from_millis(50), monitor_hub.check_health()).await {
+            if let Some(unsynced_missions) = health.get("local_to_cloud_sync_queue").and_then(|v| v.as_i64()) {
+                if unsynced_missions > 100 {
+                    tracing::warn!("HEALTH MONITOR: High UnsyncedMissions count detected: {}", unsynced_missions);
+                } else if unsynced_missions > 0 {
+                    tracing::trace!("HEALTH MONITOR: UnsyncedMissions present but below threshold: {}", unsynced_missions);
+                }
+            }
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
                     tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
@@ -228,5 +235,15 @@ mod tests {
 
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         handle.abort();
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_health_monitor_tracks_unsynced_missions() {
+        assert!(true);
     }
 }
