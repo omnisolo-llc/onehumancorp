@@ -73,6 +73,7 @@ export default function OnboardingWizard() {
         console.error("Failed to load onboarding state", err);
       } finally {
         setIsLoaded(true);
+        console.log("Onboarding state loaded");
       }
     };
 
@@ -233,7 +234,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+    <div id="setup-screen" className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
           background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.5));
