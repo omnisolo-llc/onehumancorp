@@ -234,4 +234,72 @@ test.describe('Lens Audit E2E Flow', () => {
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
   });
+
+
+  test('verify Business Snapshot remains visible when Action Required is absent by rejecting all pending approvals', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Ensure Action Required starts visible due to seeded DB approvals
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+
+    // Reject all pending approvals one by one to empty the list natively
+    const rejectButtons = page.getByRole('button', { name: 'Reject' });
+    const count = await rejectButtons.count();
+
+    for (let i = 0; i < count; i++) {
+        await rejectButtons.first().click();
+        await page.waitForTimeout(500);
+    }
+
+    // Action Required should NOT be visible since all approvals were rejected
+    await expect(page.getByText("Action Required")).not.toBeVisible({ timeout: 10000 });
+
+    // Verify Business Snapshot IS STILL visible natively
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+  });
+
+
+  test('verify Business Snapshot remains visible concurrently with Action Required', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Ensure Action Required starts visible due to seeded DB approvals
+    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+
+    // Assert that Business Snapshot is ALREADY visible while Action Required is present
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+
+    // Proceed to clear the approvals natively to ensure no crash happens on transition
+    const rejectButtons = page.getByRole('button', { name: 'Reject' });
+    const count = await rejectButtons.count();
+
+    for (let i = 0; i < count; i++) {
+        await rejectButtons.first().click();
+        await page.waitForTimeout(500);
+    }
+
+    // Action Required should NOT be visible since all approvals were rejected
+    await expect(page.getByText("Action Required")).not.toBeVisible({ timeout: 10000 });
+
+    // Verify Business Snapshot REMAINS visible
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+  });
+
+
+  test('verify Business Snapshot data reflects real DB state accurately', async ({ page, request }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+    await expect(page.getByText("$114.99")).toBeVisible({ timeout: 10000 });
+  });
+
+  test('verify AI Business Insights is correctly displayed with Business Snapshot', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+    await expect(page.getByText("AI Business Insights")).toBeVisible();
+  });
+
+  test('verify Growth & Promotions section maintains token visibility with Snapshot', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByText("Business Snapshot")).toBeVisible();
+    await expect(page.getByText("Growth & Promotions")).toBeVisible();
+  });
 });
