@@ -62,13 +62,13 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                         Ok(parsed) => return Ok(parsed),
                         Err(e) => {
                             parse_error_msg = Some(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                                "Validation Error (Pydantic-first tool schema): Failed to parse tool call arguments as valid JSON matching the schema. Reason: {}. Please correct your JSON arguments and try again.", e
                             ));
                         }
                     }
                 } else {
                     parse_error_msg = Some(
-                        "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
+                        "Validation Error (Pydantic-first tool schema): Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
                 }
             }
@@ -115,7 +115,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
                 Ok(parsed) => return Ok(parsed),
                 Err(e) => {
                     parse_error_msg = Some(format!(
-                        "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                        "Validation Error (Pydantic-first tool schema): Failed to parse output as valid JSON matching the schema. Reason: {}. Please correct your JSON arguments and try again. Your raw text was: {}", e, completion
                     ));
                 }
             }
@@ -282,7 +282,7 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Failed to parse output as valid JSON"));
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
@@ -329,7 +329,7 @@ mod tests {
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Failed to parse tool call arguments"));
+            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
         } else {
             panic!("Expected LlmRecoverable error, got {:?}", result);
         }
