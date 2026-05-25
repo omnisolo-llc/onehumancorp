@@ -1,7 +1,4 @@
-use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
-use rust_decimal::Decimal;
-use chrono::{DateTime, Utc};
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct Customer360Response {
@@ -41,7 +38,7 @@ impl Customer360Repository {
         let row = sqlx::query(query)
             .bind(customer_id)
             .bind(tenant_id)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut **tx)
             .await?;
 
         let row = match row {
