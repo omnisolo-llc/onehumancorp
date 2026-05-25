@@ -138,34 +138,95 @@ impl IsolationStrategy for ProcessIsolationStrategy {
     }
 }
 
-pub struct ASTValidator;
+use std::sync::Mutex;
+use tree_sitter::{Node, Parser};
+
+pub struct ASTValidator {
+    parser: Mutex<Parser>,
+    blocked_commands: Vec<String>,
+}
 
 impl ASTValidator {
     pub fn new() -> Self {
-        ASTValidator
+        let mut parser = Parser::new();
+        parser
+            .set_language(&tree_sitter_bash::LANGUAGE.into())
+            .expect("Error loading bash grammar");
+        ASTValidator {
+            parser: Mutex::new(parser),
+            blocked_commands: vec![
+                "sudo".to_string(),
+                "su".to_string(),
+                "zmodload".to_string(),
+                "chmod".to_string(),
+            ],
+        }
     }
 
     pub fn validate(&self, command: &str) -> Result<(), String> {
-        if command.contains("sudo") {
-            return Err("sudo is not allowed".to_string());
-        }
-        if command.contains("zmodload") {
-            return Err("zmodload is not allowed".to_string());
-        }
-        if command.contains(">$") || command.contains("<$") || command.contains("`") || command.contains("$(") {
-            return Err("subshells and redirections are not allowed in stub".to_string());
-        }
         if command.contains("IFS") {
             return Err("IFS injection is not allowed".to_string());
         }
-        // Advanced AST validation with tree-sitter
-        let use_tree_sitter = std::env::var("OHC_USE_TREE_SITTER").unwrap_or_default() == "true";
-        if use_tree_sitter {
-            tracing::info!("Using tree-sitter for AST validation...");
-            if command.contains("eval") {
-                 return Err("eval is not allowed".to_string());
+
+        let mut parser = self.parser.lock().unwrap();
+        let tree = parser.parse(command, None).ok_or("Failed to parse command")?;
+        let root_node = tree.root_node();
+        self.walk_node_for_security(root_node, command)
+    }
+
+    fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
+        let node_kind = node.kind();
+
+        if node_kind == "command" {
+            if let Some(command_name_node) = node.child_by_field_name("name") {
+                let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
+
+                let name_cleaned = name.replace("\"", "").replace("'", "").replace("\\", "");
+                if self.blocked_commands.contains(&name_cleaned) {
+                    return Err(format!("{} is not allowed", name_cleaned));
+                }
+
+                let mut has_expansion = false;
+
+                let mut cursor = command_name_node.walk();
+                for child in command_name_node.children(&mut cursor) {
+                    let kind = child.kind();
+                    if kind == "command_substitution" || kind == "expansion" {
+                        has_expansion = true;
+                    }
+                    if kind == "string" || kind == "raw_string" || kind == "word" {
+                        let text = &source[child.start_byte()..child.end_byte()];
+                        if text.contains("$(") || text.contains("`") || text.contains("${") || text.contains("$[") {
+                            has_expansion = true;
+                        }
+                    }
+                }
+
+                if name.contains("$(") || name.contains("`") || name.contains("${") || name.contains("$[") {
+                    has_expansion = true;
+                }
+
+                if has_expansion {
+                    return Err("dynamic command names (subshells/expansions) are not allowed for security reasons".to_string());
+                }
+
+                if name_cleaned == "eval" {
+                    return Err("eval is not allowed".to_string());
+                }
             }
         }
+
+        if node_kind == "process_substitution" {
+            return Err("process substitution is not allowed".to_string());
+        }
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            if let Err(e) = self.walk_node_for_security(child, source) {
+                return Err(e); // Propagate up
+            }
+        }
+
         Ok(())
     }
 }
@@ -572,12 +633,34 @@ mod tests {
         
         assert!(validator.validate("ls -l").is_ok());
         assert!(validator.validate("echo hello").is_ok());
+        assert!(validator.validate("cat file.txt | grep foo").is_ok());
         
         let err = validator.validate("sudo rm -rf /").unwrap_err();
         assert_eq!(err, "sudo is not allowed");
         
+        let err = validator.validate("su root").unwrap_err();
+        assert_eq!(err, "su is not allowed");
+
         let err = validator.validate("zmodload zsh/clone").unwrap_err();
         assert_eq!(err, "zmodload is not allowed");
+
+        let err = validator.validate("$(echo \"su\"$(echo \"do\")) ls").unwrap_err();
+        assert_eq!(err, "dynamic command names (subshells/expansions) are not allowed for security reasons");
+
+        let err = validator.validate("`echo sudo` ls").unwrap_err();
+        assert_eq!(err, "dynamic command names (subshells/expansions) are not allowed for security reasons");
+
+        let err = validator.validate("$(sudo ls)").unwrap_err();
+        assert!(err.contains("not allowed"));
+
+        let err = validator.validate("cat <(ls)").unwrap_err();
+        assert_eq!(err, "process substitution is not allowed");
+
+        let err = validator.validate("s\\udo ls").unwrap_err();
+        assert_eq!(err, "sudo is not allowed");
+
+        let err = validator.validate("s\"u\"do ls").unwrap_err();
+        assert_eq!(err, "sudo is not allowed");
     }
 
     #[test]
