@@ -8,6 +8,7 @@ export default function Integrations() {
     const integrations = [
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "meta", name: "Meta API", category: "operations", status: "disconnected", icon: "💬", description: "Unified Inbox for Instagram & WhatsApp." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
@@ -75,7 +76,15 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+              <button
+                onClick={() => {
+                  if (integration.id === 'meta') {
+                    window.location.href = '/api/integrations/meta/auth';
+                  } else {
+                    alert(`Connecting to ${integration.name}...`);
+                  }
+                }}
+                className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
                 integration.status === 'connected'
                   ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                   : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"

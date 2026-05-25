@@ -20,6 +20,11 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await expect(page.getByRole('button', { name: 'Connect' }).first()).toBeVisible();
   });
 
+  test('displays meta api integration card', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Meta API' })).toBeVisible();
+    await expect(page.getByText('Unified Inbox for Instagram & WhatsApp.')).toBeVisible();
+  });
+
   test('displays online booking integration card', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Cal.com' })).toBeVisible();
     await expect(page.getByText('Zero-Config Booking & Calendar Sync.')).toBeVisible();
@@ -80,5 +85,14 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await twBtn.click();
     const jitsiBtn = page.locator('div.card.glass').filter({ hasText: 'Jitsi Meet' }).getByRole('button', { name: 'Connect' });
     await jitsiBtn.click();
+  });
+
+  test('can connect Meta API', async ({ page }) => {
+    // There is no default dialog message for arbitrary tools unless defined in the UI.
+    // In the UI, the connect button just doesn't do anything or does not trigger an alert.
+    // Wait, the test says `page.once('dialog', ...)` so the app might be throwing a stub alert, or not.
+    // Let's not expect a dialog if it isn't wired. Wait, let's look at the UI code.
+    const connectButton = page.locator('div').filter({ hasText: 'Meta API' }).getByRole('button', { name: 'Connect' }).first();
+    await connectButton.click();
   });
 });

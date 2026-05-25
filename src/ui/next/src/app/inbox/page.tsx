@@ -4,8 +4,8 @@ import Link from 'next/link';
 
 export default function InboxPage() {
   const [messages, setMessages] = useState([
-    { id: 1, sender: 'Alice', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
-    { id: 2, sender: 'Bob', content: 'When will my order be shipped?', date: 'Yesterday' },
+    { id: 1, sender: 'Alice (Instagram)', content: 'Do you have vegan birthday cake options?', date: '10:00 AM', platform: 'Instagram' },
+    { id: 2, sender: 'Bob (WhatsApp)', content: 'When will my order be shipped?', date: 'Yesterday', platform: 'WhatsApp' },
   ]);
   const [replyInput, setReplyInput] = useState('');
 
@@ -13,10 +13,23 @@ export default function InboxPage() {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
 
-  const sendReply = () => {
+  const sendReply = async () => {
     if (!replyInput) return;
-    setMessages([...messages, { id: Date.now(), sender: 'Me', content: replyInput, date: 'Just now' }]);
+
+    // Optimistic UI update
+    setMessages([...messages, { id: Date.now(), sender: 'Me', content: replyInput, date: 'Just now', platform: 'Meta' }]);
     setReplyInput('');
+
+    // Simulate sending to backend
+    try {
+      await fetch('/api/integrations/meta/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: replyInput, to: 'Alice' })
+      });
+    } catch (e) {
+      console.error("Failed to send message via Meta API");
+    }
   };
 
   return (
@@ -37,10 +50,11 @@ export default function InboxPage() {
         {messages.map(msg => (
           <div key={msg.id} className={`mb-3 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
             <span className="font-semibold text-sm">{msg.sender}</span>
+            {msg.platform && msg.platform !== 'Meta' && <span className={`text-[10px] ml-1 px-1 rounded-sm text-white ${msg.platform === 'WhatsApp' ? 'bg-green-500' : 'bg-pink-500'}`}>{msg.platform}</span>}
             <span className="text-xs text-gray-500 ml-2">{msg.date}</span>
-            <p className={`p-2 rounded mt-1 inline-block text-left ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-100'}`}>
+            <div className={`p-2 rounded mt-1 inline-block text-left ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-100'}`}>
               {msg.content}
-            </p>
+            </div>
           </div>
         ))}
       </div>
