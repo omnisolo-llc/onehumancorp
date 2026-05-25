@@ -3575,14 +3575,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <!-- 💰 Miser: Cost Transparency Dashboard (for business owners) -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost & AI Usage</h1>
-                        <p id="cost-dashboard-total">Total Costs: $0.00</p>
-                        <p id="cost-dashboard-llm">LLM Usage: $0.00</p>
-                        <p id="cost-dashboard-storage">Storage: $0.00</p>
-                        <p id="cost-dashboard-period">Period: -</p>
-                        <button onclick="showScreen('my-plan-screen')">Back to My Plan</button>
+                        <h1>Cost Transparency Dashboard</h1>
+                        <p>Keep track of your total usage across your One Human Corp setup.</p>
+                        <div class="card glass">
+                            <h2>Billing Period</h2>
+                            <p id="cost-dashboard-period">Period: -</p>
+
+                            <h2 style="margin-top: 24px;">Costs</h2>
+                            <ul style="list-style: none; padding: 0;">
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                    <span>LLM Inference Cost</span>
+                                    <strong id="cost-dashboard-llm">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                    <span>Storage & CDN</span>
+                                    <strong id="cost-dashboard-storage">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
+                                    <span>Payment Processor Fees</span>
+                                    <strong id="cost-dashboard-payment-fees">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary);">
+                                    <strong>Total Costs</strong>
+                                    <strong id="cost-dashboard-total">$0.00</strong>
+                                </li>
+                                <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green);">
+                                    <strong>Total Revenue</strong>
+                                    <strong id="cost-dashboard-revenue">$0.00</strong>
+                                </li>
+                            </ul>
+                        </div>
+                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
                     </div>
 
                      <!-- Checkout Page -->
@@ -4878,9 +4902,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/billing/cost-dashboard')
                                     .then(res => res.json())
                                     .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = 'Total Costs: $' + (data.total_costs / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-llm').textContent = 'LLM Usage: $' + (data.llm_cost / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-storage').textContent = 'Storage: $' + (data.storage_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
