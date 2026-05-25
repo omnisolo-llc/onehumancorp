@@ -5500,7 +5500,7 @@ dependencies = [
 
 [[package]]
 name = "ohc-mono"
-version = "0.4.45"
+version = "0.4.46"
 dependencies = [
  "aes-gcm",
  "async-nats",
