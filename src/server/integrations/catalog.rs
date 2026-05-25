@@ -63,27 +63,13 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let mercadopago_provider = crate::integrations::mercadopago::provider::MercadoPagoProvider::new("dummy_token".to_string());
     catalog.push(mercadopago_provider.to_integration_provider());
 
-    let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
-    catalog.push(alipay_provider.to_integration_provider());
 
 
-    let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
-    catalog.push(calendly_provider.to_integration_provider());
 
-    let mailchimp_provider = crate::integrations::mailchimp::provider::MailchimpProvider::new("dummy_token".to_string());
-    catalog.push(mailchimp_provider.to_integration_provider());
 
-    let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
-    catalog.push(ayrshare_provider.to_integration_provider());
 
-    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
-    catalog.push(listmonk_provider.to_integration_provider());
 
-    let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());
-    catalog.push(easypost_provider.to_integration_provider());
 
-    let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
-    catalog.push(jitsi_provider.to_integration_provider());
 
     catalog
 }
