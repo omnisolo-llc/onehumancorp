@@ -14,6 +14,7 @@ export default function Dashboard() {
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
+  const [ongoingTasks, setOngoingTasks] = useState<any[]>([{ id: '1', title: 'Review marketing copy', status: 'pending' }, { id: '2', title: 'Sync inventory', status: 'completed' }]);
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -674,7 +675,7 @@ export default function Dashboard() {
          </>
 )}
 {/* Swarm Observability / Team Activity Panel */}
-         <section>
+         <section className="mb-8">
             <div className="flex items-center justify-between mb-4">
                 <WithTooltip id="team-activity-tooltip" defaultText="Monitor the real-time actions and tasks being performed by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Team Activity</h2></WithTooltip>
                 <WithTooltip id="swarm-online-tooltip" defaultText="Your AI workforce is active."><div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
@@ -707,6 +708,41 @@ export default function Dashboard() {
                                     {activity.status === 'success' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
                                     {activity.status === 'warning' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
                                     {activity.status === 'info' && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+         </section>
+
+         {/* Proactive Task List Panel */}
+         <section>
+            <div className="flex items-center justify-between mb-4">
+                <WithTooltip id="ongoing-tasks-tooltip" defaultText="View and manage tasks proactively assigned to or by your AI workforce."><h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Ongoing Tasks</h2></WithTooltip>
+            </div>
+
+            <div className="ohc-hybrid-panel shadow-sm overflow-hidden">
+                {ongoingTasks.length === 0 ? (
+                    <div className="p-8 text-center">
+                        <p className="text-sm" style={{ color: '#86868B' }}>No ongoing tasks.</p>
+                    </div>
+                ) : (
+                    <div className="flex flex-col">
+                        {ongoingTasks.map((task) => (
+                            <div key={task.id} className="flex items-center justify-between p-4 border-b last:border-b-0 transition-all duration-500 ease-in-out hover:bg-white/40" style={{ borderBottomColor: 'rgba(0,0,0,0.05)' }}>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl shadow-sm" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                                        📋
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold" style={{ color: '#1D1D1F' }}>{task.title}</p>
+                                        <p className="text-sm capitalize" style={{ color: '#86868B' }}>Status: {task.status}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {task.status === 'completed' && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#34C759' }}></span>}
+                                    {task.status === 'pending' && <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FF9500' }}></span>}
                                 </div>
                             </div>
                         ))}
