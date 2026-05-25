@@ -1584,7 +1584,7 @@ impl HubService for MyHubService {
         _request: Request<EmptyRequest>,
     ) -> Result<Response<GetMeetingsResponse>, Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.to_vec() }))
+        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
