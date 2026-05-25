@@ -66,6 +66,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let alipay_provider = crate::integrations::alipay::provider::AlipayProvider::new("dummy_token".to_string());
     catalog.push(alipay_provider.to_integration_provider());
 
+    let razorpay_provider = crate::integrations::razorpay::provider::RazorpayProvider::new("dummy_key".to_string(), "dummy_secret".to_string());
+    catalog.push(razorpay_provider.to_integration_provider());
+
 
     let calendly_provider = crate::integrations::calendly::provider::CalendlyProvider::new("dummy_token".to_string());
     catalog.push(calendly_provider.to_integration_provider());
