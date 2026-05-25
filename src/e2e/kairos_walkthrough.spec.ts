@@ -16,9 +16,9 @@ test.describe('🎨 Canvas: KAIROS Orchestration Walkthrough', () => {
     await expect(page.locator('#kairos-nerves')).toBeVisible();
     await expect(page.locator('#kairos-memory')).toBeVisible();
 
-    await expect(page.getByText('Shared Task List')).toBeVisible();
-    await expect(page.getByText('Teammate Mesh')).toBeVisible();
-    await expect(page.getByText('AutoDream Memory')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Shared Task List' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Teammate Mesh' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AutoDream Memory' })).toBeVisible();
   });
 
   test('CUJ 3: Start KAIROS Walkthrough from Help Widget', async ({ page }) => {
