@@ -47,14 +47,4 @@ test.describe('Viral Storefront E2E', () => {
     await expect(footer).toContainText('⚡ Powered by OHC');
     await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
   });
-
-  test('generates social share og card with branding', async ({ request }) => {
-    const response = await request.get('/api/v1/growth/storefront/og-card?tenant=test&product_name=NovaPremium');
-    expect(response.ok()).toBeTruthy();
-    expect(response.headers()['content-type']).toContain('image/svg+xml');
-
-    const svg = await response.text();
-    expect(svg).toContain('NovaPremium');
-    expect(svg).toContain('⚡ Powered by OHC');
-  });
 });

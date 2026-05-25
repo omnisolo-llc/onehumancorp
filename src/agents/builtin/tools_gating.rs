@@ -19,25 +19,17 @@ impl ToolGater {
             }
         }
         // Stage 3: Explicit user confirmation for high-risk operations
-        // Handled via the 5-point HumanInLoopSpectrum
+        // If a tool is in high_risk_tools, or if PermissionArchitecture is Restrictive and the tool is mutating.
         let is_high_risk = cfg.high_risk_tools.contains(&tc.name);
-
-        use ohc_builtin_agent_core::types::HumanInLoopSpectrum;
-        let requires_approval = is_high_risk
-            || cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnAll
-            || (!is_read_only && cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnMutate)
-            || cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit
-            || (cfg.hil_spectrum == HumanInLoopSpectrum::Supervisory && cfg.confidence_threshold < 0.5); // Fallback: requires approval if low confidence
+        let requires_approval = is_high_risk || (!is_read_only && cfg.permission_architecture == ohc_builtin_agent_core::types::PermissionArchitecture::Restrictive);
 
         if requires_approval {
             let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id);
             if !is_approved {
-                if cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit {
-                    return Err(ToolError::UserFixable(format!("Collaborative Edit required for tool '{}'. Please review and edit the tool payload to proceed.", tc.name)));
-                } else if is_high_risk {
+                if is_high_risk {
                     return Err(ToolError::UserFixable(format!("High-risk tool '{}' requires explicit user confirmation. Approve this tool call to proceed.", tc.name)));
                 } else {
-                    return Err(ToolError::UserFixable(format!("Tool '{}' requires explicit user confirmation under current Human-in-the-Loop spectrum level. Approve this tool call to proceed.", tc.name)));
+                    return Err(ToolError::UserFixable(format!("Mutating tool '{}' requires explicit user confirmation under Restrictive permission architecture. Approve this tool call to proceed.", tc.name)));
                 }
             }
         }
@@ -51,6 +43,7 @@ impl ToolGater {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ohc_builtin_agent_core::types::PermissionArchitecture;
 
     fn create_tool_call(id: &str, name: &str) -> ToolCall {
         ToolCall {
@@ -128,47 +121,34 @@ mod tests {
     }
 
     #[test]
-    fn test_hil_spectrum() {
-        use ohc_builtin_agent_core::types::HumanInLoopSpectrum;
+    fn test_permission_architecture() {
         let mut cfg = AgentRunConfig::default();
         cfg.project_trusted = true;
+        cfg.permission_architecture = PermissionArchitecture::Restrictive;
 
         let tc_mutating = create_tool_call("1", "mutating_tool");
         let tc_readonly = create_tool_call("2", "readonly_tool");
 
-        // 1. Autonomous -> Both OK
-        cfg.hil_spectrum = HumanInLoopSpectrum::Autonomous;
-        assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
+        // Restrictive + Read-only -> OK
         assert!(ToolGater::check_gating(&tc_readonly, true, &cfg).is_ok());
 
-        // 2. ApprovalOnMutate -> Read-only OK, Mutating UserFixable
-        cfg.hil_spectrum = HumanInLoopSpectrum::ApprovalOnMutate;
-        assert!(ToolGater::check_gating(&tc_readonly, true, &cfg).is_ok());
-        let res_mutate = ToolGater::check_gating(&tc_mutating, false, &cfg);
-        assert!(matches!(res_mutate, Err(ToolError::UserFixable(_))));
-
-        // 3. ApprovalOnAll -> Both UserFixable
-        cfg.hil_spectrum = HumanInLoopSpectrum::ApprovalOnAll;
-        let res_read_all = ToolGater::check_gating(&tc_readonly, true, &cfg);
-        assert!(matches!(res_read_all, Err(ToolError::UserFixable(_))));
-        let res_mutate_all = ToolGater::check_gating(&tc_mutating, false, &cfg);
-        assert!(matches!(res_mutate_all, Err(ToolError::UserFixable(_))));
-
-        // 4. CollaborativeEdit
-        cfg.hil_spectrum = HumanInLoopSpectrum::CollaborativeEdit;
-        let res_collab = ToolGater::check_gating(&tc_mutating, false, &cfg);
-        assert!(matches!(res_collab, Err(ToolError::UserFixable(_))));
-        if let Err(ToolError::UserFixable(msg)) = res_collab {
-            assert!(msg.contains("Collaborative Edit required"));
+        // Restrictive + Mutating -> UserFixable
+        let res = ToolGater::check_gating(&tc_mutating, false, &cfg);
+        assert!(matches!(res, Err(ToolError::UserFixable(_))));
+        if let Err(ToolError::UserFixable(msg)) = res {
+            assert!(msg.contains("Restrictive permission architecture"));
         }
 
-        // 5. Supervisory -> OK if confidence >= 0.5, UserFixable if < 0.5
-        cfg.hil_spectrum = HumanInLoopSpectrum::Supervisory;
-        cfg.confidence_threshold = 0.8;
+        // Restrictive + Mutating (Approved) -> OK
+        cfg.approved_tool_calls.push("1".to_string());
         assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
 
-        cfg.confidence_threshold = 0.2;
-        let res_super = ToolGater::check_gating(&tc_mutating, false, &cfg);
-        assert!(matches!(res_super, Err(ToolError::UserFixable(_))));
+        // Switch to Permissive -> Mutating tool OK without approval
+        let mut cfg_permissive = AgentRunConfig::default();
+        cfg_permissive.project_trusted = true;
+        cfg_permissive.permission_architecture = PermissionArchitecture::Permissive;
+
+        let tc_mutating_new = create_tool_call("3", "another_mutating_tool");
+        assert!(ToolGater::check_gating(&tc_mutating_new, false, &cfg_permissive).is_ok());
     }
 }

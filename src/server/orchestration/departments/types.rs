@@ -92,7 +92,6 @@ pub struct ApprovalRequest {
     pub description: String,
     pub status: ApprovalStatus,
     pub action_risk: ActionRisk,
-    pub payload: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

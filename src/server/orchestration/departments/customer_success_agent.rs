@@ -72,11 +72,10 @@ impl Department for CustomerSuccessAgent {
             let description = if risk == ActionRisk::AutoExecute {
                 format!("Auto-replied to message: '{}' with '{}'", message, generated_response)
             } else {
-                "Draft email for review".to_string()
+                format!("Drafted reply for message: '{}'", message)
             };
 
             let action_payload = serde_json::json!({
-                "feature_type": "ambassador_reply",
                 "original_message": message,
                 "generated_response": generated_response,
                 "context_used": context_summary,
