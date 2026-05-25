@@ -422,6 +422,96 @@ impl DepartmentOrchestrator {
         results
     }
 
+
+    pub async fn get_activity_feed(&self, tenant_id: &str, cursor: Option<String>, limit: i64) -> Vec<ApprovalRequest> {
+        let mut results = Vec::new();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let fetch_res = if let Some(ref cur) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' AND id < $2 ORDER BY id DESC LIMIT $3")
+                        .bind(tenant_id)
+                        .bind(cur)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
+                } else {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' ORDER BY id DESC LIMIT $2")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(&self.db.pool)
+                        .await
+                };
+                if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let status = match status_str.as_str() {
+                            "PENDING" => ApprovalStatus::Pending,
+                            "APPROVED" => ApprovalStatus::Approved,
+                            "REJECTED" => ApprovalStatus::Rejected,
+                            _ => ApprovalStatus::Pending,
+                        };
+                        let risk_str: String = row.get("action_risk");
+                        let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        results.push(ApprovalRequest {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            department,
+                            description: row.get("description"),
+                            status,
+                            action_risk,
+                        });
+                    }
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                let fetch_res = if let Some(ref cur) = cursor {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
+                        .bind(tenant_id)
+                        .bind(cur)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                } else {
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
+                        .bind(tenant_id)
+                        .bind(limit)
+                        .fetch_all(pool)
+                        .await
+                };
+                if let Ok(rows) = fetch_res {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
+                        let status = match status_str.as_str() {
+                            "PENDING" => ApprovalStatus::Pending,
+                            "APPROVED" => ApprovalStatus::Approved,
+                            "REJECTED" => ApprovalStatus::Rejected,
+                            _ => ApprovalStatus::Pending,
+                        };
+                        let risk_str: String = row.get("action_risk");
+                        let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        results.push(ApprovalRequest {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            department,
+                            description: row.get("description"),
+                            status,
+                            action_risk,
+                        });
+                    }
+                }
+            }
+        };
+
+        results
+    }
+
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
