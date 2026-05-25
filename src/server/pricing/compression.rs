@@ -202,15 +202,15 @@ mod tests {
 
     #[test]
     fn test_cdn_url() {
-        std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com");
+        unsafe { std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com") };
         assert_eq!(cdn_url("/assets/img.png"), "https://cdn.example.com/assets/img.png");
         assert_eq!(cdn_url("assets/img.png"), "https://cdn.example.com/assets/img.png");
         assert_eq!(cdn_url("https://other.com/img.png"), "https://other.com/img.png");
 
-        std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com/");
+        unsafe { std::env::set_var("OHC_CDN_HOST", "https://cdn.example.com/") };
         assert_eq!(cdn_url("/assets/img.png"), "https://cdn.example.com/assets/img.png");
 
-        std::env::remove_var("OHC_CDN_HOST");
+        unsafe { std::env::remove_var("OHC_CDN_HOST") };
         assert_eq!(cdn_url("/assets/img.png"), "/assets/img.png");
     }
 
