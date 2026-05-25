@@ -22,3 +22,6 @@ pub mod statemachine_test;
 pub mod sandbox;
 pub mod sandbox_ask;
 pub mod local_sandbox;
+pub mod sub_agent;
+#[cfg(test)]
+pub mod sub_agent_test;

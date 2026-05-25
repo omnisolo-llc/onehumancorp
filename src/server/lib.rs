@@ -1629,6 +1629,34 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
     autodream_worker.start();
 
+    // Start SubAgent Spawner
+    let queue_manager = Arc::new(crate::queue::QueueManager::new(db.pool.clone()));
+    let spawner_mesh = hub.mesh().clone();
+    let spawner = std::sync::Arc::new(crate::orchestration::sub_agent::DefaultSubAgentSpawner::new(
+        queue_manager.clone() as std::sync::Arc<dyn crate::queue::TaskQueue>,
+        spawner_mesh
+    ));
+
+    // In standalone or mixed mode, we should start the queue manager's poller
+    let (spawner_shutdown_tx, spawner_shutdown_rx) = tokio::sync::broadcast::channel(1);
+    let worker_id = format!("worker-{}", uuid::Uuid::new_v4());
+
+    // Clone for the background loop
+    let spawner_bg = spawner.clone();
+    tokio::spawn(async move {
+        queue_manager.start_polling(
+            &worker_id,
+            std::time::Duration::from_secs(5),
+            move |job| {
+                let spawner_clone = spawner_bg.clone();
+                async move {
+                    spawner_clone.execute_with_retry(job).await
+                }
+            },
+            spawner_shutdown_rx
+        ).await;
+    });
+
     // Start Memory Consolidation Worker
     let vector_repo = std::sync::Arc::new(match &db.store {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),

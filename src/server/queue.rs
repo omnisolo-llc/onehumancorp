@@ -598,7 +598,7 @@ impl QueueManager {
                 Err(e) => {
                     retry_count += 1;
                     if retry_count > 3 {
-                        ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                        ::server_telemetry::record_sub_agent_lock_contention(::server_telemetry::get_deployment_mode());
                         return Err(e);
                     }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -607,7 +607,7 @@ impl QueueManager {
         };
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
-            ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_lock_contention(::server_telemetry::get_deployment_mode());
         }
 
         tx.commit().await?;
@@ -618,7 +618,7 @@ impl QueueManager {
             let created_at: DateTime<Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency);
+            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
 
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
