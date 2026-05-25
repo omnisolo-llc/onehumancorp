@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from 'next/navigation';
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useWalkthrough } from "../../components/help";
 
-export default function KairosDashboard() {
+function KairosDashboardContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
   const [activeTasks, setActiveTasks] = useState([
@@ -111,33 +111,33 @@ export default function KairosDashboard() {
 
         {/* 3. AutoDream (The Memory) */}
         <section id="kairos-memory" className="lg:col-span-1 space-y-6">
-            <div className="ohc-hybrid-panel shadow-lg h-full flex flex-col gap-6">
+            <div className="shadow-lg h-full flex flex-col gap-6" style={{ backdropFilter: 'blur(20px) saturate(200%)', background: 'rgba(255, 255, 255, 0.03)', color: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold font-outfit text-gray-900">AutoDream Memory</h2>
-                    <span className="text-xs font-bold px-2 py-1 bg-purple-100 text-purple-700 rounded-md">THE MEMORY</span>
+                    <h2 className="text-xl font-bold font-outfit text-white">AutoDream Memory</h2>
+                    <span className="text-xs font-bold px-2 py-1 bg-purple-900/50 text-purple-200 rounded-md border border-purple-500/30">THE MEMORY</span>
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
                     <div className="relative w-32 h-32 mb-6">
-                        <div className="absolute inset-0 bg-purple-200 rounded-full opacity-20 animate-ping"></div>
-                        <div className="relative w-32 h-32 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full shadow-xl flex items-center justify-center text-white">
+                        <div className="absolute inset-0 bg-purple-500 rounded-full opacity-20 animate-ping"></div>
+                        <div className="relative w-32 h-32 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-full shadow-xl flex items-center justify-center text-white border border-purple-400/30">
                             <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                         </div>
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">Infinite Context</h3>
-                    <p className="text-sm text-gray-500 leading-relaxed">
+                    <h3 className="text-lg font-bold text-white mb-2">Infinite Context</h3>
+                    <p className="text-sm text-gray-300 leading-relaxed">
                         AutoDream stores every interaction, ensuring your team learns and grows with your business.
                     </p>
                 </div>
 
                 <div className="space-y-4">
-                    <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                        <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-1">Knowledge Density</div>
-                        <div className="text-2xl font-bold text-purple-900">842.5 MB</div>
+                    <div className="p-4 rounded-xl border border-white/10" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                        <div className="text-xs font-bold text-purple-300 uppercase tracking-widest mb-1">Knowledge Density</div>
+                        <div className="text-2xl font-bold text-white">842.5 MB</div>
                     </div>
-                    <div className="p-4 bg-indigo-50 rounded-xl border border-indigo-100">
-                        <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Semantic Clusters</div>
-                        <div className="text-2xl font-bold text-indigo-900">12 Active</div>
+                    <div className="p-4 rounded-xl border border-white/10" style={{ background: 'rgba(255, 255, 255, 0.05)' }}>
+                        <div className="text-xs font-bold text-indigo-300 uppercase tracking-widest mb-1">Semantic Clusters</div>
+                        <div className="text-2xl font-bold text-white">12 Active</div>
                     </div>
                 </div>
             </div>
@@ -158,5 +158,13 @@ export default function KairosDashboard() {
         }
       `}} />
     </div>
+  );
+}
+
+export default function KairosDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <KairosDashboardContent />
+    </Suspense>
   );
 }
