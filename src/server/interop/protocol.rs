@@ -1,10 +1,11 @@
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::time::{sleep, timeout};
 use crate::msgbus::{Bus, DistributedLock, Message};
 #[cfg(test)]
 use crate::msgbus::MemoryBus;
 #[cfg(test)]
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use tokio::time::{sleep, timeout, Duration};
 
 pub mod proto {
     pub use ::server_ohc::interop::*;
