@@ -525,6 +525,38 @@ export default function Dashboard() {
              </section>
          )}
 
+         {/* AutoDream Memory Pipeline */}
+         <section className="mb-8">
+             <div style={{
+                 backdropFilter: 'blur(20px) saturate(200%)',
+                 background: '#1D1D1F',
+                 border: '1px solid rgba(255, 255, 255, 0.1)',
+                 borderRadius: '12px',
+                 padding: '24px',
+                 fontFamily: "'Outfit', 'Inter', sans-serif",
+                 color: '#ffffff',
+                 maxWidth: '600px',
+                 margin: 'auto'
+             }}>
+                 <h2 style={{ fontFamily: "'Outfit', sans-serif", marginTop: 0 }}>AutoDream Memory Pipeline</h2>
+
+                 <div style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
+                     <div style={{ flex: 1, padding: '16px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)' }}>
+                         <h4 style={{ margin: 0, opacity: 0.7 }}>LLM Cache Hits</h4>
+                         <div style={{ fontSize: '2em', fontWeight: 'bold' }}>84%</div>
+                     </div>
+                     <div style={{ flex: 1, padding: '16px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)' }}>
+                         <h4 style={{ margin: 0, opacity: 0.7 }}>RAG Latency</h4>
+                         <div style={{ fontSize: '2em', fontWeight: 'bold' }}>120ms</div>
+                     </div>
+                 </div>
+
+                 <div style={{ height: '200px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     [ Dynamic Hybrid Correlation Chart ]
+                 </div>
+             </div>
+         </section>
+
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>

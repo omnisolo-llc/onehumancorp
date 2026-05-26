@@ -340,6 +340,9 @@ services:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
       OHC_STANDALONE: $${OHC_STANDALONE:-false}
+      SPIFFE_ENDPOINT_SOCKET: "unix:///tmp/spire-agent/public/api.sock"
+    volumes:
+      - /tmp/spire-agent/public/api.sock:/tmp/spire-agent/public/api.sock
     depends_on:
       prometheus:
         condition: service_started
