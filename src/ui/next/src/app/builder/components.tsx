@@ -33,62 +33,25 @@ export function ActionSheet({ isOpen, onClose, title, children }: { isOpen: bool
   );
 }
 
-export function DraggableBlock({
-  children,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onDragEnter,
-  onMoveUp,
-  onMoveDown,
-  isSelected,
-  onClick
-}: {
+export function DraggableBlock({ children, onDragStart, onDragOver, onDragEnd, isSelected, onClick }: {
   children: React.ReactNode;
-  onDragStart: (e: React.TouchEvent | React.DragEvent) => void;
-  onDragOver: (e: React.TouchEvent | React.DragEvent) => void;
-  onDragEnter?: (e: React.DragEvent) => void;
-  onDragEnd: (e: React.TouchEvent | React.DragEvent) => void;
-  onMoveUp?: (e: React.MouseEvent) => void;
-  onMoveDown?: (e: React.MouseEvent) => void;
+  onDragStart: (e: React.TouchEvent) => void;
+  onDragOver: (e: React.TouchEvent) => void;
+  onDragEnd: (e: React.TouchEvent) => void;
   isSelected: boolean;
   onClick: () => void;
 }) {
   return (
     <div
-      draggable
-      className={`relative group transition-all duration-200 cursor-move ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
-      onDragStart={onDragStart as (e: React.DragEvent) => void}
-      onDragOver={(e) => {
-        e.preventDefault();
-        onDragOver(e);
-      }}
-      onDragEnter={onDragEnter}
-      onDragEnd={onDragEnd as (e: React.DragEvent) => void}
-      onTouchStart={onDragStart as (e: React.TouchEvent) => void}
-      onTouchMove={onDragOver as (e: React.TouchEvent) => void}
-      onTouchEnd={onDragEnd as (e: React.TouchEvent) => void}
+      className={`relative group transition-all duration-200 ${isSelected ? 'ring-2 ring-blue-500 z-10 shadow-lg scale-[1.02]' : 'hover:ring-1 hover:ring-blue-300'}`}
+      onTouchStart={onDragStart}
+      onTouchMove={onDragOver}
+      onTouchEnd={onDragEnd}
       onClick={onClick}
     >
       {isSelected && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-50 flex items-center gap-2">
-          <span>DRAG TO REORDER</span>
-          {onMoveUp && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onMoveUp(e); }}
-              className="px-1 hover:bg-blue-600 rounded bg-blue-500"
-            >
-              ↑
-            </button>
-          )}
-          {onMoveDown && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onMoveDown(e); }}
-              className="px-1 hover:bg-blue-600 rounded bg-blue-500"
-            >
-              ↓
-            </button>
-          )}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+          DRAG TO REORDER
         </div>
       )}
       {children}

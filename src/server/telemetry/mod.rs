@@ -142,7 +142,6 @@ static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::ne
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 static MISSION_TIME_IN_QUEUE: OnceLock<Histogram<f64>> = OnceLock::new();
-static TASK_PROCESSING_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static MISSION_FAILURE_RATE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUSINESS_EVENT_COUNT: OnceLock<UpDownCounter<i64>> = OnceLock::new();
@@ -207,27 +206,6 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
             )
             .build()
     })
-}
-
-
-pub fn get_task_processing_latency_histogram() -> &'static Histogram<f64> {
-    TASK_PROCESSING_LATENCY.get_or_init(|| {
-        let meter = global::meter("ohc.orchestration");
-        meter
-            .f64_histogram("ohc_task_processing_latency_seconds")
-            .with_description("Job processing latency")
-            .build()
-    })
-}
-
-pub fn record_task_processing_latency(deployment_mode: &str, latency: f64) {
-    let histogram = get_task_processing_latency_histogram();
-    histogram.record(
-        latency,
-        &[
-            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
-        ],
-    );
 }
 
 pub fn get_mission_time_in_queue_histogram() -> &'static Histogram<f64> {
@@ -315,9 +293,9 @@ pub fn record_business_event(tenant_id: &str, deployment_mode: &str, event_type:
     );
 }
 
-pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
+pub fn record_sub_agent_queue_delay(delay: f64) {
     let histogram = get_sub_agent_queue_delay_histogram();
-    histogram.record(delay, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+    histogram.record(delay, &[]);
 }
 
 pub fn record_task_claim_contention(mode: &str) {
@@ -538,20 +516,6 @@ pub async fn record_sqlite_retry_exhausted(
     pool: &PgPool,
     operation: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let deployment_mode = get_deployment_mode();
-    let meter = global::meter("ohc.sqlite");
-    let counter = meter.u64_counter("ohc_sqlite_retry_exhausted_total").build();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("operation", operation.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())
-    ]);
-    let deployment_mode = get_deployment_mode();
-    let meter = global::meter("ohc.sqlite");
-    let counter = meter.u64_counter("ohc_sqlite_retry_exhausted_total").build();
-    counter.add(1, &[
-        opentelemetry::KeyValue::new("operation", operation.to_string()),
-        opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())
-    ]);
     buffer_metric(
         pool,
         "ohc_sqlite_retry_exhausted_total",
@@ -560,16 +524,6 @@ pub async fn record_sqlite_retry_exhausted(
         serde_json::json!({ "operation": operation }),
     )
     .await
-}
-
-pub fn record_queue_length_sync(delta: i32, deployment_mode: &str) {
-    get_queue_length_gauge().add(
-        delta as i64,
-        &[opentelemetry::KeyValue::new(
-            "deployment_mode",
-            deployment_mode.to_string(),
-        )],
-    );
 }
 
 pub async fn record_queue_length(

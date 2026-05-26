@@ -16,7 +16,7 @@ pub mod chromadb;
 pub mod meta;
 pub mod google_calendar;
 pub mod cal_com;
-pub mod sendgrid;
+pub mod resend;
 pub mod shippo;
 pub mod zoom;
 pub mod calendly;
@@ -28,4 +28,3 @@ pub mod jitsi;
 pub mod alipay;
 
 pub mod razorpay;
-pub mod manychat;

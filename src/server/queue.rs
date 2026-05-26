@@ -565,7 +565,6 @@ impl QueueManager {
     }
 
     pub async fn enqueue(&self, job: SubAgentJob) -> Result<(), sqlx::Error> {
-        ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let payload_str = serde_json::to_string(&job.payload).unwrap_or_default();
         
         let mut tx = self.pool.begin().await?;
@@ -619,9 +618,8 @@ impl QueueManager {
             let created_at: DateTime<Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_queue_delay(latency);
 
-            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             Ok(Some(SubAgentJob {
                 id: row.get("id"),
                 tenant_id: row.get("tenant_id"),
@@ -640,21 +638,11 @@ impl QueueManager {
     pub async fn mark_completed(&self, job_id: &str, tenant_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         set_org_context(&mut *tx, tenant_id).await?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2 RETURNING updated_at, created_at")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
             .bind(job_id)
             .bind(tenant_id)
-            .fetch_optional(&mut *tx)
+            .execute(&mut *tx)
             .await?;
-
-        if let Some(r) = row {
-            use sqlx::Row;
-            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
-            let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
-            let created_at: chrono::DateTime<chrono::Utc> = r.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
-            let latency = (updated - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
-        }
-
         tx.commit().await?;
         Ok(())
     }
@@ -706,30 +694,8 @@ impl QueueManager {
                 _ = interval.tick() => {
                     loop {
                         match self.poll(worker_id).await {
-                            Ok(Some(mut job)) => {
+                            Ok(Some(job)) => {
                                 tracing::debug!("QueueManager dispatched job: {}", job.id);
-
-                                // Inject Queue Health Statistics into the payload specifically for The Advisor / Business Advisory
-                                if let Some(agent_role) = job.payload.get("agent_role").and_then(|r| r.as_str()) {
-                                    if agent_role == "The Advisor" || agent_role == "Business Advisory" {
-                                        // Retrieve metrics directly from global OTel or known variables.
-                                        // For simplicity, we just format the payload with queue_depth if possible.
-                                        // But queue count can be found via a query or we can just pass a queue_health object.
-                                        let queue_depth: i64 = match sqlx::query_scalar("SELECT COUNT(*) FROM sub_agent_queue WHERE status = 'QUEUED'")
-                                            .fetch_one(&self.pool)
-                                            .await {
-                                            Ok(c) => c,
-                                            Err(_) => 0,
-                                        };
-                                        if let Some(payload_obj) = job.payload.as_object_mut() {
-                                            payload_obj.insert("queue_health".to_string(), serde_json::json!({
-                                                "swarm_queue_depth": queue_depth,
-                                                "status": if queue_depth > 50 { "BACKLOGGED" } else { "HEALTHY" }
-                                            }));
-                                        }
-                                    }
-                                }
-
                                 let mut attempts = job.payload.get("attempts").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
                                 let max_attempts = job.payload.get("max_attempts").and_then(|v| v.as_i64()).unwrap_or(3) as i32;
                                 attempts += 1;

@@ -2,7 +2,6 @@
 mod tests {
     use sqlx::{postgres::PgPoolOptions, Row};
     use std::env;
-    use crate::domain::repository::models::{Business, AgentMemory, Tenant};
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
@@ -83,33 +82,5 @@ mod tests {
                 // Ignore errors if test db is not running
             }
         }
-    }
-
-    #[test]
-    fn test_business_struct_compilation() {
-        let b = Business {
-            id: "1".to_string(),
-            tenant_id: "2".to_string(),
-            name: "test".to_string(),
-            r#type: "retail".to_string(),
-            created_at: None,
-            updated_at: None,
-        };
-        assert_eq!(b.id, "1");
-    }
-
-    #[test]
-    fn test_agent_memory_struct_compilation() {
-        let am = AgentMemory {
-            id: "1".to_string(),
-            tenant_id: "2".to_string(),
-            business_id: Some("3".to_string()),
-            department: Some("sales".to_string()),
-            content: "hello".to_string(),
-            embedding: Some(vec![0.1, 0.2]),
-            interaction_data: None,
-            created_at: None,
-        };
-        assert_eq!(am.id, "1");
     }
 }

@@ -1,5 +1,5 @@
 filegroup(
     name = "srcs",
-    srcs = glob(["**/*.rs"]),
+    srcs = glob(["*.rs"]),
     visibility = ["//src/server/integrations:__pkg__"],
 )

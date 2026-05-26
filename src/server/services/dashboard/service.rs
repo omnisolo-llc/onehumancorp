@@ -336,52 +336,20 @@ impl DashboardService for MyDashboardService {
         }
 
         let mut final_meetings = Vec::new();
+        let mut final_agents_payload = Vec::new();
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
-        let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
-            .iter()
-            .filter(|a| {
-                a.organization_id == req.organization_id
-                    || a.id.starts_with(&format!("{}-", req.organization_id))
-            })
-            .cloned()
-            .collect();
-
-        let final_agents_payload = _filtered_agents
-            .into_iter()
-            .map(|a| {
-                let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
-                };
-
-                let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
-                };
-
-                let name = if req.mobile_optimized {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
-                } else {
-                    a.name
-                };
-
-                ::server_ohc::agent::Agent {
-                    id: a.id,
-                    name,
-                    role: role_val,
-                    status: status_val,
-                    organization_id: a.organization_id,
-                }
-            })
-            .collect::<Vec<_>>();
-
         if !req.mobile_optimized {
+            let _filtered_agents: Vec<::server_ohc::orchestration::Agent> = agents
+                .iter()
+                .filter(|a| {
+                    a.organization_id == req.organization_id
+                        || a.id.starts_with(&format!("{}-", req.organization_id))
+                })
+                .cloned()
+                .collect();
+
             let mut status_map = std::collections::HashMap::new();
             for a in agents.iter() {
                 *status_map.entry(a.status.clone()).or_insert(0) += 1;
@@ -451,6 +419,21 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
+
+            final_agents_payload = _filtered_agents
+                .into_iter()
+                .map(|a| {
+                    let compressed_name = ::server_pricing::compression::reduce_tokens(&a.name);
+
+                    ::server_ohc::agent::Agent {
+                        id: a.id,
+                        name: compressed_name,
+                        role: ::server_ohc::common::Role::Unspecified as i32,
+                        status: ::server_ohc::common::AgentStatus::Idle as i32,
+                        organization_id: a.organization_id,
+                    }
+                })
+                .collect::<Vec<_>>();
 
             final_meetings = out_meetings;
         }

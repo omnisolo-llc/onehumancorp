@@ -1,4 +1,3 @@
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -9,15 +8,11 @@ pub struct MercadoPagoCheckoutSession {
 
 pub struct MercadoPagoClient {
     pub access_token: String,
-    http_client: Client,
 }
 
 impl MercadoPagoClient {
     pub fn new(access_token: String) -> Self {
-        MercadoPagoClient {
-            access_token,
-            http_client: Client::new(),
-        }
+        MercadoPagoClient { access_token }
     }
 
     pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
@@ -28,33 +23,8 @@ impl MercadoPagoClient {
             0.15 // mock cost for api orchestration
         ).await;
 
-        let url = "https://api.mercadopago.com/checkout/preferences";
-        let payload = serde_json::json!({
-            "items": [
-                {
-                    "title": "Mock Item",
-                    "quantity": 1,
-                    "unit_price": 10.0
-                }
-            ]
-        });
-
-        let res = self.http_client.post(url)
-            .bearer_auth(&self.access_token)
-            .json(&payload)
-            .send()
-            .await;
-
-        match res {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
-                } else {
-                    Err(format!("Mercado Pago API error: {}", resp.status()))
-                }
-            }
-            Err(e) => Err(format!("Network error: {}", e)),
-        }
+        // Return a mock checkout URL for Mercado Pago
+        Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
     }
 
     pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
@@ -64,7 +34,7 @@ impl MercadoPagoClient {
 }
 
 impl MercadoPagoClient {
-    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
+    pub async fn create_payment(&self, _amount: f64, _description: &str, payer_email: &str) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             payer_email, // using email as a proxy for tenant/identity in this stub
@@ -72,32 +42,8 @@ impl MercadoPagoClient {
             0.20
         ).await;
 
-        let url = "https://api.mercadopago.com/v1/payments";
-        let payload = serde_json::json!({
-            "transaction_amount": amount,
-            "description": description,
-            "payment_method_id": "pix",
-            "payer": {
-                "email": payer_email
-            }
-        });
-
-        let res = self.http_client.post(url)
-            .bearer_auth(&self.access_token)
-            .json(&payload)
-            .send()
-            .await;
-
-        match res {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    Ok("mock_txn_123".to_string())
-                } else {
-                    Err(format!("Mercado Pago API error: {}", resp.status()))
-                }
-            }
-            Err(e) => Err(format!("Network error: {}", e)),
-        }
+        // Mock returning a transaction ID
+        Ok("mock_txn_123".to_string())
     }
 }
 
