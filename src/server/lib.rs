@@ -1599,8 +1599,8 @@ impl HubService for MyHubService {
 
     async fn publish_teammate_mesh_event(
         &self,
-        request: Request<PublishTeammateMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::PublishTeammateMeshEventRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
