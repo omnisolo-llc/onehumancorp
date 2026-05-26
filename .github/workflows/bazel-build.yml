@@ -49,13 +49,23 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+      - name: Free Disk Space (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.19.0
+        uses: bazel-contrib/setup-bazel@master
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
