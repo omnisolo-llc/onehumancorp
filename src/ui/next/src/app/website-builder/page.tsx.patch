@@ -1,0 +1,12 @@
+--- src/ui/next/src/app/website-builder/page.tsx
++++ src/ui/next/src/app/website-builder/page.tsx
+@@ -2,7 +2,8 @@
+
+ import { useState, useEffect } from "react";
+ import { SmartBlock, DraggableBlock } from "../builder/components";
+-import { WithTooltip, useWalkthrough } from "../../components/TooltipRegistry";
++import { useWalkthrough } from "../../components/help";
++import { WithTooltip } from "../../components/TooltipRegistry";
+
+ export default function WebsiteBuilderPage() {
+   const [bio, setBio] = useState("");

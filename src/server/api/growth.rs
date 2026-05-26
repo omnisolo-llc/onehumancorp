@@ -269,8 +269,10 @@ async fn handle_storefront_embed(
         .title {{ font-size: 1.2rem; font-weight: bold; margin: 0 0 8px 0; }}
         .price {{ color: {price_color}; font-size: 1rem; margin: 0 0 16px 0; }}
         .btn {{ display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }}
-        .footer {{ text-align: center; margin-top: 16px; font-size: 0.85rem; }}
-        .footer a {{ color: {link_color}; text-decoration: none; font-weight: bold; }}
+        .footer {{ text-align: center; margin-top: 16px; padding: 12px; background: rgba(0, 123, 255, 0.05); border-radius: 6px; }}
+        .footer span {{ display: block; font-size: 0.75rem; text-transform: uppercase; font-weight: bold; color: #007bff; margin-bottom: 4px; }}
+        .footer a {{ color: {link_color}; text-decoration: none; font-weight: bold; font-size: 0.9rem; }}
+        .footer a:hover {{ text-decoration: underline; }}
     </style>
 </head>
 <body>
@@ -279,7 +281,9 @@ async fn handle_storefront_embed(
         <p class="price">{safe_price}</p>
         <a href="#" class="btn">Buy Now</a>
         <div class="footer">
-            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">⚡ Powered by OHC</a>
+            <span>⚡ Powered by OHC</span>
+            <br/>
+            <a href="https://ohc.store/join?ref={safe_tenant}" target="_blank">Launch your free store</a>
         </div>
     </div>
 </body>

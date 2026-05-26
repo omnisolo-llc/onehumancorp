@@ -95,7 +95,7 @@ export default function CheckoutPage() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Payment Successful!</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>.
+              Your order is confirmed. Love what you bought? Share with your friends! When they buy, they get 10% off and you earn a <strong className="text-gray-900">$10 credit</strong>. You can also start your own store with OHC!
             </p>
 
             <div className="space-y-4">
@@ -128,7 +128,7 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}. Also launch your own free store!`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -137,7 +137,7 @@ export default function CheckoutPage() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}. Also launch your own free store!`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"

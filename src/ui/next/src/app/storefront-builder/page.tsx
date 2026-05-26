@@ -18,10 +18,9 @@ export default function StorefrontBuilderPage() {
         <div className="h-64 flex items-center justify-center border-dashed border-2 border-gray-300">
            Content...
         </div>
-        <div className="powered-by-footer mt-4 text-center py-2 text-sm text-gray-500">
-          ⚡ Powered by OHC
-          <br/>
-          <a href="ohc://join?ref=storefront" className="text-blue-500">Get your own free store</a>
+        <div className="powered-by-footer mt-4 text-center py-3 px-4 text-sm bg-blue-50 text-blue-900 rounded-lg shadow-sm border border-blue-100 flex flex-col items-center gap-1 cursor-pointer hover:bg-blue-100 transition-colors">
+          <span className="font-semibold tracking-wide uppercase text-xs text-blue-700">⚡ Powered by OHC</span>
+          <a href="ohc://join?ref=storefront" className="text-blue-600 font-bold hover:underline">Get your own free store & $50 credit</a>
         </div>
       </div>
 
