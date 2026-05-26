@@ -10,6 +10,7 @@ export default function BuilderPage() {
   const [businessName, setBusinessName] = useState("");
   const [businessCategory, setBusinessCategory] = useState("");
   const [vibe, setVibe] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
   const [blocks, setBlocks] = useState<any[]>([]);
   const [drafts, setDrafts] = useState<any[][]>([]);
@@ -22,6 +23,21 @@ export default function BuilderPage() {
   const [businessGoal, setBusinessGoal] = useState<"products" | "services" | "work" | null>(null);
   const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
+
+  const [wizardStep1Error, setWizardStep1Error] = useState("");
+
+  const handleStep1Next = () => {
+    if (businessName.trim().length < 3) {
+      setWizardStep1Error("Business name must be at least 3 characters.");
+      return;
+    }
+    if (businessCategory.trim().length < 5) {
+      setWizardStep1Error("Category must be at least 5 characters.");
+      return;
+    }
+    setWizardStep1Error("");
+    setWizardStep(2);
+  };
 
   // GEO UI State
   const [geoScore, setGeoScore] = useState<number | null>(null);
@@ -36,7 +52,58 @@ export default function BuilderPage() {
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
+
+    const savedStatus = localStorage.getItem("builder_status") as any;
+    if (savedStatus) setStatus(savedStatus);
+
+    const savedGoal = localStorage.getItem("builder_businessGoal") as any;
+    if (savedGoal) setBusinessGoal(savedGoal);
+
+    const savedStep = localStorage.getItem("builder_wizardStep");
+    if (savedStep) setWizardStep(parseInt(savedStep));
+
+    const savedName = localStorage.getItem("builder_businessName");
+    if (savedName) setBusinessName(savedName);
+
+    const savedCat = localStorage.getItem("builder_businessCategory");
+    if (savedCat) setBusinessCategory(savedCat);
+
+    const savedVibe = localStorage.getItem("builder_vibe");
+    if (savedVibe) setVibe(savedVibe);
+
+    const savedBio = localStorage.getItem("builder_bio");
+    if (savedBio) setBio(savedBio);
+
+    const savedBlocks = localStorage.getItem("builder_blocks");
+    if (savedBlocks) {
+      try { setBlocks(JSON.parse(savedBlocks)); } catch(e) {}
+    }
+
+    const savedDrafts = localStorage.getItem("builder_drafts");
+    if (savedDrafts) {
+      try { setDrafts(JSON.parse(savedDrafts)); } catch(e) {}
+    }
+
+    const savedLiveUrl = localStorage.getItem("builder_liveUrl");
+    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
+
+    setIsLoaded(true);
   }, []);
+
+  // Sync state to local storage when it changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem("builder_status", status);
+    if (businessGoal) localStorage.setItem("builder_businessGoal", businessGoal);
+    localStorage.setItem("builder_wizardStep", wizardStep.toString());
+    localStorage.setItem("builder_businessName", businessName);
+    localStorage.setItem("builder_businessCategory", businessCategory);
+    localStorage.setItem("builder_vibe", vibe);
+    localStorage.setItem("builder_bio", bio);
+    localStorage.setItem("builder_blocks", JSON.stringify(blocks));
+    localStorage.setItem("builder_drafts", JSON.stringify(drafts));
+    localStorage.setItem("builder_liveUrl", liveUrl);
+  }, [isLoaded, status, businessGoal, wizardStep, businessName, businessCategory, vibe, bio, blocks, drafts, liveUrl]);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -251,13 +318,13 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200"
-             style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 glassmorphism"
+             style={{ borderRadius: '16px' }}>
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
                {[1, 2, 3].map(step => (
-                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                 <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
                ))}
              </div>
           </div>
@@ -265,40 +332,43 @@ export default function BuilderPage() {
           <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
             {wizardStep === 1 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Let's build your store</h1>
-                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Start with the basics. What's your business called, and what do you do?
                 </p>
 
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Business Name</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-6 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Acme Corp"
                 />
 
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Category</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all text-gray-800"
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
                   placeholder="e.g. Retail, Consulting, Tech"
                 />
 
+                {wizardStep1Error && (
+                   <p className="text-[#FF3B30] text-sm mb-4">{wizardStep1Error}</p>
+                )}
+
                 <button
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
-                    businessName.trim() && businessCategory.trim()
+                    businessName.trim().length >= 3 && businessCategory.trim().length >= 5
                       ? "text-white shadow-md active:scale-[0.98]"
-                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px', background: (businessName.trim() && businessCategory.trim()) ? '#0071E3' : '' }}
-                  onClick={() => setWizardStep(2)}
-                  disabled={!businessName.trim() || !businessCategory.trim()}
+                  style={{ borderRadius: '8px', background: (businessName.trim().length >= 3 && businessCategory.trim().length >= 5) ? '#0071E3' : '' }}
+                  onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
                 </button>
@@ -307,8 +377,8 @@ export default function BuilderPage() {
 
             {wizardStep === 2 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Select Your Vibe</h1>
-                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Select Your Vibe</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   How should your store feel? Our AI agents will match this tone.
                 </p>
 
@@ -318,7 +388,7 @@ export default function BuilderPage() {
                       key={v}
                       onClick={() => setVibe(v)}
                       className={`p-4 border text-left transition-all font-semibold ${
-                        vibe === v ? "border-[#0071E3] bg-blue-50 text-[#0071E3]" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                        vibe === v ? "border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]" : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 bg-white/50 dark:bg-[#1d1d1f]/50 backdrop-blur-sm"
                       }`}
                       style={{ borderRadius: '8px' }}
                     >
@@ -329,7 +399,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(1)}
                   >
@@ -339,11 +409,10 @@ export default function BuilderPage() {
                     className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
                       vibe
                         ? "text-white shadow-md active:scale-[0.98]"
-                        : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                     }`}
                     style={{ borderRadius: '8px', background: vibe ? '#0071E3' : '' }}
                     onClick={() => {
-                       // Pre-fill bio based on earlier steps if empty
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
                        }
@@ -359,16 +428,16 @@ export default function BuilderPage() {
 
             {wizardStep === 3 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Final Details</h1>
-                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Final Details</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Review and add any extra details to help our AI generate the perfect store.
                 </p>
 
-                <label className="text-sm font-semibold text-gray-700 mb-2 block">Your Business Details</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-gray-300 p-4 mb-8 focus:ring-2 focus:ring-[#0071E3] focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800"
+                    className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -379,7 +448,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-gray-100 text-gray-700 font-bold font-outfit text-lg transition-all hover:bg-gray-200 active:scale-[0.98]"
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(2)}
                   >
@@ -391,7 +460,7 @@ export default function BuilderPage() {
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                         bio.trim().length > 5
                           ? "text-white shadow-md active:scale-[0.98]"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       }`}
                       style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                       onClick={handleGenerate}
@@ -746,7 +815,7 @@ export default function BuilderPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
-        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(20px) saturate(200%); -webkit-backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
         @media (prefers-color-scheme: dark) {
           .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         }

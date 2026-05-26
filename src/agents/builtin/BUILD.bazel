@@ -51,6 +51,7 @@ rust_library(
         "verification_loops.rs",
         "actor_model.rs",
         "swarm_topology.rs",
+        "sona_patterns.rs",
         "agent.rs",
         "checkpointer.rs",
         "tools_gating.rs",
@@ -92,6 +93,8 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@crates//:tree-sitter",
+        "@crates//:tree-sitter-bash",
         "@crates//:temp-env",
         ":core",
         "//src/proto:agent_service_tonic",
@@ -224,6 +227,7 @@ rust_binary(
         "registry",
         "gpt_researcher",
         "local_provider",
+        "sona_patterns",
     ]
 ]
 
