@@ -143,6 +143,10 @@ export default function OnboardingWizard() {
         setError("Please enter at least 3 characters.");
         return;
       }
+      if (/[<>{}[\]\\]/.test(businessType)) {
+        setError("Please do not use special symbols like <, >, {, } or \\.");
+        return;
+      }
     }
     if (step === 2) {
       if (!businessName.trim()) {
@@ -151,6 +155,10 @@ export default function OnboardingWizard() {
       }
       if (businessName.trim().length < 3) {
         setError("Business name must be at least 3 characters.");
+        return;
+      }
+      if (/[<>{}[\]\\]/.test(businessName)) {
+        setError("Please do not use special symbols like <, >, {, } or \\.");
         return;
       }
     }
@@ -168,6 +176,10 @@ export default function OnboardingWizard() {
     }
     if (categoryToUse.trim().length < 5) {
       setError("Niche description must be at least 5 characters.");
+      return;
+    }
+    if (/[<>{}[\]\\]/.test(categoryToUse)) {
+      setError("Please do not use special symbols like <, >, {, } or \\.");
       return;
     }
 
@@ -286,6 +298,13 @@ export default function OnboardingWizard() {
           from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
+        .animate-fade-out {
+          animation: fadeOut 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        @keyframes fadeOut {
+          from { opacity: 1; transform: translateY(0); }
+          to { opacity: 0; transform: translateY(10px); }
+        }
       `}} />
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
         {/* Header */}
@@ -312,7 +331,7 @@ export default function OnboardingWizard() {
                 type="text"
                 inputMode="text"
                 value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
+                onChange={(e) => { setBusinessType(e.target.value); setError(""); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
                 className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
@@ -352,7 +371,7 @@ export default function OnboardingWizard() {
                 type="text"
                 inputMode="text"
                 value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                onChange={(e) => { setBusinessName(e.target.value); setError(""); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
@@ -385,7 +404,7 @@ export default function OnboardingWizard() {
                 type="text"
                 inputMode="text"
                 value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
+                onChange={(e) => { setBusinessCategory(e.target.value); setError(""); }}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
                 className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
