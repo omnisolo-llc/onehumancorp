@@ -91,7 +91,6 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
-        .route("/discount_share/generate", post(handle_generate_discount_share))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -372,26 +371,6 @@ async fn handle_get_team_invites(
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct DiscountShareResponse {
-    pub share_url: String,
-}
-
-async fn handle_generate_discount_share(
-    Extension(state): Extension<GrowthState>,
-) -> Result<Json<DiscountShareResponse>, StatusCode> {
-    // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
-    let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
-
-    // Track generation metrics
-    // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
-    // we omit the direct `.add` call or use an existing log/metric method instead.
-
-    Ok(Json(DiscountShareResponse { share_url }))
 }
 
 async fn handle_team_invites_metrics(
