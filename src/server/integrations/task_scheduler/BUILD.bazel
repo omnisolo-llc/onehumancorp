@@ -1,8 +1,29 @@
-filegroup(
-    name = "srcs",
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_integrations_task_scheduler",
     srcs = [
         "manager.rs",
         "mod.rs",
     ],
-    visibility = ["//src/server/integrations:__pkg__"],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_integrations_task_scheduler_unit_test",
+    size = "small",
+    crate = ":server_integrations_task_scheduler",
+    edition = "2024",
+    deps = [
+        "@crates//:temp-env",
+        "@crates//:tokio",
+    ],
 )
