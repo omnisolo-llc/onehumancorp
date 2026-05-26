@@ -1315,16 +1315,17 @@ export default function Dashboard() {
                                         body: JSON.stringify({
                                             name: 'Abandoned Cart Recovery',
                                             subject: 'Forgot something? Here is 10% off',
-                                            message: cartCampaignMessage
+                                            message: cartCampaignMessage,
+                                            target_segment: 'abandoned_cart'
                                         })
                                     });
                                     if (response.ok) {
                                         setCartCampaignSent(true);
                                     } else {
-                                        setCartCampaignSent(true); // Mock success
+                                        setCartCampaignSent(false);
                                     }
                                 } catch (e) {
-                                    setCartCampaignSent(true); // Mock success
+                                    setCartCampaignSent(false);
                                 }
                             }}
                             className="w-full py-3 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-red-700 transition-colors"

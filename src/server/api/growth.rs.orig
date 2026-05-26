@@ -25,8 +25,7 @@ pub struct SocialPostResponse {
 pub struct CampaignRequest {
     pub name: String,
     pub subject: String,
-    pub body: Option<String>,
-    pub message: Option<String>,
+    pub body: String,
     pub target_segment: String,
 }
 
@@ -111,12 +110,6 @@ pub struct GenerateReviewRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct GenerateCartRequest {
-    pub customer_name: String,
-    pub cart_value: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateReviewResponse {
     pub message: String,
 }
@@ -191,18 +184,6 @@ async fn handle_generate_review(
     })
 }
 
-async fn handle_generate_cart(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateCartRequest>,
-) -> impl IntoResponse {
-    let msg = format!("Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", req.customer_name, req.cart_value);
-
-    Json(GenerateReviewResponse {
-        message: msg,
-        ok: true,
-    })
-}
-
 async fn handle_send_campaign(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CampaignRequest>,
@@ -214,7 +195,7 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else if req.target_segment == "abandoned_cart" { 1 } else { 150 };
+    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
     if let Ok(event) = serde_json::to_string(&serde_json::json!({
