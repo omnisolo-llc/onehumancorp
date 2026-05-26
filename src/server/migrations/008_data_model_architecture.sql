@@ -1,71 +1,118 @@
--- +goose Up
 -- Migration 008: Data Model Architecture for OneHumanCorp
 
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Core Schema Definitions
+-- Ensure TENANT exists
 CREATE TABLE IF NOT EXISTS tenants (
     id TEXT PRIMARY KEY,
-    business_name TEXT NOT NULL,
-    plan_tier TEXT DEFAULT 'free',
+    name TEXT NOT NULL,
+    industry TEXT DEFAULT '',
+    tier TEXT DEFAULT 'free',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT DEFAULT 1
 );
 
+-- Ensure CUSTOMER exists
 CREATE TABLE IF NOT EXISTS customers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
     email TEXT,
+    phone TEXT,
     preferences JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS products (
+-- Unified CATALOG_ITEM entity
+CREATE TABLE IF NOT EXISTS catalog_items (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-    type TEXT NOT NULL, -- "physical | digital | food"
-    inventory_count INT DEFAULT 0,
-    is_sold_out BOOLEAN DEFAULT false,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE IF NOT EXISTS services (
-    id TEXT PRIMARY KEY,
-    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
+    title TEXT NOT NULL,
     description TEXT,
-    duration_minutes INT DEFAULT 60,
+    item_type TEXT NOT NULL, -- Physical, Service, Digital, Subscription
     price DECIMAL DEFAULT 0,
+    currency TEXT DEFAULT 'USD',
+    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS item_variants (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    catalog_item_id TEXT REFERENCES catalog_items(id) ON DELETE CASCADE,
+    sku TEXT,
+    name TEXT,
+    price_adjustment DECIMAL DEFAULT 0,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Event-Driven Inventory and Fulfillment
+CREATE TABLE IF NOT EXISTS inventory_ledger (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    catalog_item_id TEXT REFERENCES catalog_items(id) ON DELETE CASCADE,
+    variant_id TEXT REFERENCES item_variants(id) ON DELETE CASCADE,
+    change_amount INT NOT NULL,
+    reason TEXT NOT NULL,
+    transaction_id TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ORDER entity
 CREATE TABLE IF NOT EXISTS orders (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
     customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
-    status TEXT DEFAULT 'pending', -- "pending | paid | fulfilled"
     total_amount DECIMAL DEFAULT 0,
+    status TEXT DEFAULT 'pending',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS order_line_items (
+-- ORDER_LINE references ITEM_VARIANT
+CREATE TABLE IF NOT EXISTS order_lines (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
     order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
-    product_id TEXT REFERENCES products(id) ON DELETE CASCADE,
+    variant_id TEXT REFERENCES item_variants(id) ON DELETE CASCADE,
+    quantity INT DEFAULT 1,
+    unit_price DECIMAL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+    amount DECIMAL NOT NULL,
+    status TEXT DEFAULT 'pending',
+    payment_method TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS fulfillments (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
+    status TEXT DEFAULT 'pending',
+    tracking_number TEXT,
+    provider TEXT,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    order_id TEXT REFERENCES orders(id) ON DELETE CASCADE,
     customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
-    service_id TEXT REFERENCES services(id) ON DELETE CASCADE,
+    variant_id TEXT REFERENCES item_variants(id) ON DELETE CASCADE,
     start_time TIMESTAMPTZ NOT NULL,
     end_time TIMESTAMPTZ,
     status TEXT DEFAULT 'scheduled',
@@ -73,11 +120,25 @@ CREATE TABLE IF NOT EXISTS bookings (
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS ai_memories (
+-- AI Context
+CREATE TABLE IF NOT EXISTS interactions (
     id TEXT PRIMARY KEY,
     tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    customer_id TEXT REFERENCES customers(id) ON DELETE CASCADE,
+    channel TEXT NOT NULL,
+    content TEXT NOT NULL,
     embedding VECTOR(1536),
-    raw_context TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS agent_actions (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
+    agent_id TEXT NOT NULL,
+    interaction_id TEXT REFERENCES interactions(id) ON DELETE CASCADE,
+    action_type TEXT NOT NULL,
+    payload JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -91,12 +152,16 @@ BEGIN
         SELECT unnest(ARRAY[
             'tenants',
             'customers',
-            'products',
-            'services',
+            'catalog_items',
+            'item_variants',
+            'inventory_ledger',
             'orders',
-            'order_line_items',
+            'order_lines',
+            'payments',
+            'fulfillments',
             'bookings',
-            'ai_memories'
+            'interactions',
+            'agent_actions'
         ])
     LOOP
         IF to_regclass(t_name) IS NOT NULL THEN
@@ -111,14 +176,15 @@ BEGIN
                     AND policyname = pol_name
             ) THEN
                 IF t_name = 'tenants' THEN
+                    -- Tenants policy uses id instead of tenant_id
                     EXECUTE format(
-                        'CREATE POLICY %I ON %I USING (id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (id::text = current_setting(''app.current_tenant'', true))',
+                        'CREATE POLICY %I ON %I USING (id::text = current_setting(''app.current_tenant'', true))',
                         pol_name,
                         t_name
                     );
                 ELSE
                     EXECUTE format(
-                        'CREATE POLICY %I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true)) WITH CHECK (tenant_id::text = current_setting(''app.current_tenant'', true))',
+                        'CREATE POLICY %I ON %I USING (tenant_id::text = current_setting(''app.current_tenant'', true))',
                         pol_name,
                         t_name
                     );
@@ -128,45 +194,4 @@ BEGIN
     END LOOP;
 END
 $$;
-CREATE INDEX IF NOT EXISTS ai_memories_embedding_hnsw_idx ON ai_memories USING hnsw (embedding vector_cosine_ops);
-
-
--- +goose Down
--- Reverse Migration 008
-
-DO $$
-DECLARE
-    t_name text;
-    pol_name text;
-BEGIN
-    FOR t_name IN
-        SELECT unnest(ARRAY[
-            'tenants',
-            'customers',
-            'products',
-            'services',
-            'orders',
-            'order_line_items',
-            'bookings',
-            'ai_memories'
-        ])
-    LOOP
-        IF to_regclass(t_name) IS NOT NULL THEN
-            pol_name := format('tenant_isolation_%s', t_name);
-            EXECUTE format('DROP POLICY IF EXISTS %I ON %I', pol_name, t_name);
-            EXECUTE format('ALTER TABLE %I DISABLE ROW LEVEL SECURITY', t_name);
-        END IF;
-    END LOOP;
-END
-$$;
-
--- We don't drop tables because other files like 001_initial might have dependencies.
--- DROP INDEX IF EXISTS ai_memories_embedding_hnsw_idx;
--- DROP TABLE IF EXISTS ai_memories CASCADE;
--- DROP TABLE IF EXISTS bookings CASCADE;
--- DROP TABLE IF EXISTS order_line_items CASCADE;
--- DROP TABLE IF EXISTS orders CASCADE;
--- DROP TABLE IF EXISTS services CASCADE;
--- DROP TABLE IF EXISTS products CASCADE;
--- DROP TABLE IF EXISTS customers CASCADE;
--- DROP TABLE IF EXISTS tenants CASCADE;
+CREATE INDEX IF NOT EXISTS interactions_embedding_hnsw_idx ON interactions USING hnsw (embedding vector_cosine_ops);

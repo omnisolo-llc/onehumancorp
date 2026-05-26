@@ -6,7 +6,6 @@ pub struct MissionPayload {
     pub role: String,
     pub task: String,
     pub context: Option<String>,
-    pub action_risk: Option<String>,
 }
 
 #[derive(Debug, Clone)]

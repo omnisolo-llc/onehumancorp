@@ -724,6 +724,7 @@ impl AgentServiceImpl {
             .await;
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
+        unarc_agent.native_env = native_env;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
@@ -1034,7 +1035,6 @@ impl AgentService for AgentServiceImpl {
             };
 
             let observation_store = Arc::new(dashmap::DashMap::new());
-
             let native_env = Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new()));
             let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
             let tools = self

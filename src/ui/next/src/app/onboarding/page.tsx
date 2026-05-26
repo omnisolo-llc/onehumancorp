@@ -158,27 +158,20 @@ export default function OnboardingWizard() {
     setStep(step + 1);
   };
 
-  const handleIntakeSubmit = async (overrideCategory?: string) => {
-    // Determine category to use depending on if it came from click or state
-    const categoryToUse = typeof overrideCategory === 'string' ? overrideCategory : businessCategory;
-
-    if (!categoryToUse.trim()) {
+  const handleIntakeSubmit = async () => {
+    if (!businessCategory.trim()) {
       setError("Please describe your niche.");
       return;
     }
-    if (categoryToUse.trim().length < 5) {
+    if (businessCategory.trim().length < 5) {
       setError("Niche description must be at least 5 characters.");
       return;
-    }
-
-    if (typeof overrideCategory === 'string') {
-      setBusinessCategory(overrideCategory);
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${categoryToUse}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -320,21 +313,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="next"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setBusinessType(type);
-                      setStep(2);
-                      setError("");
-                    }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={handleNext}
                 className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -393,17 +371,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="done"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
-                  <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {niche}
-                  </button>
-                ))}
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
@@ -412,7 +379,7 @@ export default function OnboardingWizard() {
                   Back
                 </button>
                 <button
-                  onClick={() => handleIntakeSubmit()}
+                  onClick={handleIntakeSubmit}
                   disabled={isLoading}
                   className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >

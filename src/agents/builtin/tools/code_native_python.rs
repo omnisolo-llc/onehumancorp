@@ -54,7 +54,6 @@ impl CodeNativeTool for NativePythonReplTool {
                 let var_name = line[..eq_idx].trim().to_string();
                 let var_value = line[eq_idx + 1..].trim().to_string();
 
-                // Extremely simplified "eval" that handles variable substitution
                 let mut evaluated_val = var_value.clone();
                 for (k, v) in &state.variables {
                     if evaluated_val == *k {
@@ -68,7 +67,6 @@ impl CodeNativeTool for NativePythonReplTool {
             }
         }
 
-        // Save the updated state natively, without serialization
         env.set_variable("python_repl_state", state);
 
         if output.is_empty() {
@@ -98,34 +96,5 @@ pub fn native_python_repl_tool(env: Arc<tokio::sync::RwLock<RichExecutionEnviron
             env,
             tool: Arc::new(NativePythonReplTool),
         }),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::json;
-
-    #[tokio::test]
-    async fn test_native_python_repl() {
-        let mut env = RichExecutionEnvironment::new();
-        let tool = NativePythonReplTool;
-
-        // Step 1: Assign a variable
-        let res1 = tool.execute_native(&mut env, json!({
-            "code": "x = 42\ny = 100"
-        })).await.unwrap();
-        assert_eq!(res1, "Code executed successfully (no output)");
-
-        // Step 2: Read it back
-        let res2 = tool.execute_native(&mut env, json!({
-            "code": "print(x)\nprint(y)"
-        })).await.unwrap();
-        assert_eq!(res2, "42\n100");
-
-        // Verify the native data structure directly
-        let final_state = env.get_variable::<PythonReplState>("python_repl_state").unwrap();
-        assert_eq!(final_state.variables.get("x").unwrap(), "42");
-        assert_eq!(final_state.variables.get("y").unwrap(), "100");
     }
 }

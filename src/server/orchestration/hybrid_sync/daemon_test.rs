@@ -32,9 +32,7 @@ mod tests {
                 context TEXT,
                 embedding TEXT,
                 escalation_required INTEGER DEFAULT 0,
-                sync_status TEXT DEFAULT 'PENDING',
-                sync_error TEXT,
-                last_synced_at TEXT
+                sync_status TEXT DEFAULT 'PENDING'
             )"
         )
         .execute(&sqlite_pool)
