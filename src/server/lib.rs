@@ -1763,6 +1763,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let cs_worker = crate::workers::department_workers::CustomerSuccessWorker::new(db.clone());
     cs_worker.start();
 
+    // Start Analytics Worker
+    let analytics_worker = std::sync::Arc::new(crate::workers::analytics_worker::AnalyticsWorker::new(db.clone()));
+    analytics_worker.start();
+
     // Start Maintenance Worker
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
@@ -1965,6 +1969,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
         .with_state(webhook_state);
 
+
+    let auth_store = std::sync::Arc::new(crate::auth::Store::new());
+    let analytics_router = axum::Router::new()
+        .route("/api/v1/analytics/ingest", axum::routing::post(api::analytics::handle_ingest_event))
+        .route("/api/v1/analytics/briefing", axum::routing::get(api::analytics::handle_daily_briefing))
+        .layer(axum::middleware::from_fn_with_state(
+            auth_store.clone(),
+            crate::api::mesh_handler::auth_middleware,
+        ));
+
+
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
@@ -2025,6 +2040,18 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+
+    // Initialize NATS provider for analytics
+    let nats_url = std::env::var("NATS_URL").unwrap_or_else(|_| "nats://localhost:4222".to_string());
+    let nats_provider = std::sync::Arc::new(
+        crate::integrations::nats::provider::NatsProvider::new(&nats_url)
+            .await
+            .unwrap_or_else(|_| {
+                let dummy = crate::integrations::nats::client::RealNatsClient::dummy();
+                crate::integrations::nats::provider::NatsProvider::with_client(std::sync::Arc::new(dummy), &nats_url)
+            })
+    );
+
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2310,6 +2337,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 "link": { "url": link_url, "title": link_title }
             }))
         }))
+        .layer(axum::extract::Extension(nats_provider))
+        .layer(axum::extract::Extension(std::sync::Arc::new(db.clone())))
+        .merge(analytics_router)
         .merge(webhook_router)
         .merge(health_router)
         .fallback(ui_handler);

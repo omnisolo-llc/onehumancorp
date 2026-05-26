@@ -6,6 +6,25 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+
+  const [dailyBriefing, setDailyBriefing] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBriefing = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'system' : 'system';
+        const res = await fetch(`/api/v1/analytics/briefing/${tenantId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setDailyBriefing(data.briefing);
+        }
+      } catch (e) {
+        console.error("Failed to fetch briefing", e);
+      }
+    };
+    fetchBriefing();
+  }, []);
+
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -373,8 +392,9 @@ export default function Dashboard() {
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
+
          {/* Morning Briefing */}
-         {!morningBriefingDismissed && (
+         {!morningBriefingDismissed && (dailyBriefing || businessName) && (
            <section className="mb-6 animate-fade-in">
              <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
                <div className="flex items-center gap-3 mb-2">
@@ -382,19 +402,20 @@ export default function Dashboard() {
                  <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
                </div>
                <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
-                 Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
+                 {dailyBriefing ? dailyBriefing : `Good morning ${businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.`}
                </p>
                <div className="flex gap-4">
                  <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
-                 <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
-                   Add your first product
-                 </Link>
+                 {!dailyBriefing && (
+                   <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
+                     Add your first product
+                   </Link>
+                 )}
                </div>
              </div>
            </section>
          )}
-
-         {/* Action Required (Approvals) */}
+{/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">

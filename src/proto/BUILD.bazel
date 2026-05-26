@@ -215,3 +215,18 @@ proto_rust_library(
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
+
+# ── Analytics ──────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "analytics_proto",
+    srcs = ["analytics.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "analytics",
+    proto = ":analytics_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)

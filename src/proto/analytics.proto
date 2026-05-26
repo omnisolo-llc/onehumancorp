@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package ohc.api.v1;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/api/v1;apiv1";
+
+message DailyBriefing {
+  string id = 1;
+  string tenant_id = 2;
+  string plain_language_summary = 3;
+  string briefing_date = 4;
+}
+
+message GetDailyBriefingRequest {
+  string tenant_id = 1;
+}
+
+message GetDailyBriefingResponse {
+  DailyBriefing briefing = 1;
+}
+
+service AnalyticsService {
+  rpc GetDailyBriefing(GetDailyBriefingRequest) returns (GetDailyBriefingResponse);
+}
