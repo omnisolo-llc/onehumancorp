@@ -319,6 +319,7 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
+                autoCapitalize="words"
               />
               <div className="flex flex-wrap gap-2 mb-6">
                 {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
@@ -359,6 +360,7 @@ export default function OnboardingWizard() {
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
+                autoCapitalize="words"
               />
               <div className="flex gap-3">
                 <button
@@ -449,6 +451,7 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
+                         autoCapitalize="words"
                        />
                      </div>
                      <div className="w-24">
