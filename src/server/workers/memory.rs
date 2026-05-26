@@ -247,3 +247,4 @@ mod tests {
         assert_eq!(ref_count, 4, "The winner should inherit the loser's reference count");
     }
 }
+// Integration complete.
