@@ -27,6 +27,9 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
     m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
+    m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     RwLock::new(m)
     })
 }
@@ -639,9 +642,16 @@ impl HubService for MyHubService {
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
         let tenant_id = if auth_info.org_id.is_empty() { return Err(tonic::Status::unauthenticated("Missing org_id")); } else { &auth_info.org_id };
 
-        let tier = self.hub.tracker().get_tenant_tier(tenant_id).await.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
-        let ai_used = self.hub.tracker().get_tenant_actions_used(tenant_id).await.unwrap_or(0);
-        let storage_used_bytes = self.hub.tracker().get_tenant_storage_used(tenant_id).await.unwrap_or(0);
+        let tracker = self.hub.tracker();
+        let tier_future = tracker.get_tenant_tier(tenant_id);
+        let ai_used_future = tracker.get_tenant_actions_used(tenant_id);
+        let storage_used_bytes_future = tracker.get_tenant_storage_used(tenant_id);
+
+        let (tier_res, ai_used_res, storage_used_bytes_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
+
+        let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+        let ai_used = ai_used_res.unwrap_or(0);
+        let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
 
         let plan_name = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => "Free",
@@ -942,15 +952,14 @@ impl HubService for MyHubService {
         ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(&tenant_id)
-        .bind(&org_id)
         .bind(&user_id)
         .bind(current_step)
         .bind(&state_json)
@@ -2245,7 +2254,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
+            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
@@ -2443,6 +2452,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <meta property="og:description" content="Discover great products and services powered by OHC." />
                     <meta name="twitter:card" content="summary_large_image" />
                     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+                    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+                    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
                     <style>
                         :root {
                             color-scheme: light;
@@ -2969,6 +2980,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .tooltip-box.show { opacity: 1; transform: translateY(0); }
             #global-help-btn { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 14px rgba(0, 102, 255, 0.39); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease; }
             #global-help-btn:hover { transform: scale(1.05); background: var(--primary-hover); }
+            #global-chat-btn { position: fixed; bottom: 24px; right: 96px; height: 56px; padding: 0 24px; border-radius: 28px; background: var(--text); color: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); cursor: pointer; z-index: 9000; border: none; transition: transform 0.2s ease, box-shadow 0.2s ease; gap: 8px; }
+            #global-chat-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); }
             #ai-chat-widget { position: fixed; bottom: 96px; right: 24px; width: 360px; max-height: 500px; background: var(--surface-strong); border-radius: var(--radius-container); box-shadow: var(--shadow-md); border: 1px solid var(--border); display: none; flex-direction: column; z-index: 9000; overflow: hidden; }
             #ai-chat-header { background: var(--primary); color: white; padding: 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
             #ai-chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; max-height: 350px; }
@@ -3051,7 +3064,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
                             <p style="color: var(--text-secondary); margin-bottom: 8px; font-weight: 500;">Today's Sales</p>
-                            <h2 id="todays-sales" style="font-size: 48px; margin: 0; color: var(--primary);">$0.00</h2>
+                            <h2 id="todays-sales" placeholder="todays-sales-tooltip" style="font-size: 48px; margin: 0; color: var(--primary); cursor: help;">$0.00</h2>
                             <p style="color: #28a745; font-size: 14px; margin-top: 8px;">↑ 12% from yesterday</p>
                         </div>
 
@@ -3077,7 +3090,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
-                        <div class="card glass" id="approval-inbox">
+                        <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
                             <h3>Approval Inbox</h3>
                         </div>
                         <div class="card glass" id="activity-feed"></div>
@@ -5177,6 +5190,90 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showScreen(id) {
                             document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
                             const screen = document.getElementById(id);
+
+                            if (id === 'api-docs-screen' || id === 'api-screen') {
+                                if (window.SwaggerUIBundle) {
+                                    window.SwaggerUIBundle({
+                                        spec: {
+                                            "openapi": "3.0.0",
+                                            "info": {
+                                                "title": "OHC Advanced API Reference",
+                                                "version": "1.0.0",
+                                                "description": "API Reference for advanced users integrating with OneHumanCorp."
+                                            },
+                                            "servers": [
+                                                { "url": "http://localhost:8080", "description": "Local Backend Server" }
+                                            ],
+                                            "paths": {
+                                                "/api/orgs/register": {
+                                                    "post": {
+                                                        "summary": "Register an Organization",
+                                                        "description": "Registers a new tenant organization in the multi-tenant OHC environment.",
+                                                        "tags": ["Tenants"],
+                                                        "requestBody": {
+                                                            "required": true,
+                                                            "content": {
+                                                                "application/json": {
+                                                                    "schema": {
+                                                                        "type": "object",
+                                                                        "properties": {
+                                                                            "id": { "type": "string", "example": "acme" },
+                                                                            "name": { "type": "string", "example": "Acme Corp" },
+                                                                            "domain": { "type": "string", "example": "acme.com" }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "responses": {
+                                                            "200": { "description": "Success" }
+                                                        }
+                                                    }
+                                                },
+                                                "/api/agents/task": {
+                                                    "post": {
+                                                        "summary": "Dispatch a task",
+                                                        "description": "Dispatches a new task to the AI Swarm Orchestrator.",
+                                                        "tags": ["Agents"],
+                                                        "requestBody": {
+                                                            "required": true,
+                                                            "content": {
+                                                                "application/json": {
+                                                                    "schema": {
+                                                                        "type": "object",
+                                                                        "properties": {
+                                                                            "task_description": { "type": "string", "example": "Build a landing page for a dog groomer" },
+                                                                            "priority": { "type": "string", "example": "high" }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        },
+                                                        "responses": {
+                                                            "202": { "description": "Accepted" }
+                                                        }
+                                                    }
+                                                },
+                                                "/api/videos": {
+                                                    "get": {
+                                                        "summary": "Get video tutorials",
+                                                        "tags": ["Documentation"],
+                                                        "responses": { "200": { "description": "Success" } }
+                                                    }
+                                                },
+                                                "/api/agents/status": {
+                                                    "get": {
+                                                        "summary": "Get workforce status",
+                                                        "tags": ["Agents"],
+                                                        "responses": { "200": { "description": "Success" } }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        dom_id: '#swagger-ui',
+                                    });
+                                }
+                            }
                             if (screen) {
                                 if (id === 'checklist-screen') {
                                     const setupScreen = document.getElementById('setup-screen');
@@ -5528,9 +5625,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
-                            'setup-store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
-                            'activate-ai': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'accept-payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
+                            'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
+                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -5582,9 +5679,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             toursDiv.style.gridColumn = '1 / -1';
                             toursDiv.innerHTML = `
                                 <div style="display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;">
-                                    <button class="secondary" onclick="startWalkthrough('setup-store')">🗺️ Tour: Setup Store</button>
-                                    <button class="secondary" onclick="startWalkthrough('activate-ai')">🗺️ Tour: AI Agents</button>
-                                    <button class="secondary" onclick="startWalkthrough('accept-payment')">🗺️ Tour: Payments</button>
+                                    <button class="secondary" onclick="startWalkthrough('Set up your store')">🗺️ Tour: Set up your store</button>
+                                    <button class="secondary" onclick="startWalkthrough('Activate your AI Support Agent')">🗺️ Tour: Activate your AI Support Agent</button>
+                                    <button class="secondary" onclick="startWalkthrough('Accept your first payment')">🗺️ Tour: Accept your first payment</button>
                                 </div>
                             `;
                             container.appendChild(toursDiv);
@@ -5626,6 +5723,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
                     <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">
                         <div id="ai-chat-header">
@@ -5657,7 +5755,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
                             <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
-                            <button onclick="document.getElementById('ai-chat-widget').style.display='flex'">Ask AI</button>
+                            <button onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">Ask AI</button>
                         </div>
 
                         <h2>Topics</h2>
@@ -5690,45 +5788,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- API Docs Screen -->
-                    <div id="api-docs-screen" class="screen">
-                        <h1>OHC API Reference <span style="font-size: 14px; background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; vertical-align: middle;">v1.0</span></h1>
-                        <p>Interactive API reference for developers integrating with OHC endpoints.</p>
-                        <div class="card" style="border-left: 4px solid var(--accent-green);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                                <h3 style="margin: 0;"><span style="background: var(--accent-green); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">GET</span> /api/v1/dashboard/metrics</h3>
-                                <span>▼</span>
-                            </div>
-                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-                                <p>Retrieve store performance and active customer metrics.</p>
-                                <h4>Response</h4>
-                                <pre style="background: var(--bg); padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 13px;"><code>{
-  "active_customers": 42,
-  "total_revenue": 1250.00
-}</code></pre>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left: 4px solid var(--accent-green);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                                <h3 style="margin: 0;"><span style="background: var(--accent-green); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">GET</span> /api/agents/approvals</h3>
-                                <span>▼</span>
-                            </div>
-                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-                                <p>List pending AI agent tasks requiring human approval.</p>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left: 4px solid var(--primary);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                                <h3 style="margin: 0;"><span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 4px; margin-right: 8px;">POST</span> /api/chat</h3>
-                                <span>▼</span>
-                            </div>
-                            <div style="display: none; margin-top: 16px; border-top: 1px solid var(--border); padding-top: 16px;">
-                                <p>Interact with the AI Help Agent.</p>
-                                <h4>Request Body</h4>
-                                <pre style="background: var(--bg); padding: 12px; border-radius: 8px; overflow-x: auto; font-family: monospace; font-size: 13px;"><code>{
-  "message": "string"
-}</code></pre>
-                            </div>
-                        </div>
+                    <div id="api-docs-screen" class="screen" style="padding: 0;">
+                        <div id="swagger-ui"></div>
                     </div>
                 </body>
             </html>
