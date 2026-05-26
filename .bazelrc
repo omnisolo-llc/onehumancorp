@@ -69,6 +69,11 @@ test --local_test_jobs=HOST_CPUS
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
 
+# ── Fast test loop (use --config=no-e2e) ─────────────────────────────────────
+# Optional local shortcut for skipping Docker-backed browser tests. The default
+# `bazel test //...` intentionally includes them.
+test:no-e2e --test_tag_filters=-e2e,-requires-docker
+
 # ── High parallelism (use --config=remote-jobs) ──────────────────────────────
 # Useful with a remote executor/cache setup. Keep the default local test path
 # conservative so `bazel test //...` can include Docker-backed Playwright tests
