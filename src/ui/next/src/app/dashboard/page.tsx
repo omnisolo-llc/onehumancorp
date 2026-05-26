@@ -221,17 +221,37 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleSendCampaign = () => {
+  const [globalReviewMessage, setGlobalReviewMessage] = useState("");
+
+  const handleSendCampaign = async () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
       return;
     }
 
     setIsSendingCampaign(true);
-    setTimeout(() => {
-      setIsSendingCampaign(false);
-      setCampaignSuccess(true);
-    }, 1500);
+    try {
+        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                order_id: 'ALL',
+                customer_name: 'Recent Customers',
+                product_name: 'Recent Purchases'
+            })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setGlobalReviewMessage(data.message);
+            setIsSendingCampaign(false);
+            setCampaignSuccess(true);
+        } else {
+            setIsSendingCampaign(false);
+        }
+    } catch (e) {
+        setIsSendingCampaign(false);
+        console.error(e);
+    }
   };
 
   const claimTrialExtension = () => {
@@ -555,8 +575,9 @@ export default function Dashboard() {
                 </p>
 
                 {campaignSuccess ? (
-                    <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                    <div className="p-4 rounded-xl mb-4 font-bold text-sm flex flex-col gap-2" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                        <span>✓ Campaign sent to <span id="review-emails-sent">12</span> customers!</span>
+                        {globalReviewMessage && <span className="text-xs text-green-700 italic border-l-2 pl-2 mt-1 border-green-500 whitespace-pre-wrap">{globalReviewMessage}</span>}
                     </div>
                 ) : (
                     <button
