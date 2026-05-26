@@ -49,6 +49,7 @@ rust_library(
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
+        "claude_code_plugins.rs",
         "codex_runner.rs",
         "consolidation_worker.rs",
         "deerflow_subagents.rs",
