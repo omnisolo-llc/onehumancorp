@@ -366,7 +366,7 @@ impl DashboardService for MyDashboardService {
                 };
 
                 let name = if req.mobile_optimized {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
+                    "".to_string()
                 } else {
                     a.name
                 };
