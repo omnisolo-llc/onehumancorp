@@ -120,7 +120,12 @@ impl TaskDecompositionService {
     }
 
     async fn claim_task_inner(&self, agent_id: &str, now: chrono::DateTime<Utc>) -> Result<Option<SharedTask>, String> {
-        match &self.db.store {
+        let locked = self.mesh.acquire_lock("queue_assignment", agent_id, 30).await?;
+        if !locked {
+            return Ok(None);
+        }
+
+        let res = match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
@@ -148,7 +153,7 @@ impl TaskDecompositionService {
                     Some(r) => r,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
-                        return Ok(None);
+                        break Ok(None);
                     }
                 };
 
@@ -287,9 +292,13 @@ impl TaskDecompositionService {
                 let _ = proto_task.encode(&mut payload_bytes);
                 let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
-                Ok(Some(task))
+                break Ok(Some(task));
             }
-        }
+        };
+
+        let _ = self.mesh.release_lock("queue_assignment", agent_id).await;
+
+        res
     }
 
     async fn get_task_pg(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: &str) -> Result<SharedTask, String> {

@@ -226,7 +226,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    pub async fn search_memories(&self, embedding: &str, limit: i32) -> Result<Vec<::server_ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
+    pub async fn search_memories(&self, embedding: &str, organization_id: &str, limit: i32) -> Result<Vec<::server_ohc::orchestration::TruthSearchResult>, Box<dyn std::error::Error>> {
         let tracer = global::tracer("ohc.autodream");
         let _span = tracer.start("autodream_search_memories");
         debug!("AutoDream: searching memories with limit {}", limit);
@@ -235,7 +235,8 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2")
+                .bind(organization_id)
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -251,11 +252,12 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings WHERE tenant_id = $1 ORDER BY embedding <=> '{}'::vector LIMIT $2",
                 embedding, embedding
             );
 
             let rows = sqlx::query(&query)
+                .bind(organization_id)
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;

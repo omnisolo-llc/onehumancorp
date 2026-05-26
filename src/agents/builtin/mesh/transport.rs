@@ -657,8 +657,18 @@ impl MeshTransport for RedisPubSubTransport {
             }
         });
 
+        struct DropGuard {
+            worker: tokio::task::JoinHandle<()>,
+        }
+        impl Drop for DropGuard {
+            fn drop(&mut self) {
+                self.worker.abort();
+            }
+        }
+
+        let guard = DropGuard { worker };
         let cancel = Box::new(move || {
-            worker.abort();
+            let _ = &guard;
         });
 
         Ok(cancel)

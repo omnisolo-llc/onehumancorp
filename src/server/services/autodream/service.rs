@@ -47,7 +47,7 @@ impl AutoDreamService for MyAutoDreamService {
             }
         };
 
-        match self.worker.search_memories(&embedding, limit).await {
+        match self.worker.search_memories(&embedding, &tenant_id, limit).await {
             Ok(results) => Ok(Response::new(AutoDreamQueryResult { results })),
             Err(e) => Err(Status::internal(e.to_string())),
         }

@@ -43,7 +43,9 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
                 Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
             }
         }))
-        .route("/query", get(move |Query(params): Query<QueryRequest>| async move {
+        .route("/query", get(move |headers: axum::http::HeaderMap, Query(params): Query<QueryRequest>| async move {
+            let tenant_id = headers.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("system").to_string();
+
             if params.text.is_empty() {
                 return (axum::http::StatusCode::BAD_REQUEST, "query_text is required".to_string()).into_response();
             }
@@ -61,7 +63,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
                 }
             };
 
-            match worker_query.search_memories(&embedding, limit).await {
+            match worker_query.search_memories(&embedding, &tenant_id, limit).await {
                 Ok(results) => {
                     let res = results.into_iter().map(|r| SearchResult {
                         id: r.id,
