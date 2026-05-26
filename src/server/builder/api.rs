@@ -370,8 +370,9 @@ async fn generate_storefront(
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
     let prompt = format!(
-        r#"You are The AI Architect. Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
-First, extract entities from the user's business description (company_name, business_type, product_name, product_price, company_description).
+        r#"You are The Promoter (Marketing & Advertising & SEO). Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
+First, synthesize the user's business description to select an appropriate template, generate copywriting, and select relevant concepts.
+Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
 
 User Description: "{}"
@@ -398,12 +399,18 @@ The JSON must exactly match this structure:
           "block_type": "ServiceBookingBlock",
           "content": {{ "title": "...", "availability": "..." }},
           "sort_order": 2
+        }},
+        {{
+          "block_type": "TestimonialBlock",
+          "content": {{ "quotes": [{{ "text": "...", "author": "..." }}] }},
+          "sort_order": 3
         }}
       ],
       "seo_metadata": {{
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
-        "name": "..."
+        "name": "...",
+        "description": "..."
       }}
     }}
   ]
