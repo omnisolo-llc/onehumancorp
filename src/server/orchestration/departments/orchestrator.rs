@@ -445,14 +445,14 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             DbStore::Postgres => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' AND id < $2 ORDER BY id DESC LIMIT $3")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' AND id < $2 ORDER BY id DESC LIMIT $3")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' ORDER BY id DESC LIMIT $2")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' ORDER BY id DESC LIMIT $2")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
@@ -493,14 +493,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
