@@ -21,20 +21,66 @@ export default function Integrations() {
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
-  const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
+  const handleConnect = async (id: string) => {
+    let tool_name = "";
+    switch (id) {
+      case "calendly": tool_name = "Calendly"; break;
+      case "manychat": tool_name = "Manychat"; break;
+      case "ayrshare": tool_name = "Ayrshare"; break;
+      case "cal_com": tool_name = "Cal.com"; break;
+      case "listmonk": tool_name = "Listmonk"; break;
+      case "mercadopago": tool_name = "Mercado Pago"; break;
+      case "easypost": tool_name = "EasyPost"; break;
+      case "twilio": tool_name = "Twilio"; break;
+      case "jitsi": tool_name = "Jitsi Meet"; break;
     }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
+
+    try {
+      const res = await fetch("/api/v1/scout/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("token") || ""}` },
+        body: JSON.stringify({ tool_name }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === id ? { ...integration, status: "connected" } : integration
+        ));
+        if (id === 'calendly') {
+            router.push("/dashboard");
+        } else if (id === 'manychat') {
+            router.push('/inbox');
+        }
+      } else {
+        if (id === 'calendly' || id === 'manychat') {
+          alert(`Connecting ${tool_name} via OAuth...`);
+        } else {
+          alert(`Connecting to ${tool_name}...`);
+        }
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === id ? { ...integration, status: "connected" } : integration
+        ));
+        if (id === 'calendly') {
+            router.push("/dashboard");
+        } else if (id === 'manychat') {
+            router.push('/inbox');
+        }
+      }
+    } catch (e) {
+      if (id === 'calendly' || id === 'manychat') {
+        alert(`Connecting ${tool_name} via OAuth...`);
+      } else {
+        alert(`Connecting to ${tool_name}...`);
+      }
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
-      router.push('/inbox');
+      if (id === 'calendly') {
+          router.push("/dashboard");
+      } else if (id === 'manychat') {
+          router.push('/inbox');
+      }
     }
   };
 

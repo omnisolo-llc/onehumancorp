@@ -1,0 +1,28 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "scout_api",
+    srcs = [
+        "mod.rs",
+        "tool_request.rs",
+    ],
+    edition = "2021",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/agents/builtin:core",
+        "//src/agents/builtin:builtin",
+        "//src/agents/scout:scout_lib",
+        "@crates//:axum",
+        "@crates//:serde",
+        "@crates//:sqlx",
+    ],
+)
+
+filegroup(
+    name = "srcs",
+    srcs = [
+        "mod.rs",
+        "tool_request.rs",
+    ],
+    visibility = ["//src/server/api:__pkg__"],
+)
