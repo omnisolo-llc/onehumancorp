@@ -167,22 +167,7 @@ impl KairosOrchestrator {
                     .await
                     .map_err(KairosError::Database)?;
 
-                    // Unblock downstream child dependencies
-                    if task_type == "shared" {
-                        sqlx::query("UPDATE shared_tasks SET dependencies = (SELECT json_group_array(value) FROM json_each(dependencies) WHERE value != ?) WHERE EXISTS (SELECT 1 FROM json_each(dependencies) WHERE value = ?)")
-                            .bind(task_id)
-                            .bind(task_id)
-                            .execute(&mut *tx)
-                            .await
-                            .map_err(KairosError::Database)?;
-                    } else {
-                        sqlx::query("UPDATE swarm_tasks SET dependencies = (SELECT json_group_array(value) FROM json_each(dependencies) WHERE value != ?) WHERE EXISTS (SELECT 1 FROM json_each(dependencies) WHERE value = ?)")
-                            .bind(task_id)
-                            .bind(task_id)
-                            .execute(&mut *tx)
-                            .await
-                            .map_err(KairosError::Database)?;
-                    }
+
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;
