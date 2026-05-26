@@ -1,0 +1,51 @@
+{
+  "title": "Harness Efficiency Dashboard",
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "id": 1,
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "title": "Harness Init Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_init_latency_seconds_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}} Init Latency (p95)"
+        }
+      ]
+    },
+    {
+      "title": "Harness DB I/O Latency",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_db_io_latency_seconds_bucket[5m])) by (le, deployment_mode, operation))",
+          "legendFormat": "{{deployment_mode}} {{operation}} Latency (p95)"
+        }
+      ]
+    },
+    {
+      "title": "Harness Execution Latency (P95)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(harness_execution_latency_bucket[5m])) by (le, deployment_mode))",
+          "legendFormat": "{{deployment_mode}} Execution Latency (p95)"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "title": "LLM Provider Health",
+  "uid": "llm-provider-health",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "Cost",
+    "OHC",
+    "Observability",
+    "Provider"
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Total Tokens by Tenant",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 2
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_tenant_token_usage_total[5m])) by (tenant_id)",
+          "legendFormat": "{{tenant_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "Agent Cost",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 2
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_cost[5m])) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "API Response Latency",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m]) / rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])",
+          "legendFormat": "Latency - {{entity}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    },
+    {
+      "type": "timeseries",
+      "title": "API Call Costs",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (entity)",
+          "legendFormat": "{{entity}}",
+          "refId": "A"
+        }
+      ],
+      "transparent": true
+    }
+  ]
+}
