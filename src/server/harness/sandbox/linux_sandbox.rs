@@ -11,6 +11,7 @@ use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
 
 pub struct LinuxSandbox {
+    bridge: Option<Arc<crate::harness::network::bridge::NetworkBridgeProxy>>,
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
     violation_store: Arc<ViolationStore>,
@@ -20,6 +21,7 @@ impl LinuxSandbox {
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         LinuxSandbox {
+            bridge: None,
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
             violation_store,
@@ -44,9 +46,14 @@ impl LinuxSandbox {
         args.push("/".to_string());
 
         // Handle network restrictions. For strict isolation, if there are ANY blocked domains,
-        // we drop the network entirely by not providing `--share-net`.
+        // we drop the network entirely by not providing `--share-net` (so it unshares).
+        // If a proxy bridge is active, we also bind its socket so the sandbox can use it.
         if self.policy.blocked_domains.is_empty() {
             args.push("--share-net".to_string());
+        } else if let Some(bridge) = &self.bridge {
+            args.push("--bind".to_string());
+            args.push(bridge.socket_path().to_string());
+            args.push(bridge.socket_path().to_string());
         }
 
         // Now, for every read-only path, we bind it as ro-bind to restrict writes.
@@ -104,6 +111,16 @@ impl SandboxAdapter for LinuxSandbox {
         prefix.push_str("set -e; umask 077; ");
         if !self.policy.blocked_domains.is_empty() {
             prefix.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.policy.blocked_domains.join(",")));
+            if let Some(bridge) = &self.bridge {
+                // bwrap doesn't natively expose unix:// for traditional http tools, so we bridge it via internal socat
+                let proxy_port = 8080;
+                let socket_path = bridge.socket_path();
+                prefix.push_str(&format!("socat TCP-LISTEN:{},fork UNIX-CONNECT:{} & ", proxy_port, socket_path));
+                let proxy_url = format!("http://127.0.0.1:{}", proxy_port);
+                prefix.push_str(&format!("export HTTP_PROXY='{}'; ", proxy_url));
+                prefix.push_str(&format!("export HTTPS_PROXY='{}'; ", proxy_url));
+                prefix.push_str(&format!("export ALL_PROXY='{}'; ", proxy_url));
+            }
         }
 
         Ok(format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd))
@@ -114,6 +131,14 @@ impl SandboxAdapter for LinuxSandbox {
             .map_err(|e| format!("Invalid policy JSON: {}", e))?;
 
         self.evaluator.update_policy(policy.clone());
+
+        if !policy.blocked_domains.is_empty() {
+            let bridge = crate::harness::network::bridge::NetworkBridgeProxy::new(policy.blocked_domains.clone()).await?;
+            self.bridge = Some(Arc::new(bridge));
+        } else {
+            self.bridge = None;
+        }
+
         self.policy = policy;
 
         Ok(())
@@ -153,9 +178,31 @@ mod tests {
 
         assert!(args.contains(&"--unshare-all".to_string()));
         assert!(!args.contains(&"--share-net".to_string())); // Because blocked domains is not empty
+        // Ensure proxy socket is bound
+        let bridge_socket = sandbox.bridge.as_ref().unwrap().socket_path().to_string();
+        assert!(args.contains(&"--bind".to_string()));
+        assert!(args.contains(&bridge_socket));
+
         assert!(args.contains(&"--ro-bind".to_string()));
         assert!(args.contains(&"/etc".to_string()));
         assert!(args.contains(&"/var/log".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_wrap_command_injects_http_proxy() {
+        let mut sandbox = LinuxSandbox::new(None);
+        let policy_json = r#"{
+            "blocked_domains": ["evil.com"]
+        }"#;
+        sandbox.update_config(policy_json).await.unwrap();
+
+        let wrapped = sandbox.wrap_command("curl example.com").await.unwrap();
+        assert!(wrapped.contains("export HTTP_PROXY"));
+        assert!(wrapped.contains("export HTTPS_PROXY"));
+        assert!(wrapped.contains("export ALL_PROXY"));
+
+        let bridge_socket = sandbox.bridge.as_ref().unwrap().socket_path().to_string();
+        assert!(wrapped.contains(&format!("UNIX-CONNECT:{}", bridge_socket)));
     }
 
     #[tokio::test]
