@@ -420,7 +420,7 @@ impl DepartmentOrchestrator {
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
-                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
+                        let payload_opt: Option<serde_json::Value> = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
