@@ -73,11 +73,20 @@ ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
 ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 if [[ ! -d "$workspace_root/node_modules" ]]; then
-  echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
-  echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
-  exit 1
+  echo "[playwright] Warning: node_modules not found in Bazel runfiles at $workspace_root/node_modules, attempting to link .aspect_rules_js..."
 fi
-ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
+
+# In newer versions of rules_js, node_modules is symlinked to .aspect_rules_js
+if [[ -d "$workspace_root/node_modules" ]]; then
+  cp -rL "$workspace_root/node_modules" "$WORK_DIR/node_modules"
+elif [[ -d "$workspace_root/.aspect_rules_js" ]]; then
+  ln -s "$workspace_root/.aspect_rules_js" "$WORK_DIR/.aspect_rules_js"
+  # Symlink node_modules manually if possible, or expect tools to follow aspect_rules_js
+  ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules" 2>/dev/null || true
+else
+    echo "[playwright] Error: node_modules not found in Bazel runfiles."
+    exit 1
+fi
 mkdir -p "$WORK_DIR/src/e2e"
 
 if [[ -n "$ABS_SPEC_FILE" ]]; then
@@ -100,13 +109,15 @@ cd "$WORK_DIR"
 
 PLAYWRIGHT_CLI="./node_modules/.bin/playwright"
 if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
-  for candidate in "./node_modules/playwright/cli.js" "./node_modules/@playwright/test/cli.js"; do
+  for candidate in "./node_modules/playwright/cli.js" "./node_modules/@playwright/test/cli.js" "./node_modules/.aspect_rules_js/playwright@1.50.1/node_modules/playwright/cli.js"; do
     if [[ -x "$candidate" ]]; then
       PLAYWRIGHT_CLI="$candidate"
       break
     fi
   done
 fi
+
+export NODE_PATH="$WORK_DIR/node_modules:$WORK_DIR/node_modules/.aspect_rules_js/playwright@1.50.1/node_modules"
 if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
   echo "[playwright] Error: Playwright CLI not found in node_modules"
   exit 1
