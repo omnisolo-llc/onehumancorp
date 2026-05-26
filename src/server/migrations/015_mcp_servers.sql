@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS mcp_servers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    config JSONB DEFAULT '{}',
+    config TEXT DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
