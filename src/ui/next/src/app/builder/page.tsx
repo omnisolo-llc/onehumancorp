@@ -12,6 +12,13 @@ export default function BuilderPage() {
   const [vibe, setVibe] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
   const [wizardStep, setWizardStep] = useState(1);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>(['architect']);
+  const agents = [
+    { id: 'architect', name: 'AI Architect', role: 'Design & Layout', icon: '🏛️', description: 'Expert in premium UI/UX and mobile-first storefronts.' },
+    { id: 'marketing', name: 'Marketing Guru', role: 'SEO & Copy', icon: '📈', description: 'Optimizes your content for search engines and high conversion.' },
+    { id: 'support', name: 'Success Bot', role: 'Customer Support', icon: '💬', description: 'Handles customer inquiries and automated chat responses.' },
+    { id: 'inventory', name: 'Supply Specialist', role: 'Inventory', icon: '📦', description: 'Manages stock levels and supplier communication.' },
+  ];
   const [blocks, setBlocks] = useState<any[]>([]);
   const [drafts, setDrafts] = useState<any[][]>([]);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
@@ -62,6 +69,11 @@ export default function BuilderPage() {
     const savedStep = localStorage.getItem("builder_wizardStep");
     if (savedStep) setWizardStep(parseInt(savedStep));
 
+    const savedAgents = localStorage.getItem("builder_selectedAgents");
+    if (savedAgents) {
+      try { setSelectedAgents(JSON.parse(savedAgents)); } catch(e) {}
+    }
+
     const savedName = localStorage.getItem("builder_businessName");
     if (savedName) setBusinessName(savedName);
 
@@ -90,7 +102,7 @@ export default function BuilderPage() {
     setIsLoaded(true);
   }, []);
 
-  // Sync state to local storage when it changes
+  // Sync state to local storage and backend when it changes
   useEffect(() => {
     if (!isLoaded) return;
     localStorage.setItem("builder_status", status);
@@ -103,7 +115,73 @@ export default function BuilderPage() {
     localStorage.setItem("builder_blocks", JSON.stringify(blocks));
     localStorage.setItem("builder_drafts", JSON.stringify(drafts));
     localStorage.setItem("builder_liveUrl", liveUrl);
-  }, [isLoaded, status, businessGoal, wizardStep, businessName, businessCategory, vibe, bio, blocks, drafts, liveUrl]);
+    localStorage.setItem("builder_selectedAgents", JSON.stringify(selectedAgents));
+
+    // Backend sync
+    const syncData = {
+      builderState: {
+        status,
+        businessGoal,
+        wizardStep,
+        businessName,
+        businessCategory,
+        vibe,
+        bio,
+        blocks,
+        liveUrl,
+        selectedAgents
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+          'x-user-id': 'me'
+        },
+        body: JSON.stringify(syncData)
+      }).catch(err => console.error("Failed to sync builder state to backend", err));
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [isLoaded, status, businessGoal, wizardStep, businessName, businessCategory, vibe, bio, blocks, drafts, liveUrl, tenantId, selectedAgents]);
+
+  // Load state from backend on mount
+  useEffect(() => {
+    const loadFromBackend = async () => {
+      try {
+        const response = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenantId,
+            'x-user-id': 'me'
+          }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.builderState) {
+            const bs = data.builderState;
+            if (bs.status) setStatus(bs.status);
+            if (bs.businessGoal) setBusinessGoal(bs.businessGoal);
+            if (bs.wizardStep) setWizardStep(bs.wizardStep);
+            if (bs.businessName) setBusinessName(bs.businessName);
+            if (bs.businessCategory) setBusinessCategory(bs.businessCategory);
+            if (bs.vibe) setVibe(bs.vibe);
+            if (bs.bio) setBio(bs.bio);
+            if (bs.blocks) setBlocks(bs.blocks);
+            if (bs.liveUrl) setLiveUrl(bs.liveUrl);
+            if (bs.selectedAgents) setSelectedAgents(bs.selectedAgents);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load builder state from backend", err);
+      }
+    };
+    if (isLoaded) {
+      loadFromBackend();
+    }
+  }, [isLoaded, tenantId]);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -323,13 +401,13 @@ export default function BuilderPage() {
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
-               {[1, 2, 3].map(step => (
+               {[1, 2, 3, 4].map(step => (
                  <div key={step} className={`h-1.5 flex-1 mx-1 rounded-full ${step <= wizardStep ? 'bg-[#0071E3]' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }} />
                ))}
              </div>
           </div>
 
-          <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
+          <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto hide-scrollbar">
             {wizardStep === 1 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
@@ -340,6 +418,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Business Name</label>
                 <input
                   type="text"
+                  aria-label="Business Name"
                   className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
@@ -350,6 +429,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Category</label>
                 <input
                   type="text"
+                  aria-label="Business Category"
                   className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
@@ -428,6 +508,80 @@ export default function BuilderPage() {
 
             {wizardStep === 3 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Assemble Your Team</h1>
+                <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-6 leading-relaxed">
+                  Select the AI agents that will help run your business.
+                </p>
+
+                <div className="space-y-4 mb-8">
+                  {agents.map((agent) => (
+                    <button
+                      key={agent.id}
+                      onClick={() => {
+                        if (agent.id === 'architect') return; // Mandatory
+                        setSelectedAgents(prev =>
+                          prev.includes(agent.id) ? prev.filter(a => a !== agent.id) : [...prev, agent.id]
+                        );
+                      }}
+                      className={`w-full p-4 border text-left transition-all relative ${
+                        selectedAgents.includes(agent.id)
+                        ? "border-[#0071E3] bg-[#0071E3]/5"
+                        : "border-gray-200 dark:border-white/10 bg-white/50 dark:bg-[#1d1d1f]/50"
+                      }`}
+                      style={{ borderRadius: '16px' }}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-3xl">{agent.icon}</span>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <h3 className="font-bold font-outfit text-gray-900 dark:text-[#f5f5f7]">{agent.name}</h3>
+                            {agent.id === 'architect' && (
+                              <span className="text-[10px] font-bold text-[#0066FF] bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded-full uppercase">Required</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-[#a1a1a6]">{agent.role}</p>
+                        </div>
+                        {selectedAgents.includes(agent.id) && (
+                          <div className="bg-[#0071E3] text-white rounded-full p-1">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                          </div>
+                        )}
+                      </div>
+                      {selectedAgents.includes(agent.id) && (
+                        <p className="mt-3 text-xs text-gray-600 dark:text-[#a1a1a6] italic leading-relaxed border-t border-blue-100 dark:border-blue-900/20 pt-2 animate-fade-in">
+                          {agent.description}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex gap-4">
+                  <button
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
+                    style={{ borderRadius: '8px' }}
+                    onClick={() => setWizardStep(2)}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="flex-1 p-4 bg-[#0071E3] text-white font-bold font-outfit text-lg transition-all shadow-md active:scale-[0.98]"
+                    style={{ borderRadius: '8px' }}
+                    onClick={() => {
+                       if (!bio.trim()) {
+                         setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe. My team includes: ${selectedAgents.map(a => agents.find(ag => ag.id === a)?.name).join(', ')}.`);
+                       }
+                       setWizardStep(4);
+                    }}
+                  >
+                    Next: Details
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {wizardStep === 4 && (
+              <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                 <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Final Details</h1>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Review and add any extra details to help our AI generate the perfect store.
@@ -437,6 +591,7 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
+                    aria-label="Business Details"
                     className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                     style={{ borderRadius: '8px' }}
                     value={bio}
@@ -450,7 +605,7 @@ export default function BuilderPage() {
                   <button
                     className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
                     style={{ borderRadius: '8px' }}
-                    onClick={() => setWizardStep(2)}
+                    onClick={() => setWizardStep(3)}
                   >
                     Back
                   </button>
@@ -816,6 +971,7 @@ export default function BuilderPage() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .glassmorphism { background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; }
+        .dark .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         @media (prefers-color-scheme: dark) {
           .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         }

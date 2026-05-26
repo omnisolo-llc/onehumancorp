@@ -49,7 +49,11 @@ describe('BuilderPage V2', () => {
     fireEvent.click(screen.getByText('Friendly'));
     fireEvent.click(screen.getByText('Next: Details'));
 
-    // Step 3
+    // Step 3 (AI Team)
+    fireEvent.click(screen.getByText('Marketing Guru'));
+    fireEvent.click(screen.getByText('Next: Details'));
+
+    // Step 4
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service/i), { target: { value: 'I bake amazing custom cakes.' } });
 
     (global.fetch as any).mockResolvedValueOnce({
@@ -85,6 +89,10 @@ describe('BuilderPage V2', () => {
      fireEvent.click(screen.getByText('Next: Choose Vibe'));
      fireEvent.click(screen.getByText('Minimalist'));
      fireEvent.click(screen.getByText('Next: Details'));
+
+     // AI Team
+     fireEvent.click(screen.getByText('Next: Details'));
+
      (global.fetch as any).mockResolvedValueOnce({
        ok: true,
        json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'T' } }] }] })
@@ -112,6 +120,10 @@ describe('BuilderPage V2', () => {
     fireEvent.click(screen.getByText('Next: Choose Vibe'));
     fireEvent.click(screen.getByText('Minimalist'));
     fireEvent.click(screen.getByText('Next: Details'));
+
+    // AI Team
+    fireEvent.click(screen.getByText('Next: Details'));
+
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Hero Headline' } }] }] })
