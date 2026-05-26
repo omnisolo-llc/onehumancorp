@@ -50,6 +50,7 @@ rust_library(
         "observation_masking.rs",
         "verification_loops.rs",
         "actor_model.rs",
+        "agentic_seek.rs",
         "swarm_topology.rs",
         "sona_patterns.rs",
         "agent.rs",
@@ -227,6 +228,7 @@ rust_binary(
         "registry",
         "gpt_researcher",
         "local_provider",
+        "agentic_seek",
         "sona_patterns",
     ]
 ]
