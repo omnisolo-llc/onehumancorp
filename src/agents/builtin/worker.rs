@@ -229,7 +229,7 @@ impl TaskWorker {
                 }
             }
             // exponential backoff
-            tokio::time::sleep(std::time::Duration::from_secs(2u64.pow(attempt as u32))).await;
+            tokio::time::sleep(std::time::Duration::from_secs(2 * attempt)).await;
         }
     }
 }

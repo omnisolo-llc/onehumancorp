@@ -92,8 +92,6 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "@crates//:tree-sitter",
-        "@crates//:tree-sitter-bash",
         "@crates//:temp-env",
         ":core",
         "//src/proto:agent_service_tonic",

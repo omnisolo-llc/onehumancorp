@@ -40,7 +40,6 @@ where
 {
     Router::new()
         .route("/", get(list_approvals))
-        .route("/activity", get(list_activity_feed))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
 }
@@ -68,33 +67,6 @@ async fn list_approvals(
 
     (StatusCode::OK, Json(ApprovalsResponse {
         pending_approvals: approvals,
-        next_cursor,
-    })).into_response()
-}
-
-
-async fn list_activity_feed(
-    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
-    Query(query): Query<PaginationQuery>,
-    Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
-    };
-
-    let limit = query.limit.unwrap_or(20);
-
-    let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
-
-    let next_cursor = if activities.len() == limit {
-        activities.last().map(|a| a.id.clone())
-    } else {
-        None
-    };
-
-    (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: activities,
         next_cursor,
     })).into_response()
 }
