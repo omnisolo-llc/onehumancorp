@@ -101,22 +101,20 @@ impl AuthConfig {
 
 #[allow(dead_code)]
 fn hmac_token(tok: &str) -> Vec<u8> {
-    let key = std::env::var("OHC_AGENT_AUTH_KEY")
+    let app_key = std::env::var("JWT_SECRET")
+        .map(|s| s.into_bytes())
         .unwrap_or_else(|_| {
-            if ::server_config::get().multitenant {
-                panic!("OHC_AGENT_AUTH_KEY must be set in Cloud/Multitenant Mode to ensure secure token hashing.");
-            }
-            let secret_path = std::path::Path::new(".ohc_agent_auth_key");
+            let secret_path = std::path::Path::new(".ohc_jwt_secret");
             if secret_path.exists() {
-                if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                if let Ok(bytes) = std::fs::read(secret_path) {
                     if bytes.len() >= 32 {
-                        return bytes.trim().to_string();
+                        return bytes;
                     }
                 }
             }
-            panic!("OHC_AGENT_AUTH_KEY or valid .ohc_agent_auth_key must be present for token verification");
+            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
         });
-    let mut mac = Hmac::<Sha256>::new_from_slice(key.as_bytes()).expect("HMAC can take key of any size");
+    let mut mac = Hmac::<Sha256>::new_from_slice(&app_key).expect("HMAC can take key of any size");
     mac.update(tok.as_bytes());
     mac.finalize().into_bytes().to_vec()
 }
