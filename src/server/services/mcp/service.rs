@@ -229,9 +229,7 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
-            _ => {
-                Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
-            }
+            _ => Err(Status::unimplemented(format!("tool {} not implemented", req.tool_id)))
         }
     }
 

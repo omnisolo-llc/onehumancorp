@@ -426,7 +426,14 @@ mod tests {
     async fn test_pg_checkpointer_save_and_load() {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+
+        let timeout_duration = std::time::Duration::from_millis(500);
+        let query_future = sqlx::query("SELECT 1").execute(&pool);
+
+        if let Err(_) = tokio::time::timeout(timeout_duration, query_future).await {
+            return; // Skip if database is unavailable or hangs
+        }
+
         let saver = PgCheckpointer::new(pool);
         
         let cp = Checkpoint {
@@ -446,7 +453,14 @@ mod tests {
     async fn test_pg_checkpointer_list_checkpoints() {
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
+
+        let timeout_duration = std::time::Duration::from_millis(500);
+        let query_future = sqlx::query("SELECT 1").execute(&pool);
+
+        if let Err(_) = tokio::time::timeout(timeout_duration, query_future).await {
+            return; // Skip if database is unavailable or hangs
+        }
+
         let saver = PgCheckpointer::new(pool);
         
         let res = saver.list_checkpoints("thread-list").await;
