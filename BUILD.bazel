@@ -24,6 +24,7 @@ exports_files([
     "playwright.config.ts",
     "package.json",
     "package-lock.json",
+    "pnpm-lock.yaml",
 ])
 
 config_setting(

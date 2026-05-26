@@ -70,7 +70,11 @@ WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/src/server"
 ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
-ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
+if [[ -f "$workspace_root/pnpm-lock.yaml" ]]; then
+  ln -s "$workspace_root/pnpm-lock.yaml" "$WORK_DIR/pnpm-lock.yaml"
+elif [[ -f "$workspace_root/package-lock.json" ]]; then
+  ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
+fi
 ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"

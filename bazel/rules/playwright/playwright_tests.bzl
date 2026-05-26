@@ -22,6 +22,7 @@ def define_playwright_tests(specs, data = [], server = None):
         "//:playwright.config.ts",
         "//:package.json",
         "//:package-lock.json",
+        "//:pnpm-lock.yaml",
         "@playwright//:chromium-headless-shell",
         "@playwright//:firefox",
         "@playwright//:webkit",

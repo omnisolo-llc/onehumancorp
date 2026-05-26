@@ -236,7 +236,7 @@ git_override(
 playwright = use_extension("@rules_playwright//playwright:extensions.bzl", "playwright")
 playwright.repo(
     name = "playwright",
-    playwright_version = "1.50.1",
+    playwright_version = "1.60.0",
 )
 use_repo(playwright, "playwright")
 
