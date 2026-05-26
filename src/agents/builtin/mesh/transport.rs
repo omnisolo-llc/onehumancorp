@@ -1712,6 +1712,7 @@ Content-Length: 0
 
         cancel();
     }
+}
 
     #[tokio::test]
     async fn test_sqlite_transport_coverage() {
@@ -1727,7 +1728,7 @@ Content-Length: 0
             t_clone.start_worker().await;
         });
 
-        let received = Arc::new(tokio::sync::Notify::new());
+        let received = std::sync::Arc::new(tokio::sync::Notify::new());
         let received_clone = received.clone();
 
         let _cancel = transport.subscribe("test_topic", Box::new(move |msg: Message| {
@@ -1750,7 +1751,7 @@ Content-Length: 0
         assert!(result.is_ok(), "Did not receive sqlite_payload in time");
     }
 
-                #[tokio::test]
+    #[tokio::test]
     async fn test_pg_transport_coverage() {
         let db_url = "postgres://postgres:postgres@localhost:5432/test";
 
@@ -1780,4 +1781,3 @@ Content-Length: 0
 
         let _ = transport.publish("test_topic_pg", msg).await;
     }
-}
