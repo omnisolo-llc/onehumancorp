@@ -1,6 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 
+RUNFILES_ROOT="${RUNFILES_ROOT:-}"
+if [[ -z "$RUNFILES_ROOT" && -n "${TEST_SRCDIR:-}" ]]; then
+  if [[ -n "${TEST_WORKSPACE:-}" && -d "$TEST_SRCDIR/$TEST_WORKSPACE" ]]; then
+    RUNFILES_ROOT="$TEST_SRCDIR/$TEST_WORKSPACE"
+  elif [[ -d "$TEST_SRCDIR/_main" ]]; then
+    RUNFILES_ROOT="$TEST_SRCDIR/_main"
+  else
+    RUNFILES_ROOT="$TEST_SRCDIR"
+  fi
+fi
+if [[ -z "$RUNFILES_ROOT" ]]; then
+  RUNFILES_ROOT="$(pwd)"
+fi
+
 # Traverse up to find the real repository/workspace root containing node_modules
 workspace_root=""
 current_dir="$(pwd)"
@@ -16,12 +30,11 @@ if [[ -z "$workspace_root" ]]; then
   workspace_root="$(pwd)"
 fi
 
-# Resolve spec file to absolute path if passed as argument
-spec_file="${1:-}"
-ABS_SPEC_FILE=""
-if [[ -n "$spec_file" ]]; then
-    ABS_SPEC_FILE="$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")"
-fi
+# Resolve spec files to absolute paths if passed as arguments.
+ABS_SPEC_FILES=()
+for spec_file in "$@"; do
+  ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
+done
 
 # Resolve browsers path to absolute
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
@@ -69,17 +82,32 @@ mkdir -p "$HOME"
 WORK_DIR="${TEST_TMPDIR:-/tmp}/playwright-workspace"
 rm -rf "$WORK_DIR"
 mkdir -p "$WORK_DIR/src/server"
-ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
-ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
-ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
+cp "$workspace_root/package.json" "$WORK_DIR/package.json"
+cp "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
+cp "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
+if [[ ! -d "$workspace_root/node_modules" ]]; then
+  echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
+  echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
+  exit 1
+fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
 
-if [[ -n "$ABS_SPEC_FILE" ]]; then
-  ABS_SPEC_FILE="$(realpath "$ABS_SPEC_FILE")"
-  spec_base="$(basename "$ABS_SPEC_FILE")"
-  cp "$ABS_SPEC_FILE" "$WORK_DIR/src/e2e/$spec_base"
-  ABS_SPEC_FILE="src/e2e/$spec_base"
+PLAYWRIGHT_SPEC_ARGS=()
+if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
+  for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
+    abs_spec_file="$(realpath "$abs_spec_file")"
+    spec_base="$(basename "$abs_spec_file")"
+    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_base"
+    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_base")
+  done
+else
+  for spec_dir in "$RUNFILES_ROOT/src/e2e" "$workspace_root/src/e2e"; do
+    if compgen -G "$spec_dir/*.spec.ts" >/dev/null; then
+      cp "$spec_dir"/*.spec.ts "$WORK_DIR/src/e2e/"
+      break
+    fi
+  done
 fi
 
 for support_file in fixtures.ts ai-judge.ts global-setup.ts e2e-seed.sql; do
@@ -92,6 +120,20 @@ done
 ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
+
+PLAYWRIGHT_CLI="./node_modules/.bin/playwright"
+if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
+  for candidate in "./node_modules/playwright/cli.js" "./node_modules/@playwright/test/cli.js"; do
+    if [[ -x "$candidate" ]]; then
+      PLAYWRIGHT_CLI="$candidate"
+      break
+    fi
+  done
+fi
+if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
+  echo "[playwright] Error: Playwright CLI not found in node_modules"
+  exit 1
+fi
 
 # Check if Docker is available. If not, skip E2E tests gracefully.
 if ! docker info >/dev/null 2>&1; then
@@ -108,8 +150,15 @@ CONTAINER_SUFFIX="$(echo "${TEST_TARGET:-playwright}" | md5sum | cut -c1-8)_${RA
 POSTGRES_NAME="e2e_postgres_${CONTAINER_SUFFIX}"
 VALKEY_NAME="e2e_valkey_${CONTAINER_SUFFIX}"
 
-PG_PORT=$(shuf -i 20000-30000 -n 1)
-VK_PORT=$(shuf -i 30001-40000 -n 1)
+pick_free_port() {
+  python3 - <<'PY'
+import socket
+
+with socket.socket() as sock:
+    sock.bind(("127.0.0.1", 0))
+    print(sock.getsockname()[1])
+PY
+}
 
 cleanup() {
   local exit_code=$?
@@ -122,22 +171,35 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[playwright] Starting E2E infrastructure (PG:$PG_PORT VK:$VK_PORT)..."
-docker run -d --name "$POSTGRES_NAME" -p "$PG_PORT:5432" -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
-docker run -d --name "$VALKEY_NAME" -p "$VK_PORT:6379" valkey/valkey:8-alpine
+echo "[playwright] Starting E2E infrastructure..."
+docker run -d --name "$POSTGRES_NAME" -p 127.0.0.1::5432 -e POSTGRES_USER=ohc -e POSTGRES_PASSWORD=ohc -e POSTGRES_DB=ohc pgvector/pgvector:pg16
+docker run -d --name "$VALKEY_NAME" -p 127.0.0.1::6379 valkey/valkey:8-alpine
+
+PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
+VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
+echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
 
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
-for i in $(seq 1 60); do
-  if nc -z 127.0.0.1 "$PG_PORT" 2>/dev/null; then
-    sleep 2
+for i in $(seq 1 120); do
+  if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
     break
+  fi
+  if ! docker inspect -f '{{.State.Running}}' "$POSTGRES_NAME" 2>/dev/null | grep -q true; then
+    echo "[playwright] Postgres container exited before readiness."
+    docker logs "$POSTGRES_NAME" || true
+    exit 1
+  fi
+  if (( i == 120 )); then
+    echo "[playwright] Error: Postgres failed to become ready after 120 seconds."
+    docker logs "$POSTGRES_NAME" || true
+    exit 1
   fi
   sleep 1
 done
 
 echo "[playwright] Initializing database roles..."
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
-docker exec "$POSTGRES_NAME" psql -h 127.0.0.1 -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
+docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END \$\$;"
+docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "GRANT ohc_bypassrls TO ohc;"
 
 if [[ -z "$SERVER_BIN" ]]; then
   for candidate in "$workspace_root/bazel-bin/src/server/server" "$workspace_root/src/server/server"; do
@@ -148,9 +210,9 @@ if [[ -z "$SERVER_BIN" ]]; then
   done
 fi
 
-# Pick random ports for the server to avoid collisions during parallel tests
-OHC_SERVER_PORT=$(shuf -i 15000-20000 -n 1)
-OHC_GRPC_SERVER_PORT=$(shuf -i 20001-25000 -n 1)
+# Pick currently free ports for the server to avoid collisions during parallel tests.
+OHC_SERVER_PORT="$(pick_free_port)"
+OHC_GRPC_SERVER_PORT="$(pick_free_port)"
 export OHC_PORT="$OHC_SERVER_PORT"
 export OHC_GRPC_PORT="$OHC_GRPC_SERVER_PORT"
 export OHC_DEFAULT_TENANT_ID="${OHC_DEFAULT_TENANT_ID:-e2e-tenant}"
@@ -193,6 +255,7 @@ else
 fi
 
 export CI=true
+export PLAYWRIGHT_LIST_REPORTER="${PLAYWRIGHT_LIST_REPORTER:-1}"
 export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 # Use unique output directories for parallel isolation
@@ -216,24 +279,20 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
 fi
 
 # Run Playwright
-if [[ -n "$ABS_SPEC_FILE" ]]; then
-  spec_base="$(basename "$ABS_SPEC_FILE")"
-  echo "[playwright] Validating spec discovery: $spec_base"
-  npx playwright test --config ./playwright.config.ts --list "src/e2e/$spec_base"
+if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
+  echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
+  LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"
+  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
+    if grep -q "No tests found" "$LIST_LOG"; then
+      echo "[playwright] No tests found in selected specs."
+    else
+      exit 1
+    fi
+  fi
 
-  cat > "$WORK_DIR/src/e2e/__bazel_smoke.spec.ts" <<'EOF'
-import { test, expect } from '@playwright/test';
-
-test('bazel playwright smoke', async ({ page }) => {
-  const response = await page.goto('/');
-  expect(response?.ok()).toBeTruthy();
-  await expect(page.locator('body')).toBeVisible();
-});
-EOF
-
-  echo "[playwright] Running Bazel smoke for: $spec_base"
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/__bazel_smoke.spec.ts"
+  echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG}
 else
   echo "[playwright] Running all specs on host"
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}
 fi
