@@ -592,22 +592,13 @@ export default function Dashboard() {
              </p>
              <button
                onClick={() => {
-                 const tenant = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-
-                 // Make API call to reward AI actions for the growth loop sharing action
-                 fetch('/api/v1/growth/referrals/click', {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify({ id: tenant })
-                 }).then(() => {
-                     const text = encodeURIComponent(`I'm running my business on One Human Corp! Check it out: ohc://join?ref=${tenant}`);
-                     window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                     alert('Thank you for sharing! 100 bonus AI actions have been added to your workspace.');
-                 }).catch(console.error);
+                 const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                 const text = encodeURIComponent(`I'm running my business on One Human Corp! Check it out: ohc://join?ref=${tenant}`);
+                 window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                 alert('Thank you for sharing! 100 AI actions have been added to your workspace.');
                }}
-               className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+               className="px-6 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-sm hover:bg-blue-700 transition-colors"
              >
-               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
                Share on X & Claim Reward
              </button>
            </div>
