@@ -212,8 +212,13 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
-            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" => {
-                match self.hybrid_fs_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
+            "fs_hybrid_read" | "fs_hybrid_write" | "fs_hybrid_sync" | "fs_list_dir" | "fs_search_files" => {
+                // Determine tenant_id from spiffe_id on each request to ensure multi-tenancy
+                let spiffe_id_str = &req.spiffe_id;
+                let (tenant_id, _) = ::server_auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("system".to_string(), "".to_string()));
+                let provider = crate::tools::hybridfsmcp::factory::create_fs_provider(Some(tenant_id));
+                let request_specific_server = crate::tools::hybridfsmcp::server::HybridFSMcpServer::new(provider);
+                match request_specific_server.invoke_tool(&req, Some(self.hub.pool.clone())).await {
                     Ok(resp) => Ok(Response::new(resp)),
                     Err(e) => Err(e),
                 }
@@ -224,9 +229,7 @@ impl McpService for MyMcpService {
                     Err(e) => Err(e),
                 }
             }
-            _ => {
-                Err(Status::unimplemented(format!("tool {} not implemented in stub", req.tool_id)))
-            }
+            _ => Err(Status::unimplemented(format!("tool {} not implemented", req.tool_id)))
         }
     }
 

@@ -23,6 +23,16 @@ static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
 static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
 static MEETING_EVENT: OnceLock<Counter<u64>> = OnceLock::new();
 static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
+static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
+    MCP_TOOL_CALLS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_mcp_tool_calls_total")
+            .with_description("Total number of MCP tool calls")
+            .build()
+    })
+}
 
 pub fn get_token_usage_counter() -> &'static Counter<u64> {
     TOKEN_USAGE.get_or_init(|| {
@@ -209,6 +219,16 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
     })
 }
 
+pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
+    let counter = get_mcp_tool_calls_counter();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
+            opentelemetry::KeyValue::new("status", status.to_string()),
+        ]
+    );
+}
 
 pub fn get_task_processing_latency_histogram() -> &'static Histogram<f64> {
     TASK_PROCESSING_LATENCY.get_or_init(|| {
@@ -604,6 +624,8 @@ pub async fn record_task_resolution_efficiency(
     model: &str,
     tokens: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let deployment_mode = get_deployment_mode();
+
     // 1. Outcome-Labeled Token Metrics
     buffer_metric(
         pool,
@@ -614,6 +636,7 @@ pub async fn record_task_resolution_efficiency(
             "outcome": outcome,
             "agent_role": role,
             "model": model,
+            "deployment_mode": deployment_mode,
         }),
     )
     .await?;
@@ -629,6 +652,7 @@ pub async fn record_task_resolution_efficiency(
             efficiency,
             serde_json::json!({
                 "agent_role": role,
+                "deployment_mode": deployment_mode,
             }),
         )
         .await?;
@@ -1054,4 +1078,15 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
             opentelemetry::KeyValue::new("operation", operation.to_string()),
         ],
     );
+}
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_task_resolution_efficiency_has_deployment_mode() {
+        // Just checking that `get_deployment_mode` is exported and we can use it.
+        let mode = ::server_telemetry::get_deployment_mode();
+        assert!(mode == "Standalone" || mode == "Cloud");
+    }
 }
