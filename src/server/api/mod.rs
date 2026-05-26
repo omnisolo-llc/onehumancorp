@@ -10,3 +10,4 @@ pub mod agents;
 pub mod onboarding;
 pub mod growth;
 pub mod telemetry;
+pub mod gift_cards_api;
