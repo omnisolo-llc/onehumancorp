@@ -136,6 +136,8 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub resume_from_checkpoint_id: Option<String>,
     pub enable_single_agent_maximization: bool,
     pub enable_vercel_tool_scoping_metric: bool,
+    pub enable_scalable_cloud_deployment: bool,
+    pub target_agent_count: Option<usize>,
     pub enable_lazy_tool_loading: bool,
     pub enable_langgraph_mechanic: bool,
     pub enable_agent_curated_memory: bool,
@@ -192,6 +194,8 @@ enable_llmcompiler_plan_and_execute: false,
             resume_from_checkpoint_id: None,
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
+            enable_scalable_cloud_deployment: false,
+            target_agent_count: None,
             enable_lazy_tool_loading: false,
             enable_langgraph_mechanic: false,
             enable_agent_curated_memory: false,
@@ -649,6 +653,26 @@ impl Agent {
     {
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
+
+        // SOTA Harness Patterns (2025-2026): 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
+        if final_cfg.enable_scalable_cloud_deployment {
+            if let Some(target_agents) = final_cfg.target_agent_count {
+                if target_agents > 1 {
+                    let manager = crate::scalable_cloud::CloudDeploymentManager::new();
+                    let cloud_res = manager.deploy_agents(target_agents);
+                    match cloud_res {
+                        Ok(msg) => {
+                            on_event(AgentEvent::TaskComplete { content: msg.clone() });
+                            return Ok(msg);
+                        }
+                        Err(e) => {
+                            return Err(e.into());
+                        }
+                    }
+                }
+            }
+        }
+
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
 
@@ -1740,6 +1764,26 @@ impl Agent {
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
+
+        // SOTA Harness Patterns (2025-2026): 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
+        if final_cfg.enable_scalable_cloud_deployment {
+            if let Some(target_agents) = final_cfg.target_agent_count {
+                if target_agents > 1 {
+                    let manager = crate::scalable_cloud::CloudDeploymentManager::new();
+                    let cloud_res = manager.deploy_agents(target_agents);
+                    match cloud_res {
+                        Ok(msg) => {
+                            on_event(AgentEvent::TaskComplete { content: msg.clone() });
+                            return Ok(msg);
+                        }
+                        Err(e) => {
+                            return Err(e.into());
+                        }
+                    }
+                }
+            }
+        }
+
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
             on_event(AgentEvent::TaskError { error: err_msg.clone() });
