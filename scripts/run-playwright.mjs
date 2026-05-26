@@ -54,7 +54,10 @@ async function main() {
   }
 
   try {
-    await runCommand('npx', ['playwright', 'test']);
+    // Run npx playwright test with a shard-specific cache to avoid ENOTEMPTY race conditions
+    // across parallel bazel test executions.
+    const npmCache = path.join(process.env.TEST_TMPDIR || '/tmp', 'npm-cache');
+    await runCommand('npx', ['--yes', 'playwright', 'test'], { npm_config_cache: npmCache });
   } finally {
     server.kill();
     if (process.env.E2E_SKIP_DOCKER !== 'true') {
@@ -65,12 +68,12 @@ async function main() {
   console.log('[run-playwright] Done');
 }
 
-async function runCommand(command, args) {
+async function runCommand(command, args, envOverrides = {}) {
   await new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: ROOT,
       stdio: 'inherit',
-      env: process.env,
+      env: { ...process.env, ...envOverrides },
       shell: false,
     });
     child.on('error', reject);

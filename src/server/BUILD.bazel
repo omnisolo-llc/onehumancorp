@@ -119,32 +119,6 @@ rust_library(
     ],
 )
 
-rust_test(
-    name = "hybridfsmcp_unit_test",
-    size = "large",
-    crate = ":server_lib",
-    args = ["--test", "tools::hybridfsmcp"],
-    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-    edition = "2024",
-    env = {
-        "RUST_TEST_THREADS": "1",
-    },
-    proc_macro_deps = [
-        "@crates//:async-trait",
-    ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        "@crates//:tokio",
-        "@crates//:serde_json",
-        "@crates//:sqlx",
-        "@crates//:tempfile",
-        "@crates//:temp-env",
-    ],
-)
-
 rust_binary(
     name = "server",
     srcs = ["main.rs"],

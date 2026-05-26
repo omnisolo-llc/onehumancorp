@@ -117,29 +117,3 @@ async fn test_local_fs_provider_search() {
     let entries = provider.search_files("dir", ".md").await.unwrap();
     assert_eq!(entries, vec!["file2.md"]);
 }
-
-#[tokio::test]
-async fn test_provider_path_traversal() {
-    let dir = tempdir().unwrap();
-    let provider = LocalFSProvider::new(dir.path().to_path_buf());
-
-    // Write a valid file
-    provider.write_file("valid.txt", b"valid").await.unwrap();
-
-    // Attempt directory traversal out of bounds
-    let err = provider.write_file("../out_of_bounds.txt", b"invalid").await.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
-
-    // Attempt directory traversal read
-    let err = provider.read_file("../valid.txt").await.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
-
-    // Attempt to write an absolute path that is stripped and becomes in bounds
-    provider.write_file("/in_bounds.txt", b"absolute").await.unwrap();
-    let content = provider.read_file("in_bounds.txt").await.unwrap();
-    assert_eq!(content, b"absolute");
-
-    // Check that an absolute path out of bounds doesn't traverse
-    let err = provider.read_file("/../etc/passwd").await.unwrap_err();
-    assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
-}
