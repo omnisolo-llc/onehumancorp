@@ -249,7 +249,6 @@ mod tests {
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
             .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
-            .with_state(transport)
             .layer(axum::Extension(::server_common::Claims {
                 sub: "test-user".to_string(),
                 exp: 0,
@@ -260,7 +259,8 @@ mod tests {
                 roles: vec![],
                 session_id: None,
                 jti: "test-jti".to_string(),
-            }));
+            }))
+            .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -325,7 +325,6 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
-            .with_state(transport)
             .layer(axum::Extension(::server_common::Claims {
                 sub: "test-user".to_string(),
                 exp: 0,
@@ -336,7 +335,8 @@ mod tests {
                 roles: vec![],
                 session_id: None,
                 jti: "test-jti".to_string(),
-            }));
+            }))
+            .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -379,7 +379,6 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
-            .with_state(transport)
             .layer(axum::Extension(::server_common::Claims {
                 sub: "test-user".to_string(),
                 exp: 0,
@@ -390,7 +389,8 @@ mod tests {
                 roles: vec![],
                 session_id: None,
                 jti: "test-jti".to_string(),
-            }));
+            }))
+            .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
