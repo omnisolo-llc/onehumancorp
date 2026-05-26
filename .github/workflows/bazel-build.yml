@@ -55,7 +55,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode.app
 
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@0.8.5
+        uses: bazel-contrib/setup-bazel@v3
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}

@@ -1,0 +1,10 @@
+--- registry.rs
++++ registry.rs
+@@ -658,7 +658,7 @@
+         match provider {
+             "jitsi" | "jitsi-meet" => {
+-                let clients = self.jitsi_clients.read().unwrap();
++                let clients = self.nats_clients.read().unwrap();
+                 if let Some(client) = clients.get(integration_id) {
+                     return client.create_meeting(topic).await;
+                 }
