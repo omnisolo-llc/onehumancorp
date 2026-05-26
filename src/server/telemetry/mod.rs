@@ -624,6 +624,8 @@ pub async fn record_task_resolution_efficiency(
     model: &str,
     tokens: i64,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let deployment_mode = get_deployment_mode();
+
     // 1. Outcome-Labeled Token Metrics
     buffer_metric(
         pool,
@@ -634,6 +636,7 @@ pub async fn record_task_resolution_efficiency(
             "outcome": outcome,
             "agent_role": role,
             "model": model,
+            "deployment_mode": deployment_mode,
         }),
     )
     .await?;
@@ -649,6 +652,7 @@ pub async fn record_task_resolution_efficiency(
             efficiency,
             serde_json::json!({
                 "agent_role": role,
+                "deployment_mode": deployment_mode,
             }),
         )
         .await?;
@@ -1074,4 +1078,15 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
             opentelemetry::KeyValue::new("operation", operation.to_string()),
         ],
     );
+}
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_record_task_resolution_efficiency_has_deployment_mode() {
+        // Just checking that `get_deployment_mode` is exported and we can use it.
+        let mode = ::server_telemetry::get_deployment_mode();
+        assert!(mode == "Standalone" || mode == "Cloud");
+    }
 }
