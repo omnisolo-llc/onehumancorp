@@ -287,7 +287,7 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
@@ -329,7 +329,7 @@ export default function OnboardingWizard() {
                       setStep(2);
                       setError("");
                     }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
+                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 dark:bg-black/30 dark:hover:bg-black/50 text-sm text-gray-700 dark:text-gray-300 transition-all backdrop-blur-sm"
                   >
                     {type}
                   </button>
@@ -398,7 +398,7 @@ export default function OnboardingWizard() {
                   <button
                     key={niche}
                     onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
+                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 dark:bg-black/30 dark:hover:bg-black/50 text-sm text-gray-700 dark:text-gray-300 transition-all backdrop-blur-sm"
                   >
                     {niche}
                   </button>

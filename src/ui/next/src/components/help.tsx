@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
+export { WithTooltip };
 import { InteractiveWalkthrough } from './Walkthrough';
 
 // --- Walkthrough System ---

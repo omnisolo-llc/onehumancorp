@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock } from "../builder/components";
-import { Tooltip, useWalkthrough } from "../../components/help";
+import { WithTooltip, useWalkthrough } from "../../components/help";
 
 export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
@@ -193,7 +193,7 @@ export default function WebsiteBuilderPage() {
               </p>
 
               <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
-              <Tooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+              <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
                   enterKeyHint="done"
@@ -213,10 +213,10 @@ export default function WebsiteBuilderPage() {
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
                   rows={6}
                 />
-              </Tooltip>
+              </WithTooltip>
 
               <div className="flex gap-4">
-                <Tooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
                     className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
@@ -230,7 +230,7 @@ export default function WebsiteBuilderPage() {
                   >
                     Build My Storefront
                   </button>
-                </Tooltip>
+                </WithTooltip>
               </div>
             </div>
           </div>
@@ -321,7 +321,7 @@ export default function WebsiteBuilderPage() {
         </div>
 
         <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50" style={{ borderRadius: '0 0 16px 16px' }}>
-          <Tooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
+          <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
               className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
@@ -331,7 +331,7 @@ export default function WebsiteBuilderPage() {
               <span>1-Tap Launch</span>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </button>
-          </Tooltip>
+          </WithTooltip>
         </div>
       </div>
     </div>

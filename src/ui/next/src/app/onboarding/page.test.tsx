@@ -50,6 +50,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('handles backend load error gracefully', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     (global.fetch as any).mockRejectedValueOnce(new Error("Network Error"));
 
     act(() => {
@@ -59,6 +60,7 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText('What do you do?')).toBeInTheDocument();
     });
+    vi.restoreAllMocks();
   });
 
   it('syncs state to backend when changed', async () => {
@@ -85,6 +87,7 @@ describe('OnboardingWizard', () => {
     });
 
     // Test sync error
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     (global.fetch as any).mockRejectedValueOnce(new Error("Sync Error"));
     await userEvent.type(input, '2');
 
@@ -94,6 +97,7 @@ describe('OnboardingWizard', () => {
 
     // We expect the console.error to be called, but we won't assert it strictly, just getting the coverage
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it('Step 1: User enters business type and clicks next', async () => {
@@ -126,7 +130,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 2: User enters business name and clicks next', async () => {
-    useOnboardingStore.setState({ step: 2, businessType: 'Bakery' });
+    act(() => { useOnboardingStore.setState({ step: 2, businessType: 'Bakery' }); });
     (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) });
     act(() => { render(<OnboardingWizard />); });
 
@@ -162,7 +166,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 3: User enters niche and clicks Generate Draft', async () => {
-    useOnboardingStore.setState({ step: 3, businessType: 'Bakery', businessName: "Maya's Bakery" });
+    act(() => { useOnboardingStore.setState({ step: 3, businessType: 'Bakery', businessName: "Maya's Bakery" }); });
     (global.fetch as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Initial load
       .mockResolvedValueOnce({ ok: true, json: async () => ({ initial_products: [{ name: 'Custom Cake', price: '25.00' }] }) }); // Intake API
@@ -205,13 +209,17 @@ describe('OnboardingWizard', () => {
     // Let's just test `handleIntakeSubmit` which has the exact same check. Oh, line 146 IS in `handleNext`.
 
     // Error on short submit (intake submit)
-    await userEvent.type(input, 'abcd');
+    await act(async () => {
+      await userEvent.type(input, 'abcd');
+    });
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
     await waitFor(() => expect(screen.getByText('Niche description must be at least 5 characters.')).toBeInTheDocument());
 
     // Valid submit
-    await userEvent.clear(input);
-    await userEvent.type(input, "I bake custom vegan cakes");
+    await act(async () => {
+      await userEvent.clear(input);
+      await userEvent.type(input, "I bake custom vegan cakes");
+    });
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
 
     await waitFor(() => {
@@ -221,7 +229,7 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 3: API Error on Generate Draft', async () => {
-    useOnboardingStore.setState({ step: 3, businessType: 'Bakery', businessName: "Maya's Bakery", businessCategory: "I bake custom vegan cakes" });
+    act(() => { useOnboardingStore.setState({ step: 3, businessType: 'Bakery', businessName: "Maya's Bakery", businessCategory: "I bake custom vegan cakes" }); });
     (global.fetch as any)
       .mockResolvedValueOnce({ ok: true, json: async () => ({}) }) // Initial load
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) }); // Intake API Error
@@ -235,12 +243,14 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 4: User reviews and clicks Publish Now', async () => {
-    useOnboardingStore.setState({
-      step: 4,
-      businessType: 'Bakery',
-      businessName: "Maya's Bakery",
-      businessCategory: "I bake custom vegan cakes",
-      intakeData: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+    act(() => {
+      useOnboardingStore.setState({
+        step: 4,
+        businessType: 'Bakery',
+        businessName: "Maya's Bakery",
+        businessCategory: "I bake custom vegan cakes",
+        intakeData: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+      });
     });
 
     // We expect fetch to be called twice:
@@ -258,10 +268,13 @@ describe('OnboardingWizard', () => {
     // Edit product
     const nameInput = await screen.findByPlaceholderText("e.g. Custom Cake");
     const priceInput = screen.getByPlaceholderText("0.00");
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Vegan Cake");
-    await userEvent.clear(priceInput);
-    await userEvent.type(priceInput, "30.00");
+
+    await act(async () => {
+      await userEvent.clear(nameInput);
+      await userEvent.type(nameInput, "Vegan Cake");
+      await userEvent.clear(priceInput);
+      await userEvent.type(priceInput, "30.00");
+    });
 
     // Select template and domain
     act(() => { screen.getByRole('button', { name: 'Elegant' }).click(); });
@@ -287,12 +300,14 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 4: API Error on Publish Now', async () => {
-    useOnboardingStore.setState({
-      step: 4,
-      businessType: 'Bakery',
-      businessName: "Maya's Bakery",
-      businessCategory: "I bake custom vegan cakes",
-      intakeData: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+    act(() => {
+      useOnboardingStore.setState({
+        step: 4,
+        businessType: 'Bakery',
+        businessName: "Maya's Bakery",
+        businessCategory: "I bake custom vegan cakes",
+        intakeData: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+      });
     });
 
     (global.fetch as any)
@@ -308,9 +323,11 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 5: Shows Live Screen', async () => {
-    useOnboardingStore.setState({
-      step: 5,
-      startResult: { message: "Your business has been successfully launched." }
+    act(() => {
+      useOnboardingStore.setState({
+        step: 5,
+        startResult: { message: "Your business has been successfully launched." }
+      });
     });
 
     (global.fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({}) }); // Initial load
