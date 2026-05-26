@@ -1,3 +1,4 @@
+load("@rules_rust//rust:defs.bzl", "rust_test")
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
 exports_files(
@@ -108,4 +109,9 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_benchmarks_test",
+    crate = ":server_benchmarks",
 )
