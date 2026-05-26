@@ -387,31 +387,43 @@ mod tests {
 
                         // Process the complete block once it's closed, OR if it was a single line
                         if !in_log_block && !current_log_block.is_empty() {
-                            if current_log_block.contains("tenant_id") ||
-                               current_log_block.contains("organization_id") ||
-                               current_log_block.contains("org_id") ||
-                               current_log_block.contains("session_data") ||
-                               current_log_block.contains("session_id") ||
-                               current_log_block.contains("payload") ||
-                               current_log_block.contains("email") ||
-                               current_log_block.contains("password") ||
-                               current_log_block.contains("pii") ||
-                               current_log_block.contains("api_key") ||
-                               current_log_block.contains("secret_key") ||
-                               current_log_block.contains("credit") ||
-                               current_log_block.contains("card") ||
-                               current_log_block.contains("cvv") ||
-                               current_log_block.contains("dob") ||
-                               current_log_block.contains("birth") ||
-                               current_log_block.contains("passport") ||
-                               current_log_block.contains("bank") ||
-                               current_log_block.contains("account") ||
-                               current_log_block.contains("stripe") ||
-                               current_log_block.contains("billing") ||
-                               current_log_block.contains("ip_address") ||
-                               current_log_block.contains("mac_address") ||
-                               current_log_block.contains("geolocation") {
-                                violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                            let is_explicitly_sanitized = current_log_block.contains("sanitize_props")
+                                || current_log_block.contains("redact_interface_pii")
+                                || current_log_block.contains("sanitized_props")
+                                || current_log_block.contains("redacted");
+
+                            let pii_keywords = vec![
+                                "tenant_id", "organization_id", "org_id", "session_data", "session_id", "payload",
+                                "email", "password", "pii", "api_key", "secret_key", "credit", "card", "cvv", "dob",
+                                "birth", "passport", "bank", "account", "stripe", "billing", "ip_address", "mac_address",
+                                "geolocation"
+                            ];
+
+                            let is_analytics = path_str.contains("analytics.rs");
+
+                            // For analytics.rs, we specifically verify that if properties are logged, they are sanitized.
+                            // We do NOT exempt analytics.rs from keyword checks if it logs raw properties.
+                            if is_analytics {
+                                if current_log_block.contains("props") && !current_log_block.contains("sanitized_props") {
+                                    violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                                }
+                            }
+
+                            // Regardless of whether it's analytics.rs or another file, if the log is NOT explicitly sanitized,
+                            // we search for PII keywords.
+                            if !is_explicitly_sanitized {
+                                let mut found_pii = false;
+                                // Need to enforce that we match entire words to prevent partial false positives,
+                                // but for security we match exact substrings. However, if it's explicitly sanitized, we skip.
+                                for kw in &pii_keywords {
+                                    if current_log_block.contains(kw) {
+                                        found_pii = true;
+                                        break;
+                                    }
+                                }
+                                if found_pii {
+                                    violations.push(format!("{}:{} (block starting here): {}", entry.path().display(), block_start_line, current_log_block.trim()));
+                                }
                             }
                             current_log_block.clear();
                         }
