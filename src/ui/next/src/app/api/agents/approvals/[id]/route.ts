@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
