@@ -22,3 +22,11 @@ pub mod statemachine_test;
 pub mod sandbox;
 pub mod sandbox_ask;
 pub mod local_sandbox;
+
+#[cfg(test)]
+#[cfg(test)]
+pub mod chaos_test;
+#[cfg(test)]
+pub mod chaos_extra_test;
+#[cfg(test)]
+pub mod chaos_test_real;

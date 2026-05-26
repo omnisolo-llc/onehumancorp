@@ -6143,7 +6143,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
