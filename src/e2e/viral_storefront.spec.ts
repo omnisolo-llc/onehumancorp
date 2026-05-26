@@ -47,12 +47,12 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/api/v1/growth/storefront/embed');
 
     await expect(page.locator('.card')).toBeVisible();
-    await expect(page.locator('.title')).toContainText('Premium Product');
+    await expect(page.locator('.title')).toContainText('Premium Collection');
 
     const footer = page.locator('.footer');
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
+    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=my-store');
   });
 
   test('generates social share og card with branding', async ({ request }) => {

@@ -15,8 +15,13 @@ export default function StorefrontBuilderPage() {
       <div className="mt-8 border p-4 rounded bg-gray-50">
         <h2 className="text-xl font-bold mb-2">Storefront Preview</h2>
         {/* Placeholder for preview content */}
-        <div className="h-64 flex items-center justify-center border-dashed border-2 border-gray-300">
+                <div className="h-64 flex flex-col items-center justify-center border-dashed border-2 border-gray-300">
            Content...
+           <div className="builder-block mt-4 p-4 bg-white border rounded text-center">
+             <h3 className="font-bold">Refer a Friend</h3>
+             <p>Get 10% off your next order!</p>
+             <a href="ohc://join?ref=storefront-referral" className="text-blue-500 underline">Share your link</a>
+           </div>
         </div>
         <div className="powered-by-footer mt-4 text-center py-2 text-sm text-gray-500">
           ⚡ Powered by OHC
