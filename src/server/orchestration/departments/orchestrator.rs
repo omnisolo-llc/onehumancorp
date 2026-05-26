@@ -472,6 +472,13 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        let payload_opt: Option<serde_json::Value> = match row.try_get::<String, _>("payload") {
+                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -479,20 +486,21 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_opt,
                         });
                     }
                 }
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -512,6 +520,8 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
+                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -519,6 +529,7 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_opt,
                         });
                     }
                 }
