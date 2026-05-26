@@ -18,6 +18,8 @@ export default function Dashboard() {
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+  const [profileSaved, setProfileSaved] = useState<boolean>(false);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
@@ -351,6 +353,11 @@ export default function Dashboard() {
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
       {/* Header */}
+      {profileSaved && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 font-bold transition-all">
+          Saved
+        </div>
+      )}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
          <nav className="flex items-center gap-3">
@@ -373,8 +380,33 @@ export default function Dashboard() {
              <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                <span>⚡️</span> KAIROS
              </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
+             <div className="relative">
+               <button aria-label="Profile" onClick={() => setShowProfileMenu(!showProfileMenu)} className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 hover:bg-gray-300 transition-colors">
                  AC
+               </button>
+               {showProfileMenu && (
+                 <div className="absolute top-10 right-0 w-80 bg-white shadow-xl rounded-2xl border border-gray-100 overflow-hidden z-50 p-4 font-inter">
+                   <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Profile</h3>
+                   <div className="flex flex-col gap-4">
+                     <div className="flex items-center justify-between">
+                       <span className="text-sm font-medium text-gray-700">Advanced Developer Settings</span>
+                       <button
+                         onClick={() => setShowAdvanced(!showAdvanced)}
+                         className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? "bg-[#34C759]" : "bg-gray-300"}`}
+                       >
+                         <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? "translate-x-4" : "translate-x-0"}`}></span>
+                       </button>
+                     </div>
+                     {showAdvanced && (
+                       <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs text-gray-600 flex flex-col gap-2">
+                         <div><strong>Kubernetes:</strong> Connected</div>
+                         <div><strong>Raw Payloads:</strong> Enabled</div>
+                       </div>
+                     )}
+                     <button onClick={() => { setShowProfileMenu(false); setProfileSaved(true); setTimeout(() => setProfileSaved(false), 3000); }} className="w-full py-2 bg-[#0066FF] text-white rounded-xl font-semibold shadow-sm hover:opacity-90 transition-opacity mt-2">Save Changes</button>
+                   </div>
+                 </div>
+               )}
              </div>
          </nav>
       </header>
