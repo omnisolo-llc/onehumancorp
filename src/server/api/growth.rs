@@ -122,6 +122,12 @@ pub struct GenerateReviewResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartResponse {
+    pub message: String,
+    pub ok: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
     pub id: String,
 }
@@ -197,7 +203,7 @@ async fn handle_generate_cart(
 ) -> impl IntoResponse {
     let msg = format!("Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC", req.customer_name, req.cart_value);
 
-    Json(GenerateReviewResponse {
+    Json(GenerateCartResponse {
         message: msg,
         ok: true,
     })
