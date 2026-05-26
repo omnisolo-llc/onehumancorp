@@ -138,7 +138,18 @@ impl ClaudeSubagentSpawner {
         ::server_telemetry::record_ohc_sub_agent_execution_duration_seconds(duration);
 
         // Rule: Subagents return 1k-2k token condensed summaries, never their full context loop.
-        self.summarize_output(&raw_output, config).await
+        let system_prompt = "You are a subagent synthesizer. Condense this subagent output to 1000-2000 tokens while preserving all key decisions, code changes, and unresolved issues.";
+        let req = ohc_builtin_agent_core::types::ChatRequest {
+            model: config.model.clone(),
+            system: system_prompt.to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message::user(raw_output)],
+            tools: vec![],
+            max_tokens: 2500,
+            temperature: 0.0,
+        };
+
+        let resp = self.parent_agent.llm.chat(req).await?;
+        Ok(resp.message.content)
     }
 
     async fn summarize_output(
