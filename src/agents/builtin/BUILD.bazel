@@ -84,6 +84,7 @@ rust_library(
         "consolidation_worker.rs",
         "gpt_researcher.rs",
         "deerflow_subagents.rs",
+        "openhands_sdk.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -228,6 +229,7 @@ rust_binary(
         "gpt_researcher",
         "local_provider",
         "sona_patterns",
+        "openhands_sdk",
     ]
 ]
 
