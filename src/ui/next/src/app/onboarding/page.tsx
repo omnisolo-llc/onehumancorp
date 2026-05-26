@@ -19,8 +19,7 @@ export default function OnboardingWizard() {
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
-    startResult, setStartResult,
-    stripeConnected, setStripeConnected
+    startResult, setStartResult
   } = useOnboardingStore();
 
   const lastSyncState = useRef("");
@@ -54,7 +53,6 @@ export default function OnboardingWizard() {
               if (data.domain !== undefined) setDomain(data.domain);
               if (data.intakeData !== undefined) setIntakeData(data.intakeData);
               if (data.startResult !== undefined) setStartResult(data.startResult);
-              if (data.stripeConnected !== undefined) setStripeConnected(data.stripeConnected);
 
               lastSyncState.current = JSON.stringify({
                 step: data.step,
@@ -66,8 +64,7 @@ export default function OnboardingWizard() {
                 template: data.template || template,
                 domain: data.domain || domain,
                 intakeData: data.intakeData || intakeData,
-                startResult: data.startResult || startResult,
-                stripeConnected: data.stripeConnected !== undefined ? data.stripeConnected : stripeConnected
+                startResult: data.startResult || startResult
               });
             }
           }
@@ -97,8 +94,7 @@ export default function OnboardingWizard() {
       template,
       domain,
       intakeData,
-      startResult,
-      stripeConnected
+      startResult
     });
 
     // Only sync if state actually changed from last sync
@@ -123,7 +119,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult, stripeConnected]);
+  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -438,20 +434,6 @@ export default function OnboardingWizard() {
                          {t}
                        </button>
                      ))}
-                   </div>
-                </div>
-
-                {/* Payments Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Payments</h3>
-                   <div className="flex flex-col gap-3">
-                     <button
-                       onClick={() => setStripeConnected(!stripeConnected)}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${stripeConnected ? 'border-[#34C759] bg-[#34C759]/10 text-[#34C759] font-bold shadow-sm' : 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] font-bold shadow-sm'} transition-all text-sm`}
-                     >
-                       <span>{stripeConnected ? '✓ Stripe Connected' : 'Connect Stripe (1-Click)'}</span>
-                       <span className="text-xs opacity-70 font-normal">{stripeConnected ? 'Ready to accept payments' : 'Required to accept payments'}</span>
-                     </button>
                    </div>
                 </div>
 
