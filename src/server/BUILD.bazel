@@ -198,6 +198,7 @@ rust_binary(
         "ultraplan",
         "orchestration",
         "interop",
+        "domain",
         "workers",
         "builder",
     ]
