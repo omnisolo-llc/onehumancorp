@@ -590,59 +590,47 @@ mod tests {
         // Should return Ok(()) if directory doesn't exist
         assert!(res.is_ok());
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::postgres::PgPoolOptions;
 
     #[tokio::test]
     async fn test_autodream_worker_pipelines() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-        let worker = AutoDreamWorker::new(db.clone());
-
-        assert!(AutoDreamWorker::process_mesh_messages(&db).await.is_ok());
-        assert!(AutoDreamWorker::compress_session_contexts(&db).await.is_ok());
-        assert!(AutoDreamWorker::prune_stale_sessions(&db, &worker.embedded_counter, &worker.cache).await.is_ok());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        if db_url.is_empty() { return; }
+        let pool = PgPoolOptions::new().connect_lazy(&db_url).expect("pool");
+        let mut manager = AutoDreamManager::new(pool.clone());
+        let result = manager.run_consolidation_pipeline("test-org-4156").await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_autodream_worker_ingest_memories() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-        let worker = AutoDreamWorker::new(db.clone());
-
-        assert!(AutoDreamWorker::process_db_memories(&db, &worker.embedded_counter, &worker.cache).await.is_ok());
-        assert!(AutoDreamWorker::process_fs_memories(&db, &worker.embedded_counter, &worker.cache).await.is_ok());
-        assert!(AutoDreamWorker::ingest_completed_tasks(&db, &worker.embedded_counter, &worker.cache).await.is_ok());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        if db_url.is_empty() { return; }
+        let pool = PgPoolOptions::new().connect_lazy(&db_url).expect("pool");
+        let mut manager = AutoDreamManager::new(pool.clone());
+        let memories = vec![
+            crate::server::autodream::MemoryNode {
+                node_id: "test1".into(),
+                payload: "ingest this 4156".into(),
+            }
+        ];
+        let result = manager.ingest_agent_memories("test-org-4156", memories).await;
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_autodream_worker_conflict_resolution() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
-        }
-        let database_url = std::env::var("DATABASE_URL").unwrap();
-        let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
-            .connect_lazy(&database_url)
-            .unwrap();
-        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
-
-        assert!(AutoDreamWorker::resolve_conflicts(&db).await.is_ok());
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
+        if db_url.is_empty() { return; }
+        let pool = PgPoolOptions::new().connect_lazy(&db_url).expect("pool");
+        let mut manager = AutoDreamManager::new(pool.clone());
+        let result = manager.resolve_conflicts("test-org-4156").await;
+        assert!(result.is_ok());
     }
 }
-
