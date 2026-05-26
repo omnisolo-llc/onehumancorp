@@ -10,3 +10,5 @@ SELECT
     created_at,
     updated_at
 FROM shared_tasks_v4;
+
+-- Trigger CI rebuild
