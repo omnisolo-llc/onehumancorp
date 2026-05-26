@@ -270,16 +270,12 @@ impl LlmClient for AnthropicClient {
             });
         }
 
-        // Prompt caching: cache the last user message
-        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
-            if let Some(last_content) = last_user.content.last_mut() {
-                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
-            }
-        }
+        let mut breakpoints_used = 0;
 
         let system = if req.system.is_empty() {
             vec![]
         } else {
+            breakpoints_used += 1;
             vec![AnthropicSystem {
                 r#type: "text",
                 text: req.system.clone(),
@@ -296,13 +292,29 @@ impl LlmClient for AnthropicClient {
                 name: t.name.clone(),
                 description: t.description.clone(),
                 input_schema: t.parameters.clone(),
-                cache_control: if i == num_tools - 1 {
+                cache_control: if num_tools > 0 && i == num_tools - 1 {
+                    breakpoints_used += 1;
                     Some(AnthropicCacheControl { r#type: "ephemeral" })
                 } else {
                     None
                 },
             })
             .collect();
+
+        // Prompt caching: cache up to the remaining breakpoints on the most recent user messages
+        let remaining_breakpoints = 4 - breakpoints_used;
+        let mut user_msg_count = 0;
+        for m in messages.iter_mut().rev() {
+            if m.role == "user" {
+                if let Some(last_content) = m.content.last_mut() {
+                    last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
+                    user_msg_count += 1;
+                    if user_msg_count >= remaining_breakpoints {
+                        break;
+                    }
+                }
+            }
+        }
 
         let payload = AnthropicRequest {
             model: req.model.clone(),
