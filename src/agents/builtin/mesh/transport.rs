@@ -1712,7 +1712,6 @@ Content-Length: 0
 
         cancel();
     }
-}
 
     #[tokio::test]
     async fn test_sqlite_transport_coverage() {
@@ -1781,3 +1780,5 @@ Content-Length: 0
 
         let _ = transport.publish("test_topic_pg", msg).await;
     }
+
+}
