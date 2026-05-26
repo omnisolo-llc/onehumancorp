@@ -16,29 +16,73 @@ pub async fn tier_middleware(
         None => "system".to_string(), // In tests or unauth paths
     };
 
-    // Very simple placeholder: in a real system we might inspect the request path to determine the action cost
-    // For this example, we just simulate a 1-action check for protected paths
     let mut warning_msg = None;
+
     if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
-        match rate_limiter.record_action(&tenant_id, "default_agent").await {
-            Ok(status) => {
-                if status.soft_limit_reached {
-                    warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
+        let db_pool = crate::db::get_pool();
+
+        let pg_query = async {
+            use sqlx::Row;
+            let usage_row = sqlx::query(
+                "SELECT u.ai_actions_count, t.max_ai_actions_per_month
+                 FROM tenant_usage u
+                 JOIN tenants tnt ON u.tenant_id = tnt.tenant_id
+                 JOIN tiers t ON tnt.current_tier_id = t.id
+                 WHERE u.tenant_id = $1"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&db_pool).await.ok().flatten();
+
+            if let Some(row) = usage_row {
+                let current_usage: i32 = row.get("ai_actions_count");
+                let max_limit: i32 = row.get("max_ai_actions_per_month");
+                if current_usage >= max_limit {
+                    return Some(format!("You've reached your tier limit of {} AI actions this month. Please upgrade.", max_limit));
                 }
+
+                let _ = sqlx::query("UPDATE tenant_usage SET ai_actions_count = ai_actions_count + 1 WHERE tenant_id = $1")
+                    .bind(&tenant_id)
+                    .execute(&db_pool).await;
             }
-            Err(e) => {
-                tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+            None
+        };
+
+        // This is safe because DB::get_pool is global and we just use the result if present
+        // In unit test environment if DB fails we fallback to RedisRateLimiter logic
+        let pg_limit_msg = pg_query.await;
+
+        if let Some(msg) = pg_limit_msg {
+            warning_msg = Some(msg);
+        } else {
+            // We use the existing RedisRateLimiter for tests and fast-path execution.
+            match rate_limiter.record_action(&tenant_id, "default_agent").await {
+                Ok(status) => {
+                    if status.soft_limit_reached {
+                        warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!("RateLimiter error: {}. Failing open to avoid blocking users.", e);
+                }
             }
         }
     }
 
-    let mut res = next.run(req).await;
     if let Some(msg) = warning_msg {
-        if let Ok(header_value) = axum::http::HeaderValue::from_str(&msg) {
-            res.headers_mut().insert("x-ratelimit-warning", header_value);
-        }
+        let json_body = serde_json::json!({
+            "error_code": "RESOURCE_EXHAUSTED",
+            "metadata": {
+                "user_message": msg
+            }
+        });
+        return axum::response::Response::builder()
+            .status(axum::http::StatusCode::PAYMENT_REQUIRED)
+            .header(axum::http::header::CONTENT_TYPE, "application/json")
+            .body(axum::body::Body::from(json_body.to_string()))
+            .unwrap();
     }
-    res
+
+    next.run(req).await
 }
 
 #[cfg(test)]
@@ -111,8 +155,12 @@ mod tests {
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::OK);
-                assert!(res2.headers().contains_key("x-ratelimit-warning"));
+                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
+
+                let body_bytes = axum::body::to_bytes(res2.into_body(), usize::MAX).await.unwrap();
+                let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+                assert!(body_str.contains("RESOURCE_EXHAUSTED"));
+                assert!(body_str.contains("Tier limit reached. Please upgrade."));
             }
         }
     }

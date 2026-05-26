@@ -375,11 +375,37 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS tiers (
+                        id TEXT PRIMARY KEY,
+                        name TEXT,
+                        monthly_price INTEGER,
+                        max_products INTEGER,
+                        max_ai_departments INTEGER,
+                        max_ai_actions_per_month INTEGER,
+                        max_storage_mb INTEGER,
+                        custom_domain_allowed BOOLEAN
+                    );
+                    CREATE TABLE IF NOT EXISTS tenant_usage (
+                        tenant_id TEXT,
+                        ai_actions_count INTEGER,
+                        storage_used_mb INTEGER,
+                        products_count INTEGER,
+                        billing_period_id TEXT
+                    );
+                    INSERT OR IGNORE INTO tiers (id, name, monthly_price, max_products, max_ai_departments, max_ai_actions_per_month, max_storage_mb, custom_domain_allowed)
+                    VALUES
+                        ('free', 'Free', 0, 10, 1, 100, 500, FALSE),
+                        ('starter', 'Starter', 9, 100, 3, 1000, 5000, TRUE),
+                        ('pro', 'Pro', 29, 999999, 10, 999999, 50000, TRUE),
+                        ('business', 'Business', 79, 999999, 999, 999999, 512000, TRUE);
                     CREATE TABLE IF NOT EXISTS tenants (
                         tenant_id TEXT PRIMARY KEY,
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,
+                        current_tier_id TEXT REFERENCES tiers(id),
+                        billing_period_start TIMESTAMP,
+                        billing_period_end TIMESTAMP,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
