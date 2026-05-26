@@ -335,7 +335,7 @@ mod tests {
                     .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
                 {
                     let path_str = entry.path().to_string_lossy();
-                    if path_str.contains("telemetry_test.rs") {
+                    if path_str.contains("telemetry_test.rs") || path_str.contains("node_modules") {
                         continue;
                     }
                     checked_files += 1;
