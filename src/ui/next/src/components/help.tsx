@@ -6,91 +6,6 @@ import { useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough } from './Walkthrough';
 
-// --- Tooltip Registry & Component ---
-type TooltipContextType = {
-  registerTooltip: (id: string, text: string) => void;
-  getTooltip: (id: string) => string | undefined;
-};
-
-const TooltipContext = createContext<TooltipContextType | undefined>(undefined);
-
-export function TooltipRegistryProvider({ children }: { children: ReactNode }) {
-  const [tooltips, setTooltips] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    fetch("/api/tooltips")
-      .then(res => res.json())
-      .then(data => setTooltips(prev => ({ ...data, ...prev })))
-      .catch(() => {});
-  }, []);
-
-  const registerTooltip = (id: string, text: string) => {
-    setTooltips((prev) => ({ ...prev, [id]: text }));
-  };
-
-  const getTooltip = (id: string) => tooltips[id];
-
-  return (
-    <TooltipContext.Provider value={{ registerTooltip, getTooltip }}>
-      {children}
-    </TooltipContext.Provider>
-  );
-}
-
-export function useTooltipRegistry() {
-  const context = useContext(TooltipContext);
-  if (!context) throw new Error("useTooltipRegistry must be used within TooltipRegistryProvider");
-  return context;
-}
-
-export function Tooltip({ id, defaultText, children }: { id?: string; defaultText: string; children: ReactNode }) {
-  const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Use context safely, fallback if used outside provider
-  const context = useContext(TooltipContext);
-
-  // Register tooltip on mount if ID is provided and registry exists
-  useEffect(() => {
-    if (id && context && !context.getTooltip(id)) {
-      context.registerTooltip(id, defaultText);
-    }
-  }, [id, defaultText, context]);
-
-  // Determine text to display: Try registry first, fallback to defaultText
-  const displayText = (id && context && context.getTooltip(id)) || defaultText;
-
-  const handleMouseEnter = () => setVisible(true);
-  const handleMouseLeave = () => setVisible(false);
-
-  const handleTouchStart = () => {
-    timeoutRef.current = setTimeout(() => setVisible(true), 500); // long press
-  };
-  const handleTouchEnd = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setVisible(false);
-  };
-
-  return (
-    <div
-      className="relative inline-block w-full"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-    >
-      {children}
-      {visible && (
-        <div className="absolute z-50 bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-max max-w-xs px-3 py-2 text-sm text-white bg-gray-900 rounded-lg shadow-lg pointer-events-none text-center leading-tight">
-          {displayText}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // --- Walkthrough System ---
 type Step = {
   targetId: string;
@@ -291,7 +206,7 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "bio-input", message: "Enter your business description." }, { targetId: "generate-btn", message: "Click to generate!" }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Set up your store</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "team-activity-tooltip", message: "View the real-time actions performed by your AI workforce." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">

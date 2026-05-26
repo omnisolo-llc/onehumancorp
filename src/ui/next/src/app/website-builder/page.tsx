@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SmartBlock } from "../builder/components";
+import { SmartBlock, DraggableBlock } from "../builder/components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
 export default function WebsiteBuilderPage() {
@@ -9,6 +9,9 @@ export default function WebsiteBuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const { startWalkthrough } = useWalkthrough();
 
@@ -112,6 +115,24 @@ export default function WebsiteBuilderPage() {
     }
   };
 
+  const moveBlock = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
+
+    setBlocks(prev => {
+      const newBlocks = [...prev];
+      const [moved] = newBlocks.splice(fromIndex, 1);
+      newBlocks.splice(toIndex, 0, moved);
+      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
+      return newBlocks;
+    });
+
+    if (selectedBlockIndex === fromIndex) {
+      setSelectedBlockIndex(toIndex);
+    } else if (selectedBlockIndex === toIndex) {
+      setSelectedBlockIndex(fromIndex);
+    }
+  };
+
   const handleLaunch = async () => {
     try {
       const draftBlocks = blocks.map((b, i) => ({
@@ -162,7 +183,7 @@ export default function WebsiteBuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container mac-glass-container">
+        <div id="setup-screen" className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container mac-glass-container">
 
           <div className="px-8 pb-8 pt-12 flex flex-col flex-1 justify-start overflow-y-auto">
             <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
@@ -181,6 +202,14 @@ export default function WebsiteBuilderPage() {
                   style={{ borderRadius: '8px' }}
                   value={bio}
                   onChange={(e) => updateBio(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (bio.trim().length > 5) {
+                        handleGenerate();
+                      }
+                    }
+                  }}
                   placeholder="e.g. I run a mobile dog grooming service in Portland"
                   rows={6}
                 />
@@ -258,7 +287,35 @@ export default function WebsiteBuilderPage() {
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <SmartBlock key={i} {...b} />
+            <DraggableBlock
+              key={b.type + i}
+              isSelected={selectedBlockIndex === i}
+              onClick={() => setSelectedBlockIndex(i === selectedBlockIndex ? null : i)}
+              onDragStart={(e) => {
+                if (e.type.includes('drag') && (e as React.DragEvent).dataTransfer) {
+                  (e as React.DragEvent).dataTransfer.effectAllowed = 'move';
+                  (e as React.DragEvent).dataTransfer.setData('text/plain', i.toString());
+                }
+                setDraggedIndex(i);
+                setSelectedBlockIndex(i);
+              }}
+              onDragOver={(e) => {
+                if (e.type.includes('drag') && (e as React.DragEvent).dataTransfer) {
+                  (e as React.DragEvent).dataTransfer.dropEffect = 'move';
+                }
+              }}
+              onDragEnter={() => {
+                if (draggedIndex !== null && draggedIndex !== i) {
+                  moveBlock(draggedIndex, i);
+                  setDraggedIndex(i);
+                }
+              }}
+              onDragEnd={() => setDraggedIndex(null)}
+              onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
+              onMoveDown={i < blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
+            >
+              <SmartBlock {...b} />
+            </DraggableBlock>
           ))}
           <SmartBlock type="PoweredBy" props={{ tenantId }} />
         </div>

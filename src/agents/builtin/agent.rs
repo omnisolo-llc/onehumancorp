@@ -9,6 +9,72 @@ use crate::guardrails::GuardrailRegistry;
 use ohc_builtin_agent_llm::LlmClient;
 use ohc_builtin_agent_tools::Tool;
 use ohc_builtin_agent_core::types::{ChatRequest, Message, Role, ToolCall, ToolDefinition, ToolResult};
+use crate::verification_loops::{ComputationalGuide, VisualVerifier};
+
+/// Default computational guide using bash commands
+struct BashComputationalGuide {
+    command: String,
+    workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl ComputationalGuide for BashComputationalGuide {
+    async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
+                        self.command, stdout, stderr
+                    ));
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute computational guide command '{}': {}", self.command, e)),
+        }
+    }
+}
+
+/// Default visual verifier using bash commands
+struct BashVisualVerifier {
+    command: String,
+    workspace_path: Option<String>,
+}
+
+#[async_trait::async_trait]
+impl VisualVerifier for BashVisualVerifier {
+    async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+        let wd = self.workspace_path.clone().unwrap_or_else(|| ".".to_string());
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg("-c").arg(&self.command).current_dir(wd);
+
+        match cmd.output() {
+            Ok(output) => {
+                if !output.status.success() {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    return Err(format!(
+                        "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
+                        self.command, stdout, stderr
+                    ));
+                } else {
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if stdout.contains("REJECT") {
+                        return Err(format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim()));
+                    }
+                }
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to execute visual verification command '{}': {}", self.command, e)),
+        }
+    }
+}
 
 /// Events emitted by the agent run loop.
 #[derive(Debug, Clone)]
@@ -436,32 +502,59 @@ impl Agent {
                 read_only_futures.push(async move {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
-                    let r = match gating_res {
-                        Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                            Ok(res) => res,
-                            Err(e) => format!("Error: {:?}", e),
-                        },
-                        Err(e) => format!("Error: {:?}", e),
+                    let res = match gating_res {
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await,
+                        Err(e) => Err(e),
                     };
-                    (tc_clone, r)
+                    (tc_clone, res)
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, res) in ro_results {
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             if !mutating_calls.is_empty() {
@@ -470,28 +563,55 @@ impl Agent {
             for tc in &mutating_calls {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
-                let r = match gating_res {
-                    Ok(_) => match self.execute_tool(tc, session_tools, &messages).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    },
-                    Err(e) => format!("Error: {:?}", e),
+                let res = match gating_res {
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages).await,
+                    Err(e) => Err(e),
                 };
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             messages.push(crate::types::Message {
@@ -1035,6 +1155,49 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let timeout_duration = std::time::Duration::from_secs(60);
+        let mut attempts = 0;
+        let max_attempts = 3;
+        loop {
+            attempts += 1;
+            let mut on_event_wrapper = |e| on_event(e);
+            let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
+            match result {
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
+                    }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                }
+            }
+        }
+    }
+
+    async fn run_plan_and_execute_internal<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         on_event(AgentEvent::RunStarted {
             iteration: 0,
         });
@@ -1344,13 +1507,26 @@ impl Agent {
             attempts += 1;
             let result = tokio::time::timeout(timeout_duration, self.run_structured_internal(cfg, initial_message, &output_schema, on_event)).await;
             match result {
-                Ok(res) => {
-                    return res;
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
                 },
                 Err(_) => {
                     if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
                 }
             }
         }
@@ -1367,6 +1543,9 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         let mut final_cfg = cfg.clone();
+        if final_cfg.max_retries > 2 {
+            final_cfg.max_retries = 2;
+        }
 
         // Append instruction to force the use of the structured output tool
         final_cfg.server_system_message = format!(
@@ -1489,6 +1668,9 @@ impl Agent {
         let session_tools = self_with_memory.tools.clone();
 
         let mut final_cfg = cfg.clone();
+        if final_cfg.max_retries > 2 {
+            final_cfg.max_retries = 2;
+        }
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
@@ -1532,7 +1714,7 @@ impl Agent {
         if final_cfg.enable_harness_thickness_optimization {
             let model_lower = final_cfg.model.to_lowercase();
             // Harness Thickness Mechanic: Delete harness planning steps as the LLM internalizes them.
-            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") {
+            if model_lower.contains("gpt-4o") || model_lower.contains("claude-3-5-sonnet") || model_lower.contains("o1") || model_lower.contains("o3-mini") {
                 final_cfg.enable_llmcompiler_plan_and_execute = false;
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("You must think step by step and make a detailed plan.", "");
                 final_cfg.server_system_message = final_cfg.server_system_message.replace("Make a plan before executing.", "");
@@ -1923,113 +2105,29 @@ impl Agent {
 
             // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                // Computational/Guides (feedforward verification)
+                let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.computational_guide_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Computational guide verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work and use tools to fix the issue before providing the final answer.",
-                                    final_cfg.computational_guide_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute computational guide command '{}': {}", final_cfg.computational_guide_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
+                    verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
-
-                // Visual Verification (screenshots via Playwright or Slint)
                 if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    let wd = final_cfg.workspace_path.clone().unwrap_or_else(|| ".".to_string());
-                    let mut cmd = std::process::Command::new("bash");
-                    cmd.arg("-c").arg(&final_cfg.visual_verification_command).current_dir(wd);
-
-                    match cmd.output() {
-                        Ok(output) => {
-                            if !output.status.success() {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                let stderr = String::from_utf8_lossy(&output.stderr);
-                                let err_msg = format!(
-                                    "Visual verification failed (command: {}).\nStdout: {}\nStderr: {}\nPlease correct your work based on the visual feedback and use tools to fix the issue.",
-                                    final_cfg.visual_verification_command, stdout, stderr
-                                );
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            } else {
-                                let stdout = String::from_utf8_lossy(&output.stdout);
-                                if stdout.contains("REJECT") {
-                                    let err_msg = format!("Visual verification rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", stdout.trim());
-                                    messages.push(Message::user(err_msg));
-                                    continue;
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            let err_msg = format!("Failed to execute visual verification command '{}': {}", final_cfg.visual_verification_command, e);
-                            messages.push(Message::user(err_msg));
-                            continue;
-                        }
-                    }
+                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
-
-                // Inferential/Sensors (LLM-as-judge subagent)
                 if final_cfg.enable_llm_judge {
-                    #[derive(serde::Deserialize)]
-                    struct JudgeEvaluation {
-                        status: String,
-                        reason: String,
-                        confidence: f32,
-                    }
-                    let judge_req = ChatRequest {
-                        model: final_cfg.model.clone(),
-                        system: "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.".to_string(),
-                        messages: vec![Message::user(format!("Evaluate this output:\n{}", last_assistant_content))],
-                        tools: vec![],
-                        max_tokens: 500,
-                        temperature: 0.0,
-                    };
-
-                    struct ParserClientWrapper {
-                        llm: std::sync::Arc<dyn crate::llm::LlmClient>,
-                    }
-                    #[async_trait::async_trait]
-                    impl crate::output_parser::LlmClientForParser for ParserClientWrapper {
-                        async fn chat(&self, req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-                            self.llm.chat(req).await
-                        }
-                    }
-                    let parser_client: std::sync::Arc<dyn crate::output_parser::LlmClientForParser> = std::sync::Arc::new(ParserClientWrapper { llm: self.llm.clone() });
-                    match crate::output_parser::parse_structured_output::<JudgeEvaluation>(&parser_client, judge_req, 3).await {
-                        Ok(eval) => {
-                            if eval.status.to_uppercase() == "REJECT" {
-                                let err_msg = format!("Your previous output was evaluated by an LLM-as-judge and rejected. Reason: {}. Confidence: {:.2}. Please correct your work and use tools if necessary.", eval.reason, eval.confidence);
-                                messages.push(Message::user(err_msg));
-                                continue;
-                            }
-                        },
-                        Err(e) => {
-                            let err = format!("LLM Judge error: {}", e);
-                            on_event(AgentEvent::TaskError { error: err.clone() });
-                            return Err(err.into());
-                        }
-                    }
+                    verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
                 }
-                // In a production-grade agent, we might use a separate LLM pass
-                // to evaluate confidence in the final answer if threshold > 0.
-                // For now, we'll assume the model is confident if it didn't use more tools.
 
+                if let Err(e) = verification_manager.run_computational_guides("", "").await {
+                    messages.push(Message::user(e));
+                    continue;
+                }
+                if let Err(e) = verification_manager.run_visual_verifiers("").await {
+                    messages.push(Message::user(e));
+                    continue;
+                }
+                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
+                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+                    continue;
+                }
                 // OpenAI Mechanic: Output Guardrails
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_output(&last_assistant_content) {
@@ -3069,6 +3167,23 @@ mod tests {
         let reqs2 = client_strong.requests.lock().await;
         assert!(!reqs2[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
         assert!(!reqs2[0].system.contains("You must think step by step"));
+        drop(reqs2);
+
+        let client_o3 = std::sync::Arc::new(MockThicknessClient {
+            requests: tokio::sync::Mutex::new(vec![]),
+        });
+        let agent_o3 = Agent::new(client_o3.clone(), vec![]);
+
+        let mut cfg_o3 = cfg_strong.clone();
+        cfg_o3.model = "o3-mini".to_string();
+        cfg_o3.server_system_message = "You must think step by step and make a detailed plan. Make a plan before executing.".to_string();
+
+        let mut events_o3 = vec![];
+        let _ = agent_o3.run(&cfg_o3, "Hello", &mut |e| events_o3.push(e)).await;
+
+        let reqs_o3 = client_o3.requests.lock().await;
+        assert!(!reqs_o3[0].system.contains("You are an expert planner")); // LLMCompiler bypassed
+        assert!(!reqs_o3[0].system.contains("You must think step by step"));
     }
     #[tokio::test]
     async fn test_4_type_error_handling() {
@@ -4513,51 +4628,28 @@ mod tests {
                     message: crate::types::Message::assistant("Draft answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
+                    response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_1".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
+                    message: crate::types::Message::assistant("FAIL: The answer is incomplete."),
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                        response_id: Some("mock-id".to_string()),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
                     message: crate::types::Message::assistant("Better answer"),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
-                        response_id: Some("mock-id".to_string()),
+                    response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message {
-                        role: crate::types::Role::Assistant,
-                        content: "".to_string(),
-                        tool_calls: vec![crate::types::ToolCall {
-                            id: "call_2".to_string(),
-                            name: "structured_output".to_string(),
-                            arguments: serde_json::json!({"data": {"status": "APPROVE", "reason": "Looks good.", "confidence": 0.95}}),
-                        }],
-                        tool_results: vec![],
-                        response_id: Some("mock-id".to_string()),
-                        previous_response_id: None,
-                    },
+                    message: crate::types::Message::assistant("PASS"),
                     usage: Usage::default(),
-                    stop_reason: "tool_calls".to_string(),
-                        response_id: Some("mock-id".to_string()),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("mock-id".to_string()),
                 },
             ]),
         });
-
         let agent = Agent::new(client, vec![]);
 
         let mut cfg = AgentRunConfig::default();
