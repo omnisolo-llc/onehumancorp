@@ -37,6 +37,13 @@ impl Provider for S3Provider {
     }
 
     async fn get_blob_url(&self, key: &str) -> io::Result<String> {
+        if let Ok(cdn) = std::env::var("OHC_CDN_URL") {
+            if !cdn.is_empty() {
+                let cdn = cdn.trim_end_matches('/');
+                let key = key.trim_start_matches('/');
+                return Ok(format!("{}/{}", cdn, key));
+            }
+        }
         // STUB: Return a fake presigned URL
         Ok(format!("https://s3.amazonaws.com/{}/{}?X-Amz-Signature=stub", self.bucket_name, key))
     }
