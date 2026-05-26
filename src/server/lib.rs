@@ -3150,22 +3150,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                             </div>
                             <div id="agent-activity-feed" style="background: rgba(255, 255, 255, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); overflow: hidden;">
-                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">📦</div>
-                                    <div style="flex: 1;">
-                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
-                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Updated inventory for 3 vegan cakes.</p>
-                                    </div>
-                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">2m</span>
-                                </div>
-                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">🗓️</div>
-                                    <div style="flex: 1;">
-                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
-                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Approved booking for Carlos at 2:00 PM.</p>
-                                    </div>
-                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">15m</span>
-                                </div>
+<div style="padding: 32px; text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 32px; height: 32px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div><p style="margin: 0; font-size: 14px;">Waiting for team activity...</p></div>
                             </div>
                             <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="simulateOrder()">Simulate Activity</button>
                         </div>
@@ -3294,7 +3279,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                 <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.</p>
+
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
                                 ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
                             </div>
