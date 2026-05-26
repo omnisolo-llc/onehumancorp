@@ -475,13 +475,13 @@ impl DepartmentOrchestrator {
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
                         let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
-                            payload: payload_opt,
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_opt,
                         });
                     }
                 }
@@ -518,13 +518,13 @@ impl DepartmentOrchestrator {
                         let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
                         let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
-                            payload: payload_opt,
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_opt,
                         });
                     }
                 }
