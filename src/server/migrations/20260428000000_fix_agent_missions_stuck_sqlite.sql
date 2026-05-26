@@ -32,7 +32,4 @@ SELECT
 FROM _temp_agent_missions;
 
 -- 4. Drop the temporary table.
--- Postgres requires CASCADE due to tenant_isolation_swarm_tasks depending on agent_missions.
--- But SQLite does not support CASCADE on DROP TABLE.
--- However, we must provide a SQLite migration as requested.
 DROP TABLE _temp_agent_missions;

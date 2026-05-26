@@ -233,6 +233,16 @@ impl DB {
                     .await?;
 
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
+
+                // Ignore SQLite-specific migrations on Postgres
+                let mut migrator = migrator;
+                let mut new_migrations = Vec::new();
+                for m in migrator.migrations.iter() {
+                    if !m.description.ends_with("_sqlite") {
+                        new_migrations.push(m.clone());
+                    }
+                }
+                migrator.migrations = std::borrow::Cow::Owned(new_migrations);
                 migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
