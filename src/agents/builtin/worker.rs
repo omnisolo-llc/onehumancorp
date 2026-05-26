@@ -15,20 +15,12 @@ pub struct TaskWorker {
 }
 
 impl TaskWorker {
-    /// SOTA Harness Patterns (2025-2026): 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
-    pub fn get_configured_workers() -> usize {
-        std::env::var("OHC_AGENT_MAX_WORKERS")
-            .ok()
-            .and_then(|v| v.parse::<usize>().ok())
-            .unwrap_or(3)
-    }
-
     pub fn new(plane_client: Arc<PlaneClient>, hub: Arc<Hub>) -> Self {
         TaskWorker {
             plane_client,
             hub,
             poll_interval: std::time::Duration::from_secs(30),
-            num_workers: Self::get_configured_workers(),
+            num_workers: 3,
         }
     }
 
@@ -246,17 +238,6 @@ impl TaskWorker {
 mod tests {
     use super::*;
     use std::time::Duration;
-
-    #[test]
-    fn test_scalable_multi_agent_scaling_config() {
-        temp_env::with_var_unset("OHC_AGENT_MAX_WORKERS", || {
-            assert_eq!(TaskWorker::get_configured_workers(), 3);
-        });
-
-        temp_env::with_var("OHC_AGENT_MAX_WORKERS", Some("1000"), || {
-            assert_eq!(TaskWorker::get_configured_workers(), 1000);
-        });
-    }
 
     #[tokio::test]
     async fn test_ml_resilience_worker_timeout() {
