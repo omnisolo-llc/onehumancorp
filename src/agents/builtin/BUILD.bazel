@@ -201,6 +201,7 @@ rust_binary(
     )
     for module in [
         "agent",
+        "agent_protocol",
         "auth",
         "budget",
         "caveman",
