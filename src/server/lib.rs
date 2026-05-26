@@ -4574,9 +4574,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (response.ok) {
                                     closeDomainSetup();
                                     fireConfetti();
-                                    setTimeout(() => {
-                                        showScreen('dashboard-screen');
-                                    }, 2000);
+                                    showScreen('dashboard-screen');
                                 } else {
                                     console.error('Failed to publish');
                                 }
@@ -4977,7 +4975,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.classList.add('hidden');
                                     d.style.display = 'none'; // Fallback for old e2e logic
-                                    setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
+                                    if (d.classList.contains('hidden')) d.style.display = 'none';
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
                                 }
@@ -5084,16 +5082,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }
 
                                     // Show builder screen directly
-                                    setTimeout(() => {
-                                        showScreen('storefront-builder-screen');
-                                        renderStorefrontPreview();
-                                    }, 2000); // Wait for the "generating" animation
+                                    showScreen('storefront-builder-screen');
+                                    renderStorefrontPreview(); // Wait for the "generating" animation
                                 } else {
-                                    setTimeout(() => nextStep('launch-ai'), 2000);
+                                    nextStep('launch-ai');
                                 }
                             } catch(e) {
                                 console.error(e);
-                                setTimeout(() => nextStep('launch-ai'), 2000);
+                                nextStep('launch-ai');
                             }
                         }
 

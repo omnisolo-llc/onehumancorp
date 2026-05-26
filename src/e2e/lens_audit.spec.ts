@@ -258,7 +258,7 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
     // Ensure "Generating..." mock state is not present in the dom
-    await expect(page.getByText('Generating...')).not.toBeVisible();
+    await expect(page.locator('#step-generating')).not.toBeVisible();
   });
 
   test('verify navigation from the dashboard doesn\'t incur the 2000ms mock delay', async ({ page }) => {

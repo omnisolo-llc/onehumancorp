@@ -83,6 +83,7 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
+        .route("/promotions/generate", post(handle_generate_promotion))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
@@ -763,4 +764,27 @@ async fn handle_aggregated_team_invites_metrics(
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
+}
+
+#[derive(serde::Deserialize)]
+pub struct GeneratePromotionRequest {
+    pub tenant: Option<String>,
+}
+
+#[derive(serde::Serialize)]
+pub struct GeneratePromotionResponse {
+    pub message: String,
+}
+
+pub async fn handle_generate_promotion(
+    Json(req): Json<GeneratePromotionRequest>,
+) -> Result<Json<GeneratePromotionResponse>, StatusCode> {
+    let tenant = req.tenant.unwrap_or_else(|| "my-store".to_string());
+
+    let message = format!(
+        "🎉 Special Event Special!\n\nGet ready for our amazing Special Event deals! For a limited time, enjoy 10% OFF your entire order. 🛍️✨\n\nUse code: SPECIALEVENT10 at checkout.\n\nShop now and don't miss out! 🚀 #ShopLocal #Sale #SpecialEvent ({})",
+        tenant
+    );
+
+    Ok(Json(GeneratePromotionResponse { message }))
 }
