@@ -43,8 +43,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_llm_cost_cents[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum(rate(ohc_tenant_llm_cost_cents[5m])) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
           "refId": "A"
         }
       ],
@@ -88,8 +88,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_token_usage_total[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum(rate(ohc_tenant_token_usage_total[5m])) by (organization_id)",
+          "legendFormat": "{{organization_id}}",
           "refId": "A"
         }
       ],
