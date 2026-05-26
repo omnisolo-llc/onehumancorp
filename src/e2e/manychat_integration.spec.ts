@@ -6,12 +6,12 @@ test.describe('Manychat Integration', () => {
     await page.goto('/integrations');
   });
 
-  test('can connect Manychat and redirects to inbox', async ({ page }) => {
-    // Check that Manychat is visible
-    await expect(page.getByText('Manychat')).toBeVisible();
+  test('can connect ManyChat and redirects to inbox', async ({ page }) => {
+    // Check that ManyChat is visible
+    await expect(page.getByText('ManyChat')).toBeVisible();
 
-    // Click the connect button for Manychat
-    const connectButton = page.locator('div').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
+    // Click the connect button for ManyChat
+    const connectButton = page.locator('div').filter({ hasText: 'ManyChat' }).getByRole('button', { name: 'Connect' });
 
     // Stub alert
     page.on('dialog', dialog => dialog.accept());
