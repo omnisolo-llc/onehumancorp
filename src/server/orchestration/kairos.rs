@@ -228,6 +228,21 @@ impl KairosOrchestrator {
                     .await
                     .map_err(KairosError::Database)?;
 
+                    let trans_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query(
+                        r#"
+                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                        VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                        "#
+                    )
+                    .bind(trans_id)
+                    .bind(&id_str)
+                    .bind(agent_id)
+                    .bind(now)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(KairosError::Database)?;
+
                     tx.commit().await.map_err(KairosError::Database)?;
 
                     Ok(Some(SwarmTask {
@@ -280,6 +295,22 @@ impl KairosOrchestrator {
                         dependencies: r.get("dependencies"),
                         assigned_agent_id: r.get("assigned_agent_id"),
                     };
+
+                    let trans_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query(
+                        r#"
+                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                        VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                        "#
+                    )
+                    .bind(trans_id)
+                    .bind(&task.id)
+                    .bind(agent_id)
+                    .bind(now.to_rfc3339())
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(KairosError::Database)?;
+
                     tx.commit().await.map_err(KairosError::Database)?;
                     Ok(Some(task))
                 } else {
@@ -385,6 +416,21 @@ impl KairosOrchestrator {
                     .await
                     .map_err(KairosError::Database)?;
 
+                    let trans_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query(
+                        r#"
+                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                        VALUES ($1, $2, 'PENDING', 'IN_PROGRESS', $3, $4)
+                        "#
+                    )
+                    .bind(trans_id)
+                    .bind(&id)
+                    .bind(agent_id)
+                    .bind(now)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(KairosError::Database)?;
+
                     tx.commit().await.map_err(KairosError::Database)?;
 
                     Ok(Some(SharedTask {
@@ -453,6 +499,22 @@ impl KairosOrchestrator {
                         created_at: Some(dt_created),
                         updated_at: Some(now),
                     };
+
+                    let trans_id = uuid::Uuid::new_v4().to_string();
+                    sqlx::query(
+                        r#"
+                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
+                        VALUES (?, ?, 'PENDING', 'IN_PROGRESS', ?, ?)
+                        "#
+                    )
+                    .bind(trans_id)
+                    .bind(&task.id)
+                    .bind(agent_id)
+                    .bind(now.to_rfc3339())
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(KairosError::Database)?;
+
                     tx.commit().await.map_err(KairosError::Database)?;
                     Ok(Some(task))
                 } else {
@@ -497,6 +559,20 @@ mod tests {
                 auto_dreamed BOOLEAN DEFAULT FALSE,
                 _sync_status TEXT DEFAULT 'pending',
                 version INTEGER DEFAULT 1
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                task_id TEXT,
+                from_state TEXT,
+                to_state TEXT,
+                agent_id TEXT,
+                transitioned_at TEXT
             )"
         )
         .execute(&pool)
@@ -610,6 +686,20 @@ mod tests {
                 action_risk TEXT,
                 approval_status TEXT,
                 proposed_content TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                task_id TEXT,
+                from_state TEXT,
+                to_state TEXT,
+                agent_id TEXT,
+                transitioned_at TEXT
             )"
         )
         .execute(&pool)
