@@ -2,7 +2,7 @@
 mod tests {
     use sqlx::{postgres::PgPoolOptions, Row};
     use std::env;
-    use crate::domain::repository::models::{Business, AgentMemory, Tenant};
+    use crate::domain::repository::models::{Business, AgentMemory};
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
