@@ -6,7 +6,6 @@ use super::{Tool, ToolExecutor};
 
 
 struct CreateSkillExecutor {
-    memory_store: (),
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 
@@ -53,6 +52,6 @@ pub fn create_skill_tool(memory_store: ()) -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(CreateSkillExecutor { memory_store }),
+        execute: Arc::new(CreateSkillExecutor { }),
     }
 }
