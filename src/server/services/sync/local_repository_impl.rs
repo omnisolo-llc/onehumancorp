@@ -34,6 +34,7 @@ impl LocalRepository for PgLocalRepository {
                 role: "".to_string(),
                 task: "".to_string(),
                 context: None,
+                action_risk: None,
             });
 
             missions.push(LocalMission {
@@ -103,6 +104,7 @@ impl LocalRepository for PgLocalRepository {
                 role: "".to_string(),
                 task: "".to_string(),
                 context: None,
+                action_risk: None,
             });
 
             missions.push(LocalMission {
