@@ -158,7 +158,7 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -168,7 +168,7 @@ async fn handle_social_post(
 }
 
 async fn handle_generate_review(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would call an AI provider here.
@@ -217,7 +217,7 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
@@ -328,7 +328,7 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
@@ -408,7 +408,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
         .fetch_all(&_state.pool).await

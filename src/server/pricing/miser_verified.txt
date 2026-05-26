@@ -1,1 +1,9 @@
-miser_verified
+# Miser Feature Verification Report
+
+1. **LLM Token Efficiency**: Implemented via `PromptCache` in `src/server/pricing/prompt_caching.rs`, and token reduction logic (such as stop word removal and word count truncation) in `src/server/pricing/compression.rs`. Per-tenant token usage tracked in `src/server/pricing/rate_limit.rs`.
+2. **Storage Compression & CDN**: Implemented `optimize_image` in `src/server/pricing/compression.rs` to auto-resize images and convert them to WebP. Storage quotas per tier are enforced in `check_storage_quota` within `src/server/pricing/rate_limit.rs`.
+3. **AI Agent Rate Limiting**: Implemented soft limits with friendly upgrade prompts for agents and action limits based on `PlanTier` in `src/server/pricing/rate_limit.rs`.
+4. **Infrastructure Cost Metering**: Implemented OpenTelemetry metric counters in `src/server/pricing/rate_limit.rs` and `src/server/telemetry/mod.rs`. Grafana dashboards exist such as `tenant_costs.json` and `tenant_cost_efficiency.json` in `src/server/monitoring/dashboards/`.
+5. **Transaction Fee Optimization**: Implemented payment routing using ACH versus Credit Cards based on transaction thresholds to minimize fees in `src/server/integrations/stripe/routing.rs` and `payout_batcher.rs`.
+6. **Pricing Page & Billing Portal**: Implemented a pricing comparison page with clear tiers (Free, Starter, Pro, Business) and self-serve upgrade functionality in `src/ui/next/src/app/pricing/page.tsx` and `src/server/lib.rs`.
+7. **Cost Transparency Dashboard**: Implemented "My Plan" dashboard in `src/ui/next/src/app/plan/page.tsx` showing current plan, AI actions used, storage used, and estimated next bill with an upgrade button.
