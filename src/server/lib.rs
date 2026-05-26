@@ -4228,6 +4228,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <script>
 
+                        // Global fetch override for rate limit warnings
+                        const originalFetch = window.fetch;
+                        window.fetch = async function(...args) {
+                            const response = await originalFetch.apply(this, args);
+                            if (response.headers && response.headers.has('x-ratelimit-warning')) {
+                                const warningMsg = response.headers.get('x-ratelimit-warning');
+                                let banner = document.getElementById('global-ratelimit-banner');
+                                if (!banner) {
+                                    banner = document.createElement('div');
+                                    banner.id = 'global-ratelimit-banner';
+                                    banner.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; background: #f59e0b; color: white; padding: 12px; text-align: center; z-index: 9999; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer;';
+                                    banner.onclick = () => banner.style.display = 'none';
+                                    document.body.appendChild(banner);
+                                }
+                                banner.textContent = warningMsg;
+                                banner.style.display = 'block';
+                                setTimeout(() => { banner.style.display = 'none'; }, 10000);
+                            }
+                            return response;
+                        };
 
                         // Server-Side State Management for Cross-Device Resumes
                         let saveWizardStateTimeout = null;
