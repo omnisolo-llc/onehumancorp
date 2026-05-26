@@ -2072,8 +2072,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .route(
             "/api/costs",
-            axum::routing::get(|| async {
-                axum::Json(serde_json::json!({ "totalCostUSD": 0.0, "currency": "USD" }))
+            axum::routing::get({
+                let hub = hub.clone();
+                || async move {
+                    let auditor = hub.get_cost_auditor();
+                    axum::Json(serde_json::json!({ "totalCostUSD": auditor.get_total_cost(), "currency": "USD" }))
+                }
             }),
         )
         .route(
@@ -5029,7 +5033,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (id === 'my-plan-screen') {
 
-                                fetch('/api/billing/my-plan')
+                                fetch('/api/billing/my-plan', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } })
                                     .then(res => res.json())
                                     .then(data => {
                                         document.getElementById('my-plan-name').textContent = 'Plan: ' + data.current_plan;
@@ -5046,7 +5050,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
 
                             if (id === 'cost-dashboard-screen') {
-                                fetch('/api/billing/cost-dashboard')
+                                fetch('/api/billing/cost-dashboard', { headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || '') } })
                                     .then(res => res.json())
                                     .then(data => {
                                         document.getElementById('cost-dashboard-total').textContent = 'Total Costs: $' + (data.total_costs / 100).toFixed(2);
