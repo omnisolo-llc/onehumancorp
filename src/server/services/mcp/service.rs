@@ -7,6 +7,7 @@ use crate::tools::hybridfsmcp::server::HybridFSMcpServer;
 use crate::tools::hybridfsmcp::factory;
 use crate::tools::local_proxy::server::LocalProxyServer;
 use crate::tools::config_sync::server::ConfigSyncServer;
+use crate::tools::statesyncmcp::server::StateSyncMcpServer;
 
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
@@ -15,10 +16,14 @@ pub struct MyMcpService {
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     local_proxy_server: Arc<LocalProxyServer>,
     config_sync_server: Arc<ConfigSyncServer>,
+    statesync_mcp_server: Arc<StateSyncMcpServer>,
 }
 
 impl MyMcpService {
     pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
+        // Fallback for missing sip_db/sqlite pool in simple contexts, normally we'd pull from hub
+        let dummy_sqlite = crate::sip::SipDB::new(hub.pool.clone(), "dummy".to_string()).sqlite_pool;
+
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
@@ -26,6 +31,7 @@ impl MyMcpService {
             hybrid_fs_server: Arc::new(HybridFSMcpServer::new(factory::create_fs_provider(None))),
             local_proxy_server: Arc::new(LocalProxyServer::new()),
             config_sync_server: Arc::new(ConfigSyncServer::new(hub.pool.clone())),
+            statesync_mcp_server: Arc::new(StateSyncMcpServer::new(Arc::new(dummy_sqlite))),
         }
     }
 }
@@ -73,6 +79,8 @@ impl McpService for MyMcpService {
         tools.extend(local_proxy_tools);
         let config_sync_tools = self.config_sync_server.get_tools();
         tools.extend(config_sync_tools);
+        let statesync_tools = self.statesync_mcp_server.get_tools();
+        tools.extend(statesync_tools);
         Ok(Response::new(McpToolsResponse {
             tools,
         }))
@@ -154,13 +162,9 @@ impl McpService for MyMcpService {
                 let resp_payload = serde_json::to_string(&issue).unwrap();
                 Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
             }
-            "crdt_push" => {
-                Ok(Response::new(McpInvokeResponse { payload: req.params }))
-            }
-            "crdt_pull" => {
-                let mock_data = serde_json::json!({"crdt_state": "latest_mocked_state"});
-                let resp_payload = serde_json::to_string(&mock_data).unwrap();
-                Ok(Response::new(McpInvokeResponse { payload: resp_payload }))
+            "crdt_push" | "crdt_pull" => {
+                let resp = self.statesync_mcp_server.invoke_tool(&req).await?;
+                Ok(Response::new(resp))
             }
             "hybrid_sync" => {
                 let params: serde_json::Value = serde_json::from_str(&req.params)

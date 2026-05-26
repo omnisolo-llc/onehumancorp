@@ -8,6 +8,7 @@ filegroup(
         "//src/server/tools/hybridfsmcp:srcs",
         "//src/server/tools/kvmcp:srcs",
         "//src/server/tools/config_sync:srcs",
+        "//src/server/tools/statesyncmcp:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )
