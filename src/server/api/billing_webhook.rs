@@ -187,7 +187,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -304,7 +304,7 @@ pub struct CalComAttendee {
 }
 
 pub async fn calcom_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
     match payload.triggerEvent.as_str() {
@@ -335,7 +335,7 @@ pub struct ResendEventData {
 }
 
 pub async fn resend_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ResendEvent>,
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
@@ -358,7 +358,7 @@ pub struct AyrshareEvent {
 }
 
 pub async fn ayrshare_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<AyrshareEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -384,7 +384,7 @@ pub struct ManychatMessage {
 }
 
 pub async fn manychat_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
