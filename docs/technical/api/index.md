@@ -7,8 +7,8 @@ This section groups API-facing playbooks and reference material.
 ## Primary References
 
 - `docs/api/playbook.md`
-- `docs/api/kairos_orchestration_api.md`
-- `docs/api/hybrid_mcp_api.md`
+- `docs/technical/api/kairos-orchestration-api.md`
+- `docs/technical/api/hybrid-mcp-api.md`
 
 Use these pages for endpoint behavior, orchestration-specific API notes, and integration-facing contracts.
 

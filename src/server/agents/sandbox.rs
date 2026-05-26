@@ -6,11 +6,12 @@ use std::time::Duration;
 use tempfile::{tempdir, TempDir};
 use tokio::process::Command as AsyncCommand;
 use tokio::time::timeout;
-use anyhow::{Result, Context, anyhow};
+
+pub type SandboxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[async_trait::async_trait]
 pub trait ExecutionEnvironment: Send + Sync {
-    async fn execute_context(&self, command: String, work_dir: String) -> Result<String, anyhow::Error>;
+    async fn execute_context(&self, command: String, work_dir: String) -> SandboxResult<String>;
 }
 
 pub struct LocalEnvironment {
@@ -18,14 +19,13 @@ pub struct LocalEnvironment {
 }
 
 impl LocalEnvironment {
-    pub fn new() -> Result<Self> {
-        let dir = tempdir().context("Failed to create temp directory for sandbox")?;
+    pub fn new() -> SandboxResult<Self> {
+        let dir = tempdir()?;
 
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700))
-                .context("Failed to set permissions on sandbox directory")?;
+            fs::set_permissions(dir.path(), fs::Permissions::from_mode(0o700))?;
         }
 
         Ok(Self { dir })
@@ -38,19 +38,20 @@ impl LocalEnvironment {
 
 #[async_trait::async_trait]
 impl ExecutionEnvironment for LocalEnvironment {
-    async fn execute_context(&self, command: String, work_dir: String) -> Result<String, anyhow::Error> {
+    async fn execute_context(&self, command: String, work_dir: String) -> SandboxResult<String> {
         self.execute(&command, &work_dir, Duration::from_secs(30)).await
             .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
     }
 }
 
 impl LocalEnvironment {
-    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> Result<Output> {
+    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> SandboxResult<Output> {
         // Wrap command for Bash execution to disable extended globs
         let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
 
-        let dir_str = self.dir.path().to_str()
-            .ok_or_else(|| anyhow!("Failed to convert temp dir path to string"))?;
+        let dir_str = self.dir.path().to_str().ok_or_else(|| {
+            std::io::Error::new(std::io::ErrorKind::InvalidData, "failed to convert temp dir path to string")
+        })?;
 
         let mut command = AsyncCommand::new("bash");
         command.arg("-c").arg(wrapped_cmd);
@@ -72,8 +73,8 @@ impl LocalEnvironment {
         let child = command.output();
 
         match timeout(timeout_dur, child).await {
-            Ok(output_result) => output_result.context("Failed to execute command"),
-            Err(_) => Err(anyhow!("Command execution timed out")),
+            Ok(output_result) => Ok(output_result?),
+            Err(_) => Err(std::io::Error::new(std::io::ErrorKind::TimedOut, "Command execution timed out").into()),
         }
     }
 }

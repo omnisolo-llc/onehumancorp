@@ -107,8 +107,8 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 ## 6. Deep Dive Walkthroughs
 - **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
-- **[KAIROS Orchestration: Visual Walkthrough](../../features/kairos_orchestration.md)**
-- **[Interactive CLI Guide for AutoDream](autodream_cli_guide.md)**
+- **[KAIROS Orchestration: Visual Walkthrough](../../walkthroughs/kairos_orchestration.md)**
+- **[Interactive CLI Guide for AutoDream](../../walkthroughs/autodream_cli_guide.md)**
 - **[KAIROS Central Orchestration CLI Guide](kairos_central_orchestration_cli_guide.md)**
 - **[Elastic Swarm Bursting: Visual Walkthrough](elastic_swarm_bursting.md)**
 - **[Hybrid Troubleshooting Guide](hybrid_troubleshooting.md)**
@@ -138,7 +138,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Thin Client Integration Walkthrough](thin_client_integration.md)**: Visual guide to the UI-only Thin Client connection.
 - **[SPIFFE Identity Onboarding Walkthrough](spiffe_identity_onboarding.md)**: Visual guide to the zero-trust secure agent identity protocol.
 
-- **[Edge LLM Offloading Protocol API](../api/edge_llm_offloading_api.md)**: Interactive playbook for offloading LLM inference to the cloud.
+- **[Edge LLM Offloading Protocol API](../api/edge-llm-offloading-api.md)**: Interactive playbook for offloading LLM inference to the cloud.
 - **[Edge LLM Handoff Visual Walkthrough](edge_llm_handoff_walkthrough.md)**: Visual diagram illustrating the context transfer flow.
 - **[Hybrid Environment Setup Walkthrough](hybrid_environment_setup_walkthrough.md)**: Visual guide to Cloud vs Standalone environment initialization.
 - **[Agent Harness OS-Level Sandboxing and MCP Integration](agent_harness_os_level_sandboxing_mcp_integration.md)**: Visual guide to the OS-Level execution wrapper and MCP integrations.

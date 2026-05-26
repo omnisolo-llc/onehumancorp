@@ -4,7 +4,7 @@ Technical research and analysis documents.
 
 ## Architecture Research
 
-- [Agent Harness Analysis](./\[architecture\]_agent-harness-analysis.md)
+- [Agent Harness Analysis](./%5Barchitecture%5D_agent-harness-analysis.md)
 - [Dynamic MCP](./2026-03-28-unfair-advantage-dynamic-mcp.md)
 - [Episodic Memory](./2026-03-28-unfair-advantage-episodic-memory.md)
 - [Hybrid Architecture](./2026-03-29-hybrid-architecture.md)

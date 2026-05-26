@@ -44,6 +44,7 @@ build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_amd64
 build:windows_common --extra_toolchains=@zig_sdk//toolchain:windows_arm64
 build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=--cfg=windows_raw_dylib
 build:windows_common --@rules_rust//rust/settings:extra_rustc_flag=-Clink-self-contained=yes
+build:windows_common --spawn_strategy=local
 build:windows_common --noenable_platform_specific_config
 build:windows_common --keep_going
 
