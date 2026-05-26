@@ -108,24 +108,7 @@ impl KairosOrchestrator {
                     .await
                     .map_err(KairosError::Database)?;
 
-                    // DAG Lifecycle Unblock downstream dependencies logic
-                    if task_type == "shared" {
-                        let unblock_query = "UPDATE shared_tasks SET dependencies = COALESCE((SELECT jsonb_agg(elem) FROM jsonb_array_elements(dependencies) AS elem WHERE elem::text != $1), '[]'::jsonb) WHERE dependencies @> $1::jsonb";
-                        let dep_json = format!("\"{}\"", task_id);
-                        sqlx::query(unblock_query)
-                            .bind(&dep_json)
-                            .execute(&mut *tx)
-                            .await
-                            .map_err(KairosError::Database)?;
-                    } else {
-                        let unblock_query = "UPDATE swarm_tasks SET dependencies = COALESCE((SELECT jsonb_agg(elem) FROM jsonb_array_elements(dependencies) AS elem WHERE elem::text != $1), '[]'::jsonb) WHERE dependencies @> $1::jsonb";
-                        let dep_json = format!("\"{}\"", task_id);
-                        sqlx::query(unblock_query)
-                            .bind(&dep_json)
-                            .execute(&mut *tx)
-                            .await
-                            .map_err(KairosError::Database)?;
-                    }
+
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;

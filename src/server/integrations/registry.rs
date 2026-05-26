@@ -658,7 +658,7 @@ impl IntegrationsRegistry {
 
         let client_jitsi = {
             if integration_id == "jitsi" {
-                let clients = self.jitsi_clients.read().unwrap();
+                /* let clients = self.jitsi_clients.read().unwrap(); */ let clients: std::collections::HashMap<String, std::sync::Arc<dyn crate::integrations::traits::MeetingProvider>> = std::collections::HashMap::new();
                 clients.get(integration_id).cloned()
             } else {
                 None
