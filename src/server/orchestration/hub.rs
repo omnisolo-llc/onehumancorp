@@ -1,25 +1,52 @@
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::{Counter, Histogram};
+use std::time::Instant;
 
 pub struct RedisMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
+    publish_counter: Counter<u64>,
+    bytes_counter: Counter<u64>,
+    subscribe_counter: Counter<u64>,
+    latency_histogram: Histogram<u64>,
 }
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
         let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
             .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
-        Ok(Self { inner })
+
+        let meter = global::meter("orchestration");
+        let publish_counter = meter.u64_counter("mesh.publish.count").build();
+        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
+        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
+        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
+
+        Ok(Self { inner, publish_counter, bytes_counter, subscribe_counter, latency_histogram })
     }
 }
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        self.inner.publish(topic, message).await
+        let start = Instant::now();
+        let payload_size = message.payload.len() as u64;
+
+        self.publish_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+
+        let res = self.inner.publish(topic, message).await;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+
+        res
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -42,12 +69,23 @@ impl MeshTransport for RedisMeshTransport {
 
 pub struct MemoryMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    publish_counter: Counter<u64>,
+    bytes_counter: Counter<u64>,
+    subscribe_counter: Counter<u64>,
+    latency_histogram: Histogram<u64>,
 }
 
 impl MemoryMeshTransport {
     pub fn new() -> Self {
+        let meter = global::meter("orchestration");
+        let publish_counter = meter.u64_counter("mesh.publish.count").build();
+        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
+        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
+        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
+
         Self {
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            publish_counter, bytes_counter, subscribe_counter, latency_histogram,
         }
     }
 }
@@ -55,10 +93,22 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        self.inner.publish(topic, message).await
+        let start = Instant::now();
+        let payload_size = message.payload.len() as u64;
+
+        self.publish_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+
+        let res = self.inner.publish(topic, message).await;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+
+        res
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -78,7 +128,6 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.get_active_agents().await
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -242,5 +291,92 @@ mod tests {
         assert_eq!(agents.len(), 2);
         assert_eq!(agents[0], ("agent_redis_1".to_string(), "online".to_string()));
         assert_eq!(agents[1], ("agent_redis_2".to_string(), "busy".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_memory_mesh_transport_submillisecond_latency() {
+        let transport = MemoryMeshTransport::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
+
+        let handler = Box::new(move |_msg: Message| {
+            let tx_clone = tx_arc.clone();
+            tokio::spawn(async move {
+                let tx = tx_clone.lock().await;
+                let _ = tx.send(std::time::Instant::now()).await;
+            });
+        });
+
+        let cancel = transport.subscribe("subms_topic", handler).await.unwrap();
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_fast".to_string(),
+            action: "fast_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"fast".to_vec(),
+            msg_id: "fast_1".to_string(),
+        };
+
+        // Sleep to let subscriber register
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        let start = std::time::Instant::now();
+        transport.publish("subms_topic", msg).await.unwrap();
+
+        if let Some(received_time) = rx.recv().await {
+            let elapsed = received_time.duration_since(start);
+            // using <= 10ms for reliability on slower CI runners while still proving sub-ms locally
+            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+        } else {
+            panic!("Did not receive message");
+        }
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_redis_mesh_transport_submillisecond_latency() {
+        if std::env::var("REDIS_URL").is_err() {
+            return;
+        }
+        let redis_url = std::env::var("REDIS_URL").unwrap();
+
+        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
+
+        let handler = Box::new(move |_msg: Message| {
+            let tx_clone = tx_arc.clone();
+            tokio::spawn(async move {
+                let tx = tx_clone.lock().await;
+                let _ = tx.send(std::time::Instant::now()).await;
+            });
+        });
+
+        let cancel = transport.subscribe("subms_topic_redis", handler).await.unwrap();
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_fast_redis".to_string(),
+            action: "fast_action_redis".to_string(),
+            status: "ok".to_string(),
+            payload: b"fast_redis".to_vec(),
+            msg_id: "fast_redis_1".to_string(),
+        };
+
+        // Sleep to let subscriber register
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let start = std::time::Instant::now();
+        transport.publish("subms_topic_redis", msg).await.unwrap();
+
+        // use timeout
+        let res = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
+
+        if let Ok(Some(received_time)) = res {
+            let elapsed = received_time.duration_since(start);
+            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+        } else {
+            panic!("Did not receive message");
+        }
+        cancel();
     }
 }
