@@ -209,7 +209,7 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "stripe-setup-btn", message: "Click here to connect Stripe and start accepting payments." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Accept your first payment</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
+                  <button onClick={() => startWalkthrough([{ targetId: "agents-nav-link", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
