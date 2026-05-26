@@ -6,6 +6,14 @@ import { useOnboardingStore } from './store';
 global.fetch = vi.fn();
 
 describe('OnboardingWizard', () => {
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (global.fetch as any) = vi.fn().mockImplementation(async (url: string) => {
+      return { ok: true, json: async () => ({}) };
+    });
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     localStorage.clear();
@@ -214,10 +222,7 @@ describe('OnboardingWizard', () => {
     await userEvent.type(input, "I bake custom vegan cakes");
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
 
-    await waitFor(() => {
-      expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
-      expect(useOnboardingStore.getState().step).toBe(4);
-    });
+    await waitFor(() => { expect(screen.getByText("Ready to Launch!")).toBeInTheDocument(); expect(useOnboardingStore.getState().step).toBe(4); }); await act(async () => { await new Promise(r => setTimeout(r, 0)); });
   });
 
   it('Step 3: API Error on Generate Draft', async () => {
@@ -232,6 +237,27 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to process intake")).toBeInTheDocument();
     });
+  });
+
+  it('Step 1: clicks a preset business type', async () => {
+    useOnboardingStore.setState({ step: 1 });
+    await act(async () => { render(<OnboardingWizard />); await new Promise(r => setTimeout(r, 0)); });
+    await act(async () => { screen.getByRole('button', { name: 'Online Store' }).click(); await new Promise(r => setTimeout(r, 0)); });
+    expect(useOnboardingStore.getState().businessType).toBe('Online Store');
+    expect(useOnboardingStore.getState().step).toBe(2);
+  });
+
+  it('Step 3: clicks a preset niche category', async () => {
+    useOnboardingStore.setState({ step: 3, businessType: 'Online Store', businessName: "Maya's" });
+    (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) });
+    await act(async () => { render(<OnboardingWizard />); await new Promise(r => setTimeout(r, 0)); });
+    await act(async () => { screen.getByRole('button', { name: 'Food & Beverage' }).click(); await new Promise(r => setTimeout(r, 0)); });
+    expect(useOnboardingStore.getState().businessCategory).toBe('Food & Beverage');
+    await waitFor(() => {
+      expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(4);
+    });
+    await waitFor(() => expect(useOnboardingStore.getState().isLoading).toBe(false));
   });
 
   it('Step 4: User reviews and clicks Publish Now', async () => {
@@ -280,10 +306,7 @@ describe('OnboardingWizard', () => {
     // Publish
     act(() => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
 
-    await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(useOnboardingStore.getState().step).toBe(5);
-    });
+    await waitFor(() => { expect(screen.getByText("You're Live!")).toBeInTheDocument(); expect(useOnboardingStore.getState().step).toBe(5); }); await act(async () => { await new Promise(r => setTimeout(r, 0)); });
   });
 
   it('Step 4: API Error on Publish Now', async () => {

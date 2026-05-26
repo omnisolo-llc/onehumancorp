@@ -287,7 +287,7 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-[0_8px_32px_0_rgba(31,38,135,0.15)] flex flex-col relative sm:rounded-[20px] overflow-hidden glass-container mac-glass-container backdrop-blur-2xl bg-white/40 border border-white/60 dark:border-white/20">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
@@ -297,7 +297,7 @@ export default function OnboardingWizard() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
+        <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col bg-gradient-to-b from-transparent to-white/10 dark:to-black/10">
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
               {error}
@@ -337,7 +337,7 @@ export default function OnboardingWizard() {
               </div>
               <button
                 onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all backdrop-blur-sm bg-opacity-90"
               >
                 Next
               </button>
@@ -351,6 +351,9 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 inputMode="text"
+                autoComplete="organization"
+                autoCapitalize="words"
+                spellCheck="false"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
@@ -369,7 +372,7 @@ export default function OnboardingWizard() {
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all backdrop-blur-sm bg-opacity-90"
                 >
                   Next
                 </button>
@@ -384,6 +387,9 @@ export default function OnboardingWizard() {
               <input
                 type="text"
                 inputMode="text"
+                autoComplete="off"
+                autoCapitalize="sentences"
+                spellCheck="true"
                 value={businessCategory}
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
@@ -414,7 +420,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => handleIntakeSubmit()}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[12px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center backdrop-blur-sm bg-opacity-90"
                 >
                   {isLoading ? (
                     <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -444,6 +450,9 @@ export default function OnboardingWizard() {
                        <input
                          type="text"
                          inputMode="text"
+                         autoComplete="off"
+                         autoCapitalize="words"
+                         spellCheck="false"
                          enterKeyHint="next"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
