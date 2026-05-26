@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { ApprovalRequest } from "../page";
 
 type Props = {
@@ -13,51 +13,17 @@ type Props = {
 };
 
 export default function ApprovalInbox({
-  departmentId,
   departmentName,
   approvals,
   onBack,
   onApprove,
   onReject,
 }: Props) {
-  const [reviewAll, setReviewAll] = useState(true);
-  const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(null);
-
-  const handleToggle = async () => {
-    const newValue = !reviewAll;
-    setReviewAll(newValue);
-    try {
-      await fetch(`/api/agents/settings/${departmentId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tone_of_voice: "Friendly",
-          auto_approve_limits: newValue ? 0.0 : 1000.0,
-        }),
-      });
-    } catch (e) {
-      console.error(e);
-      setReviewAll(!newValue); // Revert on failure
-    }
-  };
-
-  const extractPayload = (description: string) => {
-    const parts = description.split(" | Payload: ");
-    if (parts.length > 1) {
-      try {
-        return { desc: parts[0], payload: JSON.parse(parts[1]) };
-      } catch (e) {
-        return { desc: parts[0], payload: null };
-      }
-    }
-    return { desc: description, payload: null };
-  };
-
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+        <div className="pt-12 pb-6 px-6 bg-white/60 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
@@ -84,18 +50,6 @@ export default function ApprovalInbox({
               Approval Inbox
             </p>
           </div>
-        </div>
-
-
-        {/* Settings Toggle */}
-        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">Review all messages before sending</span>
-          <button
-            onClick={handleToggle}
-            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? 'bg-blue-500 justify-end' : 'bg-gray-300 justify-start'}`}
-          >
-            <div className={`w-4 h-4 bg-white rounded-full transition-transform`} />
-          </button>
         </div>
 
         {/* Content */}
@@ -125,13 +79,10 @@ export default function ApprovalInbox({
               </p>
             </div>
           ) : (
-            approvals.map((req) => {
-              const { desc, payload } = extractPayload(req.description);
-              return (
-
+            approvals.map((req) => (
               <div
                 key={req.id}
-                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span
@@ -149,7 +100,7 @@ export default function ApprovalInbox({
                 </div>
 
                 <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
-                  {desc}
+                  {req.description}
                 </p>
 
                 {req.payload?.feature_type === "ambassador_reply" && (
@@ -401,92 +352,23 @@ export default function ApprovalInbox({
 
                 <div className="flex gap-3">
                   <button
-                    onClick={() => {
-                      if (payload && payload.original_message) {
-                        setSelectedReview(req);
-                      } else {
-                        onReject(req.id);
-                      }
-                    }}
-                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
+                    onClick={() => onReject(req.id)}
+                    className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all"
                   >
-                    {payload && payload.original_message ? 'Review' : 'Reject / Edit'}
+                    Reject / Edit
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
-                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
+                    className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all"
                   >
                     Approve
                   </button>
                 </div>
               </div>
-            );
-          })
+            ))
           )}
         </div>
-
-        {/* Review Modal */}
-        {selectedReview && (
-          <div className="absolute inset-0 bg-black/40 z-50 flex flex-col justify-end">
-            <div
-              className="bg-white rounded-t-3xl p-6 shadow-2xl transition-transform duration-300"
-              style={{ animation: 'slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
-            >
-              <h2 className="text-xl font-bold mb-4 font-outfit text-gray-900">Review Draft</h2>
-
-              <div className="mb-4">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Context</p>
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
-                   {extractPayload(selectedReview.description).payload?.original_message || "N/A"}
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Draft</p>
-                <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                  {extractPayload(selectedReview.description).payload?.generated_response || "N/A"}
-                </div>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    onReject(selectedReview.id);
-                    setSelectedReview(null);
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
-                >
-                  Discard
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedReview(null);
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 min-h-[44px]"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => {
-                    onApprove(selectedReview.id);
-                    setSelectedReview(null);
-                  }}
-                  className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 min-h-[44px]"
-                >
-                  Send Now
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        <style dangerouslySetInnerHTML={{__html: `
-          @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-          }
-        `}} />
       </div>
     </div>
-
   );
 }

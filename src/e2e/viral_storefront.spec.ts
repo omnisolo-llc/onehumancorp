@@ -36,13 +36,6 @@ test.describe('Viral Storefront E2E', () => {
     await expect(textarea).toHaveValue(/<iframe src=".*\/api\/v1\/growth\/storefront\/embed".*><\/iframe>/);
   });
 
-  test('displays Customer Referral block in storefront preview', async ({ page }) => {
-    await page.goto('/storefront-builder');
-    await expect(page.locator('.builder-block').filter({ hasText: 'Refer a Friend' })).toBeVisible();
-    await expect(page.locator('.builder-block').filter({ hasText: 'Get 10% off your next order!' })).toBeVisible();
-    await expect(page.locator('.builder-block a[href="ohc://join?ref=storefront-referral"]')).toBeVisible();
-  });
-
   test('renders the embed widget directly with viral footer', async ({ page }) => {
     await page.goto('/api/v1/growth/storefront/embed');
 

@@ -27,18 +27,18 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
         .bind(&user.id)
         .bind(&user.username)
-        .bind(&user.email)
+        .bind(if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(&user.email) } else { user.email.clone() })
         .bind(&user.password_hash)
         .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
         .bind(user.active)
         .bind(&user.organization_id)
-        .bind(&user.oidc_subject)
+        .bind(user.oidc_subject.as_ref().map(|s| if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(s) } else { s.clone() }))
         .bind(user.created_at)
         .bind(user.updated_at)
         .execute(&mut *tx)
@@ -51,7 +51,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id AS organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -63,23 +63,42 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        Ok(User {
-            id: row.get("id"),
-            username: row.get("username"),
-            email: row.get("email"),
-            password_hash: row.get("password_hash"),
-            roles,
-            active: row.get("active"),
-            organization_id: row.get("organization_id"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-            oidc_subject: row.get("oidc_subject"),
-        })
+        {
+            let raw_email: String = row.get("email");
+            let raw_oidc: Option<String> = row.get("oidc_subject");
+
+            let dec_email = if !::server_config::get().multitenant {
+                crate::crypto::decrypt_deterministic(&raw_email)
+            } else {
+                raw_email
+            };
+
+            let dec_oidc = raw_oidc.map(|s| {
+                if !::server_config::get().multitenant {
+                    crate::crypto::decrypt_deterministic(&s)
+                } else {
+                    s
+                }
+            });
+
+            Ok(User {
+                id: row.get("id"),
+                username: row.get("username"),
+                email: dec_email,
+                password_hash: row.get("password_hash"),
+                roles,
+                active: row.get("active"),
+                organization_id: row.get("organization_id"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                oidc_subject: dec_oidc,
+            })
+        }
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id AS organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -90,76 +109,143 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        Ok(User {
-            id: row.get("id"),
-            username: row.get("username"),
-            email: row.get("email"),
-            password_hash: row.get("password_hash"),
-            roles,
-            active: row.get("active"),
-            organization_id: row.get("organization_id"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-            oidc_subject: row.get("oidc_subject"),
-        })
+        {
+            let raw_email: String = row.get("email");
+            let raw_oidc: Option<String> = row.get("oidc_subject");
+
+            let dec_email = if !::server_config::get().multitenant {
+                crate::crypto::decrypt_deterministic(&raw_email)
+            } else {
+                raw_email
+            };
+
+            let dec_oidc = raw_oidc.map(|s| {
+                if !::server_config::get().multitenant {
+                    crate::crypto::decrypt_deterministic(&s)
+                } else {
+                    s
+                }
+            });
+
+            Ok(User {
+                id: row.get("id"),
+                username: row.get("username"),
+                email: dec_email,
+                password_hash: row.get("password_hash"),
+                roles,
+                active: row.get("active"),
+                organization_id: row.get("organization_id"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                oidc_subject: dec_oidc,
+            })
+        }
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by email
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id AS organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let search_email = if !::server_config::get().multitenant {
+            crate::crypto::encrypt_deterministic(email)
+        } else {
+            email.to_string()
+        };
+        let row = sqlx::query(query).bind(&search_email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        Ok(User {
-            id: row.get("id"),
-            username: row.get("username"),
-            email: row.get("email"),
-            password_hash: row.get("password_hash"),
-            roles,
-            active: row.get("active"),
-            organization_id: row.get("organization_id"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-            oidc_subject: row.get("oidc_subject"),
-        })
+        {
+            let raw_email: String = row.get("email");
+            let raw_oidc: Option<String> = row.get("oidc_subject");
+
+            let dec_email = if !::server_config::get().multitenant {
+                crate::crypto::decrypt_deterministic(&raw_email)
+            } else {
+                raw_email
+            };
+
+            let dec_oidc = raw_oidc.map(|s| {
+                if !::server_config::get().multitenant {
+                    crate::crypto::decrypt_deterministic(&s)
+                } else {
+                    s
+                }
+            });
+
+            Ok(User {
+                id: row.get("id"),
+                username: row.get("username"),
+                email: dec_email,
+                password_hash: row.get("password_hash"),
+                roles,
+                active: row.get("active"),
+                organization_id: row.get("organization_id"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                oidc_subject: dec_oidc,
+            })
+        }
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id AS organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let row = sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let search_sub = if !::server_config::get().multitenant {
+            crate::crypto::encrypt_deterministic(sub)
+        } else {
+            sub.to_string()
+        };
+        let row = sqlx::query(query).bind(&search_sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        Ok(User {
-            id: row.get("id"),
-            username: row.get("username"),
-            email: row.get("email"),
-            password_hash: row.get("password_hash"),
-            roles,
-            active: row.get("active"),
-            organization_id: row.get("organization_id"),
-            created_at: row.get("created_at"),
-            updated_at: row.get("updated_at"),
-            oidc_subject: row.get("oidc_subject"),
-        })
+        {
+            let raw_email: String = row.get("email");
+            let raw_oidc: Option<String> = row.get("oidc_subject");
+
+            let dec_email = if !::server_config::get().multitenant {
+                crate::crypto::decrypt_deterministic(&raw_email)
+            } else {
+                raw_email
+            };
+
+            let dec_oidc = raw_oidc.map(|s| {
+                if !::server_config::get().multitenant {
+                    crate::crypto::decrypt_deterministic(&s)
+                } else {
+                    s
+                }
+            });
+
+            Ok(User {
+                id: row.get("id"),
+                username: row.get("username"),
+                email: dec_email,
+                password_hash: row.get("password_hash"),
+                roles,
+                active: row.get("active"),
+                organization_id: row.get("organization_id"),
+                created_at: row.get("created_at"),
+                updated_at: row.get("updated_at"),
+                oidc_subject: dec_oidc,
+            })
+        }
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id AS organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -172,18 +258,37 @@ impl UserRepository for PgUserRepository {
             let roles_json: String = row.get("roles");
             let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
+{
+            let raw_email: String = row.get("email");
+            let raw_oidc: Option<String> = row.get("oidc_subject");
+
+            let dec_email = if !::server_config::get().multitenant {
+                crate::crypto::decrypt_deterministic(&raw_email)
+            } else {
+                raw_email
+            };
+
+            let dec_oidc = raw_oidc.map(|s| {
+                if !::server_config::get().multitenant {
+                    crate::crypto::decrypt_deterministic(&s)
+                } else {
+                    s
+                }
+            });
+
             users.push(User {
                 id: row.get("id"),
                 username: row.get("username"),
-                email: row.get("email"),
+                email: dec_email,
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
                 organization_id: row.get("organization_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
-                oidc_subject: row.get("oidc_subject"),
+                oidc_subject: dec_oidc,
             });
+        }
         }
         Ok(users)
     }
@@ -193,7 +298,7 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 RETURNING id
             "#;
 
@@ -204,12 +309,12 @@ impl UserRepository for PgUserRepository {
         let res = sqlx::query(query)
             .bind(&user.id)
             .bind(&user.username)
-            .bind(&user.email)
+            .bind(if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(&user.email) } else { user.email.clone() })
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
             .bind(&user.organization_id)
-            .bind(&user.oidc_subject)
+            .bind(user.oidc_subject.as_ref().map(|s| if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(s) } else { s.clone() }))
             .bind(user.updated_at)
             .fetch_optional(&mut *tx)
             .await
