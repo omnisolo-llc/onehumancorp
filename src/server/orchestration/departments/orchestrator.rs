@@ -479,6 +479,9 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+
+                            payload: None,
+
                         });
                     }
                 }
@@ -519,6 +522,9 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+
+                            payload: None,
+
                         });
                     }
                 }
