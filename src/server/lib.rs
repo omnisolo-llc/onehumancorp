@@ -2231,6 +2231,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
+        .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
@@ -3078,6 +3079,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" id="approval-inbox">
                             <h3>Approval Inbox</h3>
                         </div>
+                        <div class="card glass" id="activity-feed"></div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p>Store Tips</p>
@@ -3150,22 +3152,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                             </div>
                             <div id="agent-activity-feed" style="background: rgba(255, 255, 255, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); overflow: hidden;">
-                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">📦</div>
-                                    <div style="flex: 1;">
-                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
-                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Updated inventory for 3 vegan cakes.</p>
-                                    </div>
-                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">2m</span>
-                                </div>
-                                <div style="display: flex; gap: 16px; align-items: center; padding: 16px; border-bottom: 1px solid rgba(0,0,0,0.03); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.8)'" onmouseout="this.style.background='transparent'">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid rgba(0,0,0,0.05);">🗓️</div>
-                                    <div style="flex: 1;">
-                                        <p style="margin: 0; font-weight: 600; color: #1D1D1F; font-size: 14px;">Ops Helper</p>
-                                        <p style="margin: 2px 0 0 0; font-size: 13px; color: #86868B;">Approved booking for Carlos at 2:00 PM.</p>
-                                    </div>
-                                    <span style="font-size: 12px; font-weight: 500; color: #86868B;">15m</span>
-                                </div>
+<div style="padding: 32px; text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 32px; height: 32px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div><p style="margin: 0; font-size: 14px;">Waiting for team activity...</p></div>
                             </div>
                             <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="simulateOrder()">Simulate Activity</button>
                         </div>
@@ -3294,7 +3281,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                 <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.</p>
+
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
                                 ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
                             </div>
@@ -3528,6 +3515,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
+
+                        async function fetchActivityFeed() {
+                            try {
+                                const container = document.getElementById('activity-feed');
+                                if (!container) return;
+                                const res = await fetch('/api/agents/approvals/activity', {
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') }
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.pending_approvals && data.pending_approvals.length > 0) {
+                                        container.innerHTML = '<h3>Activity Feed</h3>';
+                                        data.pending_approvals.forEach(activity => {
+                                            container.innerHTML += `
+                                                <div style="background: rgba(255,255,255,0.4); border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                                                    <p style="margin: 0; font-size: 13px; color: var(--text-secondary);">Auto-Executed by ${activity.department}: ${activity.description}</p>
+                                                </div>
+                                            `;
+                                        });
+                                    } else {
+                                        container.innerHTML = '<h3>Activity Feed</h3><p style="font-size: 13px; color: var(--text-secondary);">No recent activities.</p>';
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error fetching activity feed:', e);
+                            }
+                        }
+
                         async function fetchApprovals() {
                             try {
                                 const res = await fetch('/api/agents/approvals', {
@@ -3572,6 +3587,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (res.ok) {
                                     fetchApprovals();
+                                fetchActivityFeed();
                                 } else {
                                     alert('Failed to process approval.');
                                 }
@@ -4310,7 +4326,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'b1', type: 'Hero', content: { title: 'My Awesome Store', subtitle: 'Welcome to our premium storefront', cta: 'Shop Now' } },
                             { id: 'b2', type: 'Product Grid', content: { title: 'Featured Products', count: 4 } },
                             { id: 'b3', type: 'Service List', content: { title: 'Our Services' } },
-                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } }
+                            { id: 'b4', type: 'Testimonials', content: { text: 'Best service ever! - Happy Customer' } },
+                            { id: 'b5', type: 'Customer Referral', content: { title: 'Refer a Friend', offer: 'Get 10% off your next order!' } }
                         ];
                         let rearrangeMode = false;
                         let activeBlockId = null;
@@ -4352,6 +4369,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     } else if (block.type === 'TestimonialBlock') {
                                         const testimonials = block.content.testimonials || [];
                                         innerHtml += `<p>${testimonials.join(' ')}</p>`;
+                                    } else if (block.type === 'Customer Referral' || block.type === 'CustomerReferralBlock') {
+                                        const escapeHtml = (unsafe) => {
+                                            return (unsafe || '').toString()
+                                                 .replace(/&/g, "&amp;")
+                                                 .replace(/</g, "&lt;")
+                                                 .replace(/>/g, "&gt;")
+                                                 .replace(/"/g, "&quot;")
+                                                 .replace(/'/g, "&#039;");
+                                        };
+                                        innerHtml += `<div style="padding:16px; border:1px dashed var(--primary); border-radius:8px; text-align:center; margin-top: 16px;">
+                                            <p><strong>${escapeHtml(block.content.title)}</strong></p>
+                                            <p>${escapeHtml(block.content.offer)}</p>
+                                            <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
+                                            <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
+                                        </div>`;
                                     }
                                 }
                                 el.innerHTML = innerHtml;
@@ -4543,7 +4575,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 block_type: b.type === 'Hero' ? 'HeroBlock' :
                                             b.type === 'Product Grid' ? 'ProductGridBlock' :
                                             b.type === 'Service List' ? 'ServiceBookingBlock' :
-                                            b.type === 'Testimonials' ? 'TestimonialBlock' : b.type,
+                                            b.type === 'Testimonials' ? 'TestimonialBlock' :
+                                            b.type === 'Customer Referral' ? 'CustomerReferralBlock' : b.type,
                                 content: b.content,
                                 sort_order: i
                             }));
@@ -5205,6 +5238,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
                                 fetchApprovals();
+                                fetchActivityFeed();
                             }
 
                             if (id === 'my-plan-screen') {
