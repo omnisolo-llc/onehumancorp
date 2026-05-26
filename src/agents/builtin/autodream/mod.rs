@@ -526,5 +526,59 @@ mod tests {
         let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter).await;
         assert!(res.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_autodream_worker_pipelines() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+        let db = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Postgres });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        assert!(AutoDreamWorker::process_mesh_messages(&db).await.is_ok());
+        assert!(AutoDreamWorker::compress_session_contexts(&db).await.is_ok());
+        assert!(AutoDreamWorker::prune_stale_sessions(&db, &worker.embedded_counter).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_autodream_worker_ingest_memories() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+        let db = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Postgres });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        assert!(AutoDreamWorker::process_db_memories(&db, &worker.embedded_counter).await.is_ok());
+        assert!(AutoDreamWorker::process_fs_memories(&db, &worker.embedded_counter).await.is_ok());
+        assert!(AutoDreamWorker::ingest_completed_tasks(&db, &worker.embedded_counter).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_autodream_worker_conflict_resolution() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+        let db = Arc::new(DB { pool: pool.clone(), store: ::server_lib::db::DbStore::Postgres });
+
+        assert!(AutoDreamWorker::resolve_conflicts(&db).await.is_ok());
+    }
 }
 
