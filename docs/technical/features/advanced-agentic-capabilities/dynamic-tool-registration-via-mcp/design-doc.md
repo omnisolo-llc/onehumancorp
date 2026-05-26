@@ -21,18 +21,17 @@
 
 ## 4. API & Data Models
 ### 4.1 MCP Schema Struct
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct McpSchema {
-    name: String,
-    description: String,
-    parameters: serde_json::Value,
-    auth_role: String,
+```go
+type MCPSchema struct {
+    Name        string                 `json:"name"`
+    Description string                 `json:"description"`
+    Parameters  map[string]interface{} `json:"parameters"`
+    AuthRole    string                 `json:"auth_role"`
 }
 ```
 
 ## 5. Implementation Details
-- **Schema Validation:** Use typed `serde` deserialization where possible and explicit JSON Schema validation for dynamic payloads to prevent schema drift or injection attacks.
+- **Schema Validation:** Ensure `json.NewDecoder` combined with `dec.DisallowUnknownFields()` is used to strictly validate tool payloads to prevent schema drift or injection attacks.
 - **Zero-Lock Paradigm:** The `MCPRegistryService` must support any standard OpenAPI v3 specification to ensure zero vendor lock-in and allow importing custom tools easily.
 - **Performance:** Caching of OpenAPI schemas in the `MCPRegistryService` must be implemented to ensure sub-50ms latency routing for tool discovery requests.
 

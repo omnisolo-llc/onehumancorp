@@ -1,5 +1,6 @@
+#![allow(unused_variables)]
 use axum::{
-    extract::Json,
+    extract::{State, Json},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -81,7 +82,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +125,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }

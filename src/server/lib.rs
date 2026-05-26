@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 pub use ::server_harness as harness;
 pub mod api;
 
@@ -80,7 +81,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
-    pub use ::server_services_b2b as b2b;
+    pub mod b2b;
     pub mod integration;
     pub mod ops;
     pub mod mcp;
@@ -2027,7 +2028,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             // Generate OTP securely
@@ -2061,8 +2062,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
         }))
         .route("/api/settings/sms-confirm", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let _settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -2089,7 +2090,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .route("/api/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
                 let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -2442,7 +2443,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
     let path = req.uri().path();
     let content = match path {
         "/api/v1/health" => "{\"status\":\"ok\"}",
-        _ => r##"
+        _ => r#"
             <!DOCTYPE html>
             <html>
                 <head>
@@ -3465,7 +3466,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="team-screen" class="screen">
                         <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
-                        <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
@@ -4007,7 +4007,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -4771,7 +4770,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             'signup-screen': '/signup',
                             'pricing-screen': '/pricing',
                             'my-plan-screen': '/my-plan',
-                            'team-screen': '/agents',
+                            'team-screen': '/team',
                             'diagnostics-screen': '/diagnostics',
                             'services-screen': '/services',
                             'scaling-screen': '/scaling',
@@ -5437,7 +5436,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         window.onload = async () => {
                             const path = window.location.pathname;
-                            const pathAliases = { '/business-setup': 'setup-screen', '/team': 'team-screen' };
+                            const pathAliases = { '/business-setup': 'setup-screen' };
                             const screenId = pathAliases[path] || Object.keys(pathMap).find(key => pathMap[key] === path) || 'dashboard-screen';
 
                             if (screenId === 'setup-screen') {
@@ -5619,7 +5618,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
+                                if(data.link) aiMsg.innerHTML += '<br><br><a href='#' onclick="showScreen('help-screen'); document.getElementById('ai-chat-widget').style.display='none';">' + data.link_text + '</a>';
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
@@ -5795,7 +5794,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
                 </body>
             </html>
-        "##,
+        "#,
     };
     axum::response::Html(content)
 }

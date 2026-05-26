@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -158,7 +159,7 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -168,7 +169,7 @@ async fn handle_social_post(
 }
 
 async fn handle_generate_review(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would call an AI provider here.
@@ -217,7 +218,7 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
@@ -328,7 +329,7 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
@@ -408,10 +409,10 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
+        .fetch_all(&state.pool).await
     {
         Ok(rows) => {
             use sqlx::Row;

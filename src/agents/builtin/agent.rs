@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use ohc_builtin_agent_core::types::ToolError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
@@ -3800,7 +3801,8 @@ mod tests {
         }
     }
 
-    pub struct MockToolExecutor;
+    #[allow(dead_code)]
+        pub struct MockToolExecutor;
 
     #[async_trait::async_trait]
     impl ToolExecutor for MockToolExecutor {
@@ -5670,7 +5672,7 @@ mod tests {
 mod stream_tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
 
     struct StreamMockLlmClient {
@@ -5939,7 +5941,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6172,6 +6174,7 @@ mod hierarchical_prompt_tests {
 }
 
 
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }
@@ -6213,6 +6216,7 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
+        #[allow(unused_imports)]
         use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
         let tool = Tool {
@@ -6239,7 +6243,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6313,7 +6317,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]

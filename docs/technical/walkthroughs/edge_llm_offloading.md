@@ -42,6 +42,6 @@ To enable the Edge LLM Offloading Protocol, you must configure the `mcp_inferenc
 1.  Ensure you are authenticated via SPIFFE/SPIRE.
 2.  Set the environment variable `OHC_EDGE_OFFLOADING_ENABLED=true`.
 
-For a full breakdown of the API endpoints, see the [Hybrid MCP Integration API Playbook](../api/hybrid-mcp-api.md).
+For a full breakdown of the API endpoints, see the [Hybrid MCP Integration API Playbook](../api/hybrid_mcp_api.md).
 
 </div>

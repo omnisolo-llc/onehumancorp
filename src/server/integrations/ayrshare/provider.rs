@@ -1,5 +1,5 @@
 use super::client::AyrshareClient;
-use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
+use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct AyrshareProvider {
