@@ -16,7 +16,7 @@ test.describe('Agent Audit Dashboard E2E', () => {
     await expect(page.locator('text=Unified Inbox')).toBeVisible();
 
     // Click the admin panel settings button to navigate to the agent audit dashboard
-    await page.click('button[aria-label="Agent Audit Dashboard"], [tooltip="Agent Audit Dashboard"]');
+    await page.click('a[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
 
     // Wait for the agent audit dashboard to load
     await expect(page.locator('text=Agent Audit Dashboard')).toBeVisible();
