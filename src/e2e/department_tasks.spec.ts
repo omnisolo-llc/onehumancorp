@@ -185,3 +185,59 @@ test.describe("AI Agent Department UI Mocks", () => {
     await expect(page.locator("button", { hasText: "The Ambassador" })).toBeVisible();
   });
 });
+
+  test("UI: Check empty inbox behavior", async ({ page }) => {
+    await page.goto("/team");
+    const legalCard = page.locator("button", { hasText: "The Protector" });
+    await legalCard.click();
+    await expect(page.locator("h1")).toContainText("The Protector");
+    await expect(page.getByText("All Caught Up!")).toBeVisible();
+  });
+
+  test("UI: Check back button works in ApprovalInbox", async ({ page }) => {
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await expect(page.locator("h1")).toContainText("The Promoter");
+    await page.getByRole("button", { name: "Back" }).first().click();
+    await expect(page.locator("h1")).toContainText("Your Team");
+  });
+
+  test("UI: Handle error on approve gracefully", async ({ page }) => {
+    // Intercept to mock error response
+    await page.route('**/api/agents/approvals/*', route => route.abort());
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await page.getByRole("button", { name: "Approve" }).click();
+    // It should handle gracefully, possibly reverting the UI or maintaining state
+    // In our implementation, it removes optimistically and adds back or refetches on error
+    await expect(page.getByText("Generated 7-day social media plan for Vegan Celebration Cake")).toBeVisible();
+  });
+
+  test("UI: Check empty inbox behavior", async ({ page }) => {
+    await page.goto("/team");
+    const legalCard = page.locator("button", { hasText: "The Protector" });
+    await legalCard.click();
+    await expect(page.locator("h1")).toContainText("The Protector");
+    await expect(page.getByText("All Caught Up!")).toBeVisible();
+  });
+
+  test("UI: Check back button works in ApprovalInbox", async ({ page }) => {
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await expect(page.locator("h1")).toContainText("The Promoter");
+    await page.getByRole("button", { name: "Your Team" }).first().click();
+    await expect(page.locator("h1")).toContainText("Your Team");
+  });
+
+  test("UI: Handle error on approve gracefully", async ({ page }) => {
+    // Intercept to mock error response
+    await page.route('**/api/agents/approvals/*', route => route.abort());
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(page.getByText("Generated 7-day social media plan for Vegan Celebration Cake")).toBeVisible();
+  });
