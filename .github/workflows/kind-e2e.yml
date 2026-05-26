@@ -64,7 +64,7 @@ jobs:
           docker info
 
       - name: Set up Bazel
-        uses: bazel-contrib/setup-bazel@v0.8.1
+        uses: bazel-contrib/setup-bazel@v0.8.5
         with:
           bazelisk-cache: true
           disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
