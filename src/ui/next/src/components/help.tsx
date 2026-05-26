@@ -98,6 +98,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [activeVideo, setActiveVideo] = useState<{id: number, title: string} | null>(null);
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
@@ -271,20 +272,43 @@ export function HelpWidget() {
             {tab === "videos" && (
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 z-10">
-                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
-                        <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
-                      </div>
+                {activeVideo ? (
+                  <div className="flex flex-col h-[400px] bg-black rounded-xl overflow-hidden relative">
+                    <button
+                      onClick={() => setActiveVideo(null)}
+                      className="absolute top-2 left-2 bg-black/50 text-white rounded-full p-2 z-20 hover:bg-black/70 transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                    </button>
+                    <div className="flex-1 flex items-center justify-center relative">
+                       <div className="absolute inset-0 flex items-center justify-center text-white/50 text-sm">
+                         <span className="animate-pulse">Loading video...</span>
+                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div className="bg-gray-900 text-white p-3 z-10">
+                      <p className="text-sm font-bold truncate">{activeVideo.title}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    {videos.map((v) => (
+                      <div
+                        key={v.id}
+                        onClick={() => setActiveVideo(v)}
+                        className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer"
+                      >
+                        <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
+                        <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                          <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                        </div>
+                        <div className="absolute bottom-2 left-2 right-2 z-10">
+                          <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
+                          <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
