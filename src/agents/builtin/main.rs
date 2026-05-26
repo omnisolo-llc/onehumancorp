@@ -73,6 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut parent_context_file = None;
     let mut worktree = None;
     let mut mailbox = None;
+    let mut cloud_nodes = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -98,6 +99,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "--mailbox" => {
                 if i + 1 < args.len() {
                     mailbox = Some(args[i + 1].clone());
+                    i += 1;
+                }
+            }
+            "--cloud-deployment" => {
+                if i + 1 < args.len() {
+                    cloud_nodes = Some(args[i + 1].parse::<usize>().unwrap_or(1));
                     i += 1;
                 }
             }
@@ -133,6 +140,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut svc_impl = AgentServiceImpl::new(agent_id.clone(), cfg, auth);
     svc_impl.init_memory().await;
+
+
+    if let Some(nodes) = cloud_nodes {
+        if let Some(t) = task {
+            info!("Deploying task to {} scalable cloud agents...", nodes);
+            let mut agents = Vec::new();
+            // Typically you'd distribute this over the network via mesh, but for local CLI test we spawn in-process
+            for _ in 0..nodes {
+                // creating new unarc_agent instances for deployment
+                let (client, tools) = svc_impl.get_agent_dependencies();
+                let mut agent = ohc_builtin_agent::agent::Agent::new(client, tools);
+                agent.observation_store = svc_impl.get_observation_store();
+                agents.push(std::sync::Arc::new(agent));
+            }
+            let deployment = ohc_builtin_agent::scalable_multi_agent::CloudDeployment::new(agents);
+            let results = deployment.deploy(&t, &cfg).await;
+
+            let success_count = results.iter().filter(|r| r.is_ok()).count();
+            println!("Cloud Deployment complete. {}/{} agents succeeded.", success_count, nodes);
+            return Ok(());
+        }
+    }
 
     if let Some(t) = task {
         // Run as a subagent (Fork, Worktree, Teammate)
