@@ -170,6 +170,14 @@ impl Tracker {
         }
     }
 
+    pub async fn set_tenant_tier(&self, tenant_id: &str, tier: ::server_pricing::rate_limit::PlanTier) -> Result<(), String> {
+        if let Some(ref limiter) = self.rate_limiter {
+            limiter.set_tenant_tier(tenant_id, tier).await
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn get_tenant_actions_used(&self, tenant_id: &str) -> Result<u32, String> {
         if let Some(ref limiter) = self.rate_limiter {
             limiter.get_tenant_actions_used(tenant_id).await

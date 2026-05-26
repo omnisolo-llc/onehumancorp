@@ -28,7 +28,87 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/upgrade", axum::routing::post(upgrade_plan_handler))
+        .route("/downgrade", axum::routing::post(downgrade_plan_handler))
+        .route("/cancel", axum::routing::post(cancel_plan_handler))
         .with_state(hub)
+}
+
+#[derive(serde::Deserialize)]
+pub struct PlanChangeRequest {
+    pub tier: String,
+}
+
+pub async fn upgrade_plan_handler(
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<serde_json::Value> {
+    handle_plan_change(hub, request).await
+}
+
+pub async fn downgrade_plan_handler(
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<serde_json::Value> {
+    handle_plan_change(hub, request).await
+}
+
+pub async fn cancel_plan_handler(
+    State(hub): State<Arc<Hub>>,
+    request: axum::extract::Request,
+) -> Json<serde_json::Value> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => "default".to_string()
+    };
+
+    let tracker = hub.tracker();
+    let _ = tracker.set_tenant_tier(&tenant_id, ::server_pricing::rate_limit::PlanTier::Free).await;
+
+    Json(serde_json::json!({"status": "success", "message": "Plan canceled"}))
+}
+
+async fn handle_plan_change(hub: Arc<Hub>, request: axum::extract::Request) -> Json<serde_json::Value> {
+    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+        Some(auth) => {
+            if auth.org_id.is_empty() {
+                "default".to_string()
+            } else {
+                auth.org_id.clone()
+            }
+        },
+        None => "default".to_string()
+    };
+
+    // Extract body using from_request
+    use axum::extract::FromRequest;
+    let (parts, body) = request.into_parts();
+    let req = axum::extract::Request::from_parts(parts, body);
+    let payload_result = Json::<PlanChangeRequest>::from_request(req, &()).await;
+
+    let tier_str = match payload_result {
+        Ok(Json(payload)) => payload.tier,
+        Err(_) => return Json(serde_json::json!({"error": "Invalid request"})),
+    };
+
+    let tier = match tier_str.to_lowercase().as_str() {
+        "free" => ::server_pricing::rate_limit::PlanTier::Free,
+        "starter" => ::server_pricing::rate_limit::PlanTier::Starter,
+        "pro" => ::server_pricing::rate_limit::PlanTier::Pro,
+        "business" => ::server_pricing::rate_limit::PlanTier::Business,
+        _ => return Json(serde_json::json!({"error": "Invalid tier"})),
+    };
+
+    let tracker = hub.tracker();
+    let _ = tracker.set_tenant_tier(&tenant_id, tier).await;
+
+    Json(serde_json::json!({"status": "success"}))
 }
 
 pub async fn my_plan_handler(

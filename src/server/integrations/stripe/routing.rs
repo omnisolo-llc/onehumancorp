@@ -50,6 +50,36 @@ impl PaymentRouter {
             0.0
         }
     }
+
+    /// Simulates batching multiple payouts into a single transaction to minimize fees.
+    /// It calculates the fee savings compared to processing them individually via CreditCard.
+    pub fn batch_payouts(amounts: Vec<f64>) -> f64 {
+        let mut individual_fees = 0.0;
+        let mut total_amount = 0.0;
+
+        for amount in amounts {
+            individual_fees += (amount * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED;
+            total_amount += amount;
+        }
+
+        let batched_fee = if total_amount > 0.0 {
+            let ach_min = std::env::var("ACH_MIN_AMOUNT").unwrap_or_else(|_| Self::ACH_MIN_AMOUNT.to_string()).parse::<f64>().unwrap_or(Self::ACH_MIN_AMOUNT);
+            if total_amount >= ach_min {
+                (total_amount * Self::ACH_FEE_PERCENTAGE).min(Self::ACH_FEE_CAP)
+            } else {
+                (total_amount * Self::CARD_FEE_PERCENTAGE) + Self::CARD_FEE_FIXED
+            }
+        } else {
+            0.0
+        };
+
+        if individual_fees > batched_fee {
+            let savings = individual_fees - batched_fee;
+            (savings * 100.0).round() / 100.0
+        } else {
+            0.0
+        }
+    }
 }
 
 #[cfg(test)]
@@ -76,6 +106,32 @@ mod tests {
         // ACH fee: 5.00
         // Savings: 24.30
         assert_eq!(savings, 24.30);
+    }
+
+    #[test]
+    fn test_batch_payouts() {
+        // Amounts: 10.0, 20.0, 30.0
+        // Individual Card fees:
+        // 10.0: 0.29 + 0.30 = 0.59
+        // 20.0: 0.58 + 0.30 = 0.88
+        // 30.0: 0.87 + 0.30 = 1.17
+        // Total Individual fees: 2.64
+        // Total Amount: 60.0 (ACH eligible)
+        // Batched ACH fee: 60.0 * 0.008 = 0.48
+        // Savings: 2.64 - 0.48 = 2.16
+
+        let savings = PaymentRouter::batch_payouts(vec![10.0, 20.0, 30.0]);
+        assert_eq!(savings, 2.16);
+
+        // Under threshold amounts
+        // Amounts: 5.0, 5.0
+        // Total amount: 10.0 (Not ACH eligible)
+        // Individual Card fees:
+        // 5.0: 0.145 + 0.30 = 0.445 * 2 = 0.89
+        // Batched Card fee: 10.0 * 0.029 + 0.30 = 0.29 + 0.30 = 0.59
+        // Savings: 0.89 - 0.59 = 0.30
+        let savings_under = PaymentRouter::batch_payouts(vec![5.0, 5.0]);
+        assert_eq!(savings_under, 0.30);
     }
 }
 
