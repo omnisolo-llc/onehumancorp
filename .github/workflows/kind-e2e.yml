@@ -33,6 +33,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
+
       - name: Install Kubernetes tools
         run: |
           case "$(uname -m)" in
