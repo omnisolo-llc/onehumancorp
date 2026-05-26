@@ -472,6 +472,8 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        let payload_str: Option<String> = row.try_get("payload").unwrap_or(None);
+                        let payload_opt = payload_str.and_then(|s| serde_json::from_str(&s).unwrap_or(None));
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -479,6 +481,7 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_opt,
                         });
                     }
                 }
@@ -512,6 +515,13 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
+                        let payload_val = match row.try_get::<String, _>("payload") {
+                            Ok(s) => serde_json::from_str(&s).unwrap_or(None),
+                            Err(_) => match row.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
                         results.push(ApprovalRequest {
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
@@ -519,6 +529,7 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: payload_val,
                         });
                     }
                 }
