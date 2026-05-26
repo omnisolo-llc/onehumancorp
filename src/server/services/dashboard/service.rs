@@ -89,7 +89,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 };
@@ -99,24 +99,27 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Postgres => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(&db1.pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
-                                    id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r
-                                        .try_get("organization_id")
-                                        .unwrap_or_default(),
-                                    name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
-                                    price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: if mobile_optimized {
-                                        "{}".to_string()
-                                    } else {
-                                        match r.try_get::<serde_json::Value, _>("metadata") {
+                                let p = if mobile_optimized {
+                                    ::server_ohc::organization::Product {
+                                        id: r.try_get("id").unwrap_or_default(),
+                                        organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                        name: r.try_get("name").unwrap_or_default(),
+                                        ..Default::default()
+                                    }
+                                } else {
+                                    ::server_ohc::organization::Product {
+                                        id: r.try_get("id").unwrap_or_default(),
+                                        organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                        name: r.try_get("name").unwrap_or_default(),
+                                        description: r.try_get("description").unwrap_or_default(),
+                                        price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                        currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                        fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                        metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
-                                        }
-                                    },
+                                        },
+                                    }
                                 };
                                 results.push(p);
                             }
@@ -125,24 +128,27 @@ impl DashboardService for MyDashboardService {
                     crate::db::DbStore::Sqlite(pool) => {
                         if let Ok(rows) = sqlx::query(q).bind(&org_id).fetch_all(pool).await {
                             for r in rows {
-                                let p = ::server_ohc::organization::Product {
-                                    id: r.try_get("id").unwrap_or_default(),
-                                    organization_id: r
-                                        .try_get("organization_id")
-                                        .unwrap_or_default(),
-                                    name: r.try_get("name").unwrap_or_default(),
-                                    description: r.try_get("description").unwrap_or_default(),
-                                    price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
-                                    metadata_json: if mobile_optimized {
-                                        "{}".to_string()
-                                    } else {
-                                        match r.try_get::<serde_json::Value, _>("metadata") {
+                                let p = if mobile_optimized {
+                                    ::server_ohc::organization::Product {
+                                        id: r.try_get("id").unwrap_or_default(),
+                                        organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                        name: r.try_get("name").unwrap_or_default(),
+                                        ..Default::default()
+                                    }
+                                } else {
+                                    ::server_ohc::organization::Product {
+                                        id: r.try_get("id").unwrap_or_default(),
+                                        organization_id: r.try_get("organization_id").unwrap_or_default(),
+                                        name: r.try_get("name").unwrap_or_default(),
+                                        description: r.try_get("description").unwrap_or_default(),
+                                        price_cents: r.try_get("price_cents").unwrap_or_default(),
+                                        currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
+                                        fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                        metadata_json: match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
                                             Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
-                                        }
-                                    },
+                                        },
+                                    }
                                 };
                                 results.push(p);
                             }
@@ -204,7 +210,7 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(10)).await;
                 Ok::<_, String>(results)
             }),
             tokio::spawn(async move {
@@ -258,7 +264,7 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(86400)).await;
                 Ok::<_, String>(org)
             })
         );
@@ -376,7 +382,7 @@ impl DashboardService for MyDashboardService {
                     name,
                     role: role_val,
                     status: status_val,
-                    organization_id: a.organization_id,
+                    organization_id: if req.mobile_optimized { String::new() } else { a.organization_id },
                 }
             })
             .collect::<Vec<_>>();
@@ -457,6 +463,7 @@ impl DashboardService for MyDashboardService {
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {
+                o.name = ::server_pricing::compression::reduce_tokens(&o.name);
                 o.domain = String::new();
                 o.members = vec![];
                 o.role_profiles = vec![];
@@ -677,6 +684,7 @@ mod tests {
 
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
         assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        assert_eq!(res_mobile.agents[0].organization_id, "", "Mobile optimization should clear agent organization_id");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");
