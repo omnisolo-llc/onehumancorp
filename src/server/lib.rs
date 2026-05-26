@@ -3848,7 +3848,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2 style="margin-top: 24px;">Costs</h2>
                             <ul style="list-style: none; padding: 0;">
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>LLM Inference Cost</span>
+                                    <span id="cost-dashboard-llm-usage">LLM Usage: 0 tokens</span>
                                     <strong id="cost-dashboard-llm">$0.00</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
@@ -5235,6 +5235,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;
+                                        document.getElementById('cost-dashboard-llm-usage').textContent = 'LLM Usage: ' + (data.llm_tokens || 0).toLocaleString() + ' tokens';
                                     })
                                     .catch(err => console.error('Error fetching cost dashboard:', err));
                             }
