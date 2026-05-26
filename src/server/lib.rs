@@ -3281,6 +3281,45 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
+                        <!-- Viral Social Share Cards -->
+                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; color: var(--text-primary);">Viral Social Cards <span style="font-size: 12px; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Acquisition & Virality</span></h3>
+                            </div>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Stand out on social media. Turn your products into beautiful, shareable cards for Instagram, X, and WhatsApp.</p>
+                            <!-- Real functional card builder UI inside Tauri -->
+                            <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.05); margin-bottom: 16px;">
+                                <input type="text" id="og-product-name" placeholder="Product Name" value="NovaPremium" style="width: 100%; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: white; font-family: inherit;" />
+                                <div style="display: flex; gap: 8px;">
+                                    <select id="og-theme" style="flex: 1; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: white; font-family: inherit;">
+                                        <option value="light">Light Theme</option>
+                                        <option value="dark">Dark Theme</option>
+                                    </select>
+                                    <button onclick="
+                                        const pName = encodeURIComponent(document.getElementById('og-product-name').value);
+                                        const theme = document.getElementById('og-theme').value;
+                                        const url = `/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=${pName}&theme=${theme}`;
+                                        document.getElementById('og-preview-img').src = url;
+                                        document.getElementById('og-preview-img').style.display = 'block';
+
+                                        const fullUrl = `https://ohc.store${url}`;
+                                        document.getElementById('og-btn-twitter').onclick = () => window.open(`https://twitter.com/intent/tweet?text=Check+out+my+product+on+OHC!+${encodeURIComponent(fullUrl)}`, '_blank');
+                                        document.getElementById('og-btn-whatsapp').onclick = () => window.open(`https://wa.me/?text=Check+out+my+product+on+OHC!+${encodeURIComponent(fullUrl)}`, '_blank');
+                                    " style="background: #8b5cf6; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer;">Generate Card</button>
+                                </div>
+                                <img id="og-preview-img" src="/api/v1/growth/storefront/og-card?tenant=DEFAULT&product_name=NovaPremium&theme=light" style="width: 100%; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); display: block;" alt="OG Card Preview" />
+                            </div>
+
+                            <div style="display: flex; gap: 8px;">
+                                <button id="og-btn-twitter" style="flex: 1; margin: 0; background: #000; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="window.open('https://twitter.com/intent/tweet?text=Check+out+my+product+on+OHC!+https://ohc.store/api/v1/growth/storefront/og-card?tenant=DEFAULT%26product_name=NovaPremium%26theme=light', '_blank')">
+                                    <span>𝕏</span> Share
+                                </button>
+                                <button id="og-btn-whatsapp" style="flex: 1; margin: 0; background: #25D366; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;" onclick="window.open('https://wa.me/?text=Check+out+my+product+on+OHC!+https://ohc.store/api/v1/growth/storefront/og-card?tenant=DEFAULT%26product_name=NovaPremium%26theme=light', '_blank')">
+                                    <span>💬</span> WhatsApp
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Embeddable Storefront Widget -->
                         <div class="card glass" style="margin-top: 24px;">
                             <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>

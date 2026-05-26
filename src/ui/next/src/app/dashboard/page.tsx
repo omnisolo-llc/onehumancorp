@@ -833,6 +833,40 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Social OG Share Cards */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Viral Social Cards</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Acquisition & Virality</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Stand out on Social Media</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your products into beautiful, shareable cards for Twitter, Instagram, and WhatsApp. Each card includes a tracking link to help you get your next customer faster.</p>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => window.location.href='/share-cards'}
+                            className="px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            Open Card Builder
+                        </button>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px] relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-indigo-50 opacity-50"></div>
+                    <div className="relative z-10 bg-white p-3 rounded-lg shadow border border-gray-100 transform rotate-2 w-48 text-center">
+                         <div className="h-20 bg-gray-100 rounded mb-2 flex items-center justify-center text-2xl">📸</div>
+                         <div className="text-xs font-bold text-gray-800">NovaPremium</div>
+                         <div className="text-[10px] text-gray-500 mt-1">⚡ Powered by OHC</div>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
