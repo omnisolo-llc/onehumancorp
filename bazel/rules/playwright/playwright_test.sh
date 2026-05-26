@@ -72,7 +72,7 @@ mkdir -p "$WORK_DIR/src/server"
 ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
 ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
-ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
+cp -r "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
 
 if [[ -n "$ABS_SPEC_FILE" ]]; then
@@ -213,6 +213,11 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
     touch "$TEST_SHARD_STATUS_FILE"
   fi
+fi
+
+# Try to fix playwright missing issue by explicitly installing it if npx doesn't find it
+if ! npx --no-install playwright --version >/dev/null 2>&1; then
+  npm install playwright@1.60.0 @playwright/test@1.60.0
 fi
 
 # Run Playwright
