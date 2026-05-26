@@ -332,6 +332,7 @@ async fn handle_check_milestones(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
+    use sqlx::Row;
     let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
 
     let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
@@ -408,8 +409,6 @@ async fn handle_get_milestone_card(
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
-    let bg_gradient = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
-
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -462,7 +461,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
