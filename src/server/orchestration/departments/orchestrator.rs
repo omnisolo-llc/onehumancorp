@@ -479,6 +479,7 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: Some(row.get::<sqlx::types::Json<serde_json::Value>, _>("payload").0),
                         });
                     }
                 }
@@ -519,6 +520,7 @@ impl DepartmentOrchestrator {
                             description: row.get("description"),
                             status,
                             action_risk,
+                            payload: Some(row.get::<sqlx::types::Json<serde_json::Value>, _>("payload").0),
                         });
                     }
                 }
