@@ -1,12 +1,12 @@
 {
-  "title": "Hybrid Swarm Cost Analytics",
-  "uid": "hybrid-swarm-cost",
+  "title": "Hybrid Database Metrics",
+  "uid": "database-metrics",
   "schemaVersion": 38,
   "style": "dark",
   "tags": [
-    "Cost",
+    "Database",
     "OHC",
-    "Analytics"
+    "Hybrid"
   ],
   "time": {
     "from": "now-1h",
@@ -30,7 +30,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Per-Tenant LLM Cost (Cents/sec)",
+      "title": "Total QPS",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -43,8 +43,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_llm_cost_cents[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum(rate(db_client_operation_duration_seconds_count[5m])) by (db_type)",
+          "legendFormat": "{{db_type}}",
           "refId": "A"
         }
       ],
@@ -75,7 +75,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Per-Tenant Token Usage Rate",
+      "title": "Global Error Rate",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -88,8 +88,8 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_token_usage_total[5m])) by (tenant_id)",
-          "legendFormat": "{{tenant_id}}",
+          "expr": "sum(rate(db_client_operation_errors_total[5m])) by (db_type)",
+          "legendFormat": "{{db_type}}",
           "refId": "A"
         }
       ],
@@ -120,7 +120,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Storage Cost by Tier",
+      "title": "Total Query Latency",
       "gridPos": {
         "h": 8,
         "w": 24,
@@ -133,9 +133,19 @@
       },
       "targets": [
         {
-          "expr": "sum(ohc_storage_bytes_total) by (tier)",
-          "legendFormat": "Storage ({{tier}})",
+          "expr": "histogram_quantile(0.50, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
+          "legendFormat": "P50 {{db_type}}",
           "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.90, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
+          "legendFormat": "P90 {{db_type}}",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(db_client_operation_duration_seconds_bucket[5m])) by (le, db_type))",
+          "legendFormat": "P99 {{db_type}}",
+          "refId": "C"
         }
       ],
       "transparent": true,
@@ -155,7 +165,57 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "decbytes",
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "SQLite Lock Contention & PostgreSQL SKIP LOCKED Rate",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_postgres_skip_locked_total[5m]))",
+          "legendFormat": "Postgres Lock Contention",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(sqlite_lock_contention[5m]))",
+          "legendFormat": "SQLite Lock Contention",
+          "refId": "B"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
