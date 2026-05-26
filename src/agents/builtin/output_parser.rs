@@ -21,6 +21,7 @@ pub async fn parse_structured_output<T: DeserializeOwned>(
     req: ChatRequest,
     max_retries: usize,
 ) -> Result<T, ToolError> {
+    let max_retries = std::cmp::min(max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
     let mut current_req = req.clone();
 
     // Inject the schema as a tool definition to encourage the model to use tool_calls API
