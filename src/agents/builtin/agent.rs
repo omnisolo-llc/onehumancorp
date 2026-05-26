@@ -502,32 +502,59 @@ impl Agent {
                 read_only_futures.push(async move {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
-                    let r = match gating_res {
-                        Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                            Ok(res) => res,
-                            Err(e) => format!("Error: {:?}", e),
-                        },
-                        Err(e) => format!("Error: {:?}", e),
+                    let res = match gating_res {
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await,
+                        Err(e) => Err(e),
                     };
-                    (tc_clone, r)
+                    (tc_clone, res)
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, res) in ro_results {
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             if !mutating_calls.is_empty() {
@@ -536,28 +563,55 @@ impl Agent {
             for tc in &mutating_calls {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
-                let r = match gating_res {
-                    Ok(_) => match self.execute_tool(tc, session_tools, &messages).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    },
-                    Err(e) => format!("Error: {:?}", e),
+                let res = match gating_res {
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages).await,
+                    Err(e) => Err(e),
                 };
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             messages.push(crate::types::Message {
