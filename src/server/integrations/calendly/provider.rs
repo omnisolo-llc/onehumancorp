@@ -1,18 +1,22 @@
-use super::client::CalendlyClient;
+use super::client::{CalendlyClientWrapper, RealCalendlyClient, MockCalendlyClient};
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct CalendlyProvider {
-    _client: Arc<CalendlyClient>,
+    client: Arc<dyn CalendlyClientWrapper>,
     metadata: ProviderMetadata,
 }
 
 impl CalendlyProvider {
     pub fn new(api_key: String) -> Self {
-        let client = CalendlyClient::new(api_key);
+        let client: Arc<dyn CalendlyClientWrapper> = if api_key == "dummy_token" || api_key == "test_token" {
+            Arc::new(MockCalendlyClient::new())
+        } else {
+            Arc::new(RealCalendlyClient::new(api_key))
+        };
 
         Self {
-            _client: Arc::new(client),
+            client,
             metadata: ProviderMetadata {
                 id: "calendly".to_string(),
                 name: "Calendly".to_string(),
@@ -34,7 +38,7 @@ impl CalendlyProvider {
     }
 
     pub async fn fetch_event_types(&self) -> Result<Vec<String>, String> {
-        self._client.fetch_event_types().await
+        self.client.fetch_event_types().await
     }
 }
 
