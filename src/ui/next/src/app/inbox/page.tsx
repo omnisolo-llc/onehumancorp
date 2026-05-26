@@ -3,6 +3,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function InboxPage() {
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [isAutoReplyEnabled, setIsAutoReplyEnabled] = useState(false);
+
+  const handleToggle = () => {
+    setShowPaywallModal(true);
+    setIsAutoReplyEnabled(false); // Simulate that they can't turn it on yet
+  };
+
   const [messages, setMessages] = useState([
     { id: 1, sender: 'Facebook User', source: 'Facebook', icon: '📘', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
     { id: 2, sender: 'Instagram User', source: 'Instagram', icon: '📸', content: 'When will my order be shipped?', date: 'Yesterday' },
@@ -50,13 +58,26 @@ export default function InboxPage() {
       </div>
 
       <div className="bg-gray-50 p-4 rounded border text-black">
-        <div className="flex gap-2 mb-2">
-          <button
-            onClick={generateDraft}
-            className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm hover:bg-purple-200"
-          >
-            ✨ AI Draft
-          </button>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex gap-2">
+            <button
+              onClick={generateDraft}
+              className="bg-purple-100 text-purple-700 px-3 py-1 rounded text-sm font-semibold hover:bg-purple-200"
+            >
+              ✨ AI Draft
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-semibold text-gray-700 cursor-pointer flex items-center gap-2">
+              <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full text-xs font-bold">PRO</span>
+              AI Auto-Reply
+              <div className="relative inline-block w-10 h-5">
+                <input type="checkbox" className="sr-only peer" checked={isAutoReplyEnabled} onChange={handleToggle} />
+                <div className="w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
+                <div className="absolute left-1 top-1 bg-white w-3 h-3 rounded-full transition-transform peer-checked:translate-x-5"></div>
+              </div>
+            </label>
+          </div>
         </div>
         <textarea
           id="reply-input"
@@ -69,12 +90,55 @@ export default function InboxPage() {
         <div className="flex justify-end mt-2">
           <button
             onClick={sendReply}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 font-semibold shadow-sm transition-colors"
           >
             Send
           </button>
         </div>
       </div>
+
+      {showPaywallModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-indigo-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+                🤖
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-2">Unlock AI Auto-Reply</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Your free plan includes 3 manual AI drafts per day. Upgrade to Pro to let AI automatically respond to customer inquiries 24/7, keeping your response time under 5 minutes.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  alert('Redirecting to upgrade checkout...');
+                  setShowPaywallModal(false);
+                }}
+                className="w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-md"
+              >
+                Upgrade to Pro - $19/mo
+              </button>
+              <button
+                onClick={() => setShowPaywallModal(false)}
+                className="w-full px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+              >
+                Not right now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+      `}} />
     </div>
   );
 }
