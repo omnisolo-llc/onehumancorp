@@ -1970,14 +1970,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(webhook_state);
 
 
-    let auth_store = std::sync::Arc::new(crate::auth::Store::new());
+
     let analytics_router = axum::Router::new()
         .route("/api/v1/analytics/ingest", axum::routing::post(api::analytics::handle_ingest_event))
-        .route("/api/v1/analytics/briefing", axum::routing::get(api::analytics::handle_daily_briefing))
-        .layer(axum::middleware::from_fn_with_state(
-            auth_store.clone(),
-            crate::api::mesh_handler::auth_middleware,
-        ));
+        .route("/api/v1/analytics/briefing", axum::routing::get(api::analytics::handle_daily_briefing));
+
 
 
     let health_router = axum::Router::new()
