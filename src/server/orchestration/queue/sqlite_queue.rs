@@ -5,12 +5,11 @@ use std::sync::Arc;
 
 pub struct SQLiteTaskQueue {
     pool: Arc<SqlitePool>,
-    mu: tokio::sync::Mutex<()>,
 }
 
 impl SQLiteTaskQueue {
     pub fn new(pool: Arc<SqlitePool>) -> Self {
-        Self { pool, mu: tokio::sync::Mutex::new(()) }
+        Self { pool }
     }
 }
 
@@ -18,7 +17,6 @@ impl SQLiteTaskQueue {
 impl TaskQueue for SQLiteTaskQueue {
     async fn enqueue_batch(&self, jobs: Vec<Job>) -> Result<(), String> {
         if jobs.is_empty() { return Ok(()); }
-        ::server_telemetry::record_queue_length_sync(jobs.len() as i32, ::server_telemetry::get_deployment_mode());
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
@@ -70,7 +68,6 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
         let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = ? AND status = 'QUEUED'")
             .bind(&job.tenant_id)
             .fetch_one(&*self.pool)
@@ -106,16 +103,6 @@ impl TaskQueue for SQLiteTaskQueue {
             return Ok(None);
         }
 
-        let lock_result = self.mu.try_lock();
-        let _lock = match lock_result {
-            Ok(guard) => guard,
-            Err(_) => {
-                let pg_pool = crate::db::get_pool();
-                let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
-                self.mu.lock().await
-            }
-        };
-
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let role_placeholders = roles.iter().map(|_| "?").collect::<Vec<_>>().join(",");
@@ -141,10 +128,9 @@ impl TaskQueue for SQLiteTaskQueue {
         }
 
         if let Some(row) = job_opt {
-            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
             let created_at: chrono::DateTime<chrono::Utc> = row.try_get("created_at").unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(latency, ::server_telemetry::get_deployment_mode());
+            ::server_telemetry::record_sub_agent_queue_delay(latency);
 
             let job = Job {
                 id: row.get("id"),
@@ -176,20 +162,11 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn complete(&self, job_id: &str) -> Result<(), String> {
-        let row = sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ? RETURNING updated_at, run_after")
+        sqlx::query("UPDATE sub_agent_jobs SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(job_id)
-            .fetch_optional(&*self.pool)
+            .execute(&*self.pool)
             .await
             .map_err(|e| e.to_string())?;
-
-        if let Some(r) = row {
-            ::server_telemetry::record_queue_length_sync(-1, ::server_telemetry::get_deployment_mode());
-            use sqlx::Row;
-            let updated: chrono::DateTime<chrono::Utc> = r.try_get("updated_at").unwrap_or_else(|_| chrono::Utc::now());
-            let run_after: chrono::DateTime<chrono::Utc> = r.try_get("run_after").unwrap_or_else(|_| chrono::Utc::now());
-            let latency = (updated - run_after).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_task_processing_latency(::server_telemetry::get_deployment_mode(), latency);
-        }
         Ok(())
     }
 

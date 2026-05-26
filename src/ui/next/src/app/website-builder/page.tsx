@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SmartBlock, DraggableBlock } from "../builder/components";
+import { SmartBlock } from "../builder/components";
 import { Tooltip, useWalkthrough } from "../../components/help";
 
 export default function WebsiteBuilderPage() {
@@ -9,9 +9,6 @@ export default function WebsiteBuilderPage() {
   const [blocks, setBlocks] = useState<any[]>([]);
   const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
   const [liveUrl, setLiveUrl] = useState("");
-
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
   const { startWalkthrough } = useWalkthrough();
 
@@ -112,24 +109,6 @@ export default function WebsiteBuilderPage() {
     } catch (error) {
       console.error("Failed to generate storefront", error);
       updateStatus("idle");
-    }
-  };
-
-  const moveBlock = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= blocks.length || fromIndex === toIndex) return;
-
-    setBlocks(prev => {
-      const newBlocks = [...prev];
-      const [moved] = newBlocks.splice(fromIndex, 1);
-      newBlocks.splice(toIndex, 0, moved);
-      localStorage.setItem("ohc_builder_blocks", JSON.stringify(newBlocks));
-      return newBlocks;
-    });
-
-    if (selectedBlockIndex === fromIndex) {
-      setSelectedBlockIndex(toIndex);
-    } else if (selectedBlockIndex === toIndex) {
-      setSelectedBlockIndex(fromIndex);
     }
   };
 
@@ -279,35 +258,7 @@ export default function WebsiteBuilderPage() {
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
           {blocks.map((b, i) => (
-            <DraggableBlock
-              key={b.type + i}
-              isSelected={selectedBlockIndex === i}
-              onClick={() => setSelectedBlockIndex(i === selectedBlockIndex ? null : i)}
-              onDragStart={(e) => {
-                if (e.type.includes('drag') && (e as React.DragEvent).dataTransfer) {
-                  (e as React.DragEvent).dataTransfer.effectAllowed = 'move';
-                  (e as React.DragEvent).dataTransfer.setData('text/plain', i.toString());
-                }
-                setDraggedIndex(i);
-                setSelectedBlockIndex(i);
-              }}
-              onDragOver={(e) => {
-                if (e.type.includes('drag') && (e as React.DragEvent).dataTransfer) {
-                  (e as React.DragEvent).dataTransfer.dropEffect = 'move';
-                }
-              }}
-              onDragEnter={() => {
-                if (draggedIndex !== null && draggedIndex !== i) {
-                  moveBlock(draggedIndex, i);
-                  setDraggedIndex(i);
-                }
-              }}
-              onDragEnd={() => setDraggedIndex(null)}
-              onMoveUp={i > 0 ? () => moveBlock(i, i - 1) : undefined}
-              onMoveDown={i < blocks.length - 1 ? () => moveBlock(i, i + 1) : undefined}
-            >
-              <SmartBlock {...b} />
-            </DraggableBlock>
+            <SmartBlock key={i} {...b} />
           ))}
           <SmartBlock type="PoweredBy" props={{ tenantId }} />
         </div>

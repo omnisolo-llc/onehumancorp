@@ -1,15 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
-  const router = useRouter();
 
-  const [integrations, setIntegrations] = useState([
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
+    const integrations = [
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
@@ -17,26 +13,9 @@ export default function Integrations() {
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
     { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
-  ]);
+  ];
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
-
-  const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
-    }
-  };
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -96,13 +75,11 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
-              <button
-                onClick={() => handleConnect(integration.id)}
-                className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
-                  integration.status === 'connected'
-                    ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
-                    : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
-                }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
+              <button className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
+                integration.status === 'connected'
+                  ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
+                  : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
+              }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
                 {integration.status === 'connected' ? 'Manage' : 'Connect'}
               </button>
             </div>

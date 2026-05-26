@@ -4,7 +4,6 @@ test.describe('Onboarding Wizard', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('Maya (The Home Baker) onboarding flow', async ({ page }) => {
-    await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Maya's Cakes", business_type: "Bakery", categories: ["food", "physical"], initial_products: [{ name: "Custom Vegan Cake", price: "45.00" }] }) }));
     // 0. Start from UI Login
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
@@ -75,7 +74,6 @@ test.describe('Onboarding Wizard', () => {
   });
 
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
-    await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Carlos Plumbing", business_type: "Service", categories: ["service"], initial_products: [{ name: "Pipe Fix", price: "80.00" }] }) }));
     // 0. Start from UI Login
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
