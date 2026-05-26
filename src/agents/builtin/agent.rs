@@ -1543,6 +1543,9 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         let mut final_cfg = cfg.clone();
+        if final_cfg.max_retries > 2 {
+            final_cfg.max_retries = 2;
+        }
 
         // Append instruction to force the use of the structured output tool
         final_cfg.server_system_message = format!(
@@ -1665,6 +1668,9 @@ impl Agent {
         let session_tools = self_with_memory.tools.clone();
 
         let mut final_cfg = cfg.clone();
+        if final_cfg.max_retries > 2 {
+            final_cfg.max_retries = 2;
+        }
 
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
