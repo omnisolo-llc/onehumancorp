@@ -72,7 +72,7 @@ describe('OnboardingWizard', () => {
     const input = await screen.findByPlaceholderText('e.g. Sell cakes, plumbing');
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    await userEvent.type(input, 'New Type');
+    await act(async () => { await userEvent.type(input, 'New Type') });
 
     await act(async () => {
       vi.advanceTimersByTime(1500);
@@ -86,7 +86,7 @@ describe('OnboardingWizard', () => {
 
     // Test sync error
     (global.fetch as any).mockRejectedValueOnce(new Error("Sync Error"));
-    await userEvent.type(input, '2');
+    await act(async () => { await userEvent.type(input, '2') });
 
     await act(async () => {
       vi.advanceTimersByTime(1500);
@@ -110,13 +110,13 @@ describe('OnboardingWizard', () => {
     // Error on short submit
     const input = screen.getByPlaceholderText('e.g. Sell cakes, plumbing');
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-    await userEvent.type(input, 'ab');
+    await act(async () => { await userEvent.type(input, 'abc') });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
-    await waitFor(() => expect(screen.getByText('Please enter at least 3 characters.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Please enter at least 4 characters.')).toBeInTheDocument());
 
     // Valid submit
     await userEvent.clear(input);
-    await userEvent.type(input, 'Bakery');
+    await act(async () => { await userEvent.type(input, 'Bakery') });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
 
     await waitFor(() => {
@@ -146,13 +146,13 @@ describe('OnboardingWizard', () => {
     // Error on short submit
     const input = screen.getByPlaceholderText("e.g. Maya's Cakes");
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-    await userEvent.type(input, 'ab');
+    await act(async () => { await userEvent.type(input, 'abc') });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
-    await waitFor(() => expect(screen.getByText('Business name must be at least 3 characters.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Business name must be at least 4 characters.')).toBeInTheDocument());
 
     // Valid submit
     await userEvent.clear(input);
-    await userEvent.type(input, "Maya's Bakery");
+    await act(async () => { await userEvent.type(input, "Maya's Bakery") });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
 
     await waitFor(() => {
@@ -205,13 +205,13 @@ describe('OnboardingWizard', () => {
     // Let's just test `handleIntakeSubmit` which has the exact same check. Oh, line 146 IS in `handleNext`.
 
     // Error on short submit (intake submit)
-    await userEvent.type(input, 'abcd');
+    await act(async () => { await userEvent.type(input, 'abcde') });
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
-    await waitFor(() => expect(screen.getByText('Niche description must be at least 5 characters.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Niche description must be at least 6 characters.')).toBeInTheDocument());
 
     // Valid submit
     await userEvent.clear(input);
-    await userEvent.type(input, "I bake custom vegan cakes");
+    await act(async () => { await userEvent.type(input, "I bake custom vegan cakes") });
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
 
     await waitFor(() => {
@@ -259,9 +259,9 @@ describe('OnboardingWizard', () => {
     const nameInput = await screen.findByPlaceholderText("e.g. Custom Cake");
     const priceInput = screen.getByPlaceholderText("0.00");
     await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Vegan Cake");
+    await act(async () => { await userEvent.type(nameInput, "Vegan Cake") });
     await userEvent.clear(priceInput);
-    await userEvent.type(priceInput, "30.00");
+    await act(async () => { await userEvent.type(priceInput, "30.00") });
 
     // Select template and domain
     act(() => { screen.getByRole('button', { name: 'Elegant' }).click(); });

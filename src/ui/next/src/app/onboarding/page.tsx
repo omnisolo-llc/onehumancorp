@@ -139,8 +139,8 @@ export default function OnboardingWizard() {
         setError("Please describe what you sell.");
         return;
       }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
+      if (businessType.trim().length < 4) {
+        setError("Please enter at least 4 characters.");
         return;
       }
     }
@@ -149,8 +149,8 @@ export default function OnboardingWizard() {
         setError("Please enter your business name.");
         return;
       }
-      if (businessName.trim().length < 3) {
-        setError("Business name must be at least 3 characters.");
+      if (businessName.trim().length < 4) {
+        setError("Business name must be at least 4 characters.");
         return;
       }
     }
@@ -166,8 +166,8 @@ export default function OnboardingWizard() {
       setError("Please describe your niche.");
       return;
     }
-    if (categoryToUse.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
+    if (categoryToUse.trim().length < 6) {
+      setError("Niche description must be at least 6 characters.");
       return;
     }
 
@@ -263,7 +263,7 @@ export default function OnboardingWizard() {
               0 8px 32px 0 rgba(0, 0, 0, 0.4),
               inset 0 0 0 1px rgba(255, 255, 255, 0.05);
           }
-          .glass-container h1, .glass-container h2, .glass-container .text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] {
+          .glass-container h1, .glass-container h2, .glass-container .text-[#1D1D1F] dark:text-[#F5F5F7] {
             color: #F5F5F7;
           }
           .glass-container p, .glass-container .text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] {
@@ -287,10 +287,10 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-md sm:max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
-           <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
+           <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">OHC Setup</h1>
            <div className="text-xs font-semibold px-2 py-1 bg-blue-50 dark:bg-blue-900/30 dark:bg-blue-900/30 text-[#0066FF] rounded-full">
              Step {Math.min(step, 4)} of 4
            </div>
@@ -437,7 +437,7 @@ export default function OnboardingWizard() {
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
                 <div className="bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 dark:border-white/10 shadow-sm space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
                        <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Name</label>
@@ -447,7 +447,7 @@ export default function OnboardingWizard() {
                          enterKeyHint="next"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
                        />
                      </div>
@@ -459,7 +459,7 @@ export default function OnboardingWizard() {
                          pattern="[0-9]*\.?[0-9]*"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="0.00"
                        />
                      </div>
@@ -468,7 +468,7 @@ export default function OnboardingWizard() {
 
                 {/* Template Selection */}
                 <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Choose a Template</h3>
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit pl-1">Choose a Template</h3>
                    <div className="grid grid-cols-2 gap-3">
                      {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
                        <button
@@ -484,7 +484,7 @@ export default function OnboardingWizard() {
 
                 {/* Domain Selection */}
                 <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
@@ -548,7 +548,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
