@@ -33,6 +33,7 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -72,6 +73,7 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -271,6 +273,11 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
+        }
+
         Ok(inst)
     }
 
@@ -386,6 +393,18 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
         }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn send_email_with_from(&self, integration_id: &str, to: &str, subject: &str, body: &str, from: &str) -> Result<(), String> {
+        let resend_client = {
+            let clients = self.resend_clients.read().unwrap();
+            clients.get(integration_id).cloned()
+        };
+        if let Some(c) = resend_client {
+            return c.send_email_with_from(to, subject, body, from).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -702,17 +721,22 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "sendgrid" {
-                let clients = self.sendgrid_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
+        let sendgrid_client = {
+            let clients = self.sendgrid_clients.read().unwrap();
+            clients.get(integration_id).cloned()
         };
-        if let Some(c) = client {
+        if let Some(c) = sendgrid_client {
             return c.send_email(to, subject, body).await;
         }
+
+        let resend_client = {
+            let clients = self.resend_clients.read().unwrap();
+            clients.get(integration_id).cloned()
+        };
+        if let Some(c) = resend_client {
+            return c.send_email(to, subject, body).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
