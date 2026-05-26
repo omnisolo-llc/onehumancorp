@@ -9,6 +9,13 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [tenantId, setTenantId] = useState("merchant");
+
+  React.useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      setTenantId(localStorage.getItem('tenant') || 'merchant');
+    }
+  }, []);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -153,6 +160,31 @@ export default function CheckoutPage() {
               >
                 Continue to Dashboard
               </button>
+
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <a
+                  href={`https://ohc.app/join?ref=${tenantId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-indigo-100 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform">
+                      🚀
+                    </div>
+                    <div className="flex-1 text-left">
+                      <h4 className="text-sm font-bold text-gray-900 font-outfit">Start your own business</h4>
+                      <p className="text-xs text-gray-600">Launch an AI store in seconds.</p>
+                    </div>
+                    <div className="text-indigo-600">
+                      <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-right">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">⚡ Powered by OHC</span>
+                  </div>
+                </a>
+              </div>
             </div>
           </div>
         </div>
