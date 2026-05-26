@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
 use uuid::Uuid;
-use crate::db::get_pool;
+use crate::db::DB;
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
@@ -86,8 +86,8 @@ async fn handle_webhook(
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
     let status = "pending";
-    let pool = get_pool();
-    let mut tx = match pool.begin().await {
+    let db = match DB::new().await { Ok(d) => d, Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(), };
+    let mut tx = match db.pool.begin().await {
         Ok(t) => t,
         Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
     };
