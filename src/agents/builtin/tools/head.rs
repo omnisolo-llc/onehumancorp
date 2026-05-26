@@ -30,7 +30,12 @@ impl ToolExecutor for HeadExecutor {
             .await
             .map_err(|e| format!("head: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
+        // Just-in-Time (JIT) Retrieval Mechanic: "Never load full files."
         let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+
+        if lines_to_read > 1000 {
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once. Never load full files.".to_string()));
+        }
 
         let mut reader = BufReader::new(file);
         let mut lines = Vec::new();
@@ -117,6 +122,24 @@ mod tests {
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("path traversal"));
+        } else {
+            panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_head_jit_retrieval_limit() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("test.txt");
+        fs::write(&file_path, "line1\nline2").await.unwrap();
+
+        let executor = HeadExecutor { working_dir: Some(dir.path().to_path_buf()) };
+
+        let args = json!({ "path": "test.txt", "lines": 2000 });
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("JIT Retrieval Error: Cannot read more than 1000 lines at once"));
         } else {
             panic!("Expected LlmRecoverable error");
         }
