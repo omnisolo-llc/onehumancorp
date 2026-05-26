@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     const message = `Hi ${name},\n\nWe noticed you left some items in your cart totaling ${value}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`;
 
     // Simulate an AI generation delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
 
     return NextResponse.json({ message });
   } catch (error) {

@@ -299,7 +299,7 @@ export default function BuilderPage() {
                     key={option.id}
                     onClick={() => {
                       setBusinessGoal(option.id as any);
-                      setTimeout(() => setStatus("idle"), 300);
+                      setStatus("idle");
                     }}
                     className="w-full p-6 glassmorphism border border-white/40 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group"
                   >

@@ -228,10 +228,8 @@ export default function Dashboard() {
     }
 
     setIsSendingCampaign(true);
-    setTimeout(() => {
-      setIsSendingCampaign(false);
-      setCampaignSuccess(true);
-    }, 1500);
+    setIsSendingCampaign(false);
+    setCampaignSuccess(true);
   };
 
   const claimTrialExtension = () => {
@@ -242,10 +240,8 @@ export default function Dashboard() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTimeout(() => {
-      alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-      handleSendCampaign();
-    }, 500);
+    alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+    handleSendCampaign();
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
