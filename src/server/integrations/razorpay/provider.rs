@@ -1,5 +1,5 @@
 use super::client::RazorpayClient;
-use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
+use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
 pub struct RazorpayProvider {
