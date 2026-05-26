@@ -4501,8 +4501,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             localStorage.setItem('has_pro', 'true');
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-                            // Re-run the campaign now that they have pro
-                            sendReviewCampaign();
+                            // They might have clicked from the review campaign or the inbox.
+                            // We don't automatically call sendReviewCampaign() if they are in the inbox.
+                            // The user can just click the premium button again.
                         }
 
                         function closeEmbedSetup() {
@@ -4727,6 +4728,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function draftInboxReply(btn) {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const input = document.getElementById('reply-input');
                             btn.disabled = true;
                             const originalText = btn.textContent;
