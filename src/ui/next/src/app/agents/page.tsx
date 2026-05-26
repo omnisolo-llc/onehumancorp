@@ -4,11 +4,27 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function AgentsPage() {
-  const [activeTab, setActiveTab] = useState<'departments' | 'approvals'>('departments');
+  const [activeTab, setActiveTab] = useState<'departments' | 'feed' | 'approvals'>('departments');
+  const [feed, setFeed] = useState<any[]>([]);
+  const [feedLoading, setFeedLoading] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchFeed = async () => {
+    setFeedLoading(true);
+    try {
+      const res = await fetch('/api/agents/feed');
+      if (res.ok) {
+        const data = await res.json();
+        setFeed(data.feed || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch feed:', e);
+    }
+    setFeedLoading(false);
+  };
 
   const fetchApprovals = async () => {
     setLoading(true);
@@ -26,6 +42,7 @@ export default function AgentsPage() {
 
   useEffect(() => {
     fetchApprovals();
+    fetchFeed();
   }, []);
 
   const handleDecision = async (id: string, approved: boolean) => {
@@ -93,6 +110,12 @@ export default function AgentsPage() {
             My Team
           </button>
           <button
+            onClick={() => setActiveTab('feed')}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors ${activeTab === 'feed' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Activity Feed
+          </button>
+          <button
             onClick={() => setActiveTab('approvals')}
             className={`flex-1 py-3 text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${activeTab === 'approvals' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
           >
@@ -134,6 +157,37 @@ export default function AgentsPage() {
                 </div>
               ))}
             </div>
+
+          ) : activeTab === 'feed' ? (
+            <div className="h-full flex flex-col">
+              {feedLoading ? (
+                <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
+                  <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+                  <p className="text-gray-500 text-sm font-medium">Fetching feed...</p>
+                </div>
+              ) : feed.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center flex-1 text-center py-12">
+                  <p className="text-gray-500 text-sm">No activity yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4 pb-8">
+                  {feed.map((item) => (
+                    <div key={item.id} className="bg-white rounded-[16px] shadow-sm border border-gray-200 p-5 font-inter">
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
+                          {item.department}
+                        </span>
+                        <span className="text-xs text-gray-400 font-medium">{item.timestamp}</span>
+                      </div>
+                      <p className="text-gray-800 text-sm font-medium leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           ) : (
             <div className="h-full flex flex-col">
               {loading ? (
