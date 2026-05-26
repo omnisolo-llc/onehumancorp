@@ -33,27 +33,39 @@ impl TaskQueue for SQLiteTaskQueue {
 
         let mut query = sqlx::query(&query_str);
 
+        let mut unique_tenants = std::collections::HashSet::new();
+        for job in &jobs {
+            unique_tenants.insert(job.tenant_id.clone());
+        }
+
+        if !unique_tenants.is_empty() {
+            let placeholders: Vec<_> = unique_tenants.iter().map(|_| "?").collect();
+            let count_query = format!("SELECT organization_id, COUNT(*) FROM sub_agent_jobs WHERE organization_id IN ({}) AND status = 'QUEUED' GROUP BY organization_id", placeholders.join(","));
+
+            let mut q = sqlx::query(&count_query);
+            for tenant in &unique_tenants {
+                q = q.bind(tenant);
+            }
+
+            if let Ok(rows) = q.fetch_all(&mut *tx).await {
+                for row in rows {
+                    let org_id: String = row.try_get(0).unwrap_or_default();
+                    let count: i64 = row.try_get(1).unwrap_or(0);
+                    current_depths.insert(org_id, count);
+                }
+            }
+        }
+
         let bursts_threshold = 10;
         for job in jobs {
-            let depth = match current_depths.get(&job.tenant_id) {
-                Some(&d) => d,
-                None => {
-                    let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = ? AND status = 'QUEUED'")
-                        .bind(&job.tenant_id)
-                        .fetch_one(&mut *tx)
-                        .await
-                        .unwrap_or((0,));
-                    current_depths.insert(job.tenant_id.clone(), count_row.0);
-                    count_row.0
-                }
-            };
+            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
 
             let mut run_after = job.run_after;
             if depth > bursts_threshold {
                 let delay_seconds = (depth - bursts_threshold) * 5;
                 run_after = run_after + chrono::Duration::seconds(delay_seconds);
             }
-            *current_depths.get_mut(&job.tenant_id).unwrap() += 1;
+            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
 
             query = query
                 .bind(job.id)
