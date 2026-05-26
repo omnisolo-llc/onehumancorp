@@ -166,7 +166,8 @@ jobs:
       - name: Test E2E target
         run: |
           bazelisk test \
+            --test_tag_filters=ui-e2e \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //src/e2e:playwright
+            //...
