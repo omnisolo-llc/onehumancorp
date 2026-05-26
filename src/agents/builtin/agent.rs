@@ -1155,6 +1155,49 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let timeout_duration = std::time::Duration::from_secs(60);
+        let mut attempts = 0;
+        let max_attempts = 3;
+        loop {
+            attempts += 1;
+            let mut on_event_wrapper = |e| on_event(e);
+            let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
+            match result {
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
+                    }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                }
+            }
+        }
+    }
+
+    async fn run_plan_and_execute_internal<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         on_event(AgentEvent::RunStarted {
             iteration: 0,
         });
