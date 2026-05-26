@@ -71,7 +71,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -205,7 +204,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-desktop-${{ matrix.name }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -567,7 +565,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-mobile-${{ matrix.name }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -665,7 +662,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-server-web-image
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -913,7 +909,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock

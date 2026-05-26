@@ -58,7 +58,6 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
