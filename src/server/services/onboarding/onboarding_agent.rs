@@ -33,6 +33,7 @@ impl OnboardingAgent {
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {
+        let start_time = std::time::Instant::now();
         let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
 
         let prompt = format!(
@@ -65,6 +66,7 @@ impl OnboardingAgent {
         let data: IntakeData = serde_json::from_str(clean_json)
             .map_err(|e| format!("Failed to parse AI response as JSON: {}. Response was: {}", e, response))?;
 
+        crate::telemetry::track_onboarding_step("system", "process_intake", start_time.elapsed().as_millis() as u64);
         Ok(data)
     }
 
@@ -120,6 +122,13 @@ impl OnboardingAgent {
     }
 
     pub async fn start_onboarding(&self, req: StartOnboardingRequest) -> Result<StartOnboardingResponse, String> {
+        if !crate::services::onboarding::validation::validate_business_name(&req.company_name) {
+            return Err("Invalid company name".to_string());
+        }
+        if !req.first_product_price.is_empty() && !crate::services::onboarding::validation::validate_product_price(&req.first_product_price) {
+            return Err("Invalid product price".to_string());
+        }
+
         let start_time = std::time::Instant::now();
         let org_id = format!("org-{}", uuid::Uuid::new_v4());
 
@@ -277,8 +286,18 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
-        // Extract feature flags logic
+        // Parse AI settings if provided
         let mut flags = serde_json::Map::new();
+        if !req.ai_settings.is_empty() {
+            if let Ok(settings) = serde_json::from_str::<serde_json::Value>(&req.ai_settings) {
+                if let Some(team) = settings.get("team").and_then(|v| v.as_str()) {
+                     crate::telemetry::record_business_event(&org_id, "Cloud", &format!("ai_team_selected:{}", team));
+                }
+                flags.insert("ai_settings".to_string(), settings);
+            }
+        }
+
+        // Extract feature flags logic
         if business_type == "Service Business" || business_type == "Service" || req.selling_categories.contains(&"services".to_string()) {
             flags.insert("enable_booking".to_string(), serde_json::json!(true));
         }
