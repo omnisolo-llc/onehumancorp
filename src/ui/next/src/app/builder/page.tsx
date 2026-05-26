@@ -317,9 +317,9 @@ export default function BuilderPage() {
 
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
-        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 glassmorphism"
-             style={{ borderRadius: '16px' }}>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#16161a] font-inter">
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] bg-white/65 dark:bg-[#16161a]/70 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 dark:border-white/10 glassmorphism"
+             style={{ borderRadius: '16px', backdropFilter: 'blur(30px) saturate(210%)' }}>
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -340,8 +340,8 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                  style={{ borderRadius: '8px' }}
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                  style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Acme Corp"
@@ -350,8 +350,8 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                  style={{ borderRadius: '8px' }}
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                  style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
                   placeholder="e.g. Retail, Consulting, Tech"
@@ -362,12 +362,12 @@ export default function BuilderPage() {
                 )}
 
                 <button
-                  className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
+                  className={`w-full p-4 font-bold font-outfit text-lg ${
                     businessName.trim().length >= 3 && businessCategory.trim().length >= 5
                       ? "text-white shadow-md active:scale-[0.98]"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px', background: (businessName.trim().length >= 3 && businessCategory.trim().length >= 5) ? '#0071E3' : '' }}
+                  style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)', background: (businessName.trim().length >= 3 && businessCategory.trim().length >= 5) ? '#0071E3' : '' }}
                   onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
@@ -387,10 +387,10 @@ export default function BuilderPage() {
                     <button
                       key={v}
                       onClick={() => setVibe(v)}
-                      className={`p-4 border text-left transition-all font-semibold ${
+                      className={`p-4 border text-left font-semibold ${
                         vibe === v ? "border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]" : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 bg-white/50 dark:bg-[#1d1d1f]/50 backdrop-blur-sm"
                       }`}
-                      style={{ borderRadius: '8px' }}
+                      style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                     >
                       {v}
                     </button>
@@ -399,19 +399,19 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
-                    style={{ borderRadius: '8px' }}
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
+                    style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                     onClick={() => setWizardStep(1)}
                   >
                     Back
                   </button>
                   <button
-                    className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`flex-1 p-4 font-bold font-outfit text-lg ${
                       vibe
                         ? "text-white shadow-md active:scale-[0.98]"
                         : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '8px', background: vibe ? '#0071E3' : '' }}
+                    style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)', background: vibe ? '#0071E3' : '' }}
                     onClick={() => {
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
@@ -437,8 +437,8 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
-                    style={{ borderRadius: '8px' }}
+                    className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
+                    style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="e.g. I run a mobile dog grooming service in Portland"
@@ -448,8 +448,8 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
-                    style={{ borderRadius: '8px' }}
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
+                    style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}
                     onClick={() => setWizardStep(2)}
                   >
                     Back
@@ -457,12 +457,12 @@ export default function BuilderPage() {
                   <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                     <button
                       id="generate-btn"
-                      className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                      className={`flex-[2] p-4 font-bold font-outfit text-lg ${
                         bio.trim().length > 5
                           ? "text-white shadow-md active:scale-[0.98]"
                           : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       }`}
-                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                      style={{ borderRadius: '8px', transition: 'all 250ms cubic-bezier(0.4, 0, 0.2, 1)', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                       onClick={handleGenerate}
                       disabled={bio.trim().length <= 5}
                     >
