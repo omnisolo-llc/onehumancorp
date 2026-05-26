@@ -50,7 +50,7 @@ export default function PricingPage() {
             <div className="absolute top-0 right-0 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-lg">Recommended</div>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Starter</h3>
-              <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-2" style={{ color: '#1D1D1F' }}>$9 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <p className="text-xs text-indigo-600 font-medium mb-4">Suggested for growing stores</p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> 3 Agents Limit</li>
@@ -68,7 +68,7 @@ export default function PricingPage() {
           <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Pro</h3>
-              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$29 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> 10 Agents Limit</li>
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>
@@ -85,7 +85,7 @@ export default function PricingPage() {
           <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div>
               <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Business</h3>
-              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$299 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$79 <span className="text-sm font-normal text-gray-500">/ month</span></p>
               <ul className="text-sm text-gray-700 space-y-3 mb-6">
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited Agents</li>
                 <li className="flex items-center gap-2"><span>✓</span> Unlimited AI actions</li>

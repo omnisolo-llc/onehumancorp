@@ -28,6 +28,10 @@ export default function Dashboard() {
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
+  const [currentTier, setCurrentTier] = useState<string>("Free");
+  const [aiActionsCount, setAiActionsCount] = useState<number>(85);
+  const [aiActionsLimit, setAiActionsLimit] = useState<number>(100);
+
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
@@ -92,10 +96,28 @@ export default function Dashboard() {
 
   // Growth Loop: Upgrade Modal State
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [showTierComparison, setShowTierComparison] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
+
+  useEffect(() => {
+    // Inject the Business Advisory Agent warning when approaching AI Actions limit
+    if (currentTier === "Free" && aiActionsCount >= 85) {
+      setSwarmActivity(prev => {
+        const warningExists = prev.some(a => a.agent === "Business Advisory Agent");
+        if (warningExists) return prev;
+
+        return [{
+            id: Math.random().toString(),
+            agent: "Business Advisory Agent",
+            action: "Your business is booming! You're using a lot of AI actions to reply to customers. Consider upgrading to the Starter plan so your Ambassador agent doesn't pause.",
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
+        }, ...prev].slice(0, 5);
+      });
+    }
+  }, [currentTier, aiActionsCount]);
 
   useEffect(() => {
     async function checkMilestones() {
@@ -518,7 +540,7 @@ export default function Dashboard() {
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
@@ -534,6 +556,39 @@ export default function Dashboard() {
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
+                </div>
+
+                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>AI Actions This Month</div>
+                    <div className="flex items-center gap-4">
+                      <div className="relative w-12 h-12">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <path
+                            className="text-gray-200"
+                            strokeWidth="4"
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                          <path
+                            className={aiActionsCount / aiActionsLimit >= 1 ? "text-red-500" : aiActionsCount / aiActionsLimit >= 0.8 ? "text-amber-500" : "text-green-500"}
+                            strokeWidth="4"
+                            strokeDasharray={`${Math.min((aiActionsCount / aiActionsLimit) * 100, 100)}, 100`}
+                            stroke="currentColor"
+                            fill="none"
+                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          />
+                        </svg>
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>
+                            {aiActionsCount} <span className="text-sm font-normal text-gray-500">/ {aiActionsLimit === Infinity ? '∞' : aiActionsLimit}</span>
+                        </div>
+                        <span className={`text-xs font-semibold ${aiActionsCount / aiActionsLimit >= 1 ? 'text-red-600' : aiActionsCount / aiActionsLimit >= 0.8 ? 'text-amber-600' : 'text-green-600'}`}>
+                            {aiActionsCount / aiActionsLimit >= 1 ? 'Limit Reached' : aiActionsCount / aiActionsLimit >= 0.8 ? 'Approaching Limit' : 'Healthy'}
+                        </span>
+                      </div>
+                    </div>
                 </div>
 
             </div>
@@ -881,12 +936,13 @@ export default function Dashboard() {
                 <div className="flex items-center gap-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
-                        <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
+                        <span className="text-xs font-medium text-green-600">{productCount} / {currentTier === "Free" ? 10 : (currentTier === "Starter" ? 100 : '∞')} Products Used</span>
                     </div>
                 </div>
                 <button
                     onClick={() => {
-                        if (productCount >= 10) {
+                        const productLimit = currentTier === "Free" ? 10 : (currentTier === "Starter" ? 100 : Infinity);
+                        if (productCount >= productLimit) {
                             setShowPaywallModal(true);
                         } else {
                             setProductCount(prev => prev + 1);
@@ -1145,40 +1201,45 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Paywall Modal */}
+      {/* Paywall Modal (Contextual Limit Warning) */}
       {showPaywallModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
-            {/* Background embellishment */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50 rounded-bl-full -z-10"></div>
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center sm:items-center sm:p-4 transition-opacity">
+          <div className="w-full sm:max-w-md bg-white/80 backdrop-blur-3xl saturate-200 border border-white/40 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl relative overflow-hidden font-inter transform transition-transform translate-y-0" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.1)' }}>
+
+            <div className="flex justify-center mb-4 sm:hidden">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
 
             <div className="flex justify-between items-start mb-4">
-              <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-orange-600">
-                ⭐
+              <div className="w-12 h-12 bg-indigo-100/80 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+                🚀
               </div>
               <button
                 onClick={() => setShowPaywallModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100/50 transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
 
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">You've hit your limit!</h2>
-            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              You have reached the <strong className="text-gray-900">10 Products Limit</strong> on the Free plan. Upgrade to the Starter plan to add more products and unlock unlimited potential.
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Ready to expand?</h2>
+            <p className="text-gray-600 mb-6 text-base leading-relaxed">
+              You've reached your 10 product limit on the <strong className="text-gray-900">Free</strong> plan. Upgrade to <strong className="text-gray-900">Starter</strong> to add 90 more products and unlock 2 new AI Teammates!
             </p>
 
             <div className="space-y-3">
-              <Link
-                href="/pricing"
-                className="block w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              <button
+                onClick={() => {
+                  setShowPaywallModal(false);
+                  setShowTierComparison(true);
+                }}
+                className="w-full py-3.5 bg-indigo-600 text-white font-semibold rounded-xl text-center shadow-lg hover:bg-indigo-700 transition-all text-base"
               >
-                Upgrade to Starter
-              </Link>
+                View Plans
+              </button>
               <button
                 onClick={() => setShowPaywallModal(false)}
-                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                className="w-full py-2 rounded-xl text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
               >
                 Maybe later
               </button>
@@ -1334,6 +1395,87 @@ export default function Dashboard() {
                     )}
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1-Tap Upgrade Flow (Tier Comparison) Modal */}
+      {showTierComparison && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-end justify-center sm:items-center sm:p-4 transition-opacity">
+          <div className="w-full sm:max-w-md bg-white/80 backdrop-blur-3xl saturate-200 border border-white/40 rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl relative overflow-hidden font-inter transform transition-transform translate-y-0" style={{ boxShadow: '0 -10px 40px rgba(0,0,0,0.1)' }}>
+
+            <div className="flex justify-center mb-4 sm:hidden">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+            </div>
+
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900">Upgrade to Starter</h2>
+              <button
+                onClick={() => setShowTierComparison(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100/50 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="bg-gray-50/50 rounded-2xl p-4 mb-6 border border-gray-100">
+              <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200/50">
+                <span className="font-medium text-gray-500">Current: Free</span>
+                <span className="font-bold text-gray-900">$0<span className="text-sm font-normal text-gray-500">/mo</span></span>
+              </div>
+              <ul className="text-sm text-gray-600 space-y-2 mb-4">
+                <li className="flex items-center gap-2 line-through opacity-70"><span>✓</span> 10 Products Limit</li>
+                <li className="flex items-center gap-2 line-through opacity-70"><span>✓</span> 1 AI Teammate</li>
+              </ul>
+
+              <div className="flex justify-between items-center mb-2">
+                <span className="font-bold text-indigo-600">Starter Plan</span>
+                <span className="font-bold text-gray-900">$9<span className="text-sm font-normal text-gray-500">/mo</span></span>
+              </div>
+              <ul className="text-sm text-gray-900 space-y-2 font-medium">
+                <li className="flex items-center gap-2"><span>✨</span> 100 Products Limit</li>
+                <li className="flex items-center gap-2"><span>✨</span> 3 AI Teammates</li>
+                <li className="flex items-center gap-2"><span>✨</span> 1,000 AI Actions</li>
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setShowTierComparison(false);
+                  setCurrentTier("Starter");
+                  setAiActionsLimit(1000);
+                  setProductCount(prev => prev + 1); // Allow original action
+                  if (!productAdded) {
+                      setProductAdded(true);
+                      setTrialDaysLeft(prev => prev + 7);
+                  }
+                  alert("Apple Pay approved. Starter Tier Active! You can now add 90 more products.");
+                }}
+                className="w-full py-3.5 bg-black text-white font-semibold rounded-xl text-center shadow-md hover:bg-gray-800 transition-all text-base flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 384 512" fill="currentColor" className="w-5 h-5"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                Pay
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowTierComparison(false);
+                  setCurrentTier("Starter");
+                  setAiActionsLimit(1000);
+                  setProductCount(prev => prev + 1); // Allow original action
+                  if (!productAdded) {
+                      setProductAdded(true);
+                      setTrialDaysLeft(prev => prev + 7);
+                  }
+                  alert("Google Pay approved. Starter Tier Active! You can now add 90 more products.");
+                }}
+                className="w-full py-3.5 bg-white text-gray-800 border border-gray-300 font-semibold rounded-xl text-center shadow-sm hover:bg-gray-50 transition-all text-base flex items-center justify-center gap-2"
+              >
+                <svg viewBox="0 0 488 512" fill="currentColor" className="w-5 h-5"><path d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"/></svg>
+                Pay
+              </button>
             </div>
           </div>
         </div>

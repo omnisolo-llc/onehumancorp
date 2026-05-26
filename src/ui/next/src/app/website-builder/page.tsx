@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { SmartBlock, DraggableBlock } from "../builder/components";
-import { Tooltip, useWalkthrough } from "../../components/help";
+import { useWalkthrough } from "../../components/help";
+import { WithTooltip as Tooltip } from "../../components/TooltipRegistry";
 
 export default function WebsiteBuilderPage() {
   const [bio, setBio] = useState("");
