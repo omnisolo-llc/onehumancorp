@@ -387,16 +387,6 @@ pub async fn manychat_webhook_handler(
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
-    for msg in payload.messages {
-        tracing::info!("Received Manychat message id: {}, text: {}", msg.id, msg.text);
-        let _ = ::server_telemetry::record_api_call_cost(
-            &webhook_state.db.pool,
-            "unknown", // tenant context
-            "manychat_webhook_process_message",
-            0.01
-        ).await;
-    }
-
     match payload.status.as_str() {
         "ok" => StatusCode::OK.into_response(),
         _ => StatusCode::OK.into_response()
