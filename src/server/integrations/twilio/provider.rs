@@ -43,6 +43,10 @@ impl TwilioProvider {
     }
 
     pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+        // Mock checking opt-out status
+        if self.is_opted_out(to).await {
+            return Err("User opted out".to_string());
+        }
         self.client.send_sms(to, from, body).await
     }
 }
@@ -88,5 +92,17 @@ mod tests {
         let provider = TwilioProvider::new("sid".to_string(), "token".to_string());
         let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "twilio");
+    }
+}
+
+impl TwilioProvider {
+    pub async fn is_opted_out(&self, _phone: &str) -> bool {
+        // In a real app, query the DB for user communication preferences
+        false
+    }
+
+    pub async fn handle_opt_out(&self, _phone: &str) -> Result<(), String> {
+        // Handle STOP messages by updating DB
+        Ok(())
     }
 }

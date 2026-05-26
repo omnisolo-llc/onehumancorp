@@ -2,7 +2,11 @@ load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_telemetry",
-    srcs = ["mod.rs"],
+    srcs = [
+        "mod.rs",
+        "forecaster.rs",
+    ],
+    crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -13,5 +17,6 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tracing",
         "@crates//:opentelemetry",
+        "@crates//:tokio",
     ],
 )

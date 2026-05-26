@@ -1,23 +1,23 @@
-use super::client::ResendClient;
+use super::client::SendGridClient;
 use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
-pub struct ResendProvider {
-    _client: Arc<ResendClient>,
+pub struct SendGridProvider {
+    _client: Arc<SendGridClient>,
     metadata: ProviderMetadata,
 }
 
-impl ResendProvider {
+impl SendGridProvider {
     pub fn new(api_key: String) -> Self {
-        let client = ResendClient::new(api_key);
+        let client = SendGridClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
             metadata: ProviderMetadata {
-                id: "resend".to_string(),
-                name: "Resend Email".to_string(),
+                id: "sendgrid".to_string(),
+                name: "SendGrid Email".to_string(),
                 category: "email".to_string(),
-                base_url: "https://api.resend.com".to_string(),
+                base_url: "https://api.sendgrid.com/v3".to_string(),
             },
         }
     }
@@ -31,5 +31,9 @@ impl ResendProvider {
                 base_url: self.metadata.base_url.clone(),
             }
         }
+    }
+
+    pub async fn send_email(&self, to: &str, subject: &str, body: &str) -> Result<(), String> {
+        self._client.send_email(to, subject, body).await
     }
 }
