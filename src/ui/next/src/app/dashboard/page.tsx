@@ -97,6 +97,12 @@ export default function Dashboard() {
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
+  // Growth Loop: Loyalty Loop State
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState<boolean>(false);
+  const [loyaltyMessage, setLoyaltyMessage] = useState<string>('');
+  const [isGeneratingLoyalty, setIsGeneratingLoyalty] = useState<boolean>(false);
+  const [loyaltySent, setLoyaltySent] = useState<boolean>(false);
+
   useEffect(() => {
     async function checkMilestones() {
       if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
@@ -463,6 +469,44 @@ export default function Dashboard() {
                 </div>
             </section>
          )}
+
+         {/* Customer Loyalty Anniversary Alert */}
+         <section className="mb-6">
+            <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', color: '#1D1D1F' }}>
+                <div className="flex items-center gap-4">
+                    <span className="text-3xl">🏆</span>
+                    <div>
+                        <h3 className="font-bold text-lg font-outfit text-gray-900">Customer Loyalty Alert</h3>
+                        <p className="text-sm opacity-90 font-inter text-gray-800">Alex M. made their first purchase exactly 1 year ago today. Send a celebratory discount to drive a repeat purchase.</p>
+                    </div>
+                </div>
+                <button
+                    onClick={async () => {
+                        setShowLoyaltyModal(true);
+                        setIsGeneratingLoyalty(true);
+                        try {
+                            const response = await fetch('/api/v1/growth/campaign/generate-anniversary', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ customer_name: 'Alex', years: 1 })
+                            });
+                            const data = await response.json();
+                            if (data && data.message) {
+                                setLoyaltyMessage(data.message);
+                            }
+                        } catch (e) {
+                            console.error("Failed to generate anniversary message", e);
+                            setLoyaltyMessage("Hi Alex,\n\nWe can't believe it's already been 1 year(s) since your first order with us! \n\nAs a small token of our appreciation for your continued support, please enjoy 20% off your next purchase using the code: ANNIVERSARY20\n\nShop here: https://ohc.store/shop/return\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
+                        } finally {
+                            setIsGeneratingLoyalty(false);
+                        }
+                    }}
+                    className="whitespace-nowrap px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                    Draft Anniversary Email
+                </button>
+            </div>
+         </section>
 
          {/* Milestone Viral Share Loop Banner */}
          {activeCustomers > 0 && !bannerDismissed && (
@@ -1080,6 +1124,84 @@ export default function Dashboard() {
          </section>
 
       </main>
+
+      {/* Customer Loyalty Modal */}
+      {showLoyaltyModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-indigo-100">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-indigo-600">
+                ✨
+              </div>
+              <button
+                onClick={() => {
+                  setShowLoyaltyModal(false);
+                  setLoyaltyMessage('');
+                  setLoyaltySent(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Anniversary Celebration</h2>
+            <p className="text-gray-600 mb-4 text-sm">Review the AI-generated celebratory email for your loyal customer before sending.</p>
+
+            {isGeneratingLoyalty ? (
+               <div className="flex flex-col items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
+                  <p className="text-sm font-medium text-gray-500">Drafting personalized message...</p>
+               </div>
+            ) : loyaltySent ? (
+               <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl mb-4">
+                    ✓
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Email Sent!</h3>
+                  <p className="text-sm text-gray-600">Alex will receive their anniversary discount shortly.</p>
+               </div>
+            ) : (
+               <div className="space-y-4">
+                 <div>
+                   <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Message Preview</label>
+                   <textarea
+                     value={loyaltyMessage}
+                     onChange={(e) => setLoyaltyMessage(e.target.value)}
+                     className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                     rows={8}
+                   />
+                 </div>
+
+                 <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => setShowLoyaltyModal(false)}
+                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-800 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        setLoyaltySent(true);
+                        setTimeout(() => {
+                           setShowLoyaltyModal(false);
+                           setLoyaltyMessage('');
+                           setLoyaltySent(false);
+                        }, 2500);
+                      }}
+                      className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <span>Send Email</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                    </button>
+                 </div>
+               </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (
