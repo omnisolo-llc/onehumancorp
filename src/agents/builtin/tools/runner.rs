@@ -259,7 +259,6 @@ impl CommandRunner for SandboxedCommandRunner {
     }
 }
 
-#[cfg(test)]
 pub mod mock {
     use super::*;
     use std::sync::{Arc, Mutex};

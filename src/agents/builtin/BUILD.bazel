@@ -81,6 +81,7 @@ rust_library(
         "sona_patterns.rs",
         "sqlite_memory.rs",
         "swarm_topology.rs",
+        "scalable_cloud.rs",
         "tools_gating.rs",
         "verification_loops.rs",
         "visual_workflow.rs",

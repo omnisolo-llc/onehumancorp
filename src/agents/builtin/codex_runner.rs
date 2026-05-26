@@ -7,11 +7,12 @@ use tokio::sync::mpsc;
 /// Uses a `Runner` class with async, sync, and streamed modes.
 pub struct Runner {
     pub agent: Arc<Agent>,
+    pub cloud_manager: tokio::sync::Mutex<Option<std::sync::Arc<crate::scalable_cloud::CloudDeploymentManager>>>,
 }
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
-        Self { agent }
+        Self { agent, cloud_manager: tokio::sync::Mutex::new(None) }
     }
 
     /// Asynchronous execution mode
@@ -36,6 +37,23 @@ impl Runner {
     /// Streamed execution mode (returns a receiver for AgentEvents)
     pub fn run_streamed(&self, cfg: &AgentRunConfig, initial_message: &str) -> mpsc::UnboundedReceiver<AgentEvent> {
         self.agent.clone().query(cfg.clone(), initial_message.to_string())
+    }
+
+    /// Scalable Distributed Execution Mode (1000+ Agents)
+    pub async fn run_distributed(&self, cfg: &AgentRunConfig, tasks: Vec<String>, mode: crate::scalable_cloud::DeploymentMode) -> Result<Vec<String>, String> {
+        let runner = Arc::new(crate::tools::runner::SandboxedCommandRunner::new(None));
+        let manager = std::sync::Arc::new(crate::scalable_cloud::CloudDeploymentManager::new(mode, self.agent.clone(), runner));
+        let ids = manager.submit_jobs(cfg.clone(), tasks).await?;
+        *self.cloud_manager.lock().await = Some(manager);
+        Ok(ids)
+    }
+
+    pub async fn get_batch_status(&self, job_id: &str) -> Option<String> {
+        if let Some(m) = self.cloud_manager.lock().await.as_ref() {
+            m.get_status(job_id).await
+        } else {
+            None
+        }
     }
 }
 
@@ -109,6 +127,58 @@ impl AppServer {
                     };
                     serde_json::to_string(&resp).unwrap()
                 }
+            }
+        } else if req.method == "run_distributed_batch" {
+            let tasks: Vec<String> = match req.params.get("tasks").and_then(|v| v.as_array()) {
+                Some(arr) => arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect(),
+                None => Vec::new(),
+            };
+
+            let mode = if req.params.get("mode").and_then(|v| v.as_str()) == Some("cloud") {
+                crate::scalable_cloud::DeploymentMode::CloudDistributed
+            } else {
+                crate::scalable_cloud::DeploymentMode::LocalCLI
+            };
+
+            let cfg = AgentRunConfig::default();
+            match self.runner.run_distributed(&cfg, tasks, mode).await {
+                Ok(ids) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: Some(serde_json::json!({ "job_ids": ids })),
+                        error: None,
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+            }
+        } else if req.method == "get_batch_status" {
+            let job_id = req.params.get("job_id").and_then(|v| v.as_str()).unwrap_or("");
+            if let Some(status) = self.runner.get_batch_status(job_id).await {
+                let resp = JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id,
+                    result: Some(serde_json::json!({ "status": status })),
+                    error: None,
+                };
+                serde_json::to_string(&resp).unwrap()
+            } else {
+                let resp = JsonRpcResponse {
+                    jsonrpc: "2.0".to_string(),
+                    id: req.id,
+                    result: None,
+                    error: Some(JsonRpcError { code: -32000, message: "Job not found".to_string() }),
+                };
+                serde_json::to_string(&resp).unwrap()
             }
         } else {
             let resp = JsonRpcResponse {
@@ -236,4 +306,38 @@ mod tests {
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
     }
+}
+
+#[tokio::test]
+async fn test_app_server_distributed_batch() {
+    use crate::llm::LlmClient;
+    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+
+    struct MockLlmClientCloud2;
+    #[async_trait::async_trait]
+    impl LlmClient for MockLlmClientCloud2 {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(ChatResponse {
+                message: Message::assistant("success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("id1".to_string()),
+            })
+        }
+    }
+
+    let client = Arc::new(MockLlmClientCloud2);
+    let agent = Arc::new(Agent::new(client, vec![]));
+    let runner = Arc::new(Runner::new(agent));
+    let app_server = AppServer::new(runner);
+
+    let req_json = r#"{"jsonrpc": "2.0", "id": "1", "method": "run_distributed_batch", "params": {"tasks": ["task1", "task2"], "mode": "cloud"}}"#;
+    let resp_json = app_server.handle_request(req_json).await;
+
+    let resp: JsonRpcResponse = serde_json::from_str(&resp_json).unwrap();
+    assert_eq!(resp.id.unwrap(), serde_json::json!("1"));
+    assert!(resp.error.is_none());
+
+    let job_ids = resp.result.unwrap().get("job_ids").unwrap().as_array().unwrap().clone();
+    assert_eq!(job_ids.len(), 2);
 }
