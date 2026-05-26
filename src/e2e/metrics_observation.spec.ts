@@ -5,7 +5,6 @@ test('verify Swarm metrics observation flow', async ({ page }) => {
   await page.waitForTimeout(5000);
 
   const html = await page.content();
-  console.log("App load content length:", html.length);
 
   expect(html).toContain('OHC Builder');
   await expect(page.locator('body')).toBeVisible();
