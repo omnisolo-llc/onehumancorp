@@ -266,6 +266,7 @@ describe('OnboardingWizard', () => {
     // Select template and domain
     act(() => { screen.getByRole('button', { name: 'Elegant' }).click(); });
     act(() => { screen.getByRole('button', { name: 'Minimal' }).click(); });
+    act(() => { screen.getByRole('button', { name: /Advanced Options/i }).click(); });
     act(() => { screen.getByRole('button', { name: /Connect Custom Domain/i }).click(); });
     act(() => { screen.getByRole('button', { name: /Free OHC Domain/i }).click(); });
 

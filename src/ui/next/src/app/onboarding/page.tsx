@@ -25,6 +25,7 @@ export default function OnboardingWizard() {
   const lastSyncState = useRef("");
 
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const [showAdvancedOptions, setShowAdvancedOptions] = React.useState(false);
 
   // Load state from backend on initial mount
   useEffect(() => {
@@ -287,7 +288,7 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
@@ -436,7 +437,7 @@ export default function OnboardingWizard() {
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
-                <div className="bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 dark:border-white/10 shadow-sm space-y-3">
+                <div className="bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] p-5 rounded-[16px] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] shadow-sm space-y-3">
                    <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
@@ -482,26 +483,46 @@ export default function OnboardingWizard() {
                    </div>
                 </div>
 
-                {/* Domain Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
-                   <div className="flex flex-col gap-3">
-                     <button
-                       onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Free OHC Domain</span>
-                       <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
-                     </button>
-                     <button
-                       onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Connect Custom Domain</span>
-                       <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
-                     </button>
-                   </div>
+                {/* Advanced Options Toggle */}
+                <div className="pt-2">
+                  <button
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    className="flex items-center text-sm font-semibold text-[#0066FF] dark:text-[#0a84ff] hover:text-[#0052cc] dark:hover:text-[#409cff] transition-colors focus:outline-none"
+                  >
+                    <span className="mr-1">{showAdvancedOptions ? 'Hide' : 'Show'} Advanced Options</span>
+                    <svg
+                      className={`w-4 h-4 transform transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
                 </div>
+
+                {/* Domain Selection (Advanced) */}
+                {showAdvancedOptions && (
+                  <div className="space-y-3 animate-fade-in border-t border-gray-200 dark:border-gray-800 pt-3">
+                     <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
+                     <div className="flex flex-col gap-3">
+                       <button
+                         onClick={() => setDomain('free')}
+                         className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20'} transition-all text-sm`}
+                       >
+                         <span>Free OHC Domain</span>
+                         <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
+                       </button>
+                       <button
+                         onClick={() => setDomain('custom')}
+                         className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20'} transition-all text-sm`}
+                       >
+                         <span>Connect Custom Domain</span>
+                         <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
+                       </button>
+                     </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 mt-auto">
