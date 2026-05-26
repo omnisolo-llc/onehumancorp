@@ -1,25 +1,52 @@
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry::metrics::{Counter, Histogram};
+use std::time::Instant;
 
 pub struct RedisMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::RedisPubSubTransport,
+    publish_counter: Counter<u64>,
+    bytes_counter: Counter<u64>,
+    subscribe_counter: Counter<u64>,
+    latency_histogram: Histogram<u64>,
 }
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
         let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
             .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
-        Ok(Self { inner })
+
+        let meter = global::meter("orchestration");
+        let publish_counter = meter.u64_counter("mesh.publish.count").build();
+        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
+        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
+        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
+
+        Ok(Self { inner, publish_counter, bytes_counter, subscribe_counter, latency_histogram })
     }
 }
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        self.inner.publish(topic, message).await
+        let start = Instant::now();
+        let payload_size = message.payload.len() as u64;
+
+        self.publish_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+
+        let res = self.inner.publish(topic, message).await;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+
+        res
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -42,12 +69,23 @@ impl MeshTransport for RedisMeshTransport {
 
 pub struct MemoryMeshTransport {
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
+    publish_counter: Counter<u64>,
+    bytes_counter: Counter<u64>,
+    subscribe_counter: Counter<u64>,
+    latency_histogram: Histogram<u64>,
 }
 
 impl MemoryMeshTransport {
     pub fn new() -> Self {
+        let meter = global::meter("orchestration");
+        let publish_counter = meter.u64_counter("mesh.publish.count").build();
+        let bytes_counter = meter.u64_counter("mesh.publish.bytes").build();
+        let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
+        let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
+
         Self {
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
+            publish_counter, bytes_counter, subscribe_counter, latency_histogram,
         }
     }
 }
@@ -55,10 +93,22 @@ impl MemoryMeshTransport {
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
     async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
-        self.inner.publish(topic, message).await
+        let start = Instant::now();
+        let payload_size = message.payload.len() as u64;
+
+        self.publish_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+
+        let res = self.inner.publish(topic, message).await;
+
+        let duration_ms = start.elapsed().as_millis() as u64;
+        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+
+        res
     }
 
     async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
         self.inner.subscribe(topic, handler).await
     }
 
@@ -78,7 +128,6 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.get_active_agents().await
     }
 }
-
 
 #[cfg(test)]
 mod tests {
