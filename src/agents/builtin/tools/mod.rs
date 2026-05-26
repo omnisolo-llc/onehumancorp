@@ -40,6 +40,7 @@ pub mod create_skill;
 pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
+pub mod code_native_python;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -100,6 +101,7 @@ pub fn all_tools(
     working_dir: Option<std::path::PathBuf>,
     memory_accessor: Option<Arc<dyn anthropic_memory::MemoryAccessor>>,
     observation_store: Arc<dashmap::DashMap<String, String>>,
+    native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
@@ -142,6 +144,7 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        code_native_python::native_python_repl_tool(native_env),
     ];
 
     if let Some(accessor) = memory_accessor {

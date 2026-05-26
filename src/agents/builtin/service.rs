@@ -646,6 +646,7 @@ impl AgentServiceImpl {
         working_dir: Option<PathBuf>,
         memory_accessor: Option<Arc<dyn ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor>>,
         observation_store: Arc<dashmap::DashMap<String, String>>,
+        native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
     ) -> Vec<Tool> {
         let todos: SharedTodos = Arc::new(RwLock::new(Vec::<TodoItem>::new()));
         let task_store: SharedTaskStore = Arc::new(RwLock::new(TaskStore::default()));
@@ -658,6 +659,7 @@ impl AgentServiceImpl {
             working_dir,
             memory_accessor,
             observation_store,
+            native_env,
         );
 
 
@@ -709,6 +711,7 @@ impl AgentServiceImpl {
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
         
         let observation_store = Arc::new(dashmap::DashMap::new());
+        let native_env = Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new()));
         let tools = self
             .build_tools(
                 req.toolset_config.as_ref(),
@@ -716,6 +719,7 @@ impl AgentServiceImpl {
                 Some(Self::workspace_path()),
                 None,
                 observation_store.clone(),
+                native_env.clone(),
             )
             .await;
         let mut unarc_agent = Agent::new(llm, tools);
@@ -777,6 +781,7 @@ impl AgentService for AgentServiceImpl {
             mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
+        let native_env = Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new()));
         let tools = self
             .build_tools(
                 task_req.toolset_config.as_ref(),
@@ -784,11 +789,13 @@ impl AgentService for AgentServiceImpl {
                 Some(Self::workspace_path()),
                 accessor,
                 observation_store.clone(),
+                native_env.clone(),
             )
             .await;
 
         let mut unarc_agent = Agent::new(llm, tools);
         unarc_agent.observation_store = observation_store;
+        unarc_agent.native_env = native_env;
         if let Some(wd) = &run_cfg.workspace_path {
             let cp = crate::checkpointer::GitCheckpointer::new(std::path::PathBuf::from(wd));
             unarc_agent = unarc_agent.with_checkpointer(Arc::new(cp));
@@ -1028,6 +1035,7 @@ impl AgentService for AgentServiceImpl {
 
             let observation_store = Arc::new(dashmap::DashMap::new());
 
+            let native_env = Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new()));
             let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
             let tools = self
                 .build_tools(
@@ -1036,10 +1044,12 @@ impl AgentService for AgentServiceImpl {
                     working_dir,
                     None,
                     observation_store.clone(),
+                    native_env.clone(),
                 )
                 .await;
             let mut agent = Agent::new(llm, tools);
             agent.observation_store = observation_store;
+            agent.native_env = native_env;
 
             let mut no_op = |_: AgentEvent| {};
             let result = agent
