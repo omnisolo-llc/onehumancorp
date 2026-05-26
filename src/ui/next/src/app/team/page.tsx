@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
+import BudgetAlert from './components/BudgetAlert';
 
 export type ApprovalRequest = {
   id: string;
@@ -28,6 +29,7 @@ export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [budget, setBudget] = useState<number>(100);
 
   const fetchApprovals = async () => {
     try {
@@ -43,8 +45,21 @@ export default function TeamPage() {
     }
   };
 
+  const fetchBudget = async () => {
+    try {
+      const response = await fetch('/api/agents/approvals/budget');
+      if (response.ok) {
+        const data = await response.json();
+        setBudget(data.budget);
+      }
+    } catch (error) {
+      console.error("Failed to fetch budget", error);
+    }
+  };
+
   useEffect(() => {
     fetchApprovals();
+    fetchBudget();
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -102,6 +117,8 @@ export default function TeamPage() {
           <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Your Team</h1>
           <p className="text-gray-500 text-sm mt-1">Invisible specialized AI teams</p>
         </div>
+
+        <BudgetAlert budget={budget} />
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">

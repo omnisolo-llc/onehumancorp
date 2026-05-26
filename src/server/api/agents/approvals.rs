@@ -34,14 +34,35 @@ pub struct DecisionResponse {
     pub success: bool,
 }
 
+#[derive(Serialize)]
+pub struct BudgetResponse {
+    pub budget: i32,
+}
+
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
         .route("/", get(list_approvals))
+        .route("/budget", get(get_budget))
         .route("/{id}", post(decide_approval))
         .with_state(orchestrator)
+}
+
+async fn get_budget(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(BudgetResponse { budget: 0 })).into_response(),
+    };
+
+    match orchestrator.get_ai_budget(&tenant_id).await {
+        Ok(budget) => (StatusCode::OK, Json(BudgetResponse { budget })).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(BudgetResponse { budget: 0 })).into_response(),
+    }
 }
 
 async fn list_approvals(

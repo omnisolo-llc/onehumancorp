@@ -244,11 +244,13 @@ impl DepartmentOrchestrator {
     }
 
     pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
-
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
-
         throttler.check_and_consume_budget(tenant_id, points).await
+    }
 
+    pub async fn get_ai_budget(&self, tenant_id: &str) -> Result<i32, String> {
+        let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
+        throttler.get_budget(tenant_id).await
     }
 
     pub async fn execute_action(
