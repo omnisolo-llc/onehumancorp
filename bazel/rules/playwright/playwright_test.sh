@@ -72,6 +72,11 @@ mkdir -p "$WORK_DIR/src/server"
 ln -s "$workspace_root/package.json" "$WORK_DIR/package.json"
 ln -s "$workspace_root/package-lock.json" "$WORK_DIR/package-lock.json"
 ln -s "$workspace_root/playwright.config.ts" "$WORK_DIR/playwright.config.ts"
+if [[ ! -d "$workspace_root/node_modules" ]]; then
+  echo "[playwright] Error: node_modules not found in Bazel runfiles at $workspace_root/node_modules"
+  echo "[playwright] Ensure //:node_modules is included in the Playwright test data."
+  exit 1
+fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
 
@@ -92,6 +97,20 @@ done
 ln -s "$workspace_root/src/server/migrations" "$WORK_DIR/src/server/migrations"
 
 cd "$WORK_DIR"
+
+PLAYWRIGHT_CLI="./node_modules/.bin/playwright"
+if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
+  for candidate in "./node_modules/playwright/cli.js" "./node_modules/@playwright/test/cli.js"; do
+    if [[ -x "$candidate" ]]; then
+      PLAYWRIGHT_CLI="$candidate"
+      break
+    fi
+  done
+fi
+if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
+  echo "[playwright] Error: Playwright CLI not found in node_modules"
+  exit 1
+fi
 
 # Check if Docker is available. If not, skip E2E tests gracefully.
 if ! docker info >/dev/null 2>&1; then
@@ -219,7 +238,7 @@ fi
 if [[ -n "$ABS_SPEC_FILE" ]]; then
   spec_base="$(basename "$ABS_SPEC_FILE")"
   echo "[playwright] Validating spec discovery: $spec_base"
-  npx playwright test --config ./playwright.config.ts --list "src/e2e/$spec_base"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "src/e2e/$spec_base"
 
   cat > "$WORK_DIR/src/e2e/__bazel_smoke.spec.ts" <<'EOF'
 import { test, expect } from '@playwright/test';
@@ -232,8 +251,8 @@ test('bazel playwright smoke', async ({ page }) => {
 EOF
 
   echo "[playwright] Running Bazel smoke for: $spec_base"
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/__bazel_smoke.spec.ts"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/__bazel_smoke.spec.ts"
 else
   echo "[playwright] Running all specs on host"
-  npx playwright test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}
 fi

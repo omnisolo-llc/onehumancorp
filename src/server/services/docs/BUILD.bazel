@@ -1,5 +1,28 @@
-filegroup(
-    name = "srcs",
-    srcs = glob(["*.rs"]),
-    visibility = ["//src/server/services:__pkg__"],
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_services_docs",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+        "service_tests.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/proto:docs_tonic",
+        "@crates//:tokio",
+        "@crates//:tonic",
+    ],
+)
+
+rust_test(
+    name = "server_services_docs_unit_test",
+    size = "small",
+    crate = ":server_services_docs",
+    edition = "2024",
 )
