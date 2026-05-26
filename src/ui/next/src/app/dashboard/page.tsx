@@ -787,6 +787,95 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Social Media Discount Share Growth Loop */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Media Discount Share</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col items-start gap-4" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(20px) saturate(200%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(16, 185, 129, 0.3)', backgroundColor: '#ffffff' }}>
+                <p className="text-sm text-gray-600 mb-2 leading-relaxed">
+                    Offer a 10% discount on social media to celebrate your store and drive instant traffic!
+                </p>
+                <button
+                    onClick={async () => {
+                        try {
+                            const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                            const response = await fetch('/api/v1/growth/discount_share/generate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tenant })
+                            });
+                            const data = await response.json();
+                            if (data.share_url) {
+                                const text = encodeURIComponent(`Get 10% off at my store! Shop here: ${data.share_url}`);
+                                window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+                            }
+                        } catch (e) {
+                            console.error('Failed to generate discount share', e);
+                        }
+                    }}
+                    className="px-6 py-3 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                    Share 10% Off on X
+                </button>
+            </div>
+         </section>
+
+
+         {/* Social Media Discount Share Growth Loop */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit text-gray-900">Social Media Discount Share</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col items-start gap-4 bg-white">
+                <p className="text-sm text-gray-600 mb-2 leading-relaxed">
+                    Offer a 10% discount on social media to celebrate your store and drive instant traffic!
+                </p>
+                <button
+                    onClick={async () => {
+                        // Open window synchronously to avoid popup blockers
+                        const newWindow = window.open('', '_blank');
+                        if (!newWindow) {
+                            console.error('Failed to open new window');
+                            return;
+                        }
+                        try {
+                            const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                            const response = await fetch('/api/v1/growth/discount_share/generate', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tenant })
+                            });
+                            const data = await response.json();
+                            if (data.share_url) {
+                                const text = encodeURIComponent(`Get 10% off at my store! Shop here: ${data.share_url}`);
+                                newWindow.location.href = `https://twitter.com/intent/tweet?text=${text}`;
+                            }
+                        } catch (e) {
+                            console.error('Failed to generate discount share', e);
+                            newWindow.close();
+                        }
+                    }}
+                    className="px-6 py-3 bg-black text-white rounded-xl text-sm font-bold shadow-md hover:bg-gray-800 transition-all flex items-center justify-center gap-2 w-full sm:w-auto"
+                >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                    Share 10% Off on X
+                </button>
+            </div>
+         </section>
+
+
          {/* Growth Loop: Interactive Analytics Soft Paywall */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
