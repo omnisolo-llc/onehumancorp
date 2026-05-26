@@ -607,11 +607,10 @@ impl DB {
                         cloud_mission_id TEXT,
                         sync_error TEXT,
                         last_synced_at TIMESTAMP,
-                        synced_to_cloud BOOLEAN DEFAULT false,
+                        synced_to_cloud BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        mission_log TEXT,
-                        organization_id TEXT NOT NULL DEFAULT 'system'
+                        mission_log TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS inbox_messages (

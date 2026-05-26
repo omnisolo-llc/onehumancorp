@@ -1,4 +1,5 @@
 -- Reconstruction of the agent_missions table to persist the STUCK enum constraint safely.
+-- We must retain all critical columns (updated_at, synced_to_cloud, organization_id, etc.).
 
 -- 1. Rename existing table to _temp_agent_missions
 ALTER TABLE agent_missions RENAME TO _temp_agent_missions;
@@ -22,15 +23,16 @@ CREATE TABLE agent_missions (
 );
 
 -- 3. Copy the data back explicitly.
--- We cannot use ADD COLUMN IF NOT EXISTS in SQLite, so we rely on SQLite's weak typing and default values
--- to just insert the core columns that we are 100% sure exist in the older versions of SQLite DBs.
--- The missing columns will get their default values from the CREATE TABLE statement.
+-- We include all critical columns including organization_id.
 INSERT INTO agent_missions (
     id, status, payload, created_at, updated_at, tenant_id, synced_to_cloud, organization_id
 )
 SELECT
-    id, status, payload, created_at, updated_at, tenant_id, synced_to_cloud, 'system'
+    id, status, payload, created_at, updated_at, tenant_id, synced_to_cloud, organization_id
 FROM _temp_agent_missions;
 
 -- 4. Drop the temporary table.
+-- Postgres requires CASCADE due to tenant_isolation_swarm_tasks depending on agent_missions.
+-- But SQLite does not support CASCADE on DROP TABLE.
+-- However, we must provide a SQLite migration as requested.
 DROP TABLE _temp_agent_missions;
