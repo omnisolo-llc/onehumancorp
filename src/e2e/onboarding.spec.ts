@@ -61,7 +61,7 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: /Connect Custom Domain/i }).click();
 
     // Publish
-    await page.getByRole('button', { name: /Publish Now/i }).click();
+    await page.getByRole('button', { name: /Publish my business/i }).click();
 
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
@@ -127,7 +127,7 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: 'Modern' }).click();
 
     // Publish
-    await page.getByRole('button', { name: /Publish Now/i }).click();
+    await page.getByRole('button', { name: /Publish my business/i }).click();
 
     // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
