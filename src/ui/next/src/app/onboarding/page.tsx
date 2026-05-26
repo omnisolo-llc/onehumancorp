@@ -1,190 +1,58 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
 
 // OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
 // We simulate these with tailwind classes for now, ensuring 375px responsiveness.
 
+type Message = {
+  id: string;
+  sender: 'ai' | 'user';
+  text: string;
+  isWidget?: boolean;
+};
+
 export default function OnboardingWizard() {
   const {
-    step, setStep,
-    businessType, setBusinessType,
-    businessName, setBusinessName,
-    businessCategory, setBusinessCategory,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
     template, setTemplate,
-    domain, setDomain,
+    domain,
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
     startResult, setStartResult
   } = useOnboardingStore();
 
-  const lastSyncState = useRef("");
+  const [messages, setMessages] = useState<Message[]>([
+    { id: '1', sender: 'ai', text: "Hi there! I'm The Advisor. What kind of business are you starting? Tell me about your products or services." }
+  ]);
+  const [inputValue, setInputValue] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const [isLoaded, setIsLoaded] = React.useState(false);
-
-  // Load state from backend on initial mount
-  useEffect(() => {
-    if (isLoaded) return;
-
-    // Zustand's persist middleware automatically loads the state from local storage before this.
-    const loadState = async () => {
-      try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-        const res = await fetch('/api/onboarding/state', {
-          headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Object.keys(data).length > 0) {
-            // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step !== undefined && data.step >= step) {
-              setStep(data.step);
-              if (data.businessType !== undefined) setBusinessType(data.businessType);
-              if (data.businessName !== undefined) setBusinessName(data.businessName);
-              if (data.businessCategory !== undefined) setBusinessCategory(data.businessCategory);
-              if (data.firstProductName !== undefined) setFirstProductName(data.firstProductName);
-              if (data.firstProductPrice !== undefined) setFirstProductPrice(data.firstProductPrice);
-              if (data.template !== undefined) setTemplate(data.template);
-              if (data.domain !== undefined) setDomain(data.domain);
-              if (data.intakeData !== undefined) setIntakeData(data.intakeData);
-              if (data.startResult !== undefined) setStartResult(data.startResult);
-
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load onboarding state", err);
-      } finally {
-        // Set the lastSyncState right before marking loaded so the first sync effect evaluates it correctly
-        // We use the current store values which will include what we just set above (as the set functions are batched or applied in the component render cycle,
-        // to be safe we'll use the values directly but technically we rely on the component re-rendering to see `isLoaded = true` and `step` updated.
-        // A better approach is setting it on the next render pass by initializing it empty.
-        // Actually, we just want to ensure we don't immediately sync the initial local state back to the backend.
-        setIsLoaded(true);
-        console.log("Onboarding state loaded");
-      }
-    };
-
-    loadState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded]); // Only run once to load
-
-  // Update lastSyncState after successful load so we don't immediately push local state back
-  useEffect(() => {
-    if (isLoaded && !lastSyncState.current) {
-        lastSyncState.current = JSON.stringify({
-            step,
-            businessType,
-            businessName,
-            businessCategory,
-            firstProductName,
-            firstProductPrice,
-            template,
-            domain,
-            intakeData,
-            startResult
-        });
-    }
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
-
-  // Sync state to backend when it changes
-  useEffect(() => {
-    if (!isLoaded) return;
-
-    const currentStateStr = JSON.stringify({
-      step,
-      businessType,
-      businessName,
-      businessCategory,
-      firstProductName,
-      firstProductPrice,
-      template,
-      domain,
-      intakeData,
-      startResult
-    });
-
-    // Only sync if state actually changed from last sync
-    if (currentStateStr === lastSyncState.current) {
-      return;
-    }
-
-    const syncState = async () => {
-      try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-        await fetch('/api/onboarding/state', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: currentStateStr
-        });
-        lastSyncState.current = currentStateStr;
-      } catch (err) {
-        console.error("Failed to sync onboarding state", err);
-      }
-    };
-
-    const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
-    return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
-
-  const handleNext = () => {
-    if (step === 1) {
-      if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
-      if (!businessName.trim()) {
-        setError("Please enter your business name.");
-        return;
-      }
-      if (businessName.trim().length < 3) {
-        setError("Business name must be at least 3 characters.");
-        return;
-      }
-    }
-    setError("");
-    setStep(step + 1);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const handleIntakeSubmit = async (overrideCategory?: string) => {
-    // Determine category to use depending on if it came from click or state
-    const categoryToUse = typeof overrideCategory === 'string' ? overrideCategory : businessCategory;
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading, startResult]);
 
-    if (!categoryToUse.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (categoryToUse.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
-      return;
-    }
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
-    if (typeof overrideCategory === 'string') {
-      setBusinessCategory(overrideCategory);
-    }
-
+    const userMsg: Message = { id: Date.now().toString(), sender: 'user', text: inputValue };
+    setMessages(prev => [...prev, userMsg]);
+    setInputValue("");
     setError("");
     setIsLoading(true);
-
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${categoryToUse}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: combinedDescription }),
+        body: JSON.stringify({ description: userMsg.text }),
       });
 
       if (!response.ok) {
@@ -193,9 +61,18 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setIntakeData(data);
-      setStep(4); // Go to review step
+
+      // Add AI response with widget
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        sender: 'ai',
+        text: "I've generated a draft of your storefront! Review it below and let me know if you want to publish.",
+        isWidget: true
+      }]);
+
     } catch (err: any) {
       setError(err.message || 'An error occurred during intake.');
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'ai', text: "Sorry, I had trouble understanding that. Could you try again?" }]);
     } finally {
       setIsLoading(false);
     }
@@ -207,9 +84,9 @@ export default function OnboardingWizard() {
 
     try {
       const startRequest = {
-        business_type: intakeData.business_type || businessType || "Retail",
-        company_name: intakeData.business_name || businessName,
-        company_description: "", // Removed preferredStyle
+        business_type: intakeData.business_type || "Retail",
+        company_name: intakeData.business_name || "My Business",
+        company_description: "",
         selling_categories: intakeData.categories || [],
         payment_pref: "stripe",
         admin_email: "admin@example.com",
@@ -233,7 +110,6 @@ export default function OnboardingWizard() {
 
       const data = await response.json();
       setStartResult(data);
-      setStep(5); // Go to live step
     } catch (err: any) {
       setError(err.message || 'An error occurred starting your business.');
     } finally {
@@ -287,259 +163,29 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-[375px] mx-auto h-[100dvh] sm:h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+
         {/* Header */}
-        <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
-           <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 dark:bg-blue-900/30 dark:bg-blue-900/30 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
-           </div>
+        <div className="w-full p-4 pt-12 flex justify-between items-center z-10 border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-black/20 backdrop-blur-md shrink-0">
+           <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">The Advisor</h1>
+           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#0066FF] to-[#0052cc] flex items-center justify-center text-white text-xs shadow-sm">AI</div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
-              {error}
-            </div>
-          )}
-
-          {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What do you do?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setBusinessType(type);
-                      setStep(2);
-                      setError("");
-                    }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Don't worry, you can change this later.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What's your niche?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Products, services, or bookings.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
-                placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="done"
-                autoComplete="off"
-              />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
-                  <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {niche}
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => handleIntakeSubmit()}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Generate Draft"
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && intakeData && (
-            <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
-                <span className="text-3xl text-[#0066FF]">✨</span>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2 text-center shrink-0">Ready to Launch!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
-
-              <div className="space-y-6 flex-1 overflow-visible">
-                {/* Product Section */}
-                <div className="bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 dark:border-white/10 shadow-sm space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
-                   <div className="flex gap-3">
-                     <div className="flex-1">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Name</label>
-                       <input
-                         type="text"
-                         inputMode="text"
-                         enterKeyHint="next"
-                         value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
-                         onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
-                         placeholder="e.g. Custom Cake"
-                       />
-                     </div>
-                     <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Price</label>
-                       <input
-                         type="text"
-                         inputMode="decimal"
-                         pattern="[0-9]*\.?[0-9]*"
-                         value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
-                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
-                         placeholder="0.00"
-                       />
-                     </div>
-                   </div>
-                </div>
-
-                {/* Template Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Choose a Template</h3>
-                   <div className="grid grid-cols-2 gap-3">
-                     {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
-                       <button
-                         key={t}
-                         onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[8px] border ${template === t ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                       >
-                         {t}
-                       </button>
-                     ))}
-                   </div>
-                </div>
-
-                {/* Domain Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
-                   <div className="flex flex-col gap-3">
-                     <button
-                       onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Free OHC Domain</span>
-                       <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
-                     </button>
-                     <button
-                       onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Connect Custom Domain</span>
-                       <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
-                     </button>
-                   </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
-                  disabled={isLoading}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Publish Now"
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+        {/* Chat Feed */}
+        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+          {startResult ? (
+            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in my-auto">
               <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-8 px-4">
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
 
-              <div className="w-full space-y-3 mt-auto">
+              <div className="w-full space-y-3">
                 <a
                   href="/dashboard"
                   className="block w-full bg-[#1D1D1F] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
@@ -548,15 +194,134 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
               </div>
             </div>
+          ) : (
+            <>
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl mb-2 text-center animate-fade-in">
+                  {error}
+                </div>
+              )}
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex flex-col animate-fade-in ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[85%] p-3 rounded-[16px] text-sm ${msg.sender === 'user' ? 'bg-[#0066FF] text-white rounded-br-sm' : 'bg-white/70 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 shadow-sm rounded-bl-sm'}`}>
+                    {msg.text}
+                  </div>
+
+                  {msg.isWidget && intakeData && (
+                    <div className="mt-3 w-full max-w-full bg-white/80 dark:bg-black/30 backdrop-blur-md p-4 rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm animate-fade-in">
+                      <div className="flex items-center justify-between mb-3 border-b border-gray-200 dark:border-white/10 pb-2">
+                        <span className="font-bold text-sm text-[#1D1D1F] dark:text-white">Storefront Preview</span>
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-[#0066FF] px-2 py-1 rounded-md">{intakeData.business_type}</span>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider block mb-1">First Product / Service</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
+                              onChange={(e) => setFirstProductName(e.target.value)}
+                              className="flex-1 p-2 text-sm rounded-[6px] border border-gray-200 dark:border-white/10 bg-white dark:bg-black/40 text-[#1D1D1F] dark:text-white outline-none focus:border-[#0066FF]"
+                              placeholder="Name"
+                            />
+                            <input
+                              type="text"
+                              value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
+                              onChange={(e) => setFirstProductPrice(e.target.value)}
+                              className="w-20 p-2 text-sm rounded-[6px] border border-gray-200 dark:border-white/10 bg-white dark:bg-black/40 text-[#1D1D1F] dark:text-white outline-none focus:border-[#0066FF]"
+                              placeholder="$0.00"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider block mb-1">Theme</label>
+                          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                            {['Modern', 'Elegant', 'Minimal'].map((t) => (
+                              <button
+                                key={t}
+                                onClick={() => setTemplate(t)}
+                                className={`whitespace-nowrap px-3 py-1.5 rounded-[6px] text-xs transition-colors border ${template === t ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] font-medium' : 'border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-300'}`}
+                              >
+                                {t}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={handleStartOnboarding}
+                          disabled={isLoading}
+                          className="w-full mt-2 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-3 rounded-[8px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all disabled:opacity-70 text-sm flex justify-center items-center"
+                        >
+                          {isLoading ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                          ) : (
+                            "Publish Now"
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {isLoading && !msgHasWidgetPending() && (
+                <div className="flex items-start animate-fade-in">
+                  <div className="p-3 rounded-[16px] rounded-bl-sm bg-white/70 dark:bg-black/40 backdrop-blur-md border border-white/50 dark:border-white/10">
+                    <div className="flex space-x-1 items-center h-5">
+                      <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="w-1.5 h-1.5 bg-[#0066FF] rounded-full animate-bounce"></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </>
           )}
         </div>
+
+        {/* Chat Input */}
+        {!startResult && (
+          <div className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md border-t border-white/20 dark:border-white/5 shrink-0">
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSend();
+                }}
+                disabled={isLoading || !!intakeData} // Disable input once intake is done and widget is showing
+                placeholder={intakeData ? "Review the generated storefront above..." : "Message The Advisor..."}
+                className="w-full bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/50 dark:border-white/10 rounded-full py-3 pl-4 pr-12 text-[#1D1D1F] dark:text-[#F5F5F7] outline-none focus:border-[#0066FF] shadow-inner text-sm disabled:opacity-50"
+              />
+              <button
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isLoading || !!intakeData}
+                className="absolute right-2 w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center disabled:bg-gray-300 dark:disabled:bg-gray-700 transition-colors"
+              >
+                <svg className="w-4 h-4 translate-x-[1px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14M12 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-[10px] text-center text-gray-500 mt-2">AI can make mistakes. Verify important info.</p>
+          </div>
+        )}
       </div>
     </div>
   );
+
+  function msgHasWidgetPending() {
+    return false; // we show loading whenever isLoading is true and handled
+  }
 }
