@@ -33,12 +33,12 @@ impl UserRepository for PgUserRepository {
         )
         .bind(&user.id)
         .bind(&user.username)
-        .bind(if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(&user.email) } else { user.email.clone() })
+        .bind(&user.email)
         .bind(&user.password_hash)
         .bind(roles_json) // Using JSON string for simplicity, assuming TEXT or JSONB column
         .bind(user.active)
         .bind(&user.organization_id)
-        .bind(user.oidc_subject.as_ref().map(|s| if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(s) } else { s.clone() }))
+        .bind(&user.oidc_subject)
         .bind(user.created_at)
         .bind(user.updated_at)
         .execute(&mut *tx)
@@ -63,37 +63,18 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        {
-            let raw_email: String = row.get("email");
-            let raw_oidc: Option<String> = row.get("oidc_subject");
-
-            let dec_email = if !::server_config::get().multitenant {
-                crate::crypto::decrypt_deterministic(&raw_email)
-            } else {
-                raw_email
-            };
-
-            let dec_oidc = raw_oidc.map(|s| {
-                if !::server_config::get().multitenant {
-                    crate::crypto::decrypt_deterministic(&s)
-                } else {
-                    s
-                }
-            });
-
-            Ok(User {
-                id: row.get("id"),
-                username: row.get("username"),
-                email: dec_email,
-                password_hash: row.get("password_hash"),
-                roles,
-                active: row.get("active"),
-                organization_id: row.get("organization_id"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-                oidc_subject: dec_oidc,
-            })
-        }
+        Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("organization_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        })
     }
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
@@ -109,37 +90,18 @@ impl UserRepository for PgUserRepository {
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        {
-            let raw_email: String = row.get("email");
-            let raw_oidc: Option<String> = row.get("oidc_subject");
-
-            let dec_email = if !::server_config::get().multitenant {
-                crate::crypto::decrypt_deterministic(&raw_email)
-            } else {
-                raw_email
-            };
-
-            let dec_oidc = raw_oidc.map(|s| {
-                if !::server_config::get().multitenant {
-                    crate::crypto::decrypt_deterministic(&s)
-                } else {
-                    s
-                }
-            });
-
-            Ok(User {
-                id: row.get("id"),
-                username: row.get("username"),
-                email: dec_email,
-                password_hash: row.get("password_hash"),
-                roles,
-                active: row.get("active"),
-                organization_id: row.get("organization_id"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-                oidc_subject: dec_oidc,
-            })
-        }
+        Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("organization_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        })
     }
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
@@ -150,47 +112,23 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let search_email = if !::server_config::get().multitenant {
-            crate::crypto::encrypt_deterministic(email)
-        } else {
-            email.to_string()
-        };
-        let row = sqlx::query(query).bind(&search_email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(email).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        {
-            let raw_email: String = row.get("email");
-            let raw_oidc: Option<String> = row.get("oidc_subject");
-
-            let dec_email = if !::server_config::get().multitenant {
-                crate::crypto::decrypt_deterministic(&raw_email)
-            } else {
-                raw_email
-            };
-
-            let dec_oidc = raw_oidc.map(|s| {
-                if !::server_config::get().multitenant {
-                    crate::crypto::decrypt_deterministic(&s)
-                } else {
-                    s
-                }
-            });
-
-            Ok(User {
-                id: row.get("id"),
-                username: row.get("username"),
-                email: dec_email,
-                password_hash: row.get("password_hash"),
-                roles,
-                active: row.get("active"),
-                organization_id: row.get("organization_id"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-                oidc_subject: dec_oidc,
-            })
-        }
+        Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("organization_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        })
     }
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
@@ -201,47 +139,23 @@ impl UserRepository for PgUserRepository {
         let tenant_id = org_id;
         set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
-        let search_sub = if !::server_config::get().multitenant {
-            crate::crypto::encrypt_deterministic(sub)
-        } else {
-            sub.to_string()
-        };
-        let row = sqlx::query(query).bind(&search_sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
+        let row = sqlx::query(query).bind(sub).fetch_one(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let roles_json: String = row.get("roles");
         let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-        {
-            let raw_email: String = row.get("email");
-            let raw_oidc: Option<String> = row.get("oidc_subject");
-
-            let dec_email = if !::server_config::get().multitenant {
-                crate::crypto::decrypt_deterministic(&raw_email)
-            } else {
-                raw_email
-            };
-
-            let dec_oidc = raw_oidc.map(|s| {
-                if !::server_config::get().multitenant {
-                    crate::crypto::decrypt_deterministic(&s)
-                } else {
-                    s
-                }
-            });
-
-            Ok(User {
-                id: row.get("id"),
-                username: row.get("username"),
-                email: dec_email,
-                password_hash: row.get("password_hash"),
-                roles,
-                active: row.get("active"),
-                organization_id: row.get("organization_id"),
-                created_at: row.get("created_at"),
-                updated_at: row.get("updated_at"),
-                oidc_subject: dec_oidc,
-            })
-        }
+        Ok(User {
+            id: row.get("id"),
+            username: row.get("username"),
+            email: row.get("email"),
+            password_hash: row.get("password_hash"),
+            roles,
+            active: row.get("active"),
+            organization_id: row.get("organization_id"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            oidc_subject: row.get("oidc_subject"),
+        })
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
@@ -258,37 +172,18 @@ impl UserRepository for PgUserRepository {
             let roles_json: String = row.get("roles");
             let roles: Vec<String> = serde_json::from_str(&roles_json).unwrap_or_default();
 
-{
-            let raw_email: String = row.get("email");
-            let raw_oidc: Option<String> = row.get("oidc_subject");
-
-            let dec_email = if !::server_config::get().multitenant {
-                crate::crypto::decrypt_deterministic(&raw_email)
-            } else {
-                raw_email
-            };
-
-            let dec_oidc = raw_oidc.map(|s| {
-                if !::server_config::get().multitenant {
-                    crate::crypto::decrypt_deterministic(&s)
-                } else {
-                    s
-                }
-            });
-
             users.push(User {
                 id: row.get("id"),
                 username: row.get("username"),
-                email: dec_email,
+                email: row.get("email"),
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
                 organization_id: row.get("organization_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
-                oidc_subject: dec_oidc,
+                oidc_subject: row.get("oidc_subject"),
             });
-        }
         }
         Ok(users)
     }
@@ -309,12 +204,12 @@ impl UserRepository for PgUserRepository {
         let res = sqlx::query(query)
             .bind(&user.id)
             .bind(&user.username)
-            .bind(if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(&user.email) } else { user.email.clone() })
+            .bind(&user.email)
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
             .bind(&user.organization_id)
-            .bind(user.oidc_subject.as_ref().map(|s| if !::server_config::get().multitenant { crate::crypto::encrypt_deterministic(s) } else { s.clone() }))
+            .bind(&user.oidc_subject)
             .bind(user.updated_at)
             .fetch_optional(&mut *tx)
             .await
