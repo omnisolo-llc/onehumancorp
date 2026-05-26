@@ -315,7 +315,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessType(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-white/30 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/30 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -355,7 +355,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
                 placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-white/30 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/30 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]"
                 autoFocus
                 enterKeyHint="next"
                 autoComplete="off"
@@ -388,7 +388,7 @@ export default function OnboardingWizard() {
                 onChange={(e) => setBusinessCategory(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
                 placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
+                className="w-full p-4 rounded-[8px] border border-white/30 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/20 dark:bg-black/30 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]"
                 autoFocus
                 enterKeyHint="done"
                 autoComplete="off"
@@ -436,30 +436,31 @@ export default function OnboardingWizard() {
 
               <div className="space-y-6 flex-1 overflow-visible">
                 {/* Product Section */}
-                <div className="bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 dark:border-white/10 shadow-sm space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
+                <div className="bg-white/20 dark:bg-black/30 backdrop-blur-xl p-5 rounded-[16px] border border-white/30 dark:border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] space-y-3">
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
                    <div className="flex gap-3">
                      <div className="flex-1">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Name</label>
+                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Name</label>
                        <input
                          type="text"
                          inputMode="text"
                          enterKeyHint="next"
                          value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
                          onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-white/30 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
                        />
                      </div>
                      <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Price</label>
+                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Price</label>
                        <input
                          type="text"
                          inputMode="decimal"
                          pattern="[0-9]*\.?[0-9]*"
+                         enterKeyHint="done"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
+                         className="w-full p-3 rounded-[8px] border border-white/30 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="0.00"
                        />
                      </div>
@@ -474,7 +475,7 @@ export default function OnboardingWizard() {
                        <button
                          key={t}
                          onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[8px] border ${template === t ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
+                         className={`p-3 rounded-[8px] border transition-all text-sm ${template === t ? 'border-[#0066FF] bg-white/40 dark:bg-white/10 backdrop-blur-xl text-[#0066FF] font-bold shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]' : 'border-white/30 dark:border-white/10 bg-white/20 dark:bg-black/30 backdrop-blur-md text-gray-700 hover:scale-[1.02] active:scale-[0.98]'}`}
                        >
                          {t}
                        </button>
@@ -488,14 +489,14 @@ export default function OnboardingWizard() {
                    <div className="flex flex-col gap-3">
                      <button
                        onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
+                       className={`p-4 rounded-[8px] border flex justify-between items-center transition-all text-sm ${domain === 'free' ? 'border-[#0066FF] bg-white/40 dark:bg-white/10 backdrop-blur-xl text-[#0066FF] font-bold shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]' : 'border-white/30 dark:border-white/10 bg-white/20 dark:bg-black/30 backdrop-blur-md text-gray-700 hover:scale-[1.02] active:scale-[0.98]'}`}
                      >
                        <span>Free OHC Domain</span>
                        <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
                      </button>
                      <button
                        onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
+                       className={`p-4 rounded-[8px] border flex justify-between items-center transition-all text-sm ${domain === 'custom' ? 'border-[#0066FF] bg-white/40 dark:bg-white/10 backdrop-blur-xl text-[#0066FF] font-bold shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]' : 'border-white/30 dark:border-white/10 bg-white/20 dark:bg-black/30 backdrop-blur-md text-gray-700 hover:scale-[1.02] active:scale-[0.98]'}`}
                      >
                        <span>Connect Custom Domain</span>
                        <span className="text-xs opacity-70 font-normal">www.myshop.com</span>

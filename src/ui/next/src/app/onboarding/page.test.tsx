@@ -323,4 +323,47 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
     });
   });
+
+  it('Step 4: verifies selection interaction and glassmorphism classes', async () => {
+    useOnboardingStore.setState({
+      step: 4,
+      intakeData: { initial_products: [{ name: 'Test Product', price: '10.00' }] },
+      template: 'Modern',
+      domain: 'free',
+    });
+
+    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({}) }); // Initial load
+
+    act(() => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(screen.getByText('Ready to Launch!')).toBeInTheDocument();
+    });
+
+    // Check for backdrop-blur-xl class on the Product section container
+    const productSectionHeading = screen.getByText('First Product/Service');
+    const productContainer = productSectionHeading.closest('div');
+    expect(productContainer?.className).toContain('backdrop-blur-xl');
+
+    // Select a different template
+    const elegantBtn = screen.getByRole('button', { name: 'Elegant' });
+    act(() => { elegantBtn.click(); });
+    expect(useOnboardingStore.getState().template).toBe('Elegant');
+
+    // The component should apply the active classes
+    await waitFor(() => {
+      expect(elegantBtn.className).toContain('backdrop-blur-xl');
+      expect(elegantBtn.className).toContain('border-[#0066FF]');
+    });
+
+    // Select custom domain
+    const customDomainBtn = screen.getByRole('button', { name: /Connect Custom Domain/i });
+    act(() => { customDomainBtn.click(); });
+    expect(useOnboardingStore.getState().domain).toBe('custom');
+
+    await waitFor(() => {
+      expect(customDomainBtn.className).toContain('backdrop-blur-xl');
+      expect(customDomainBtn.className).toContain('border-[#0066FF]');
+    });
+  });
 });
