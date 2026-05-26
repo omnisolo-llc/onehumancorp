@@ -92,7 +92,7 @@ jobs:
       - name: Test non-E2E targets
         run: |
           bazelisk test \
-            --config=no-e2e \
+            --test_tag_filters=-e2e,-requires-docker \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
