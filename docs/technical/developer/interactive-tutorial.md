@@ -8,21 +8,27 @@ Welcome to the One Human Corp (OHC) interactive developer tutorial. This guide w
 
 First, define your new persona in the agent registry. This involves updating the provider configurations.
 
-Create a new file in `src/server/agents/` or modify an existing registry file to include your agent's profile:
+Create a new module under `src/agents/builtin/` or extend the relevant orchestration department under `src/server/orchestration/departments/`:
 
-```go
-package agents
+```rust
+#[derive(Debug, Clone)]
+pub struct AgentProfile {
+    pub name: String,
+    pub role: String,
+    pub priority: i32,
+    pub capabilities: Vec<String>,
+}
 
-import "github.com/onehumancorp/ohc/src/server/agents/types"
-
-var QualityAssurancePersona = types.AgentProfile{
-    Name:     "Sentinel",
-    Role:     "qa_engineer",
-    Priority: 1, // P1 Priority
-    Capabilities: []string{
-        "browser_verification",
-        "playwright_execution",
-    },
+pub fn quality_assurance_persona() -> AgentProfile {
+    AgentProfile {
+        name: "Sentinel".to_string(),
+        role: "qa_engineer".to_string(),
+        priority: 1,
+        capabilities: vec![
+            "browser_verification".to_string(),
+            "playwright_execution".to_string(),
+        ],
+    }
 }
 ```
 
@@ -30,16 +36,12 @@ var QualityAssurancePersona = types.AgentProfile{
 
 Every agent requires a main loop to execute its "Think → Act → Observe → Decide" methodology.
 
-```go
-func (a *SentinelAgent) Run(ctx context.Context) error {
-    for {
-        select {
-        case <-ctx.Done():
-            return ctx.Err()
-        case task := <-a.mailbox:
-            a.processTask(ctx, task)
-        }
+```rust
+pub async fn run(mut mailbox: tokio::sync::mpsc::Receiver<Task>) -> Result<(), String> {
+    while let Some(task) = mailbox.recv().await {
+        process_task(task).await?;
     }
+    Ok(())
 }
 ```
 
@@ -47,13 +49,27 @@ func (a *SentinelAgent) Run(ctx context.Context) error {
 
 Your agent must be able to persist its state regardless of the runtime mode (Cloud vs. Standalone).
 
-Use the injected `db.Provider` interface to execute queries:
+Use `crate::db::DB` and branch on `DbStore` when SQL dialects differ:
 
-```go
-// Example SQLite / PostgreSQL fallback execution
-query := `INSERT INTO agent_missions (id, agent_id, status) VALUES ($1, $2, $3)`
-// Note: Ensure the db package translates $1 to ? for SQLite automatically!
-err := a.db.Exec(ctx, query, task.ID, a.id, "IN_PROGRESS")
+```rust
+match &db.store {
+    crate::db::DbStore::Postgres => {
+        sqlx::query("INSERT INTO agent_missions (id, agent_id, status) VALUES ($1, $2, $3)")
+            .bind(&task.id)
+            .bind(&agent_id)
+            .bind("IN_PROGRESS")
+            .execute(&db.pool)
+            .await?;
+    }
+    crate::db::DbStore::Sqlite(pool) => {
+        sqlx::query("INSERT INTO agent_missions (id, agent_id, status) VALUES (?, ?, ?)")
+            .bind(&task.id)
+            .bind(&agent_id)
+            .bind("IN_PROGRESS")
+            .execute(pool)
+            .await?;
+    }
+}
 ```
 
 ## Step 4: Ensure Visual Excellence (Docs/UI)
@@ -72,15 +88,12 @@ If your agent generates documentation or UI templates, it **must** inject the OH
 Before you commit the new agent, ensure it builds hermetically inside the Bazel sandbox.
 
 ```bash
-# Update Go dependencies
-bazelisk run //:gazelle
-
 # Run the test suite
-bazelisk test //src/server/agents/...
+bazelisk test //src/agents/... //src/server/...
 ```
 
 <div style="margin-top: 20px; padding: 15px; border-left: 4px solid #007BFF; background: rgba(0, 123, 255, 0.1);">
-  <strong>Pro Tip:</strong> Ensure that your agent gracefully handles the absence of heavy dependencies (like Redis) by leveraging local memory structures when in Standalone Desktop Mode.
+  <strong>Tip:</strong> Ensure that your agent gracefully handles the absence of heavy dependencies like Redis by using local transport or SQLite-backed state in Standalone Desktop Mode.
 </div>
 
 </div>
