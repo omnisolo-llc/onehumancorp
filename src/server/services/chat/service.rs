@@ -1,6 +1,6 @@
 use tonic::{Request, Response, Status};
-use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::chat_service_server::ChatService;
+use crate::orchestration::*;
+use crate::orchestration::chat_service_server::ChatService;
 use crate::integrations::registry::IntegrationsRegistry;
 
 pub struct MyChatService {
@@ -17,29 +17,29 @@ impl MyChatService {
 impl ChatService for MyChatService {
     async fn test_connection(
         &self,
-        request: Request<::server_ohc::orchestration::ChatTestRequest>,
-    ) -> Result<Response<::server_ohc::orchestration::ChatTestResponse>, Status> {
+        request: Request<crate::orchestration::ChatTestRequest>,
+    ) -> Result<Response<crate::orchestration::ChatTestResponse>, Status> {
         let req = request.into_inner();
         
         match self.registry.test_connection(&req.integration_id, req.clone()) {
-            Ok(_) => Ok(Response::new(::server_ohc::orchestration::ChatTestResponse { success: true })),
+            Ok(_) => Ok(Response::new(crate::orchestration::ChatTestResponse { success: true })),
             Err(e) => Err(Status::invalid_argument(e)),
         }
     }
 
     async fn get_chat_messages(
         &self,
-        request: Request<::server_ohc::orchestration::GetChatMessagesRequest>,
-    ) -> Result<Response<::server_ohc::orchestration::GetChatMessagesResponse>, Status> {
+        request: Request<crate::orchestration::GetChatMessagesRequest>,
+    ) -> Result<Response<crate::orchestration::GetChatMessagesResponse>, Status> {
         let req = request.into_inner();
         let messages = self.registry.chat_messages(&req.integration_id);
-        Ok(Response::new(::server_ohc::orchestration::GetChatMessagesResponse { messages }))
+        Ok(Response::new(crate::orchestration::GetChatMessagesResponse { messages }))
     }
 
     async fn send_chat_message(
         &self,
-        request: Request<::server_ohc::orchestration::ChatSendRequest>,
-    ) -> Result<Response<::server_ohc::orchestration::ChatMessage>, Status> {
+        request: Request<crate::orchestration::ChatSendRequest>,
+    ) -> Result<Response<crate::orchestration::ChatMessage>, Status> {
         let req = request.into_inner();
         
         match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
@@ -59,7 +59,7 @@ mod tests {
         let registry = Arc::new(IntegrationsRegistry::new());
         let service = MyChatService::new(registry);
 
-        let req = Request::new(::server_ohc::orchestration::ChatTestRequest {
+        let req = Request::new(crate::orchestration::ChatTestRequest {
             integration_id: "test-int".to_string(),
             bot_token: "".to_string(),
             chat_id: "".to_string(),
@@ -69,7 +69,7 @@ mod tests {
         let resp = service.test_connection(req).await.unwrap();
         assert!(resp.get_ref().success);
 
-        let req = Request::new(::server_ohc::orchestration::ChatSendRequest {
+        let req = Request::new(crate::orchestration::ChatSendRequest {
             integration_id: "test-int".to_string(),
             channel: "test-chan".to_string(),
             from_agent: "agent-1".to_string(),
@@ -79,7 +79,7 @@ mod tests {
         let resp = service.send_chat_message(req).await.unwrap();
         assert_eq!(resp.get_ref().content, "hello");
 
-        let req = Request::new(::server_ohc::orchestration::GetChatMessagesRequest {
+        let req = Request::new(crate::orchestration::GetChatMessagesRequest {
             integration_id: "test-int".to_string(),
         });
         let resp = service.get_chat_messages(req).await.unwrap();

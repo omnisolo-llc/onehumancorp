@@ -1,5 +1,5 @@
 use std::sync::RwLock;
-use ::server_ohc::orchestration::*;
+use crate::orchestration::*;
 use chrono::Utc;
 
 pub struct IntegrationCredentials {
@@ -11,10 +11,10 @@ pub struct IntegrationCredentials {
 }
 
 pub struct IntegrationsRegistry {
-    messages: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::ChatMessage>>>,
-    instances: RwLock<std::collections::HashMap<String, ::server_ohc::orchestration::IntegrationInstance>>,
-    pull_requests: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::PullRequest>>>,
-    issues: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::Issue>>>,
+    messages: RwLock<std::collections::HashMap<String, Vec<crate::orchestration::ChatMessage>>>,
+    instances: RwLock<std::collections::HashMap<String, crate::orchestration::IntegrationInstance>>,
+    pull_requests: RwLock<std::collections::HashMap<String, Vec<crate::orchestration::PullRequest>>>,
+    issues: RwLock<std::collections::HashMap<String, Vec<crate::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
     nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
@@ -41,7 +41,7 @@ impl IntegrationsRegistry {
         let mut instances = std::collections::HashMap::new();
         for provider in crate::integrations::catalog::get_catalog() {
             let id = provider.metadata.id.clone();
-            instances.insert(id.clone(), ::server_ohc::orchestration::IntegrationInstance {
+            instances.insert(id.clone(), crate::orchestration::IntegrationInstance {
                 id: id.clone(),
                 name: provider.metadata.name.clone(),
                 category: provider.metadata.category.clone(),
@@ -78,20 +78,20 @@ impl IntegrationsRegistry {
     }
 
     // Chat methods
-    pub fn test_connection(&self, integration_id: &str, _creds: ::server_ohc::orchestration::ChatTestRequest) -> Result<(), String> {
+    pub fn test_connection(&self, integration_id: &str, _creds: crate::orchestration::ChatTestRequest) -> Result<(), String> {
         if integration_id.is_empty() {
             return Err("integrationId is required".to_string());
         }
         Ok(())
     }
 
-    pub fn chat_messages(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::ChatMessage> {
+    pub fn chat_messages(&self, integration_id: &str) -> Vec<crate::orchestration::ChatMessage> {
         let msgs = self.messages.read().unwrap();
         msgs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<::server_ohc::orchestration::ChatMessage, String> {
-        let msg = ::server_ohc::orchestration::ChatMessage {
+    pub fn send_chat_message(&self, integration_id: &str, channel: &str, from_agent: &str, content: &str, thread_id: &str) -> Result<crate::orchestration::ChatMessage, String> {
+        let msg = crate::orchestration::ChatMessage {
             id: format!("msg-{}", Utc::now().timestamp()),
             channel: channel.to_string(),
             from_agent: from_agent.to_string(),
@@ -163,19 +163,19 @@ impl IntegrationsRegistry {
     }
 
     // Integration methods
-    pub fn instances(&self) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
+    pub fn instances(&self) -> Vec<crate::orchestration::IntegrationInstance> {
         let insts = self.instances.read().unwrap();
         insts.values().cloned().collect()
     }
 
-    pub fn instances_by_category(&self, category: &str) -> Vec<::server_ohc::orchestration::IntegrationInstance> {
+    pub fn instances_by_category(&self, category: &str) -> Vec<crate::orchestration::IntegrationInstance> {
         let insts = self.instances.read().unwrap();
         insts.values().filter(|i| i.category == category).cloned().collect()
     }
 
-    pub fn connect(&self, integration_id: &str, base_url: &str, creds: ::server_ohc::orchestration::ConnectIntegrationRequest) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn connect(&self, integration_id: &str, base_url: &str, creds: crate::orchestration::ConnectIntegrationRequest) -> Result<crate::orchestration::IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
-        let inst = ::server_ohc::orchestration::IntegrationInstance {
+        let inst = crate::orchestration::IntegrationInstance {
             id: integration_id.to_string(),
             name: integration_id.to_string(),
             category: "default".to_string(),
@@ -280,7 +280,7 @@ impl IntegrationsRegistry {
         Ok(inst)
     }
 
-    pub fn disconnect(&self, integration_id: &str) -> Result<::server_ohc::orchestration::IntegrationInstance, String> {
+    pub fn disconnect(&self, integration_id: &str) -> Result<crate::orchestration::IntegrationInstance, String> {
         let mut insts = self.instances.write().unwrap();
         if let Some(inst) = insts.get_mut(integration_id) {
             inst.status = "disconnected".to_string();
@@ -289,13 +289,13 @@ impl IntegrationsRegistry {
         Err("integration not found".to_string())
     }
 
-    pub fn pull_requests(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::PullRequest> {
+    pub fn pull_requests(&self, integration_id: &str) -> Vec<crate::orchestration::PullRequest> {
         let prs = self.pull_requests.read().unwrap();
         prs.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
-        let pr = ::server_ohc::orchestration::PullRequest {
+    pub fn create_pull_request(&self, integration_id: &str, _repository: &str, title: &str, body: &str, source_branch: &str, target_branch: &str, created_by: &str) -> Result<crate::orchestration::PullRequest, String> {
+        let pr = crate::orchestration::PullRequest {
             id: format!("pr-{}", Utc::now().timestamp()),
             title: title.to_string(),
             body: body.to_string(),
@@ -312,7 +312,7 @@ impl IntegrationsRegistry {
         Ok(pr)
     }
 
-    pub fn merge_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn merge_pull_request(&self, pr_id: &str) -> Result<crate::orchestration::PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -323,7 +323,7 @@ impl IntegrationsRegistry {
         Err("pr not found".to_string())
     }
 
-    pub fn close_pull_request(&self, pr_id: &str) -> Result<::server_ohc::orchestration::PullRequest, String> {
+    pub fn close_pull_request(&self, pr_id: &str) -> Result<crate::orchestration::PullRequest, String> {
         let mut prs = self.pull_requests.write().unwrap();
         for v in prs.values_mut() {
             if let Some(pr) = v.iter_mut().find(|p| p.id == pr_id) {
@@ -334,13 +334,13 @@ impl IntegrationsRegistry {
         Err("pr not found".to_string())
     }
 
-    pub fn issues(&self, integration_id: &str) -> Vec<::server_ohc::orchestration::Issue> {
+    pub fn issues(&self, integration_id: &str) -> Vec<crate::orchestration::Issue> {
         let issues = self.issues.read().unwrap();
         issues.get(integration_id).cloned().unwrap_or_default()
     }
 
-    pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<::server_ohc::orchestration::Issue, String> {
-        let issue = ::server_ohc::orchestration::Issue {
+    pub fn create_issue(&self, integration_id: &str, _project: &str, title: &str, description: &str, created_by: &str, priority: &str, labels: Vec<String>) -> Result<crate::orchestration::Issue, String> {
+        let issue = crate::orchestration::Issue {
             id: format!("issue-{}", Utc::now().timestamp()),
             title: title.to_string(),
             description: description.to_string(),
@@ -358,7 +358,7 @@ impl IntegrationsRegistry {
         Ok(issue)
     }
 
-    pub fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn update_issue_status(&self, issue_id: &str, status: &str) -> Result<crate::orchestration::Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -369,7 +369,7 @@ impl IntegrationsRegistry {
         Err("issue not found".to_string())
     }
 
-    pub fn assign_issue(&self, issue_id: &str, assignee: &str) -> Result<::server_ohc::orchestration::Issue, String> {
+    pub fn assign_issue(&self, issue_id: &str, assignee: &str) -> Result<crate::orchestration::Issue, String> {
         let mut issues = self.issues.write().unwrap();
         for v in issues.values_mut() {
             if let Some(issue) = v.iter_mut().find(|i| i.id == issue_id) {
@@ -759,7 +759,7 @@ mod tests {
     #[tokio::test]
     async fn test_twilio_integration() {
         let registry = IntegrationsRegistry::new();
-        let creds = ::server_ohc::orchestration::ConnectIntegrationRequest {
+        let creds = crate::orchestration::ConnectIntegrationRequest {
             integration_id: "twilio".to_string(),
             base_url: "https://api.twilio.com".to_string(),
             bot_token: "test_sid".to_string(),
