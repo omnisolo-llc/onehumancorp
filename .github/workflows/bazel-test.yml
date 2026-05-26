@@ -33,7 +33,6 @@ jobs:
       - name: Free runner disk space
         run: |
           sudo rm -rf /usr/share/dotnet
-
           sudo rm -rf /opt/ghc
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "/usr/local/share/powershell"
