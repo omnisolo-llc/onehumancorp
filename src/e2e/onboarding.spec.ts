@@ -23,11 +23,11 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // Check chips
-    await expect(page.getByRole('button', { name: 'Online Store' })).toBeVisible();
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
 
-    // Click a preset chip instead of filling
-    await page.getByRole('button', { name: 'Online Store' }).click();
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Step 2
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
@@ -41,9 +41,11 @@ test.describe('Onboarding Wizard', () => {
     // Step 3
     await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
 
-    // Fill in the niche - test clicking a chip
-    await expect(page.getByRole('button', { name: 'Food & Beverage' })).toBeVisible();
-    await page.getByRole('button', { name: 'Food & Beverage' }).click();
+    // Fill in the niche
+    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
+
+    // Click Generate Draft
+    await page.getByRole('button', { name: /Generate Draft/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
@@ -95,8 +97,11 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // Click a preset chip
-    await page.getByRole('button', { name: 'Service Business' }).click();
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
+
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
 
     // Step 2
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();

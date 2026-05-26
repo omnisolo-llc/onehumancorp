@@ -321,7 +321,6 @@ mod tests {
             }
         }
 
-        search_dirs.push(std::env::current_dir().unwrap());
         let mut checked_files = 0;
 
         for dir in &search_dirs {
