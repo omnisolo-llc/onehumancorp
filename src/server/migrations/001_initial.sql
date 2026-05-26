@@ -60,7 +60,9 @@ CREATE TABLE IF NOT EXISTS agent_missions (
     status TEXT NOT NULL,
     payload TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    synced_to_cloud BOOLEAN DEFAULT false
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    synced_to_cloud BOOLEAN DEFAULT false,
+    mission_log TEXT
 );
 
 CREATE TABLE IF NOT EXISTS agent_status (

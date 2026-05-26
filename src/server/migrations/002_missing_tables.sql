@@ -17,6 +17,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ohc_bypassrls;
 
 -- Add missing columns to existing tables
 ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE agent_missions ADD COLUMN IF NOT EXISTS mission_log TEXT;
 
 -- Grant permissions (in a test environment, we might want this role to be powerful)
 -- Note: BYPASSRLS requires superuser or specific attribute which might not be available

@@ -1280,3 +1280,67 @@ mod e2e_tenant_isolation_tests {
         assert_eq!(row.0.unwrap_or_default(), "", "Verified PgPoolOptions handles initialization securely with app.current_tenant reset.");
     }
 }
+
+#[derive(Debug)]
+pub struct AgentMission {
+    pub id: String,
+    pub payload: String,
+    pub status: String,
+}
+
+impl DB {
+    pub async fn get_pending_agent_missions(&self) -> Result<Vec<AgentMission>, Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query("SELECT id, payload, status FROM agent_missions WHERE status = 'PENDING'")
+                    .fetch_all(sqlite_pool)
+                    .await?;
+                let mut missions = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    missions.push(AgentMission {
+                        id: row.try_get("id")?,
+                        payload: row.try_get("payload")?,
+                        status: row.try_get("status")?,
+                    });
+                }
+                Ok(missions)
+            },
+            DbStore::Postgres => {
+                let rows = sqlx::query("SELECT id, payload, status FROM agent_missions WHERE status = 'PENDING'")
+                    .fetch_all(&self.pool)
+                    .await?;
+                let mut missions = Vec::new();
+                for row in rows {
+                    use sqlx::Row;
+                    missions.push(AgentMission {
+                        id: row.try_get("id")?,
+                        payload: row.try_get("payload")?,
+                        status: row.try_get("status")?,
+                    });
+                }
+                Ok(missions)
+            }
+        }
+    }
+
+    pub async fn update_agent_mission_status(&self, id: &str, status: &str) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("UPDATE agent_missions SET status = ? WHERE id = ?")
+                    .bind(status)
+                    .bind(id)
+                    .execute(sqlite_pool)
+                    .await?;
+            },
+            DbStore::Postgres => {
+                sqlx::query("UPDATE agent_missions SET status = $1 WHERE id = $2")
+                    .bind(status)
+                    .bind(id)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+}
