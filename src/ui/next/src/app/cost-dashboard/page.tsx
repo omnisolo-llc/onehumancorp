@@ -74,7 +74,7 @@ export default function CostDashboardPage() {
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Advisory Dashboard</h1>
         <div className="flex gap-2">
-            <button onClick={() => router.push('/plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
+            <button onClick={() => router.push('/my-plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to My Plan
             </button>
         </div>
@@ -95,7 +95,7 @@ export default function CostDashboardPage() {
         {/* Overview Section */}
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div className="flex justify-between items-center mb-6">
-               <h2 className="text-xl font-bold font-outfit text-gray-900">Cost Transparency</h2>
+               <h2 className="text-xl font-bold font-outfit text-gray-900">Cost & AI Usage</h2>
                <span className="text-sm text-gray-500 font-medium">Period: {data?.period_start} to {data?.period_end}</span>
             </div>
 
