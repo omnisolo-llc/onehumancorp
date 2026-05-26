@@ -37,6 +37,125 @@ pub trait IsolationStrategy: Send + Sync {
 pub struct ProcessIsolationStrategy {
 }
 
+pub struct AssistantClassIsolationStrategy {}
+
+impl AssistantClassIsolationStrategy {
+    pub fn new() -> Self {
+        AssistantClassIsolationStrategy {}
+    }
+}
+
+#[async_trait]
+impl IsolationStrategy for AssistantClassIsolationStrategy {
+    async fn run_in_isolation(&self, command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn crate::provider::Transport>>) -> Result<(), String> {
+        let isolation_sandbox_id = format!("sandbox-{}-{}", agent_type, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
+        let task_id = "unknown_task";
+
+        ::server_telemetry::record_bubblewrap_spawn(agent_type, task_id);
+        let start_time = std::time::Instant::now();
+
+        let status_msg = serde_json::json!({
+            "agent":    agent_type,
+            "status":   "RUNNING",
+            "worktree": worktree,
+            "sandbox":  isolation_sandbox_id,
+        });
+
+        if let Some(ref t) = transport {
+            let _ = t.send(status_msg.to_string().as_bytes()).await;
+        }
+
+        let output_msg = serde_json::json!({
+            "agent":   agent_type,
+            "stream":  "stdout",
+            "content": format!("Execution started in isolated worktree {}", worktree),
+        });
+
+        if let Some(ref t) = transport {
+            let _ = t.send(output_msg.to_string().as_bytes()).await;
+        }
+
+        let mut child = tokio::process::Command::new("bash")
+            .arg("-c")
+            .arg(command)
+            .current_dir(worktree)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
+
+        use tokio::io::AsyncBufReadExt;
+
+        let mut stdout_reader = tokio::io::BufReader::new(stdout).lines();
+        let mut stderr_reader = tokio::io::BufReader::new(stderr).lines();
+
+        let tx_stdout_transport = transport.clone();
+        let agent_type_out = agent_type.to_string();
+        let stdout_handle = tokio::spawn(async move {
+            while let Ok(Some(line)) = stdout_reader.next_line().await {
+                let msg = serde_json::json!({
+                    "agent":  agent_type_out,
+                    "stream": "stdout",
+                    "content": line,
+                });
+                if let Some(t) = tx_stdout_transport.as_ref() {
+                    let _ = t.send(msg.to_string().as_bytes()).await;
+                }
+            }
+        });
+
+        let tx_stderr_transport = transport.clone();
+        let agent_type_err = agent_type.to_string();
+        let stderr_handle = tokio::spawn(async move {
+            while let Ok(Some(line)) = stderr_reader.next_line().await {
+                let msg = serde_json::json!({
+                    "agent":  agent_type_err,
+                    "stream": "stderr",
+                    "content": line,
+                });
+                if let Some(t) = tx_stderr_transport.as_ref() {
+                    let _ = t.send(msg.to_string().as_bytes()).await;
+                }
+            }
+        });
+
+        let status = child.wait().await.map_err(|e| {
+            format!("Failed to wait on child: {}", e)
+        })?;
+
+        let _ = stdout_handle.await;
+        let _ = stderr_handle.await;
+
+        let exit_code = status.code().unwrap_or(-1);
+
+        let latency = start_time.elapsed().as_secs_f64() * 1000.0;
+        ::server_telemetry::record_bubblewrap_execution_latency(agent_type, task_id, latency);
+
+        if exit_code == 13 || exit_code == 126 {
+            ::server_telemetry::record_bubblewrap_violation(agent_type, task_id, "permission_denied");
+        }
+
+        let end_msg = serde_json::json!({
+            "agent":  agent_type,
+            "status": if status.success() { "COMPLETED" } else { "ERROR" },
+            "exit_code": exit_code,
+        });
+
+        if let Some(ref t) = transport {
+            let _ = t.send(end_msg.to_string().as_bytes()).await;
+        }
+
+        if !status.success() {
+            return Err(format!("Process exited with status: {}", status));
+        }
+
+        Ok(())
+    }
+}
+
 impl ProcessIsolationStrategy {
     pub fn new() -> Self {
         ProcessIsolationStrategy { }
