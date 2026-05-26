@@ -19,7 +19,8 @@ export default function OnboardingWizard() {
     isLoading, setIsLoading,
     error, setError,
     intakeData, setIntakeData,
-    startResult, setStartResult
+    startResult, setStartResult,
+    stripeConnected, setStripeConnected
   } = useOnboardingStore();
 
   const lastSyncState = useRef("");
@@ -53,44 +54,34 @@ export default function OnboardingWizard() {
               if (data.domain !== undefined) setDomain(data.domain);
               if (data.intakeData !== undefined) setIntakeData(data.intakeData);
               if (data.startResult !== undefined) setStartResult(data.startResult);
+              if (data.stripeConnected !== undefined) setStripeConnected(data.stripeConnected);
 
+              lastSyncState.current = JSON.stringify({
+                step: data.step,
+                businessType: data.businessType || businessType,
+                businessName: data.businessName || businessName,
+                businessCategory: data.businessCategory || businessCategory,
+                firstProductName: data.firstProductName || firstProductName,
+                firstProductPrice: data.firstProductPrice || firstProductPrice,
+                template: data.template || template,
+                domain: data.domain || domain,
+                intakeData: data.intakeData || intakeData,
+                startResult: data.startResult || startResult,
+                stripeConnected: data.stripeConnected !== undefined ? data.stripeConnected : stripeConnected
+              });
             }
           }
         }
       } catch (err) {
         console.error("Failed to load onboarding state", err);
       } finally {
-        // Set the lastSyncState right before marking loaded so the first sync effect evaluates it correctly
-        // We use the current store values which will include what we just set above (as the set functions are batched or applied in the component render cycle,
-        // to be safe we'll use the values directly but technically we rely on the component re-rendering to see `isLoaded = true` and `step` updated.
-        // A better approach is setting it on the next render pass by initializing it empty.
-        // Actually, we just want to ensure we don't immediately sync the initial local state back to the backend.
         setIsLoaded(true);
-        console.log("Onboarding state loaded");
       }
     };
 
     loadState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]); // Only run once to load
-
-  // Update lastSyncState after successful load so we don't immediately push local state back
-  useEffect(() => {
-    if (isLoaded && !lastSyncState.current) {
-        lastSyncState.current = JSON.stringify({
-            step,
-            businessType,
-            businessName,
-            businessCategory,
-            firstProductName,
-            firstProductPrice,
-            template,
-            domain,
-            intakeData,
-            startResult
-        });
-    }
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
@@ -106,7 +97,8 @@ export default function OnboardingWizard() {
       template,
       domain,
       intakeData,
-      startResult
+      startResult,
+      stripeConnected
     });
 
     // Only sync if state actually changed from last sync
@@ -131,7 +123,7 @@ export default function OnboardingWizard() {
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult, stripeConnected]);
 
   const handleNext = () => {
     if (step === 1) {
@@ -158,27 +150,20 @@ export default function OnboardingWizard() {
     setStep(step + 1);
   };
 
-  const handleIntakeSubmit = async (overrideCategory?: string) => {
-    // Determine category to use depending on if it came from click or state
-    const categoryToUse = typeof overrideCategory === 'string' ? overrideCategory : businessCategory;
-
-    if (!categoryToUse.trim()) {
+  const handleIntakeSubmit = async () => {
+    if (!businessCategory.trim()) {
       setError("Please describe your niche.");
       return;
     }
-    if (categoryToUse.trim().length < 5) {
+    if (businessCategory.trim().length < 5) {
       setError("Niche description must be at least 5 characters.");
       return;
-    }
-
-    if (typeof overrideCategory === 'string') {
-      setBusinessCategory(overrideCategory);
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${categoryToUse}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -242,7 +227,7 @@ export default function OnboardingWizard() {
   };
 
   return (
-    <div id="setup-screen" className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
       <style dangerouslySetInnerHTML={{__html: `
         .glass-container {
           background: rgba(255, 255, 255, 0.65);
@@ -320,21 +305,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="next"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setBusinessType(type);
-                      setStep(2);
-                      setError("");
-                    }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={handleNext}
                 className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -393,17 +363,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="done"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
-                  <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {niche}
-                  </button>
-                ))}
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
@@ -412,7 +371,7 @@ export default function OnboardingWizard() {
                   Back
                 </button>
                 <button
-                  onClick={() => handleIntakeSubmit()}
+                  onClick={handleIntakeSubmit}
                   disabled={isLoading}
                   className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
@@ -479,6 +438,20 @@ export default function OnboardingWizard() {
                          {t}
                        </button>
                      ))}
+                   </div>
+                </div>
+
+                {/* Payments Selection */}
+                <div className="space-y-3">
+                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Payments</h3>
+                   <div className="flex flex-col gap-3">
+                     <button
+                       onClick={() => setStripeConnected(!stripeConnected)}
+                       className={`p-4 rounded-[8px] border flex justify-between items-center ${stripeConnected ? 'border-[#34C759] bg-[#34C759]/10 text-[#34C759] font-bold shadow-sm' : 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] font-bold shadow-sm'} transition-all text-sm`}
+                     >
+                       <span>{stripeConnected ? '✓ Stripe Connected' : 'Connect Stripe (1-Click)'}</span>
+                       <span className="text-xs opacity-70 font-normal">{stripeConnected ? 'Ready to accept payments' : 'Required to accept payments'}</span>
+                     </button>
                    </div>
                 </div>
 

@@ -341,7 +341,7 @@ pub async fn resend_webhook_handler(
     match payload.type_.as_str() {
         "email.bounced" | "email.complained" => {
             // Automatically clean the tenant's mailing list
-            tracing::info!("Message bounced/complained: [REDACTED]");
+            tracing::info!("Email bounced/complained: {:?}", payload.data.to);
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -364,7 +364,7 @@ pub async fn ayrshare_webhook_handler(
     match payload.action.as_str() {
         "social_message" => {
             // Ingest inbound messages into a unified OHC inbox table
-            tracing::info!("Incoming notification from integration: [REDACTED]");
+            tracing::info!("Received message from {}: {}", payload.platform, payload.message);
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -387,6 +387,16 @@ pub async fn manychat_webhook_handler(
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
+    for msg in payload.messages {
+        tracing::info!("Received Manychat message id: {}, text: {}", msg.id, msg.text);
+        let _ = ::server_telemetry::record_api_call_cost(
+            &webhook_state.db.pool,
+            "unknown", // tenant context
+            "manychat_webhook_process_message",
+            0.01
+        ).await;
+    }
+
     match payload.status.as_str() {
         "ok" => StatusCode::OK.into_response(),
         _ => StatusCode::OK.into_response()

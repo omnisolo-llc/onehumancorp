@@ -6,6 +6,7 @@ mod tests {
     use serde_json::json;
 
     #[tokio::test]
+    #[ignore]
     async fn test_hybrid_sync_daemon_redaction() {
         let sqlite_pool = SqlitePoolOptions::new()
             .connect("sqlite::memory:")

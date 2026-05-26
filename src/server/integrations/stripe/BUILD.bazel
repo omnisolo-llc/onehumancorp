@@ -4,7 +4,6 @@ filegroup(
         "client.rs",
         "mod.rs",
         "routing.rs",
-        "payout_batcher.rs",
     ],
     visibility = ["//src/server/integrations:__pkg__"],
 )
