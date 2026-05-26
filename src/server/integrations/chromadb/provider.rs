@@ -1,4 +1,4 @@
-use crate::integrations::catalog::{IntegrationProvider, ProviderMetadata};
+use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::env;
 
 pub struct ChromaDbProvider {

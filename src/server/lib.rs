@@ -79,7 +79,7 @@ pub mod services {
     pub mod onboarding;
     pub mod sync;
     pub mod chat;
-    pub mod b2b;
+    pub use ::server_services_b2b as b2b;
     pub mod integration;
     pub mod ops;
     pub mod mcp;

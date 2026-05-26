@@ -1,9 +1,29 @@
-filegroup(
-    name = "srcs",
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "server_tools_local_proxy",
     srcs = [
         "mod.rs",
         "server.rs",
         "tests.rs",
     ],
-    visibility = ["//src/server/tools:__pkg__"],
+    crate_root = "mod.rs",
+    edition = "2024",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/ohc:server_ohc",
+        "@crates//:serde_json",
+        "@crates//:tonic",
+        "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_tools_local_proxy_unit_test",
+    size = "small",
+    crate = ":server_tools_local_proxy",
+    edition = "2024",
+    deps = [
+        "@crates//:tokio",
+    ],
 )

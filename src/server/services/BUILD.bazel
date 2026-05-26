@@ -6,11 +6,9 @@ filegroup(
         "wizard.rs",
         "//src/server/services/agent:srcs",
         "//src/server/services/autodream:srcs",
-        "//src/server/services/b2b:srcs",
         "//src/server/services/billing:srcs",
         "//src/server/services/chat:srcs",
         "//src/server/services/dashboard:srcs",
-        "//src/server/services/docs:srcs",
         "//src/server/services/growth:srcs",
         "//src/server/services/integration:srcs",
         "//src/server/services/mcp:srcs",
@@ -20,5 +18,5 @@ filegroup(
         "//src/server/services/scheduler:srcs",
         "//src/server/services/sync:srcs",
     ],
-    visibility = ["//src/server:__pkg__"]
+    visibility = ["//src/server:__pkg__"],
 )

@@ -3,11 +3,10 @@ filegroup(
     srcs = [
         "ingest_arch.rs",
         "mod.rs",
+        "//src/server/tools/config_sync:srcs",
         "//src/server/tools/fsmcp:srcs",
-        "//src/server/tools/local_proxy:srcs",
         "//src/server/tools/hybridfsmcp:srcs",
         "//src/server/tools/kvmcp:srcs",
-        "//src/server/tools/config_sync:srcs",
     ],
     visibility = ["//src/server:__pkg__"],
 )

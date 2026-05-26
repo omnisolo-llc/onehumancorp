@@ -1,8 +1,20 @@
-filegroup(
-    name = "srcs",
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+rust_library(
+    name = "server_services_b2b",
     srcs = [
         "mod.rs",
         "service.rs",
     ],
-    visibility = ["//src/server/services:__pkg__"],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server/ohc:server_ohc",
+        "@crates//:chrono",
+        "@crates//:tonic",
+    ],
 )

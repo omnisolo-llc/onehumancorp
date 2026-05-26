@@ -73,10 +73,30 @@ rust_library(
         "//src/server/common:server_common",
         "//src/server/config:server_config",
         "//src/server/harness:server_harness",
+        "//src/server/integrations/ayrshare:server_integrations_ayrshare",
+        "//src/server/integrations/cal_com:server_integrations_cal_com",
+        "//src/server/integrations/calendly:server_integrations_calendly",
+        "//src/server/integrations/chromadb:server_integrations_chromadb",
+        "//src/server/integrations/core:server_integrations_core",
+        "//src/server/integrations/easypost:server_integrations_easypost",
+        "//src/server/integrations/jitsi:server_integrations_jitsi",
+        "//src/server/integrations/listmonk:server_integrations_listmonk",
+        "//src/server/integrations/mailchimp:server_integrations_mailchimp",
+        "//src/server/integrations/manychat:server_integrations_manychat",
+        "//src/server/integrations/nats:server_integrations_nats",
+        "//src/server/integrations/pubsub:server_integrations_pubsub",
+        "//src/server/integrations/razorpay:server_integrations_razorpay",
+        "//src/server/integrations/sendgrid:server_integrations_sendgrid",
+        "//src/server/integrations/shippo:server_integrations_shippo",
+        "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
+        "//src/server/integrations/twilio:server_integrations_twilio",
+        "//src/server/integrations/zoom:server_integrations_zoom",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
+        "//src/server/services/b2b:server_services_b2b",
         "//src/server/telemetry:server_telemetry",
+        "//src/server/tools/local_proxy:server_tools_local_proxy",
         "//src/server/utils:server_utils",
         "@crates//:aes-gcm",
         "@crates//:async-nats",
@@ -163,83 +183,60 @@ rust_binary(
     ],
 )
 
-SERVER_LIB_TEST_FILTER_GROUPS = [
-    (
-        "server_lib_core_unit_test",
-        [
-            "analytics",
-            "benchmarks",
-            "builder",
-            "chaos",
-            "db",
-            "domain",
-            "hub",
-            "msgbus",
-            "pipeline",
-            "scheduler",
-            "settings",
-            "tasks",
-            "ultraplan",
-        ],
-    ),
-    (
-        "server_lib_orchestration_unit_test",
-        [
-            "hybrid_sync",
-            "interop",
-            "orchestration",
-            "workers",
-        ],
-    ),
-    (
-        "server_lib_sync_tools_unit_test",
-        [
-            "power_sync",
-            "powersync",
-            "tools::config_sync",
-            "tools::hybridfsmcp",
-        ],
-    ),
-    (
-        "server_lib_api_agents_unit_test",
-        [
-            "agents",
-            "api::growth",
-        ],
-    ),
+SERVER_LIB_TEST_FILTERS = [
+    "agents",
+    "analytics",
+    "api::growth",
+    "benchmarks",
+    "builder",
+    "chaos",
+    "db",
+    "domain",
+    "hub",
+    "hybrid_sync",
+    "interop",
+    "msgbus",
+    "orchestration",
+    "pipeline",
+    "power_sync",
+    "powersync",
+    "scheduler",
+    "settings",
+    "tasks",
+    "tools::config_sync",
+    "tools::hybridfsmcp",
+    "ultraplan",
+    "workers",
 ]
 
-[
-    rust_test(
-        name = name,
-        size = "large",
-        args = filters,
-        crate = ":server_lib",
-        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-        edition = "2024",
-        env = {
-            "RUST_TEST_THREADS": "1",
-        },
-        proc_macro_deps = [
-            "@crates//:async-trait",
-        ],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
-        deps = [
-            "@crates//:serde_json",
-            "@crates//:sqlx",
-            "@crates//:temp-env",
-            "@crates//:tempfile",
-            "@crates//:tokio",
-            "@crates//:tokio-tungstenite",
-            "@crates//:tree-sitter-bash",
-            "@crates//:walkdir",
-        ],
-    )
-    for name, filters in SERVER_LIB_TEST_FILTER_GROUPS
-]
+rust_test(
+    name = "server_lib_unit_test",
+    size = "enormous",
+    args = SERVER_LIB_TEST_FILTERS,
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:tree-sitter-bash",
+        "@crates//:walkdir",
+    ],
+)
 
 # Filtered module targets are useful for local debugging, but each one builds a
 # separate test harness for server_lib. Keep them out of wildcard test runs.
