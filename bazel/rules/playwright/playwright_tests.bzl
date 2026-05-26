@@ -1,9 +1,7 @@
 # playwright_tests.bzl — Generates one sh_test per Playwright spec file.
 #
-# Each *.spec.ts becomes its own Bazel test target, enabling:
-#   - Granular remote caching (only re-run changed specs)
-#   - Integration with `bazel test //...`
-#   - Individual spec execution: `bazel test //src/e2e:playwright_app_spec_ts`
+# Each *.spec.ts becomes its own manual Bazel test target for focused runs.
+# The non-manual `playwright` aggregate is the CI entrypoint.
 
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -12,7 +10,7 @@ def _playwright_target_name(spec):
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
 def define_playwright_tests(specs, data = [], server = None):
-    """Generate one cacheable sh_test per *.spec.ts file, plus a manual sharded aggregate."""
+    """Generate manual per-spec sh_tests plus one sharded CI aggregate."""
     common_data = [
         "//src/e2e:fixtures.ts",
         "//src/e2e:ai-judge.ts",
@@ -45,6 +43,7 @@ def define_playwright_tests(specs, data = [], server = None):
             tags = [
                 "e2e",
                 "exclusive",
+                "manual",
                 "no-remote-exec",
                 "requires-docker",
                 "no-sandbox",
@@ -69,10 +68,10 @@ def define_playwright_tests(specs, data = [], server = None):
         shard_count = 8,  # Parallelize the run across 8 shards
         tags = [
             "e2e",
+            "ui-e2e",
             "no-remote-exec",
             "requires-docker",
             "no-sandbox",
-            "manual",
         ],
         target_compatible_with = select({
             "@platforms//os:linux": [],
