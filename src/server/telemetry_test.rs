@@ -327,7 +327,8 @@ mod tests {
         for dir in &search_dirs {
             if dir.exists() {
                 let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
-                    e.path().components().all(|c| c.as_os_str() != "external")
+                    let path_str = e.path().to_string_lossy();
+                    e.path().components().all(|c| c.as_os_str() != "external") && !path_str.contains("node_modules")
                 });
 
                 for entry in walker

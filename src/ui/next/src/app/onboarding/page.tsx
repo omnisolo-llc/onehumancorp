@@ -60,11 +60,23 @@ export default function OnboardingWizard() {
       } catch (err) {
         console.error("Failed to load onboarding state", err);
       } finally {
-        // Set the lastSyncState right before marking loaded so the first sync effect evaluates it correctly
-        // We use the current store values which will include what we just set above (as the set functions are batched or applied in the component render cycle,
-        // to be safe we'll use the values directly but technically we rely on the component re-rendering to see `isLoaded = true` and `step` updated.
-        // A better approach is setting it on the next render pass by initializing it empty.
-        // Actually, we just want to ensure we don't immediately sync the initial local state back to the backend.
+        // Initialize lastSyncState synchronously *before* marking as loaded so that
+        // the sync effect sees it already populated when `isLoaded` becomes true.
+        // We use the Zustand store's current state directly.
+        const state = useOnboardingStore.getState();
+        lastSyncState.current = JSON.stringify({
+            step: state.step,
+            businessType: state.businessType,
+            businessName: state.businessName,
+            businessCategory: state.businessCategory,
+            firstProductName: state.firstProductName,
+            firstProductPrice: state.firstProductPrice,
+            template: state.template,
+            domain: state.domain,
+            intakeData: state.intakeData,
+            startResult: state.startResult
+        });
+
         setIsLoaded(true);
         console.log("Onboarding state loaded");
       }
@@ -73,24 +85,6 @@ export default function OnboardingWizard() {
     loadState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]); // Only run once to load
-
-  // Update lastSyncState after successful load so we don't immediately push local state back
-  useEffect(() => {
-    if (isLoaded && !lastSyncState.current) {
-        lastSyncState.current = JSON.stringify({
-            step,
-            businessType,
-            businessName,
-            businessCategory,
-            firstProductName,
-            firstProductPrice,
-            template,
-            domain,
-            intakeData,
-            startResult
-        });
-    }
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
