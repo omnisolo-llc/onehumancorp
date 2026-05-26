@@ -187,4 +187,29 @@ sequenceDiagram
 3.  **The "Ah-Ha" Moment (Activation):** The platform's success hinges on the speed between *Onboarding* and *First Transaction*. Any friction here (OAuth, DNS setup, complex layout builders) must be eliminated or deferred until later.
 4.  **Actionable Push Notifications:** Retention relies on bringing the user back via push notifications that require only a 1-tap approval, turning tedious management into an engaging, low-effort habit.
 
+## 3. Platform Architecture Mapping
+
+This section maps the user journeys to the core components of the OHC backend platform.
+
+### 3.1 Multi-Tenant Rust Backend (Data Isolation)
+*   **Maya & Priya:** Product catalogs, inventory counts, and customer interactions are stored in isolated tenant boundaries. Data queries must always derive the tenant ID from the authenticated session (never from client request parameters).
+*   **Carlos:** Booking schedules and quotes are stored within his tenant context, ensuring no cross-contamination of client PII with other tradespeople on the platform.
+
+### 3.2 AI Department Orchestration
+*   **Maya:** The **Promoter Agent** designs her storefront. The **Customer Success Agent** handles IG DMs.
+*   **Carlos:** The **Salesperson Agent** reads client requests and drafts structured quotes for approval.
+*   **Fatima:** The **Promoter Agent** removes image backgrounds and handles Arabic-to-English translation.
+*   *Platform Role:* The centralized AI Dispatcher queues these jobs, manages retries, scores confidence, and presents low-confidence actions to the business owner for 1-tap approval.
+
+### 3.3 Payment & Checkout Layer
+*   **Priya:** Uses Tap-to-Pay (Stripe Terminal) for point-of-sale in-store checkout.
+*   **Carlos & Maya:** Uses deposit links (Stripe Checkout) to secure bookings and orders online.
+*   **Leo:** Uses recurring billing (Stripe Billing) for monthly student lesson packages.
+*   *Platform Role:* The Rust backend must ensure idempotency on all mutations, strictly handle webhooks (with signature verification), and log audits to guarantee zero double-charging.
+
+### 3.4 Plan Enforcement & Billing
+*   **Maya:** Blocked at a 10-product limit on the Free tier. The API responds with a plan enforcement error that the frontend translates into an upsell CTA.
+*   **Carlos:** Attempts to use SMS reminders (Pro feature) and is guided to upgrade.
+*   *Platform Role:* Tier limits are tracked in real-time on the server. The backend actively denies actions outside the plan limits and guides clients to self-serve billing.
+
 [PR: #9774]

@@ -5,6 +5,8 @@ toc:
     path: /docs/technical/index.md
   - title: Architecture
     path: /docs/technical/architecture/index.md
+  - title: Business Journey Architecture
+    path: /docs/architecture/ohc_business_journey_architecture.md
   - title: System Design
     path: /docs/technical/architecture/system-design.md
   - title: Developer Guide

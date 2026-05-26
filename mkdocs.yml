@@ -29,6 +29,7 @@ nav:
   - Home: index.md
   - Chaos Parity Audit: chaos_reports/hybrid_parity_audit.md
   - Architecture:
+      - Business Journey Architecture: architecture/ohc_business_journey_architecture.md
       - KAIROS Master Design: technical/architecture/kairos/master-design-doc.md
       - Hybrid OS Design: technical/architecture/kairos/hybrid-os-design.md
       - Shared Task Mesh Architecture: technical/architecture/kairos/shared-task-mesh-architecture.md
