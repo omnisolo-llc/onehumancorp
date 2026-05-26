@@ -1,6 +1,6 @@
-use sqlx::FromRow;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use sqlx::FromRow;
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
 pub struct Task {
@@ -53,4 +53,17 @@ pub struct AgentMemory {
     pub embedding: Option<Vec<f32>>,
     pub interaction_data: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct Booking {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub product_id: String,
+    pub start_time: DateTime<Utc>,
+    pub end_time: Option<DateTime<Utc>>,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
