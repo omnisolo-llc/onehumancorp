@@ -1,27 +1,41 @@
-# Scout: Tool Integration Research Q4
+# OHC Tool Integration Research Report
+## Q4 Integrations Scout Review
 
-This report evaluates seven critical integrations aimed at solving real-world pain points for small business owners using One Human Corp (OHC) in both Cloud and Standalone environments.
+### Executive Summary
+This report evaluates 7 critical integration categories aimed at solving day-to-day operational problems for small business owners using One Human Corp (OHC). The selected tools abstract technical complexity, allowing business owners to focus on growth and customer satisfaction. All tools evaluated are compatible with both Cloud (multi-tenant) and Standalone local environments.
 
-## 1. Social Media: Meta Graph API (Unified Inbox)
-Small business owners often miss messages scattered across Instagram, Facebook, and WhatsApp. Integrating the Meta Graph API allows OHC to consolidate these channels into a single unified inbox. Users can reply to all messages from one place, ensuring no lead is missed. This requires a standard OAuth flow and webhook processing, which is fully viable in both Cloud and Standalone modes.
+### Tool Comparison Matrix
 
-## 2. Calendar & Scheduling: Cal.com API
-Service-based businesses waste time playing phone tag to book appointments. Integrating Cal.com allows them to generate a branded booking link connected to their Google/Outlook calendar. The API is robust, open-source, and handles timezone complexities efficiently, offering a seamless booking experience that automatically updates their OHC schedule.
+| Category | Recommended Tool | Core Benefit for Business Owner | Ease of Use | Estimated Cost | Mode Compatibility |
+|----------|------------------|---------------------------------|-------------|----------------|--------------------|
+| Social Media | ManyChat | Unified inbox for IG, FB, WhatsApp | High | $15/mo | Cloud / Standalone |
+| Calendar | Cal.com | Zero-friction appointment booking | High | Free - $12/mo | Cloud / Standalone |
+| Email Marketing | Mailchimp | Professional newsletters & sync | High | Free - $13/mo | Cloud / Standalone |
+| Payments | Mercado Pago | Local LATAM payment methods | Medium | Transaction % | Cloud / Standalone |
+| Shipping | EasyPost | One-click rate comparison & labels | High | Pay per postage | Cloud / Standalone |
+| SMS | Twilio | Reliable customer notifications | Medium | Pay per message | Cloud / Standalone |
+| Video | Zoom | Automatic meeting link generation | High | Free - $15/mo | Cloud / Standalone |
 
-## 3. Email Marketing: Resend API
-Traditional email marketing tools are often too complex for simple customer updates (e.g., holiday hours, flash sales). Integrating the Resend API allows users to send simple, plain-text blasts directly from the OHC CRM. It abstracts away DNS complexity (managed by OHC in Cloud mode) and provides an easy-to-use text editor for composing broadcasts.
+### Architectural Integration Flow
 
-## 4. Payment Processing: Mercado Pago
-To capture markets in Latin America, businesses need local payment methods (Pix, OXXO, local installments) that Stripe does not deeply support. Integrating Mercado Pago directly into OHC invoices unlocks these regions, significantly improving checkout conversion rates for LATAM-based small businesses.
+```mermaid
+graph TD;
+    BusinessOwner[Small Business Owner] --> OHC_Dashboard[OHC Dashboard];
 
-## 5. Shipping & Logistics: Shippo API
-E-commerce businesses spend excessive time manually copying addresses to generate shipping labels. Integrating Shippo allows instant rate calculation and label generation directly from an OHC order screen. It provides deep carrier discounts and automates tracking number delivery to the customer.
+    OHC_Dashboard -->|OAuth/API| ManyChat[ManyChat API];
+    OHC_Dashboard -->|Webhooks| CalCom[Cal.com];
+    OHC_Dashboard -->|API| Mailchimp[Mailchimp];
+    OHC_Dashboard -->|API Keys| MercadoPago[Mercado Pago];
+    OHC_Dashboard -->|API| EasyPost[EasyPost];
+    OHC_Dashboard -->|API| Twilio[Twilio];
+    OHC_Dashboard -->|OAuth| Zoom[Zoom];
 
-## 6. SMS & Notifications: Twilio API
-Many customers of small businesses prefer text messages over email. Missed emails lead to no-shows. Integrating Twilio allows OHC to send automated SMS reminders for appointments and order pickups. While A2P 10DLC compliance in the US presents a hurdle, the value in reducing no-shows is massive.
+    ManyChat -->|Customer Messages| UnifiedInbox[Unified Inbox];
+    CalCom -->|New Bookings| Calendar[Calendar View];
+    EasyPost -->|Labels| Orders[Order Management];
+```
 
-## 7. Video Conferencing: Zoom API
-Tutors and consultants waste time manually creating and sending Zoom links. Integrating the Zoom API allows OHC to automatically generate a unique meeting room for every virtual booking. The link is automatically added to the OHC schedule and emailed to the client, providing a completely hands-off experience.
-
-## Next Steps
-The corresponding issue briefs have been added to the `docs/research/` directory. Implementation should prioritize the P0 issues (Meta Integration, Twilio SMS) followed by P1 (Cal.com, Mercado Pago) to deliver immediate value to the core user personas.
+### Strategic Recommendations
+1. **Prioritize ManyChat and Cal.com (P1):** A unified inbox and automated scheduling solve immediate time-drains for service-based businesses.
+2. **Implement EasyPost for E-commerce (P1):** Manual shipping calculations are highly error-prone; automating this is a massive value-add.
+3. **Use OAuth wherever possible:** Business owners struggle with API keys. For tools like Zoom and Mailchimp, a one-click OAuth flow is strictly required for an optimal UX.
