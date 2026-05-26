@@ -318,7 +318,7 @@ export default function OnboardingWizard() {
                 className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
                 autoFocus
                 enterKeyHint="next"
-                autoComplete="off"
+                autoComplete="organization"
               />
               <div className="flex flex-wrap gap-2 mb-6">
                 {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
@@ -449,6 +449,7 @@ export default function OnboardingWizard() {
                          onChange={(e) => setFirstProductName(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="e.g. Custom Cake"
+                autoComplete="off"
                        />
                      </div>
                      <div className="w-24">
@@ -456,11 +457,13 @@ export default function OnboardingWizard() {
                        <input
                          type="text"
                          inputMode="decimal"
+                enterKeyHint="done"
                          pattern="[0-9]*\.?[0-9]*"
                          value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
                          onChange={(e) => setFirstProductPrice(e.target.value)}
                          className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
                          placeholder="0.00"
+                autoComplete="off"
                        />
                      </div>
                    </div>

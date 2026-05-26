@@ -123,6 +123,15 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
       expect(useOnboardingStore.getState().step).toBe(2);
     });
+
+    // Go back to test chip click
+    act(() => { screen.getByRole('button', { name: /Back/i }).click(); });
+    act(() => { screen.getByRole('button', { name: 'Online Store' }).click(); });
+    await waitFor(() => {
+      expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(2);
+      expect(useOnboardingStore.getState().businessType).toBe('Online Store');
+    });
   });
 
   it('Step 2: User enters business name and clicks next', async () => {
@@ -217,6 +226,18 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
       expect(useOnboardingStore.getState().step).toBe(4);
+    });
+
+    // Go back to test chip click
+    act(() => { screen.getByRole('button', { name: /Edit/i }).click(); });
+    act(() => { screen.getByRole('button', { name: 'Food & Beverage' }).click(); });
+    // Generating draft might take a small amount of time since it clicks the chip which calls handleIntakeSubmit
+    (global.fetch as any).mockResolvedValueOnce({ ok: true, json: async () => ({ initial_products: [{ name: 'Food', price: '10' }] }) }); // Intake API again
+    act(() => { screen.getByRole('button', { name: 'Food & Beverage' }).click(); });
+    await waitFor(() => {
+      expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(4);
+      expect(useOnboardingStore.getState().businessCategory).toBe('Food & Beverage');
     });
   });
 
