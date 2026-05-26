@@ -2247,13 +2247,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         ))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
+            { "title": "Getting Started", "desc": "Learn how to easily set up your store and accept your first payment.", "link": "/help/getting-started" },
+            { "title": "My Store", "desc": "Add products, track what's in stock, and change how your store looks.", "link": "/help/my-store" },
+            { "title": "Getting Paid", "desc": "Set up how you get paid, view deposits, and handle simple taxes.", "link": "/help/payments" },
+            { "title": "Your AI Helpers", "desc": "Learn how to hire AI helpers and give them tasks to do.", "link": "/help/ai-agents" },
+            { "title": "Finding Customers", "desc": "Send emails to customers and grow your business easily.", "link": "/help/marketing" },
+            { "title": "Account & Billing", "desc": "View your bills, manage your plan, and invite team members.", "link": "/help/account-billing" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
@@ -2268,16 +2267,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "How to set up your first store easily", "duration": "1:20" },
+            { "id": 2, "title": "Linking your own website name", "duration": "0:45" },
+            { "id": 3, "title": "Getting paid for the first time", "duration": "1:10" },
+            { "id": 4, "title": "Hiring your first AI helper", "duration": "1:05" },
+            { "id": 5, "title": "Adding and editing your products", "duration": "0:55" },
+            { "id": 6, "title": "Sending emails to your customers", "duration": "1:15" },
+            { "id": 7, "title": "Seeing how much you sold", "duration": "0:50" },
+            { "id": 8, "title": "What to do when you get an order", "duration": "1:00" },
+            { "id": 9, "title": "Changing colors and logos", "duration": "1:25" },
+            { "id": 10, "title": "Adding staff to your account", "duration": "0:40" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
