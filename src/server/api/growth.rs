@@ -158,7 +158,7 @@ struct GrowthState {
 }
 
 async fn handle_social_post(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<SocialPostRequest>,
 ) -> impl IntoResponse {
     Json(SocialPostResponse {
@@ -168,7 +168,7 @@ async fn handle_social_post(
 }
 
 async fn handle_generate_review(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<GenerateReviewRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would call an AI provider here.
@@ -184,7 +184,7 @@ async fn handle_generate_review(
 }
 
 async fn handle_send_campaign(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<CampaignRequest>,
 ) -> impl IntoResponse {
     // In a real implementation we would:
@@ -217,7 +217,7 @@ async fn handle_send_campaign(
 }
 
 async fn handle_track_visitor(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
@@ -328,7 +328,7 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> impl IntoResponse {
     let milestones = vec![
         Milestone {
@@ -354,7 +354,7 @@ async fn handle_check_milestones(
 }
 
 async fn handle_get_team_invites(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -380,7 +380,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
@@ -395,7 +395,7 @@ async fn handle_generate_discount_share(
 }
 
 async fn handle_team_invites_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -408,7 +408,7 @@ async fn handle_team_invites_metrics(
 }
 
 async fn handle_onboarding_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
         .fetch_all(&_state.pool).await
@@ -426,7 +426,7 @@ async fn handle_onboarding_metrics(
 }
 
 async fn handle_referral_click(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET clicks = clicks + 1 WHERE id = $1")
@@ -455,7 +455,7 @@ async fn handle_referral_click(
 }
 
 async fn handle_referral_convert(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<ReferralIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     match sqlx::query("UPDATE referrals SET conversions = conversions + 1 WHERE id = $1")
@@ -485,7 +485,7 @@ async fn handle_referral_convert(
 
 
 async fn handle_referral_generate(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
     let ref_code = uuid::Uuid::new_v4().to_string();
@@ -519,7 +519,7 @@ async fn handle_referral_generate(
 }
 
 async fn handle_team_invite_accept(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -543,7 +543,7 @@ async fn handle_team_invite_accept(
 }
 
 async fn handle_create_team_invite(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<()>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
@@ -834,7 +834,7 @@ mod tests {
 }
 
 async fn handle_aggregated_team_invites_metrics(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
     let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
