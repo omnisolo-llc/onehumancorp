@@ -14,19 +14,20 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is currently active and processing tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
+    m.insert("bio-input-tooltip".to_string(), "Tell us what you sell and who your customers are. Keep it simple!".to_string());
+    m.insert("generate-btn-tooltip".to_string(), "Click here to have our AI build your ready-to-launch store.".to_string());
+    m.insert("launch-btn-tooltip".to_string(), "Make your store live on the internet so customers can visit.".to_string());
+    m.insert("team-activity-tooltip".to_string(), "See exactly what your AI helpers are doing right now.".to_string());
+    m.insert("referral-tooltip".to_string(), "Share this link with friends. You earn credits if they sign up!".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI helpers are working hard on your tasks right now.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click here to see tasks that need your approval.".to_string());
+    m.insert("nav-dashboard-tooltip".to_string(), "Check your sales, recent orders, and how your store is doing.".to_string());
+    m.insert("nav-agents-tooltip".to_string(), "See your AI team, give them tasks, or hire new helpers.".to_string());
+    m.insert("nav-setup-tooltip".to_string(), "Set up your business info, logo, and how you get paid.".to_string());
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here for guides, videos, and to ask our AI.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See the latest updates and new features we just added.".to_string());
+    m.insert("stripe-setup-tooltip".to_string(), "Connect your bank account securely with Stripe to start getting paid.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
@@ -2268,16 +2269,16 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::Json(serde_json::json!({"success": true}))
         }))
         .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 1, "title": "Set up your store", "duration": "1:20" },
+            { "id": 2, "title": "Accept your first payment", "duration": "0:45" },
+            { "id": 3, "title": "Activate your AI Support Agent", "duration": "1:15" },
+            { "id": 4, "title": "Add products to your store", "duration": "0:50" },
+            { "id": 5, "title": "Run a marketing campaign", "duration": "1:10" },
+            { "id": 6, "title": "Manage your inventory", "duration": "0:55" },
+            { "id": 7, "title": "View your sales dashboard", "duration": "1:05" },
+            { "id": 8, "title": "Configure shipping rates", "duration": "1:25" },
+            { "id": 9, "title": "Respond to customer reviews", "duration": "0:40" },
+            { "id": 10, "title": "Understand your billing", "duration": "1:00" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![

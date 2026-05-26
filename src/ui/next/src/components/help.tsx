@@ -98,6 +98,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
@@ -188,18 +189,38 @@ export function HelpWidget() {
               <div>
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Help Center</h3>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 border border-gray-200 rounded-xl mb-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                <div className="space-y-2 mb-4">
-                  {filteredArticles.map((a, idx) => (
-                    <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
-                      {a.link ? (
-                        <a href={a.link}><h4 className="font-bold text-gray-800 text-sm hover:underline">{a.title}</h4></a>
-                      ) : (
-                        <h4 className="font-bold text-gray-800 text-sm">{a.title}</h4>
+
+                {/* Topics Grid */}
+                {!activeTopic && !searchQuery && (
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    {['Getting Started', 'My Store', 'Payments', 'AI Agents', 'Marketing', 'Account & Billing'].map((topic) => (
+                      <div key={topic} onClick={() => setActiveTopic(topic)} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300 text-center font-bold text-gray-800 text-xs flex items-center justify-center min-h-[60px]">
+                        {topic}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(searchQuery || activeTopic) && (
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-bold text-gray-700 text-sm">{activeTopic && !searchQuery ? activeTopic : "Search Results"}</h4>
+                      {activeTopic && !searchQuery && (
+                        <button onClick={() => setActiveTopic(null)} className="text-xs text-blue-600 hover:underline">Back to Topics</button>
                       )}
-                      <p className="text-xs text-gray-500 mt-1">{a.desc}</p>
                     </div>
-                  ))}
-                </div>
+                    {filteredArticles.filter(a => !activeTopic || a.title === activeTopic || searchQuery).map((a, idx) => (
+                      <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:border-blue-300">
+                        {a.link ? (
+                          <a href={a.link}><h4 className="font-bold text-gray-800 text-sm hover:underline">{a.title}</h4></a>
+                        ) : (
+                          <h4 className="font-bold text-gray-800 text-sm">{a.title}</h4>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">{a.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <h3 className="font-bold text-gray-900 mb-2 text-md">Interactive Tours</h3>
                 <div className="space-y-2">

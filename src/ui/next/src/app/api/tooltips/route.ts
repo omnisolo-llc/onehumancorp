@@ -12,9 +12,12 @@ export async function GET() {
     "nav-dashboard-tooltip": "Check your sales, recent orders, and how your store is doing.",
     "nav-agents-tooltip": "See your AI team, give them tasks, or hire new helpers.",
     "nav-setup-tooltip": "Set up your business info, logo, and how you get paid.",
-    "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
+    "credit-tooltip": "Earn credits to use on premium tools when you refer a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
     "changelog-nav-tooltip": "See the latest updates and new features we just added.",
-    "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid."
+    "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid.",
+    "todays-sales-tooltip": "Your total sales for today. Check back often to track your progress.",
+    "approval-inbox-tooltip": "Review tasks that your AI agents need permission to execute. Approve or deny them here.",
+    "ask-ai-tooltip": "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you."
   });
 }

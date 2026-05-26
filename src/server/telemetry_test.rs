@@ -332,7 +332,7 @@ mod tests {
 
                 for entry in walker
                     .filter_map(Result::ok)
-                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts"))
+                    .filter(|e| e.path().extension().map_or(false, |ext| ext == "rs" || ext == "go" || ext == "ts") && !e.path().to_string_lossy().contains("node_modules"))
                 {
                     let path_str = entry.path().to_string_lossy();
                     if path_str.contains("telemetry_test.rs") {
