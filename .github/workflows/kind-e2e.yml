@@ -45,6 +45,8 @@ jobs:
           sudo rm -rf /usr/local/graalvm
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/lib/android
 
       - name: Install Kubernetes tools
         run: |
