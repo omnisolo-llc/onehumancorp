@@ -12,7 +12,7 @@ def _playwright_target_name(spec):
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
 def define_playwright_tests(specs, data = [], server = None):
-    """Generate one sh_test target per *.spec.ts file (manual), plus a single sharded sh_test target."""
+    """Generate one sh_test target per *.spec.ts file, plus a test_suite."""
     common_data = [
         "//src/e2e:fixtures.ts",
         "//src/e2e:ai-judge.ts",
@@ -30,6 +30,7 @@ def define_playwright_tests(specs, data = [], server = None):
     if server:
         common_data.append(server)
 
+    targets = []
     for spec in sorted(specs):
         name = _playwright_target_name(spec)
         sh_test(
@@ -48,34 +49,16 @@ def define_playwright_tests(specs, data = [], server = None):
                 "no-remote-exec",
                 "requires-docker",
                 "no-sandbox",
-                "manual",  # Tag manual so it does not run in bazel test //...
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],
                 "//conditions:default": ["@platforms//:incompatible"],
             }),
         )
+        targets.append(":" + name)
 
-    # Define a single sharded test target that runs all specs
-    sh_test(
+    native.test_suite(
         name = "playwright",
-        srcs = ["//bazel/rules/playwright:playwright_test.sh"],
-        data = specs + common_data,
-        env = {
-            "BASE_URL": "http://localhost:18789",
-            "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
-        },
-        size = "large",
-        timeout = "eternal",
-        shard_count = 8,  # Parallelize the run across 8 shards
-        tags = [
-            "e2e",
-            "no-remote-exec",
-            "requires-docker",
-            "no-sandbox",
-        ],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
+        tests = targets,
+        tags = [],
     )

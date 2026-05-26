@@ -108,7 +108,8 @@ mod tests {
     }
 
 
-}
+
+
 
 #[tokio::test]
 async fn test_hybrid_sync_daemon_telemetry_opt_out() {
@@ -259,3 +260,5 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         let status: String = pg_row.get("status");
         assert_eq!(status, "CLOUD_ESCALATION");
     }
+
+}

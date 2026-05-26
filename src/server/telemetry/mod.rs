@@ -23,16 +23,6 @@ static AGENT_API_ERROR: OnceLock<Counter<u64>> = OnceLock::new();
 static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
 static MEETING_EVENT: OnceLock<Counter<u64>> = OnceLock::new();
 static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
-static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-
-pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
-    MCP_TOOL_CALLS_TOTAL.get_or_init(|| {
-        let meter = global::meter("ohc.telemetry");
-        meter.u64_counter("ohc_mcp_tool_calls_total")
-            .with_description("Total number of MCP tool calls")
-            .build()
-    })
-}
 
 pub fn get_token_usage_counter() -> &'static Counter<u64> {
     TOKEN_USAGE.get_or_init(|| {
@@ -219,16 +209,6 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
     })
 }
 
-pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
-    let counter = get_mcp_tool_calls_counter();
-    counter.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
-            opentelemetry::KeyValue::new("status", status.to_string()),
-        ]
-    );
-}
 
 pub fn get_task_processing_latency_histogram() -> &'static Histogram<f64> {
     TASK_PROCESSING_LATENCY.get_or_init(|| {
