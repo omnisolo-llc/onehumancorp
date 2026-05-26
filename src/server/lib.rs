@@ -2244,7 +2244,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "Interactive API reference for integrations.", "link": "/api-docs" }
+            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
