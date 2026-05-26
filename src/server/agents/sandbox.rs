@@ -7,6 +7,8 @@ use tempfile::{tempdir, TempDir};
 use tokio::process::Command as AsyncCommand;
 use tokio::time::timeout;
 use anyhow::{Result, Context, anyhow};
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
+use std::time::Instant;
 
 #[async_trait::async_trait]
 pub trait ExecutionEnvironment: Send + Sync {
@@ -69,12 +71,20 @@ impl LocalEnvironment {
         command.env_remove("GITHUB_TOKEN");
         command.env_remove("OTEL_EXPORTER_OTLP_HEADERS");
 
+        record_bubblewrap_spawn("local_agent", "unknown_task");
+        let start = Instant::now();
         let child = command.output();
 
-        match timeout(timeout_dur, child).await {
+        let result = match timeout(timeout_dur, child).await {
             Ok(output_result) => output_result.context("Failed to execute command"),
-            Err(_) => Err(anyhow!("Command execution timed out")),
-        }
+            Err(_) => {
+                record_bubblewrap_violation("local_agent", "unknown_task", "execution_timeout");
+                Err(anyhow!("Command execution timed out"))
+            },
+        };
+        let latency = start.elapsed().as_secs_f64() * 1000.0;
+        record_bubblewrap_execution_latency("local_agent", "unknown_task", latency);
+        result
     }
 }
 

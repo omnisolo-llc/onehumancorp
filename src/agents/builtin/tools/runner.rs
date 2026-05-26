@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 use async_trait::async_trait;
 use tokio::process::Command;
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency};
+use std::time::Instant;
 use std::sync::OnceLock;
 
 #[async_trait]
@@ -244,7 +246,12 @@ impl CommandRunner for SandboxedCommandRunner {
             for (k, v) in envs {
                 bwrap_cmd.env(k, v);
             }
-            return bwrap_cmd.output().await;
+            record_bubblewrap_spawn("local_agent", "unknown_task");
+            let start = Instant::now();
+            let output = bwrap_cmd.output().await;
+            let latency = start.elapsed().as_secs_f64() * 1000.0;
+            record_bubblewrap_execution_latency("local_agent", "unknown_task", latency);
+            return output;
         }
 
         let mut cmd = Command::new(program);

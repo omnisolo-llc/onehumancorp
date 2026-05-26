@@ -3,6 +3,8 @@ use std::sync::Arc;
 use tokio::process::Command;
 use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig, ViolationEvent};
 use crate::orchestration::sandbox_ask::SandboxAskCallback;
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
+use std::time::Instant;
 
 pub struct LocalSandbox {
     config: SandboxConfig,
@@ -22,6 +24,7 @@ impl OHCSandboxManager for LocalSandbox {
         for deny_dir in &self.config.deny_list_dirs {
             if cmd.contains(deny_dir) {
                 let reason = format!("Command attempts to access deny-listed directory: {}", deny_dir);
+                record_bubblewrap_violation("local_agent", "unknown_task", "deny_listed_directory");
                 if let Some(cb) = &self.callback {
                     if !cb.ask_for_permission(cmd, &reason).await {
                         return Err(ViolationEvent {
@@ -42,6 +45,7 @@ impl OHCSandboxManager for LocalSandbox {
         for disabled_cmd in &self.config.disabled_commands {
             if cmd.contains(disabled_cmd) {
                 let reason = format!("Command attempts to run disabled command: {}", disabled_cmd);
+                record_bubblewrap_violation("local_agent", "unknown_task", "disabled_command");
                 if let Some(cb) = &self.callback {
                     if !cb.ask_for_permission(cmd, &reason).await {
                         return Err(ViolationEvent {
@@ -58,7 +62,9 @@ impl OHCSandboxManager for LocalSandbox {
             }
         }
 
-        match Command::new("sh").arg("-c").arg(cmd).output().await {
+        record_bubblewrap_spawn("local_agent", "unknown_task");
+        let start = Instant::now();
+        let result = match Command::new("sh").arg("-c").arg(cmd).output().await {
             Ok(output) => {
                 if output.status.success() {
                     Ok((true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string()))
@@ -67,7 +73,10 @@ impl OHCSandboxManager for LocalSandbox {
                 }
             }
             Err(e) => Ok((false, "".to_string(), e.to_string())),
-        }
+        };
+        let latency = start.elapsed().as_secs_f64() * 1000.0;
+        record_bubblewrap_execution_latency("local_agent", "unknown_task", latency);
+        result
     }
 }
 

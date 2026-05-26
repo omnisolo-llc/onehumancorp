@@ -6,6 +6,8 @@ use tokio::process::Command;
 use tokio::sync::RwLock;
 use regex::Regex;
 use crate::harness::ASTValidator;
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
+use std::time::Instant;
 
 pub struct ShellSession {
     pub session_id: String,
@@ -52,10 +54,14 @@ impl ShellSession {
     pub fn validate(&self, command: &str) -> Result<(), String> {
         for pattern in &self.blocked_patterns {
             if pattern.is_match(command) {
+                record_bubblewrap_violation("local_agent", "unknown_task", "regex_policy_violation");
                 return Err(format!("command violates security policy: matched {}", pattern));
             }
         }
-        self.ast_validator.validate(command)?;
+        if let Err(e) = self.ast_validator.validate(command) {
+            record_bubblewrap_violation("local_agent", "unknown_task", "ast_policy_violation");
+            return Err(e);
+        }
         Ok(())
     }
 
@@ -129,7 +135,11 @@ impl ShellSession {
             bwrap_cmd.env("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
 
             // We do not override cmd entirely, instead we simply use bwrap_cmd to execute
+            record_bubblewrap_spawn("local_agent", "unknown_task");
+            let start = Instant::now();
             let output = bwrap_cmd.output().await.map_err(|e| e.to_string())?;
+            let latency = start.elapsed().as_secs_f64() * 1000.0;
+            record_bubblewrap_execution_latency("local_agent", "unknown_task", latency);
 
             if let Ok(cwd_bytes) = fs::read(&cwd_snapshot_path).await {
                 let cwd_str = String::from_utf8_lossy(&cwd_bytes).trim().to_string();
