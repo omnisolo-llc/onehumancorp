@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  backdrop-filter: blur(30px) saturate(210%);
+  backdrop-filter: blur(20px) saturate(200%);
   background: rgba(255, 255, 255, 0.03);
   font-family: 'Outfit', 'Inter', sans-serif;
 }

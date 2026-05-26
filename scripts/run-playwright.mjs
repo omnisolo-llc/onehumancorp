@@ -34,8 +34,8 @@ async function main() {
 
   console.log('[run-playwright] Server already built in outer execution');
 
-  const serverBin = process.env.SERVER_BIN || path.join(ROOT, 'bazel-bin/src/server/server');
-  console.log(`[run-playwright] Starting server at ${serverBin}...`);
+  const serverBin = path.join(ROOT, 'bazel-bin/src/server/server');
+  console.log('[run-playwright] Starting server...');
   const server = spawn(serverBin, [], {
     cwd: ROOT,
     stdio: 'inherit',
@@ -54,8 +54,7 @@ async function main() {
   }
 
   try {
-    const args = process.argv.slice(2);
-    await runCommand('npx', ['playwright', 'test', ...args]);
+    await runCommand('npx', ['playwright', 'test']);
   } finally {
     server.kill();
     if (process.env.E2E_SKIP_DOCKER !== 'true') {

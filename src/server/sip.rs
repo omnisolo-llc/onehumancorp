@@ -167,7 +167,7 @@ impl SipDB {
                     Ok(p) => Some(p),
                     Err(_) => {
                         let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "delegate_mission_with_tx").await;
-                        Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                        Some(get_sqlite_limiter().acquire().await.unwrap())
                     }
                 }
             } else {
@@ -197,7 +197,7 @@ impl SipDB {
                         Ok(p) => Some(p),
                         Err(_) => {
                             let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "upsert_mission").await;
-                            Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                            Some(get_sqlite_limiter().acquire().await.unwrap())
                         }
                     }
                 } else {
