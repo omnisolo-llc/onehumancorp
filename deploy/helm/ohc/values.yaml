@@ -1,6 +1,6 @@
 backend:
   image: onehumancorp/server:latest
-  replicas: 3
+  replicas: 1
   headless: false
   service:
     port: 8080
@@ -10,7 +10,7 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
+    minReplicas: 5
     maxReplicas: 200
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
@@ -46,7 +46,7 @@ resourceQuota:
 ohcCore:
   enabled: true
   image: onehumancorp/mono-core:latest
-  replicas: 3
+  replicas: 1
   service:
     port: 18789
   networkPolicy:
@@ -55,7 +55,7 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
+    minReplicas: 5
     maxReplicas: 200
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
@@ -90,7 +90,7 @@ cnpg:
 chatwoot:
   enabled: true
   image: chatwoot/chatwoot:v3.15.1
-  replicas: 3
+  replicas: 1
   service:
     port: 3000
   networkPolicy:
@@ -99,7 +99,7 @@ chatwoot:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 5
+    minReplicas: 3
     maxReplicas: 50
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90
@@ -131,7 +131,7 @@ multiTenant:
 powersync:
   enabled: true
   image: journeyapps/powersync-service:latest
-  replicas: 3
+  replicas: 1
   service:
     type: ClusterIP
     port: 8081
@@ -142,7 +142,7 @@ powersync:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 5
+    minReplicas: 3
     maxReplicas: 50
     targetCPUUtilizationPercentage: 80
     targetMemoryUtilizationPercentage: 90

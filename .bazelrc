@@ -5,7 +5,7 @@ build --config=remote
 build:remote --config=buildbuddy
 
 # ── Default: local builds/tests ───────────────────────────────────────────────
-build --jobs=HOST_CPUS
+build --jobs=8
 # Keep local CPU slots low so large local Rust actions do not oversubscribe RAM.
 build --local_resources=cpu=HOST_CPUS*.8
 build --local_resources=memory=HOST_CPUS*.8
@@ -63,7 +63,7 @@ test --build_tests_only
 # the Docker-backed Playwright E2E targets along with unit and integration tests.
 test --test_timeout=60,120,300,600
 # Limit concurrent local test jobs to prevent disk exhaustion on CI runners.
-test --local_test_jobs=HOST_CPUS
+test --local_test_jobs=4
 
 # ── Stream test output for debugging (use --config=verbose) ───────────────────
 test:verbose --test_output=streamed
