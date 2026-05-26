@@ -5083,7 +5083,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                     // Show builder screen directly
                                     showScreen('storefront-builder-screen');
-                                        renderStorefrontPreview(); // Wait for the "generating" animation
+                                    renderStorefrontPreview(); // Wait for the "generating" animation
                                 } else {
                                     nextStep('launch-ai');
                                 }
