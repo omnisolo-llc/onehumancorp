@@ -431,7 +431,20 @@ async fn http_login_handler(
     let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let issued_at = chrono::Utc::now().timestamp();
     let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "e2e-local-jwt-secret-change-me-32-bytes".to_string());
+        .unwrap_or_else(|_| {
+            if ::server_config::get().multitenant {
+                panic!("JWT_SECRET must be set in Cloud/Multitenant Mode to ensure secure access token management.");
+            }
+            let secret_path = std::path::Path::new(".ohc_jwt_secret");
+            if secret_path.exists() {
+                if let Ok(bytes) = std::fs::read_to_string(secret_path) {
+                    if bytes.len() >= 32 {
+                        return bytes.trim().to_string();
+                    }
+                }
+            }
+            panic!("JWT_SECRET or valid .ohc_jwt_secret must be present for token verification");
+        });
     let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
