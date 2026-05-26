@@ -96,3 +96,45 @@ P1
 
 ## Estimated Scope
 Medium
+
+### Data Model & Invariants
+- **Data Entities:**
+  - `VoiceSession`: Stores transcript fragments, confidence scores, and raw audio blob references.
+  - `VoiceIntent`: Links a resolved intent to the corresponding downstream entity (e.g., `LedgerEntry` or `InventoryDelta`).
+- **Invariants:**
+  - A `VoiceSession` must exclusively belong to a single `TenantID`.
+  - Transcripts must be scrubbed of PII before persisting for analytics.
+
+### ER Diagram (Mermaid.js)
+```mermaid
+erDiagram
+    TENANT ||--o{ VOICE_SESSION : creates
+    VOICE_SESSION ||--|| VOICE_INTENT : parses_to
+    VOICE_INTENT ||--o{ ACTION_LOG : executes
+
+    TENANT {
+        string id
+        string name
+    }
+    VOICE_SESSION {
+        string session_id
+        string transcript
+        float confidence_score
+    }
+    VOICE_INTENT {
+        string intent_type
+        json extracted_entities
+    }
+    ACTION_LOG {
+        string target_entity_id
+        string status
+    }
+```
+
+### Zero Trust & Security
+- **Multi-Tenant Isolation:** Every voice session initialization must be accompanied by a tenant-scoped JWT. The Voice Engine API drops requests without an active, verified `tenant_id`.
+- **SPIFFE/SPIRE Identity:** The Intent Routing Agent and internal processing pipelines authenticate with downstream AI departments (e.g., Finance, Operations) using dynamically issued SPIFFE/SPIRE certificates, ensuring that an impersonated or hijacked voice payload cannot arbitrarily escalate privileges across the internal mesh.
+
+### Offline & Performance Targets
+- **Performance:** End-to-end latency (voice activation to audio success chime) must be under 800ms.
+- **Offline Capability:** If the device loses connection, the Voice Mesh must locally queue compressed audio payloads using the device's secure enclave storage. It will seamlessly flush the queue to the STT API upon reconnection, triggering asynchronous intent execution without requiring the user to remain on the screen.
