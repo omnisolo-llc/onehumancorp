@@ -74,15 +74,14 @@ impl OnboardingAgent {
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) \
-             VALUES ($1, $2, $3, $4, $5) \
-             ON CONFLICT (tenant_id, organization_id) DO UPDATE \
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
+             VALUES ($1, $2, $3, $4) \
+             ON CONFLICT (tenant_id, user_id) DO UPDATE \
              SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
-        .bind(tenant_id) // using tenant_id as organization_id for simplicity as auth_utils expect it
         .bind(user_id)
         .bind(current_step)
         .bind(state_json)
@@ -312,9 +311,8 @@ impl OnboardingAgent {
         let flags_json = serde_json::Value::Object(flags);
 
         sqlx::query(
-            "INSERT INTO onboarding_state (tenant_id, organization_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4, $5)"
+            "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) VALUES ($1, $2, $3, $4)"
         )
-        .bind(&org_id)
         .bind(&org_id)
         .bind(&user_id)
         .bind(1)
