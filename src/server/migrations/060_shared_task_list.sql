@@ -12,3 +12,4 @@ SELECT
 FROM shared_tasks_v4;
 
 -- Trigger CI rebuild
+-- Trigger CI
