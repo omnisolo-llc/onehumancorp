@@ -17,7 +17,7 @@ pub struct IntegrationsRegistry {
     issues: RwLock<std::collections::HashMap<String, Vec<::server_ohc::orchestration::Issue>>>,
     credentials: RwLock<std::collections::HashMap<String, IntegrationCredentials>>,
     twilio_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::twilio::provider::TwilioProvider>>>,
-    nats_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::nats::provider::NatsProvider>>>>,
+    jitsi_clients: std::sync::Arc<std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>>,
     meta_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::meta::provider::MetaProvider>>>,
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
@@ -56,7 +56,7 @@ impl IntegrationsRegistry {
             issues: RwLock::new(std::collections::HashMap::new()),
             credentials: RwLock::new(std::collections::HashMap::new()),
             twilio_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            nats_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            jitsi_clients: std::sync::Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
             meta_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -196,13 +196,12 @@ impl IntegrationsRegistry {
         }
         if integration_id == "nats" {
             let base_url_clone = base_url.to_string();
-            let nats_clients = std::sync::Arc::clone(&self.nats_clients);
+            let jitsi_clients = std::sync::Arc::clone(&self.jitsi_clients);
             let integration_id_clone = integration_id.to_string();
             tokio::spawn(async move {
-                if let Ok(provider) = crate::integrations::nats::provider::NatsProvider::new(&base_url_clone).await {
-                    let mut clients = nats_clients.write().unwrap();
+                let provider = crate::integrations::jitsi::provider::JitsiProvider::new(base_url_clone);
+                    let mut clients = jitsi_clients.write().unwrap();
                     clients.insert(integration_id_clone, std::sync::Arc::new(provider));
-                }
             });
         }
         if integration_id == "meta" {
@@ -594,21 +593,6 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.send_campaign(list_id, template_id, subject, body).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_payment(amount, description, payer_email).await;
         }
         Err("integration not found or not supported".to_string())
     }
