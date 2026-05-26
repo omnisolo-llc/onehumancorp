@@ -697,6 +697,11 @@ impl AgentServiceImpl {
                 ohc_builtin_agent_tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
                     .await;
             tools.append(&mut mcp_tools);
+
+            let plugin_dir = std::env::var("OHC_CLAUDE_CODE_PLUGINS_DIR").unwrap_or_else(|_| ".claude-code-plugins".to_string());
+            let mut plugin_tools = ohc_builtin_agent_tools::claude_code_plugins::load_claude_code_plugins(&plugin_dir, std::sync::Arc::new(ohc_builtin_agent_tools::runner::SandboxedCommandRunner::new(None))).await;
+            tools.append(&mut plugin_tools);
+
         }
 
         tools

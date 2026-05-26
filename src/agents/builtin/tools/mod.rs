@@ -35,6 +35,7 @@ pub mod generative_visibility;
 pub mod magentic;
 pub mod recall;
 pub mod mcp_dynamic;
+pub mod claude_code_plugins;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;

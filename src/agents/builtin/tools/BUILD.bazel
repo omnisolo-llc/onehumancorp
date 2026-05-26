@@ -19,6 +19,7 @@ rust_library(
         "magentic.rs",
         "marketing.rs",
         "mcp_dynamic.rs",
+        "claude_code_plugins.rs",
         "mod.rs",
         "marketplace.rs",
         "marketplace_tool.rs",
