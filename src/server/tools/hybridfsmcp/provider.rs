@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf, Component};
+use std::path::PathBuf;
 use std::io;
 
 #[async_trait::async_trait]
@@ -9,51 +9,21 @@ pub trait FileSystemProvider: Send + Sync {
     async fn search_files(&self, path: &str, query: &str) -> io::Result<Vec<String>>;
 }
 
-fn normalize_path(path: &Path) -> PathBuf {
-    let mut normalized = PathBuf::new();
-    for component in path.components() {
-        match component {
-            Component::ParentDir => {
-                normalized.pop();
-            }
-            Component::Normal(c) => {
-                normalized.push(c);
-            }
-            Component::RootDir => {
-                normalized.push(Component::RootDir);
-            }
-            Component::Prefix(prefix) => {
-                normalized.push(Component::Prefix(prefix));
-            }
-            Component::CurDir => {}
-        }
-    }
-    normalized
-}
-
 pub struct BaseFSProvider {
     root_dir: PathBuf,
 }
 
 impl BaseFSProvider {
-    fn resolve_path(&self, path_str: &str) -> io::Result<PathBuf> {
-        let path = Path::new(path_str);
-        // Prevent absolute path bypassing
-        let path = if path.is_absolute() {
-            path.strip_prefix("/").unwrap_or(path)
-        } else {
-            path
-        };
-
+    fn resolve_path(&self, path: &str) -> io::Result<PathBuf> {
         let full_path = self.root_dir.join(path);
-        let normalized = normalize_path(&full_path);
-        let root_normalized = normalize_path(&self.root_dir);
+        let canonical_root = self.root_dir.canonicalize().unwrap_or_else(|_| self.root_dir.clone());
+        let canonical_path = full_path.canonicalize().unwrap_or_else(|_| full_path.clone());
 
-        if !normalized.starts_with(&root_normalized) {
+        if !canonical_path.starts_with(&canonical_root) {
             return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path out of bounds"));
         }
 
-        Ok(normalized)
+        Ok(full_path)
     }
 }
 

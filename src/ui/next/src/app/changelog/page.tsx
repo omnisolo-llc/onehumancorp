@@ -4,7 +4,7 @@ import path from 'path';
 
 export default function ChangelogPage() {
   // Fix the path to point to root correctly
-  const changelogPath = path.join(process.cwd(), '..', '..', '..', 'CHANGELOG.md');
+  const changelogPath = path.join(process.cwd(), '../../../CHANGELOG.md');
   let changelogContent = '';
   try {
     changelogContent = fs.readFileSync(changelogPath, 'utf8');

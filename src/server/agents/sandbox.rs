@@ -8,16 +8,11 @@ use tokio::process::Command as AsyncCommand;
 use tokio::time::timeout;
 use anyhow::{Result, Context, anyhow};
 
-#[async_trait::async_trait]
-pub trait ExecutionEnvironment: Send + Sync {
-    async fn execute_context(&self, command: String, work_dir: String) -> Result<String, anyhow::Error>;
-}
-
-pub struct LocalEnvironment {
+pub struct SandboxManager {
     dir: TempDir,
 }
 
-impl LocalEnvironment {
+impl SandboxManager {
     pub fn new() -> Result<Self> {
         let dir = tempdir().context("Failed to create temp directory for sandbox")?;
 
@@ -34,20 +29,10 @@ impl LocalEnvironment {
     pub fn dir_path(&self) -> &std::path::Path {
         self.dir.path()
     }
-}
 
-#[async_trait::async_trait]
-impl ExecutionEnvironment for LocalEnvironment {
-    async fn execute_context(&self, command: String, work_dir: String) -> Result<String, anyhow::Error> {
-        self.execute(&command, &work_dir, Duration::from_secs(30)).await
-            .map(|out| String::from_utf8_lossy(&out.stdout).to_string())
-    }
-}
-
-impl LocalEnvironment {
-    pub async fn execute(&self, cmd: &str, work_dir: &str, timeout_dur: Duration) -> Result<Output> {
+    pub async fn execute(&self, cmd: &str, timeout_dur: Duration) -> Result<Output> {
         // Wrap command for Bash execution to disable extended globs
-        let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; cd '{}'; {}", work_dir, cmd);
+        let wrapped_cmd = format!("shopt -u extglob 2>/dev/null || true; {}", cmd);
 
         let dir_str = self.dir.path().to_str()
             .ok_or_else(|| anyhow!("Failed to convert temp dir path to string"))?;
@@ -57,17 +42,6 @@ impl LocalEnvironment {
 
         // Force TMPDIR to sandbox directory
         command.env("TMPDIR", dir_str);
-
-        // Override HOME to temporary directory for isolation
-        let home_dir = self.dir.path().join(".agent-home");
-        fs::create_dir_all(&home_dir).unwrap_or_default();
-        command.env("HOME", home_dir.to_str().unwrap_or(dir_str));
-
-        // Scrub sensitive environment variables
-        command.env_remove("OHC_API_KEY");
-        command.env_remove("GH_TOKEN");
-        command.env_remove("GITHUB_TOKEN");
-        command.env_remove("OTEL_EXPORTER_OTLP_HEADERS");
 
         let child = command.output();
 
@@ -85,51 +59,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_execute_tmpdir() {
-        let sm = LocalEnvironment::new().unwrap();
-        let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let output = sm.execute_context("echo $TMPDIR".to_string(), work_dir).await.unwrap();
+        let sm = SandboxManager::new().unwrap();
+        let output = sm.execute("echo $TMPDIR", Duration::from_secs(5)).await.unwrap();
 
-        assert_eq!(output.trim(), sm.dir_path().to_str().unwrap());
+        let result = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        assert_eq!(result, sm.dir_path().to_str().unwrap());
     }
 
     #[tokio::test]
     async fn test_sandbox_execute_shopt() {
-        let sm = LocalEnvironment::new().unwrap();
-        let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let output = sm.execute_context("shopt | grep extglob".to_string(), work_dir).await.unwrap();
+        let sm = SandboxManager::new().unwrap();
+        let output = sm.execute("shopt | grep extglob", Duration::from_secs(5)).await.unwrap();
 
-        assert!(output.contains("extglob\toff") || output.contains("extglob        \toff") || output.contains("extglob\t off") || output.contains("extglob") && output.contains("off"));
+        let result = String::from_utf8_lossy(&output.stdout).to_string();
+        assert!(result.contains("extglob\toff") || result.contains("extglob        \toff") || result.contains("extglob\t off") || result.contains("extglob") && result.contains("off"));
     }
 
     #[tokio::test]
     async fn test_sandbox_execute_timeout() {
-        let sm = LocalEnvironment::new().unwrap();
-        let work_dir = sm.dir_path().to_str().unwrap().to_string();
-        let result = sm.execute("sleep 1", &work_dir, Duration::from_millis(10)).await;
+        let sm = SandboxManager::new().unwrap();
+        let result = sm.execute("sleep 1", Duration::from_millis(10)).await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "Command execution timed out");
-    }
-
-    #[tokio::test]
-    async fn test_sandbox_environment_scrubbing() {
-        let sm = LocalEnvironment::new().unwrap();
-        let work_dir = sm.dir_path().to_str().unwrap().to_string();
-
-        let output = sm.execute_context("echo ${GITHUB_TOKEN:-not_found}".to_string(), work_dir).await.unwrap();
-
-        // It should output not_found because the environment variable is stripped out from the command context
-        assert_eq!(output.trim(), "not_found");
-    }
-
-    #[tokio::test]
-    async fn test_sandbox_home_override() {
-        let sm = LocalEnvironment::new().unwrap();
-        let work_dir = sm.dir_path().to_str().unwrap().to_string();
-
-        let output = sm.execute_context("echo $HOME".to_string(), work_dir).await.unwrap();
-
-        let expected_home = sm.dir_path().join(".agent-home");
-        assert_eq!(output.trim(), expected_home.to_str().unwrap());
     }
 }

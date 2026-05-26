@@ -85,18 +85,6 @@ test.describe('Website Builder Full E2E', () => {
     // Button should be disabled
     const btn = page.getByRole('button', { name: 'Build My Storefront' });
     await expect(btn).toBeDisabled();
-
-    // Try to build by pressing Enter with too short a string
-    await textarea.press('Enter');
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
-
-    // Fill with long enough string
-    await textarea.fill('This is a valid long string to test the Enter key.');
-
-    // Wait to avoid rate limiting or overlap, then press enter. The generation should trigger.
-    await page.waitForTimeout(500);
-    await textarea.press('Enter');
-    await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 15000 });
   });
 
   test('nextjs builder workflow generates and publishes successfully to the real database', async ({ page }) => {

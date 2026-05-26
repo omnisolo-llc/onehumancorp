@@ -85,15 +85,6 @@ async fn test_shared_task_orchestrator_sqlite() {
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
-
-        CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
-        );
         "#
     )
     .execute(&pool)
@@ -156,15 +147,6 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
             dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS state_machine_transitions (
-            id TEXT PRIMARY KEY,
-            task_id TEXT,
-            from_state TEXT,
-            to_state TEXT,
-            agent_id TEXT,
-            transitioned_at TEXT
         );
         "#
     )

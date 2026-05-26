@@ -137,21 +137,6 @@ impl SharedTaskOrchestrator {
                     .await
                     .map_err(|e| e.to_string())?;
 
-                    let trans_id = uuid::Uuid::new_v4().to_string();
-                    sqlx::query(
-                        r#"
-                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                        VALUES ($1, $2, 'PENDING', 'ASSIGNED', $3, $4)
-                        "#
-                    )
-                    .bind(trans_id)
-                    .bind(&task_id)
-                    .bind(agent_id)
-                    .bind(Utc::now())
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
                     tx.commit().await.map_err(|e| e.to_string())?;
 
                     Ok(Some(SharedTaskV4 {
@@ -207,21 +192,6 @@ impl SharedTaskOrchestrator {
                     .bind(agent_id)
                     .bind(Utc::now().to_rfc3339())
                     .bind(&task_id)
-                    .execute(&mut *tx)
-                    .await
-                    .map_err(|e| e.to_string())?;
-
-                    let trans_id = uuid::Uuid::new_v4().to_string();
-                    sqlx::query(
-                        r#"
-                        INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
-                        VALUES (?, ?, 'PENDING', 'ASSIGNED', ?, ?)
-                        "#
-                    )
-                    .bind(trans_id)
-                    .bind(&task_id)
-                    .bind(agent_id)
-                    .bind(Utc::now().to_rfc3339())
                     .execute(&mut *tx)
                     .await
                     .map_err(|e| e.to_string())?;
