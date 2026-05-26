@@ -107,6 +107,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
     }
 
     pub async fn parse_with_prompt(&self, req: ChatRequest, max_retries: usize) -> Result<T, ToolError> {
+        let max_retries = std::cmp::min(max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
         let mut current_req = req.clone();
 
         // Inject the schema as a tool definition to encourage the model to use tool_calls API
@@ -185,7 +186,8 @@ pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
 ) -> Result<T, ToolError> {
     let parser = Box::new(StructuredOutputParser::<T>::new());
     let retry_parser = RetryWithErrorOutputParser::new(parser, llm.clone());
-    retry_parser.parse_with_prompt(req, max_retries).await
+    let clamped_retries = std::cmp::min(max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+    retry_parser.parse_with_prompt(req, clamped_retries).await
 }
 
 #[cfg(test)]
@@ -310,7 +312,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 5).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Failed to parse output as valid JSON"));
@@ -357,7 +359,7 @@ mod tests {
         });
 
         let req = create_test_req();
-        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 2).await;
+        let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 5).await;
         assert!(result.is_err());
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Failed to parse tool call arguments"));
