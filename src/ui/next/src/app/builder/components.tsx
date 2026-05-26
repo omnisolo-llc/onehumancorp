@@ -142,9 +142,28 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Catalog") {
     return (
       <div className="p-6 bg-gray-50 font-inter min-w-[375px]">
-        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b border-gray-200 pb-2">Our Services</h2>
+        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b border-gray-200 pb-2">Featured Products</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {props.items.map((item: any, i: number) => (
+            <div key={i} className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] p-4 rounded-xl flex flex-col">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                <span className="font-bold text-gray-900 bg-gray-100 px-2 py-1 rounded-md text-sm">{item.price}</span>
+              </div>
+              <p className="text-sm text-gray-500 leading-relaxed">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "ServiceList") {
+    return (
+      <div className="p-6 bg-gray-50 font-inter min-w-[375px]">
+        <h2 className="text-xl font-bold font-outfit mb-4 text-gray-900 border-b border-gray-200 pb-2">Our Services</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(props.services || []).map((item: any, i: number) => (
             <div key={i} className="backdrop-blur-[30px] saturate-[210%] bg-white/65 border border-white/40 shadow-[0_8px_32px_0_rgba(0,0,0,0.1)] p-4 rounded-xl flex flex-col">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-gray-900">{item.name}</h3>

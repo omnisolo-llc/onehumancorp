@@ -278,7 +278,7 @@ async fn create_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceBookingBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
+    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceListBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
@@ -396,14 +396,19 @@ The JSON must exactly match this structure:
           "sort_order": 1
         }},
         {{
-          "block_type": "ServiceBookingBlock",
-          "content": {{ "title": "...", "availability": "..." }},
+          "block_type": "ServiceListBlock",
+          "content": {{ "services": [{{ "name": "...", "description": "...", "price": "..." }}] }},
           "sort_order": 2
+        }},
+        {{
+          "block_type": "BookingCalendarBlock",
+          "content": {{ "title": "...", "availability": "..." }},
+          "sort_order": 3
         }},
         {{
           "block_type": "TestimonialBlock",
           "content": {{ "quotes": [{{ "text": "...", "author": "..." }}] }},
-          "sort_order": 3
+          "sort_order": 4
         }}
       ],
       "seo_metadata": {{
@@ -415,7 +420,7 @@ The JSON must exactly match this structure:
     }}
   ]
 }}
-Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
+Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceListBlock, BookingCalendarBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
         payload.description
     );
 

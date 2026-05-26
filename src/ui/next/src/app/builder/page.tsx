@@ -147,7 +147,8 @@ export default function BuilderPage() {
       const newBlocks = data.pages[0].blocks.map((b: any) => ({
         type: b.block_type === 'HeroBlock' ? 'Hero' :
               b.block_type === 'ProductGridBlock' ? 'Catalog' :
-              b.block_type === 'ServiceBookingBlock' ? 'Booking' :
+              b.block_type === 'ServiceListBlock' ? 'ServiceList' :
+              b.block_type === 'BookingCalendarBlock' ? 'Booking' :
               b.block_type === 'TestimonialBlock' ? 'Testimonials' : b.block_type,
         props: b.content
       }));
@@ -183,7 +184,8 @@ export default function BuilderPage() {
       const draftBlocks = blocks.map((b, i) => ({
         block_type: b.type === 'Hero' ? 'HeroBlock' :
                     b.type === 'Catalog' ? 'ProductGridBlock' :
-                    b.type === 'Booking' ? 'ServiceBookingBlock' :
+                    b.type === 'ServiceList' ? 'ServiceListBlock' :
+                    b.type === 'Booking' ? 'BookingCalendarBlock' :
                     b.type === 'Testimonials' ? 'TestimonialBlock' :
                     b.type === 'Referral' ? 'ReferralBlock' : b.type,
         content: b.props,

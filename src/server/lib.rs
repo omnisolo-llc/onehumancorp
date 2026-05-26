@@ -4376,9 +4376,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     } else if (block.type === 'ProductGridBlock') {
                                         const items = block.content.items || [];
                                         innerHtml += `<p>${items.length} items: ${items.join(', ')}</p>`;
-                                    } else if (block.type === 'ServiceBookingBlock') {
+                                    } else if (block.type === 'ServiceListBlock') {
                                         const services = block.content.services || [];
-                                        innerHtml += `<p>${services.length} services: ${services.join(', ')}</p>`;
+                                        innerHtml += `<p>${services.length} services: ${services.map(s => s.name || s).join(', ')}</p>`;
+                                    } else if (block.type === 'BookingCalendarBlock') {
+                                        innerHtml += `<p><strong>${block.content.title || 'Booking'}</strong></p><p>${block.content.availability || 'Available'}</p>`;
                                     } else if (block.type === 'TestimonialBlock') {
                                         const testimonials = block.content.testimonials || [];
                                         innerHtml += `<p>${testimonials.join(' ')}</p>`;
@@ -4587,7 +4589,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const draftBlocks = storefrontDraftState.map((b, i) => ({
                                 block_type: b.type === 'Hero' ? 'HeroBlock' :
                                             b.type === 'Product Grid' ? 'ProductGridBlock' :
-                                            b.type === 'Service List' ? 'ServiceBookingBlock' :
+                                            b.type === 'Service List' ? 'ServiceListBlock' :
+                                            b.type === 'Booking Calendar' ? 'BookingCalendarBlock' :
                                             b.type === 'Testimonials' ? 'TestimonialBlock' :
                                             b.type === 'Customer Referral' ? 'CustomerReferralBlock' : b.type,
                                 content: b.content,
