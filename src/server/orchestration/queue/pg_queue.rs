@@ -33,36 +33,27 @@ impl TaskQueue for PgTaskQueue {
 
         let mut query = sqlx::query(&query_str);
 
-        let mut unique_tenants = std::collections::HashSet::new();
-        for job in &jobs {
-            unique_tenants.insert(job.tenant_id.clone());
-        }
-
-        let tenants_vec: Vec<String> = unique_tenants.into_iter().collect();
-        if !tenants_vec.is_empty() {
-            if let Ok(rows) = sqlx::query("SELECT organization_id, COUNT(*) FROM sub_agent_jobs WHERE organization_id = ANY($1) AND status = 'QUEUED' GROUP BY organization_id")
-                .bind(&tenants_vec)
-                .fetch_all(&mut *tx)
-                .await
-            {
-                for row in rows {
-                    let org_id: String = row.try_get(0).unwrap_or_default();
-                    let count: i64 = row.try_get(1).unwrap_or(0);
-                    current_depths.insert(org_id, count);
-                }
-            }
-        }
-
         let bursts_threshold = 10;
         for job in jobs {
-            let depth = *current_depths.get(&job.tenant_id).unwrap_or(&0);
+            let depth = match current_depths.get(&job.tenant_id) {
+                Some(&d) => d,
+                None => {
+                    let count_row: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM sub_agent_jobs WHERE organization_id = $1 AND status = 'QUEUED'")
+                        .bind(&job.tenant_id)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .unwrap_or((0,));
+                    current_depths.insert(job.tenant_id.clone(), count_row.0);
+                    count_row.0
+                }
+            };
 
             let mut run_after = job.run_after;
             if depth > bursts_threshold {
                 let delay_seconds = (depth - bursts_threshold) * 5;
                 run_after = run_after + chrono::Duration::seconds(delay_seconds);
             }
-            *current_depths.entry(job.tenant_id.clone()).or_insert(0) += 1;
+            *current_depths.get_mut(&job.tenant_id).unwrap() += 1;
 
             let payload_json: serde_json::Value = serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
             query = query

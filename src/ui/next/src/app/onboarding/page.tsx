@@ -54,17 +54,24 @@ export default function OnboardingWizard() {
               if (data.intakeData !== undefined) setIntakeData(data.intakeData);
               if (data.startResult !== undefined) setStartResult(data.startResult);
 
+              lastSyncState.current = JSON.stringify({
+                step: data.step,
+                businessType: data.businessType || businessType,
+                businessName: data.businessName || businessName,
+                businessCategory: data.businessCategory || businessCategory,
+                firstProductName: data.firstProductName || firstProductName,
+                firstProductPrice: data.firstProductPrice || firstProductPrice,
+                template: data.template || template,
+                domain: data.domain || domain,
+                intakeData: data.intakeData || intakeData,
+                startResult: data.startResult || startResult
+              });
             }
           }
         }
       } catch (err) {
         console.error("Failed to load onboarding state", err);
       } finally {
-        // Set the lastSyncState right before marking loaded so the first sync effect evaluates it correctly
-        // We use the current store values which will include what we just set above (as the set functions are batched or applied in the component render cycle,
-        // to be safe we'll use the values directly but technically we rely on the component re-rendering to see `isLoaded = true` and `step` updated.
-        // A better approach is setting it on the next render pass by initializing it empty.
-        // Actually, we just want to ensure we don't immediately sync the initial local state back to the backend.
         setIsLoaded(true);
         console.log("Onboarding state loaded");
       }
@@ -73,24 +80,6 @@ export default function OnboardingWizard() {
     loadState();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]); // Only run once to load
-
-  // Update lastSyncState after successful load so we don't immediately push local state back
-  useEffect(() => {
-    if (isLoaded && !lastSyncState.current) {
-        lastSyncState.current = JSON.stringify({
-            step,
-            businessType,
-            businessName,
-            businessCategory,
-            firstProductName,
-            firstProductPrice,
-            template,
-            domain,
-            intakeData,
-            startResult
-        });
-    }
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   // Sync state to backend when it changes
   useEffect(() => {
@@ -158,27 +147,20 @@ export default function OnboardingWizard() {
     setStep(step + 1);
   };
 
-  const handleIntakeSubmit = async (overrideCategory?: string) => {
-    // Determine category to use depending on if it came from click or state
-    const categoryToUse = typeof overrideCategory === 'string' ? overrideCategory : businessCategory;
-
-    if (!categoryToUse.trim()) {
+  const handleIntakeSubmit = async () => {
+    if (!businessCategory.trim()) {
       setError("Please describe your niche.");
       return;
     }
-    if (categoryToUse.trim().length < 5) {
+    if (businessCategory.trim().length < 5) {
       setError("Niche description must be at least 5 characters.");
       return;
-    }
-
-    if (typeof overrideCategory === 'string') {
-      setBusinessCategory(overrideCategory);
     }
 
     setError("");
     setIsLoading(true);
 
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${categoryToUse}`;
+    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${businessCategory}`;
 
     try {
       const response = await fetch('/api/onboarding/intake', {
@@ -320,21 +302,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="next"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setBusinessType(type);
-                      setStep(2);
-                      setError("");
-                    }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={handleNext}
                 className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
@@ -393,17 +360,6 @@ export default function OnboardingWizard() {
                 enterKeyHint="done"
                 autoComplete="off"
               />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
-                  <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {niche}
-                  </button>
-                ))}
-              </div>
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(2)}
@@ -412,7 +368,7 @@ export default function OnboardingWizard() {
                   Back
                 </button>
                 <button
-                  onClick={() => handleIntakeSubmit()}
+                  onClick={handleIntakeSubmit}
                   disabled={isLoading}
                   className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
                 >
