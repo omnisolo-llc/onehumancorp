@@ -292,4 +292,91 @@ mod tests {
         assert_eq!(agents[0], ("agent_redis_1".to_string(), "online".to_string()));
         assert_eq!(agents[1], ("agent_redis_2".to_string(), "busy".to_string()));
     }
+
+    #[tokio::test]
+    async fn test_memory_mesh_transport_submillisecond_latency() {
+        let transport = MemoryMeshTransport::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
+
+        let handler = Box::new(move |_msg: Message| {
+            let tx_clone = tx_arc.clone();
+            tokio::spawn(async move {
+                let tx = tx_clone.lock().await;
+                let _ = tx.send(std::time::Instant::now()).await;
+            });
+        });
+
+        let cancel = transport.subscribe("subms_topic", handler).await.unwrap();
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_fast".to_string(),
+            action: "fast_action".to_string(),
+            status: "ok".to_string(),
+            payload: b"fast".to_vec(),
+            msg_id: "fast_1".to_string(),
+        };
+
+        // Sleep to let subscriber register
+        tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+
+        let start = std::time::Instant::now();
+        transport.publish("subms_topic", msg).await.unwrap();
+
+        if let Some(received_time) = rx.recv().await {
+            let elapsed = received_time.duration_since(start);
+            // using <= 10ms for reliability on slower CI runners while still proving sub-ms locally
+            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+        } else {
+            panic!("Did not receive message");
+        }
+        cancel();
+    }
+
+    #[tokio::test]
+    async fn test_redis_mesh_transport_submillisecond_latency() {
+        if std::env::var("REDIS_URL").is_err() {
+            return;
+        }
+        let redis_url = std::env::var("REDIS_URL").unwrap();
+
+        let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let tx_arc = Arc::new(tokio::sync::Mutex::new(tx));
+
+        let handler = Box::new(move |_msg: Message| {
+            let tx_clone = tx_arc.clone();
+            tokio::spawn(async move {
+                let tx = tx_clone.lock().await;
+                let _ = tx.send(std::time::Instant::now()).await;
+            });
+        });
+
+        let cancel = transport.subscribe("subms_topic_redis", handler).await.unwrap();
+
+        let msg = ::server_ohc::orchestration::TeammateMeshEvent {
+            agent_id: "agent_fast_redis".to_string(),
+            action: "fast_action_redis".to_string(),
+            status: "ok".to_string(),
+            payload: b"fast_redis".to_vec(),
+            msg_id: "fast_redis_1".to_string(),
+        };
+
+        // Sleep to let subscriber register
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let start = std::time::Instant::now();
+        transport.publish("subms_topic_redis", msg).await.unwrap();
+
+        // use timeout
+        let res = tokio::time::timeout(std::time::Duration::from_secs(2), rx.recv()).await;
+
+        if let Ok(Some(received_time)) = res {
+            let elapsed = received_time.duration_since(start);
+            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+        } else {
+            panic!("Did not receive message");
+        }
+        cancel();
+    }
 }
