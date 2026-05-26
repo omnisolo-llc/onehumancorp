@@ -51,9 +51,23 @@ export default function Dashboard() {
   const [isGeneratingReview, setIsGeneratingReview] = useState<boolean>(false);
   const [reviewMessage, setReviewMessage] = useState<string>("");
   const [reviewSent, setReviewSent] = useState<boolean>(false);
+  const [stripeConnected, setStripeConnected] = useState<boolean>(false);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+    if (typeof window !== 'undefined') {
+      try {
+        const storeStr = localStorage.getItem('onboarding-storage');
+        if (storeStr) {
+          const parsed = JSON.parse(storeStr);
+          if (parsed && parsed.state && parsed.state.stripeConnected) {
+            setStripeConnected(true);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse onboarding storage", e);
+      }
+    }
   }, []);
 
   const openReferralModal = async () => {
@@ -465,20 +479,22 @@ export default function Dashboard() {
          )}
 
          {/* Top Action Banner (Stripe Setup) */}
-         <section className="mb-6">
-             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
-                 <div className="flex items-center gap-4">
-                     <div>
-                         <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
+         {!stripeConnected && (
+             <section className="mb-6">
+                 <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-red-50 text-red-900 border border-red-100">
+                     <div className="flex items-center gap-4">
+                         <div>
+                             <h3 className="font-bold text-sm sm:text-lg font-outfit text-red-800">1 Action Required: Connect Stripe to accept payments.</h3>
+                         </div>
                      </div>
+                     <WithTooltip id="stripe-setup-tooltip" defaultText="Connect your bank account securely with Stripe to start getting paid.">
+                         <button id="stripe-setup-btn" className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
+                             Complete Stripe Setup
+                         </button>
+                     </WithTooltip>
                  </div>
-                 <WithTooltip id="stripe-setup-tooltip" defaultText="Connect your bank account securely with Stripe to start getting paid.">
-                     <button id="stripe-setup-btn" className="px-5 py-2 bg-red-600 text-white font-bold rounded-lg shadow-sm hover:bg-red-700 transition-colors whitespace-nowrap">
-                         Complete Stripe Setup
-                     </button>
-                 </WithTooltip>
-             </div>
-         </section>
+             </section>
+         )}
 
          {/* Business Snapshot */}
          <section>

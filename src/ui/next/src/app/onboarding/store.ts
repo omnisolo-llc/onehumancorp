@@ -14,6 +14,7 @@ interface OnboardingState {
   error: string;
   intakeData: any;
   startResult: any;
+  stripeConnected: boolean;
   setStep: (step: number) => void;
   setBusinessType: (type: string) => void;
   setBusinessName: (name: string) => void;
@@ -26,6 +27,7 @@ interface OnboardingState {
   setError: (error: string) => void;
   setIntakeData: (data: any) => void;
   setStartResult: (result: any) => void;
+  setStripeConnected: (connected: boolean) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -43,6 +45,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   error: '',
   intakeData: null,
   startResult: null,
+  stripeConnected: false,
   setStep: (step) => set({ step }),
   setBusinessType: (businessType) => set({ businessType }),
   setBusinessName: (businessName) => set({ businessName }),
@@ -55,6 +58,7 @@ export const useOnboardingStore = create<OnboardingState>()(
   setError: (error) => set({ error }),
   setIntakeData: (intakeData) => set({ intakeData }),
       setStartResult: (startResult) => set({ startResult }),
+      setStripeConnected: (stripeConnected) => set({ stripeConnected }),
     }),
     {
       name: 'onboarding-storage', // name of the item in the storage (must be unique)
