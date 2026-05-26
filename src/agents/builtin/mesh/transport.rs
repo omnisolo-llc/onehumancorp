@@ -37,8 +37,28 @@ impl InProcessTransport {
 impl MeshTransport for InProcessTransport {
     async fn publish(&self, topic: &str, message: Message) -> Result<(), String> {
         if let Some(tx) = self.subs.get(topic) {
-            let _ = tx.send(message);
+            let _ = tx.send(message.clone());
         }
+
+        // Graceful degradation in Standalone Mode to file-based mocking
+        let message_clone = message.clone();
+        let topic_clone = topic.to_string();
+        tokio::task::spawn_blocking(move || {
+            if let Ok(_) = std::fs::create_dir_all(".agent-task/memory") {
+                use std::io::Write;
+                if let Ok(mut file) = std::fs::OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(".agent-task/memory/mesh_mock.log")
+                {
+                    if let Ok(json_str) = serde_json::to_string(&message_clone) {
+                        let log_entry = format!("Topic: {} | Message: {}\n", topic_clone, json_str);
+                        let _ = file.write_all(log_entry.as_bytes());
+                    }
+                }
+            }
+        });
+
         Ok(())
     }
 

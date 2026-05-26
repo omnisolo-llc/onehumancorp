@@ -19,9 +19,16 @@ pub struct ConnectQuery {
 pub async fn mesh_ws_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let scoped_channel = if org_id.is_empty() {
+        query.channel
+    } else {
+        format!("{}:{}", org_id, query.channel)
+    };
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, scoped_channel))
 }
 
 #[derive(serde::Deserialize)]
@@ -57,13 +64,20 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
 pub async fn orchestration_broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let scoped_topic = if org_id.is_empty() {
+        payload.topic
+    } else {
+        format!("{}:{}", org_id, payload.topic)
+    };
+    match transport.publish(&scoped_topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -75,21 +89,35 @@ pub async fn orchestration_broadcast_handler(
 pub async fn orchestration_tasks_stream_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let scoped_channel = if org_id.is_empty() {
+        query.channel
+    } else {
+        format!("{}:{}", org_id, query.channel)
+    };
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, scoped_channel))
 }
 
 pub async fn broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let scoped_topic = if org_id.is_empty() {
+        payload.topic
+    } else {
+        format!("{}:{}", org_id, payload.topic)
+    };
+    match transport.publish(&scoped_topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -101,13 +129,19 @@ pub async fn broadcast_handler(
 pub async fn direct_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(payload): axum::Json<DirectRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    let topic = format!("mesh:direct:{}", payload.target_agent_id);
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let topic = if org_id.is_empty() {
+        format!("mesh:direct:{}", payload.target_agent_id)
+    } else {
+        format!("{}:mesh:direct:{}", org_id, payload.target_agent_id)
+    };
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -120,13 +154,19 @@ pub async fn direct_handler(
 pub async fn mailbox_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    claims_opt: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(payload): axum::Json<MailboxRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    let org_id = claims_opt.and_then(|c| c.organization_id.clone()).unwrap_or_default();
+    let topic = if org_id.is_empty() {
+        format!("mesh:mailbox:{}", payload.mailbox_id)
+    } else {
+        format!("{}:mesh:mailbox:{}", org_id, payload.mailbox_id)
+    };
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -209,7 +249,18 @@ mod tests {
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
             .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
-            .with_state(transport);
+            .with_state(transport)
+            .layer(axum::Extension(::server_common::Claims {
+                sub: "test-user".to_string(),
+                exp: 0,
+                iat: 0,
+                organization_id: Some("test-org-123".to_string()),
+                username: "test".to_string(),
+                email: "test@example.com".to_string(),
+                roles: vec![],
+                session_id: None,
+                jti: "test-jti".to_string(),
+            }));
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -274,7 +325,18 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
-            .with_state(transport);
+            .with_state(transport)
+            .layer(axum::Extension(::server_common::Claims {
+                sub: "test-user".to_string(),
+                exp: 0,
+                iat: 0,
+                organization_id: Some("test-org-123".to_string()),
+                username: "test".to_string(),
+                email: "test@example.com".to_string(),
+                roles: vec![],
+                session_id: None,
+                jti: "test-jti".to_string(),
+            }));
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
@@ -317,7 +379,18 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
-            .with_state(transport);
+            .with_state(transport)
+            .layer(axum::Extension(::server_common::Claims {
+                sub: "test-user".to_string(),
+                exp: 0,
+                iat: 0,
+                organization_id: Some("test-org-123".to_string()),
+                username: "test".to_string(),
+                email: "test@example.com".to_string(),
+                roles: vec![],
+                session_id: None,
+                jti: "test-jti".to_string(),
+            }));
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
