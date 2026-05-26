@@ -598,21 +598,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_payment(amount, description, payer_email).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn mercadopago_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mercadopago" {
@@ -656,15 +641,15 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
-        let client_jitsi = {
-            if integration_id == "jitsi" {
-                let clients = self.jitsi_clients.read().unwrap();
+        let client = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
                 clients.get(integration_id).cloned()
             } else {
                 None
             }
         };
-        if let Some(c) = client_jitsi {
+        if let Some(c) = client {
             return c.create_meeting(topic).await;
         }
 
