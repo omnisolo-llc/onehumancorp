@@ -25,6 +25,8 @@ export default function Dashboard() {
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
+  const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
+  const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
@@ -358,6 +360,27 @@ export default function Dashboard() {
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Morning Briefing */}
+         {!morningBriefingDismissed && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
+               <div className="flex items-center gap-3 mb-2">
+                 <div className="text-2xl">🌅</div>
+                 <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
+               </div>
+               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+                 Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
+               </p>
+               <div className="flex gap-4">
+                 <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
+                 <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
+                   Add your first product
+                 </Link>
+               </div>
+             </div>
+           </section>
+         )}
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
