@@ -190,7 +190,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "app"
-version = "0.4.45"
+version = "0.4.46"
 dependencies = [
  "reqwest 0.12.28",
  "serde",
@@ -5519,7 +5519,7 @@ dependencies = [
 
 [[package]]
 name = "ohc-mono"
-version = "0.4.45"
+version = "0.4.46"
 dependencies = [
  "aes-gcm",
  "async-nats",

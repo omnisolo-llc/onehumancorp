@@ -1,3 +1,11 @@
+## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Implement cost optimizations including prompt caching and rate limiting for increased load.
+
+### Privacy/Offline Improvements
+- Optimize local offline image compression and payment method handling for Standalone desktop beta builds.
+
 ## v0.4.45 (Cloud) / v0.4.45+1 (Standalone)
 - Scaling (Cloud): Optimize Cloud staging multi-environment promotion performance for increased load.
 - Privacy/Offline (Standalone): Enforce improved local offline telemetry privacy controls for Standalone desktop beta builds.
