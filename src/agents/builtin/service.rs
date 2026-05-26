@@ -25,7 +25,7 @@ pub struct MemoryEntry {
 
 pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str) -> String {
     if memories.is_empty() {
-        return system_prompt.to_string();
+        return ::server_pricing::compression::reduce_tokens(system_prompt);
     }
     let mut s = String::new();
     s.push_str("## Relevant past experience\n");
@@ -36,7 +36,7 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     }
     s.push_str("\n---\n\n");
     s.push_str(system_prompt);
-    s
+    ::server_pricing::compression::reduce_tokens(&s)
 }
 
 use crate::memory_store::{VectorRepository, EmbeddingRecord};
