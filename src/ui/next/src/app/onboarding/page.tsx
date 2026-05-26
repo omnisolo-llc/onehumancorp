@@ -153,6 +153,10 @@ export default function OnboardingWizard() {
         setError("Business name must be at least 3 characters.");
         return;
       }
+      if (!/[a-zA-Z0-9]/.test(businessName)) {
+        setError("Business name must contain at least one letter or number.");
+        return;
+      }
     }
     setError("");
     setStep(step + 1);
@@ -252,6 +256,7 @@ export default function OnboardingWizard() {
           box-shadow:
             0 8px 32px 0 rgba(31, 38, 135, 0.1),
             inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+          border-radius: 16px;
         }
         @media (prefers-color-scheme: dark) {
           .glass-container {
@@ -263,10 +268,10 @@ export default function OnboardingWizard() {
               0 8px 32px 0 rgba(0, 0, 0, 0.4),
               inset 0 0 0 1px rgba(255, 255, 255, 0.05);
           }
-          .glass-container h1, .glass-container h2, .glass-container .text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] {
+          .glass-container h1, .glass-container h2, .glass-container .text-[#1D1D1F] dark:text-[#F5F5F7] {
             color: #F5F5F7;
           }
-          .glass-container p, .glass-container .text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] {
+          .glass-container p, .glass-container .text-gray-500 dark:text-[#A1A1A6] {
             color: #A1A1A6;
           }
           .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
@@ -287,7 +292,7 @@ export default function OnboardingWizard() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
+      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl">
         {/* Header */}
         <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
            <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
@@ -321,17 +326,23 @@ export default function OnboardingWizard() {
                 autoComplete="off"
               />
               <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
+                {[
+                  { name: 'Online Store', icon: '🛍️' },
+                  { name: 'Service Business', icon: '🛠️' },
+                  { name: 'Restaurant / Food', icon: '🍔' },
+                  { name: 'Creative', icon: '🎨' },
+                  { name: 'Local Business', icon: '📍' }
+                ].map((typeObj) => (
                   <button
-                    key={type}
+                    key={typeObj.name}
                     onClick={() => {
-                      setBusinessType(type);
+                      setBusinessType(typeObj.name);
                       setStep(2);
                       setError("");
                     }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
+                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm flex items-center gap-2"
                   >
-                    {type}
+                    <span>{typeObj.icon}</span> {typeObj.name}
                   </button>
                 ))}
               </div>
@@ -394,13 +405,19 @@ export default function OnboardingWizard() {
                 autoComplete="off"
               />
               <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
+                {[
+                  { name: 'Food & Beverage', icon: '🍰' },
+                  { name: 'Health & Beauty', icon: '💄' },
+                  { name: 'Home Services', icon: '🏠' },
+                  { name: 'Retail', icon: '👕' },
+                  { name: 'Consulting', icon: '💼' }
+                ].map((nicheObj) => (
                   <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
+                    key={nicheObj.name}
+                    onClick={() => handleIntakeSubmit(nicheObj.name)}
+                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm flex items-center gap-2"
                   >
-                    {niche}
+                    <span>{nicheObj.icon}</span> {nicheObj.name}
                   </button>
                 ))}
               </div>

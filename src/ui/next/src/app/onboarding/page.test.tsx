@@ -146,13 +146,25 @@ describe('OnboardingWizard', () => {
     // Error on short submit
     const input = screen.getByPlaceholderText("e.g. Maya's Cakes");
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-    await userEvent.type(input, 'ab');
+    await act(async () => {
+      await userEvent.type(input, 'ab');
+    });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
     await waitFor(() => expect(screen.getByText('Business name must be at least 3 characters.')).toBeInTheDocument());
 
+    // Error on no letters/numbers
+    await act(async () => {
+      await userEvent.clear(input);
+      await userEvent.type(input, '!!!');
+    });
+    act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
+    await waitFor(() => expect(screen.getByText('Business name must contain at least one letter or number.')).toBeInTheDocument());
+
     // Valid submit
-    await userEvent.clear(input);
-    await userEvent.type(input, "Maya's Bakery");
+    await act(async () => {
+      await userEvent.clear(input);
+      await userEvent.type(input, "Maya's Bakery");
+    });
     act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
 
     await waitFor(() => {
@@ -196,7 +208,9 @@ describe('OnboardingWizard', () => {
     // The only way to trigger handleNext from step 3 is... nothing calls handleNext from step 3. Let's see if we can trigger it from an input by forcing the state while focus is retained?
 
     // Error on empty submit (intake submit)
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Generate Draft/i }).click();
+    });
     await waitFor(() => expect(screen.getByText('Please describe your niche.')).toBeInTheDocument());
 
     // Actually, let's just trigger `handleNext` by changing step to 2, typing Enter in businessName, then immediately changing step to 3 before handleNext executes? Unlikely.
@@ -205,14 +219,22 @@ describe('OnboardingWizard', () => {
     // Let's just test `handleIntakeSubmit` which has the exact same check. Oh, line 146 IS in `handleNext`.
 
     // Error on short submit (intake submit)
-    await userEvent.type(input, 'abcd');
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => {
+      await userEvent.type(input, 'abcd');
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /Generate Draft/i }).click();
+    });
     await waitFor(() => expect(screen.getByText('Niche description must be at least 5 characters.')).toBeInTheDocument());
 
     // Valid submit
-    await userEvent.clear(input);
-    await userEvent.type(input, "I bake custom vegan cakes");
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => {
+      await userEvent.clear(input);
+      await userEvent.type(input, "I bake custom vegan cakes");
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /Generate Draft/i }).click();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
@@ -227,7 +249,9 @@ describe('OnboardingWizard', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) }); // Intake API Error
 
     act(() => { render(<OnboardingWizard />); });
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Generate Draft/i }).click();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Failed to process intake")).toBeInTheDocument();
@@ -258,27 +282,43 @@ describe('OnboardingWizard', () => {
     // Edit product
     const nameInput = await screen.findByPlaceholderText("e.g. Custom Cake");
     const priceInput = screen.getByPlaceholderText("0.00");
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Vegan Cake");
-    await userEvent.clear(priceInput);
-    await userEvent.type(priceInput, "30.00");
+    await act(async () => {
+      await userEvent.clear(nameInput);
+      await userEvent.type(nameInput, "Vegan Cake");
+      await userEvent.clear(priceInput);
+      await userEvent.type(priceInput, "30.00");
+    });
 
     // Select template and domain
-    act(() => { screen.getByRole('button', { name: 'Elegant' }).click(); });
-    act(() => { screen.getByRole('button', { name: 'Minimal' }).click(); });
-    act(() => { screen.getByRole('button', { name: /Connect Custom Domain/i }).click(); });
-    act(() => { screen.getByRole('button', { name: /Free OHC Domain/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: 'Elegant' }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: 'Minimal' }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /Connect Custom Domain/i }).click();
+    });
+    await act(async () => {
+      screen.getByRole('button', { name: /Free OHC Domain/i }).click();
+    });
 
     // Navigate back to edit and then back to Step 4
-    act(() => { screen.getByRole('button', { name: /Edit/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Edit/i }).click();
+    });
     expect(useOnboardingStore.getState().step).toBe(3);
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Generate Draft/i }).click();
+    });
     await waitFor(() => {
       expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
     });
 
     // Publish
-    act(() => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Publish Now/i }).click();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -300,7 +340,9 @@ describe('OnboardingWizard', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) }); // Publish API Error
 
     act(() => { render(<OnboardingWizard />); });
-    act(() => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
+    await act(async () => {
+      screen.getByRole('button', { name: /Publish Now/i }).click();
+    });
 
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
