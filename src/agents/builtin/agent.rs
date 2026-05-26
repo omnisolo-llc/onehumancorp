@@ -502,32 +502,59 @@ impl Agent {
                 read_only_futures.push(async move {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
-                    let r = match gating_res {
-                        Ok(_) => match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                            Ok(res) => res,
-                            Err(e) => format!("Error: {:?}", e),
-                        },
-                        Err(e) => format!("Error: {:?}", e),
+                    let res = match gating_res {
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await,
+                        Err(e) => Err(e),
                     };
-                    (tc_clone, r)
+                    (tc_clone, res)
                 });
             }
             let ro_results = futures::future::join_all(read_only_futures).await;
-            for (tc, r) in ro_results {
+            for (tc, res) in ro_results {
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             if !mutating_calls.is_empty() {
@@ -536,28 +563,55 @@ impl Agent {
             for tc in &mutating_calls {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
-                let r = match gating_res {
-                    Ok(_) => match self.execute_tool(tc, session_tools, &messages).await {
-                        Ok(res) => res,
-                        Err(e) => format!("Error: {:?}", e),
-                    },
-                    Err(e) => format!("Error: {:?}", e),
+                let res = match gating_res {
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages).await,
+                    Err(e) => Err(e),
                 };
 
                 let idx = msg.tool_calls.iter().position(|t| t.id == tc.id).unwrap();
 
-                on_event(AgentEvent::ToolCall {
-                    name: tc.name.clone(),
-                    args_json: tc.arguments.to_string(),
-                    result: r.clone(),
-                    iteration: i as i32,
-                });
-
-                tool_results[idx] = crate::types::ToolResult {
-                    tool_call_id: tc.id.clone(),
-                    content: r,
-                    error: String::new(),
-                };
+                match res {
+                    Ok(r) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: r.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: r,
+                            error: String::new(),
+                        };
+                    }
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: format!("Error: {}", msg),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: String::new(),
+                            error: msg,
+                        };
+                    }
+                    Err(e) => {
+                        let err_str = format!("Error: {:?}", e);
+                        on_event(AgentEvent::ToolCall {
+                            name: tc.name.clone(),
+                            args_json: tc.arguments.to_string(),
+                            result: err_str.clone(),
+                            iteration: i as i32,
+                        });
+                        tool_results[idx] = crate::types::ToolResult {
+                            tool_call_id: tc.id.clone(),
+                            content: err_str,
+                            error: String::new(),
+                        };
+                    }
+                }
             }
 
             messages.push(crate::types::Message {
@@ -1101,6 +1155,49 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        let timeout_duration = std::time::Duration::from_secs(60);
+        let mut attempts = 0;
+        let max_attempts = 3;
+        loop {
+            attempts += 1;
+            let mut on_event_wrapper = |e| on_event(e);
+            let result = tokio::time::timeout(timeout_duration, self.run_plan_and_execute_internal(cfg, initial_message, session_tools, &mut on_event_wrapper)).await;
+            match result {
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
+                },
+                Err(_) => {
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
+                    }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
+                }
+            }
+        }
+    }
+
+    async fn run_plan_and_execute_internal<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        initial_message: &str,
+        session_tools: &[Tool],
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
         on_event(AgentEvent::RunStarted {
             iteration: 0,
         });
@@ -1410,13 +1507,26 @@ impl Agent {
             attempts += 1;
             let result = tokio::time::timeout(timeout_duration, self.run_structured_internal(cfg, initial_message, &output_schema, on_event)).await;
             match result {
-                Ok(res) => {
-                    return res;
+                Ok(Ok(res)) => {
+                    return Ok(res);
+                },
+                Ok(Err(e)) => {
+                    let err_str = e.to_string();
+                    if err_str.contains("Fatal") || err_str.contains("Unexpected tool error") || err_str.contains("USER_FIXABLE") || err_str.contains("User intervention") || err_str.contains("Guardrail") || err_str.contains("Reject") || err_str.contains("Transient error after retries") || err_str.contains("Tool guardrail") || err_str.contains("Output guardrail") {
+                        return Err(e);
+                    }
+                    if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
+                        return Err(e);
+                    }
+                    tracing::warn!("Agent internal error on attempt {}: {}. Retrying...", attempts, e);
                 },
                 Err(_) => {
                     if attempts >= max_attempts {
+                        on_event(AgentEvent::TaskError { error: "PAUSED".to_string() });
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
+                    tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
                 }
             }
         }
