@@ -3086,6 +3086,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
+                                <div id="milestone-share-links" style="display: none; margin-top: 15px;">
+                                    <p style="font-weight: bold; margin-bottom: 10px;">Share Your Success</p>
+                                    <div style="display: flex; gap: 10px;">
+                                        <a id="milestone-share-wa" href="javascript:void(0)" target="_blank" style="padding: 8px 12px; background: #25D366; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Share to WhatsApp</a>
+                                        <a id="milestone-share-x" href="javascript:void(0)" target="_blank" style="padding: 8px 12px; background: #000; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold;">Share to X</a>
+                                    </div>
+                                </div>
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
@@ -4700,6 +4707,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             document.getElementById('milestone-body').textContent = body;
+
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const referralLink = 'https://ohc.store/join?ref=' + tenant;
+                            const shareText = encodeURIComponent('Just hit an amazing milestone: ' + title + ' on my new store! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ' + referralLink);
+
+                            if (title.includes('10th Order')) {
+                                document.getElementById('milestone-share-wa').href = 'https://wa.me/?text=' + shareText;
+                                document.getElementById('milestone-share-x').href = 'https://twitter.com/intent/tweet?text=' + shareText;
+                                document.getElementById('milestone-share-links').style.display = 'block';
+                            } else {
+                                document.getElementById('milestone-share-links').style.display = 'none';
+                            }
+
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
