@@ -1,3 +1,4 @@
+pub mod orchestration;
 pub mod mesh_handler;
 pub mod autodream;
 

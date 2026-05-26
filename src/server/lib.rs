@@ -1967,6 +1967,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let health_router = axum::Router::new()
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
+        .route("/api/health/hybrid", axum::routing::get(api::health::hybrid_health_handler))
         .with_state(hub.clone());
 
     let db_for_login = db.clone();
@@ -2230,6 +2231,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/orchestration/tasks", api::orchestration::tasks::router(std::sync::Arc::new(crate::orchestration::tasks::TaskDecompositionService::new(db.clone(), mesh_transport.clone()))))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
