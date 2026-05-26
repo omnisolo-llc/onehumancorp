@@ -66,6 +66,7 @@ rust_library(
         "lib.rs",
         "marketplace.rs",
         "visual_workflow.rs",
+        "scalable_multi_agent.rs",
         "local_provider.rs",
         "json_store.rs",
         "memory_store.rs",
@@ -226,6 +227,7 @@ rust_binary(
         "tools_gating",
         "registry",
         "gpt_researcher",
+        "scalable_multi_agent",
         "local_provider",
         "sona_patterns",
     ]
