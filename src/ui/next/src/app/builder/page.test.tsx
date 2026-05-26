@@ -23,13 +23,13 @@ describe('BuilderPage V2', () => {
   it('renders Screen 1 Onboarding and transitions to Idle', async () => {
     render(<BuilderPage />);
 
-    expect(screen.getByText('What are you building today?')).toBeInTheDocument();
+    expect(screen.getByText('What are you building today?')).toBeTruthy();
 
     const productsBtn = screen.getByText('Selling Products');
     fireEvent.click(productsBtn);
 
     await waitFor(() => {
-      expect(screen.getByText("Let's build your store")).toBeInTheDocument();
+      expect(screen.getByText("Let's build your store")).toBeTruthy();
     }, { timeout: 1000 });
   });
 
@@ -38,7 +38,7 @@ describe('BuilderPage V2', () => {
 
     // Onboarding
     fireEvent.click(screen.getByText('Selling Products'));
-    await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
+    await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
     // Step 1
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Maya Cakes' } });
@@ -65,11 +65,11 @@ describe('BuilderPage V2', () => {
 
     fireEvent.click(screen.getByText('Build Store'));
 
-    expect(screen.getByText('AI Architect')).toBeInTheDocument();
-    expect(screen.getByText('Designing your custom storefront...')).toBeInTheDocument();
+    expect(screen.getByText('AI Architect')).toBeTruthy();
+    expect(screen.getByText('Designing your custom storefront...')).toBeTruthy();
 
     await waitFor(() => {
-      expect(screen.getByText('Pick your draft')).toBeInTheDocument();
+      expect(screen.getByText('Pick your draft')).toBeTruthy();
     });
   });
 
@@ -78,10 +78,10 @@ describe('BuilderPage V2', () => {
      render(<BuilderPage />);
      // Fast forward to selection (would be better with state injection if possible, but we'll follow the flow)
      fireEvent.click(screen.getByText('Showcasing Work'));
-     await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
+     await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
-     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Test' } });
-     fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'Test' } });
+     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Testing' } });
+     fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'Testing' } });
      fireEvent.click(screen.getByText('Next: Choose Vibe'));
      fireEvent.click(screen.getByText('Minimalist'));
      fireEvent.click(screen.getByText('Next: Details'));
@@ -92,23 +92,23 @@ describe('BuilderPage V2', () => {
      fireEvent.click(screen.getByText('Build Store'));
 
      await waitFor(() => {
-       expect(screen.getByText('Pick your draft')).toBeInTheDocument();
+       expect(screen.getByText('Pick your draft')).toBeTruthy();
      });
 
      fireEvent.click(screen.getByText('Draft 2'));
      fireEvent.click(screen.getByText('Customize Selected Draft'));
 
-     expect(screen.getByText('Mobile Editor')).toBeInTheDocument();
+     expect(screen.getByText('Mobile Editor')).toBeTruthy();
   });
 
   it('opens Action Sheet when a block is clicked', async () => {
     // We'll skip the full flow for brevity if we can, but let's just finish it.
     render(<BuilderPage />);
     fireEvent.click(screen.getByText('Offering Services'));
-    await waitFor(() => expect(screen.getByText("Let's build your store")).toBeInTheDocument());
+    await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
-    fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'T' } });
-    fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'T' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Testing' } });
+    fireEvent.change(screen.getByPlaceholderText('e.g. Retail, Consulting, Tech'), { target: { value: 'Testing' } });
     fireEvent.click(screen.getByText('Next: Choose Vibe'));
     fireEvent.click(screen.getByText('Minimalist'));
     fireEvent.click(screen.getByText('Next: Details'));
@@ -125,6 +125,6 @@ describe('BuilderPage V2', () => {
     const heroBlock = screen.getByText('Hero Headline');
     fireEvent.click(heroBlock);
 
-    expect(screen.getByText('Edit Hero Block')).toBeInTheDocument();
+    expect(screen.getByText('Edit Hero Block')).toBeTruthy();
   });
 });
