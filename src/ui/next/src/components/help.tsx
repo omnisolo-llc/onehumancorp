@@ -97,7 +97,7 @@ export function HelpWidget() {
   const router = useRouter();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew" | "apidocs">("center");
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
@@ -169,7 +169,8 @@ export function HelpWidget() {
               { id: "center", label: "Help" },
               { id: "chat", label: "Ask AI" },
               { id: "videos", label: "Videos" },
-              { id: "whatsnew", label: "New" }
+              { id: "whatsnew", label: "New" },
+              { id: "apidocs", label: "API Docs" }
             ].map((t) => (
               <button
                 key={t.id}
@@ -285,6 +286,14 @@ export function HelpWidget() {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {tab === "apidocs" && (
+              <div>
+                <h3 className="font-bold text-gray-900 mb-4 text-lg">API Documentation</h3>
+                <p className="text-sm text-gray-600 mb-4">View our advanced API documentation.</p>
+                <a href="/api-docs" className="text-blue-600 text-sm font-bold hover:underline">Open API Docs →</a>
               </div>
             )}
 

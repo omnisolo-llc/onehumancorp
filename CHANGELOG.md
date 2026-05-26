@@ -1,3 +1,8 @@
+## v1.1.0
+
+### Documentation Update
+- Added new AI-Powered Help Center, Tooltips, and API Reference.
+
 ## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
 
 ### Cloud Scaling Improvements
