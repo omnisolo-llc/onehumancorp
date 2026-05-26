@@ -30,6 +30,8 @@ impl AutoDreamService for MyAutoDreamService {
         &self,
         request: Request<AutoDreamQueryRequest>,
     ) -> Result<Response<AutoDreamQueryResult>, Status> {
+        let md = request.metadata().clone();
+        let tenant_id = md.get("x-tenant-id").and_then(|v| v.to_str().ok()).unwrap_or("system").to_string();
         let req = request.into_inner();
         if req.query_text.is_empty() {
             return Err(Status::invalid_argument("query_text is required"));
