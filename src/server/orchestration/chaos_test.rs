@@ -240,7 +240,7 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_cloud_degradation_fallback() {
         // We use an empty db pool but with CloudStateManager to see fail-safes on lock acquisition timeout
-        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
             .unwrap();
 
@@ -269,7 +269,7 @@ mod chaos_tests {
     async fn test_cloud_db_transition_fallback() {
         // Intentionally bad DB URL to simulate database failure / degraded performance
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
             .unwrap();
 
@@ -291,7 +291,7 @@ mod chaos_tests {
     async fn test_cloud_db_pull_fallback() {
         // Intentionally bad DB URL to simulate database failure / degraded performance
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .max_connections(1)
             .connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent")
             .unwrap();
 
@@ -312,12 +312,12 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_standalone_db_transition_fallback() {
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .max_connections(1)
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:12345/nonexistent").unwrap(),
             store: DbStore::Sqlite(pool),
         });
 
@@ -333,12 +333,12 @@ mod chaos_tests {
     #[tokio::test]
     async fn test_standalone_db_pull_fallback() {
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
-            .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .max_connections(1)
             .connect_lazy("sqlite::memory:")
             .unwrap();
 
         let db = Arc::new(DB {
-            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50)).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
+            pool: sqlx::postgres::PgPoolOptions::new().max_connections(1).connect_lazy("postgres://postgres:postgres@localhost:5432/test").unwrap(),
             store: DbStore::Sqlite(dummy_sqlite_pool),
         });
 

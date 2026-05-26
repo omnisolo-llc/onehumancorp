@@ -107,7 +107,7 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 ## 6. Deep Dive Walkthroughs
 - **[OHC Walkthrough: Custom Agent Creation](custom_agent_creation_walkthrough.md)**
 - **[KAIROS Shared Task List: Visual Walkthrough](shared_task_list_visual_walkthrough.md)**
-- **[KAIROS Orchestration: Visual Walkthrough](../../features/kairos_orchestration.md)**
+- **[KAIROS Orchestration: Visual Walkthrough](kairos_orchestration.md)**
 - **[Interactive CLI Guide for AutoDream](autodream_cli_guide.md)**
 - **[KAIROS Central Orchestration CLI Guide](kairos_central_orchestration_cli_guide.md)**
 - **[Elastic Swarm Bursting: Visual Walkthrough](elastic_swarm_bursting.md)**
@@ -125,11 +125,11 @@ The Swarm is powered by the KAIROS engine which maintains stability via three co
 - **[Hybrid Swarm-Aware Telemetry Mesh Walkthrough](hybrid_swarm_telemetry_mesh.md)**: Visual guide to the mTLS telemetry buffering and sync.
 - **[Hybrid FS MCP Architecture Walkthrough](hybrid_fs_mcp_architecture.md)**: Visual guide to the Machine Context Protocol state sync.
 - **[AutoDream Sync Daemon Walkthrough](autodream_sync.md)**: Visual guide to the Hybrid AutoDream Synchronization.
-- **[Distributed State Machine Walkthrough](../../features/kairos/distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
+- **[Distributed State Machine Walkthrough](distributed_state_machine.md)**: Visual guide to the task transition lifecycle.
 - **[Hybrid MCP RAG Protocol Walkthrough](hybrid_mcp_rag.md)**: Explore the architectural flow between Standalone and Cloud states.
-- **[KAIROS Sub-Agent Orchestration Walkthrough](../architecture/kairos/sub-agent-queue-design.md)**: Explore the orchestration of sub-agents.
+- **[KAIROS Sub-Agent Orchestration Walkthrough](sub_agent_orchestration.md)**: Explore the orchestration of sub-agents.
 - **[Teammate Mesh Walkthrough](teammate_mesh.md)**: Interactive guide on agent Pub/Sub communication and event filtering.
-- **[AutoDream Pipeline Walkthrough](../../features/kairos/autodream_pipelines.md)**: Visual guide to the memory consolidation engine.
+- **[AutoDream Pipeline Walkthrough](autodream_pipeline.md)**: Visual guide to the memory consolidation engine.
 - **[Omni-Context Sub-Agent Routing Walkthrough](omni_context_routing.md)**: Visual guide to the zero-latency sub-agent context injection.
 - **[Virtual Meeting Room Walkthrough](virtual_meeting_room.md)**: Visual guide to the UltraPlan protocol and agent deliberation.
 - **[Hybrid Swarm-Aware MCP Telemetry Mesh Walkthrough](hybrid_telemetry_mesh.md)**: Visual guide to full-spectrum hybrid observability.

@@ -82,50 +82,15 @@ impl BaseProvider {
         c.clone()
     }
 }
-pub struct RedisIsolationTransport {
-    conn: redis::aio::MultiplexedConnection,
-    topic: String,
-}
-
-impl RedisIsolationTransport {
-    pub async fn new(redis_url: &str, topic: &str) -> Result<Self, String> {
-        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
-        Ok(Self {
-            conn,
-            topic: topic.to_string(),
-        })
-    }
-}
-
-#[async_trait]
-impl Transport for RedisIsolationTransport {
-    async fn send(&self, message: &[u8]) -> Result<(), String> {
-        use redis::AsyncCommands;
-        let mut conn = self.conn.clone();
-        let _: () = conn.publish(&self.topic, message).await.map_err(|e| e.to_string())?;
-        Ok(())
-    }
-}
 
 async fn execute_in_isolation(command: &str, agent_type: &str, worktree: &str, transport: Option<Arc<dyn Transport>>) -> Result<(), String> {
     use crate::harness::IsolationStrategy;
 
-    let strategy = crate::harness::AssistantClassIsolationStrategy::new();
+    let strategy = crate::harness::ProcessIsolationStrategy::new();
+    // Use the passed command directly
 
-    let mut actual_transport = transport;
-    if actual_transport.is_none() {
-        if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            let topic = format!("agent_harness_output:{}", agent_type);
-            if let Ok(t) = RedisIsolationTransport::new(&redis_url, &topic).await {
-                actual_transport = Some(Arc::new(t));
-            }
-        }
-    }
-
-    strategy.run_in_isolation(&command, agent_type, worktree, actual_transport).await
+    strategy.run_in_isolation(&command, agent_type, worktree, transport).await
 }
-
 
 // Implementations
 
