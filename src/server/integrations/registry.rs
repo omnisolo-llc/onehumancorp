@@ -464,20 +464,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_payment(amount, description, payer_email).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
 
     pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
         let client = {
@@ -568,83 +554,8 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn ayrshare_post_message(&self, integration_id: &str, message: &str, platforms: Vec<&str>) -> Result<(), String> {
-        let client = {
-            if integration_id == "ayrshare" {
-                let clients = self.ayrshare_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.post_message(message, platforms).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn listmonk_send_campaign(&self, integration_id: &str, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "listmonk" {
-                let clients = self.listmonk_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.send_campaign(list_id, template_id, subject, body).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_payment(amount, description, payer_email).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn mercadopago_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.handle_webhook(payload).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-    pub async fn easypost_create_shipment(&self, integration_id: &str, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "easypost" {
-                let clients = self.easypost_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_shipment(to_address, from_address, parcel_details).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn create_meeting(&self, integration_id: &str, topic: &str) -> Result<String, String> {
-        let client_zoom = {
+        let client = {
             if integration_id == "zoom" {
                 let clients = self.zoom_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -652,22 +563,9 @@ impl IntegrationsRegistry {
                 None
             }
         };
-        if let Some(c) = client_zoom {
+        if let Some(c) = client {
             return c.create_meeting(topic).await;
         }
-
-        let client_jitsi = {
-            if integration_id == "jitsi" {
-                let clients = self.jitsi_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client_jitsi {
-            return c.create_meeting(topic).await;
-        }
-
         Err("integration not found or not supported".to_string())
     }
 

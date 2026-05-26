@@ -1,7 +1,6 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { WalkthroughTarget } from '../components/Walkthrough';
-import { WalkthroughProvider, HelpWidget } from '../components/help';
+import { TooltipRegistryProvider, WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 import { HelpChat } from '../components/HelpChat';
 
@@ -19,12 +18,14 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <TooltipProvider>
-                  <WalkthroughProvider>
+        <TooltipRegistryProvider>
+          <WalkthroughProvider>
             {children}
-            <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
+            <HelpWidget />
             <HelpChat />
           </WalkthroughProvider>
-                </TooltipProvider>
+        </TooltipRegistryProvider>
+        </TooltipProvider>
       </body>
     </html>
   );

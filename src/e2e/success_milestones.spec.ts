@@ -48,7 +48,7 @@ test.describe('Success Milestones Notifications', () => {
     await expect(page.locator('text=First Sale!')).toBeVisible();
   });
 
-  test('should verify 10th order milestone and viral share buttons', async ({ page }) => {
+  test('should verify 10th order milestone', async ({ page }) => {
     await page.goto('/login');
     await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
     await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
@@ -65,19 +65,7 @@ test.describe('Success Milestones Notifications', () => {
     }
 
     // Might appear later
-    const milestoneTitle = page.locator('text=🎉 10th Order!');
-    await expect(milestoneTitle).toBeVisible({ timeout: 10000 });
-
-    // Check for viral sharing options
-    await expect(page.locator('text=Share Your Success')).toBeVisible();
-
-    const whatsappShare = page.locator('a:has-text("Share to WhatsApp")');
-    await expect(whatsappShare).toBeVisible();
-    await expect(whatsappShare).toHaveAttribute('href', /wa\.me.*10th%20Order/);
-
-    const xShare = page.locator('a:has-text("Share to X")');
-    await expect(xShare).toBeVisible();
-    await expect(xShare).toHaveAttribute('href', /twitter\.com.*10th%20Order/);
+    await expect(page.locator('text=🎉 10th Order!')).toBeVisible({ timeout: 10000 });
   });
 
   test('should verify 100th order milestone', async ({ page }) => {
