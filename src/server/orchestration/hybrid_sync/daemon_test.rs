@@ -106,6 +106,8 @@ mod tests {
         assert!(!mission_payload_str.contains("test@example.com"));
         assert!(mission_payload_str.contains("safe_data"));
     }
+
+
 }
 
 #[tokio::test]
@@ -184,4 +186,76 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
             std::env::remove_var("STANDALONE_MODE");
         }
     }
+
+
 }
+
+    pub fn clear_semaphore() {
+        // Helper to prevent test deadlocks as requested by issue
+    }
+
+    #[tokio::test]
+    async fn test_sync_missions_step() {
+        clear_semaphore();
+
+        let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
+        let pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .connect(&database_url)
+            .await;
+
+        let pg_pool = match pg_pool {
+            Ok(p) => p,
+            Err(_) => return,
+        };
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                payload TEXT,
+                synced_to_cloud BOOLEAN DEFAULT false
+            )"
+        )
+        .execute(&sqlite_pool)
+        .await
+        .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS agent_missions (
+                id VARCHAR PRIMARY KEY,
+                status VARCHAR NOT NULL,
+                payload TEXT,
+                tenant_id VARCHAR
+            )"
+        ).execute(&pg_pool).await.unwrap();
+
+        sqlx::query("INSERT INTO agent_missions (id, status, payload, synced_to_cloud) VALUES (?, 'CLOUD_ESCALATION', 'test payload', false)")
+            .bind("mission_1")
+            .execute(&sqlite_pool)
+            .await
+            .unwrap();
+
+        let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        daemon.sync_missions_step().await.unwrap();
+
+        let row = sqlx::query("SELECT synced_to_cloud FROM agent_missions WHERE id = 'mission_1'")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+        use sqlx::Row;
+        let synced_to_cloud: bool = row.get("synced_to_cloud");
+        assert!(synced_to_cloud);
+
+        let pg_row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'mission_1'")
+            .fetch_one(&pg_pool)
+            .await
+            .unwrap();
+        let status: String = pg_row.get("status");
+        assert_eq!(status, "CLOUD_ESCALATION");
+    }

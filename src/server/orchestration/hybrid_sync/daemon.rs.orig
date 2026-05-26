@@ -23,9 +23,6 @@ impl HybridSyncDaemon {
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
             }
-            if let Err(e) = self.sync_missions_step().await {
-                error!("Hybrid sync missions error: {}", e);
-            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -88,53 +85,6 @@ impl HybridSyncDaemon {
         }
 
         info!("Successfully synced telemetry batch");
-
-        Ok(())
-    }
-
-    pub async fn sync_missions_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT id, status, payload FROM agent_missions WHERE synced_to_cloud = false AND status = 'CLOUD_ESCALATION' LIMIT 100")
-            .fetch_all(&self.sqlite_pool)
-            .await?;
-
-        if rows.is_empty() {
-            return Ok(());
-        }
-
-        let mut success_count = 0;
-
-        for row in rows {
-            let id: String = row.get("id");
-            let status: String = row.get("status");
-            let payload: String = row.get("payload");
-
-            let mut tx = match self.pg_pool.begin().await {
-                Ok(t) => t,
-                Err(e) => {
-                    warn!("Failed to begin pg transaction for mission sync: {}", e);
-                    continue;
-                }
-            };
-
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, 'system') ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload")
-                .bind(&id)
-                .bind(&status)
-                .bind(&payload)
-                .execute(&mut *tx)
-                .await;
-
-            if res.is_ok() && tx.commit().await.is_ok() {
-                let _ = sqlx::query("UPDATE agent_missions SET synced_to_cloud = true WHERE id = ?")
-                    .bind(&id)
-                    .execute(&self.sqlite_pool)
-                    .await;
-                success_count += 1;
-            }
-        }
-
-        if success_count > 0 {
-            info!("sync_daemon: successfully synced agent_missions");
-        }
 
         Ok(())
     }
