@@ -465,20 +465,6 @@ impl IntegrationsRegistry {
     }
 
 
-    pub async fn handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.handle_webhook(payload).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
 
     pub async fn alipay_create_checkout_preference(&self, integration_id: &str, price_id: &str, tenant_id: &str) -> Result<String, String> {
         let client = {
