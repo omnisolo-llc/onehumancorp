@@ -62,6 +62,7 @@ rust_library(
         "autogen.rs",
         "ruflo.rs",
         "observability.rs",
+        "scalable_deployment.rs",
         "lib.rs",
         "marketplace.rs",
         "visual_workflow.rs",
@@ -219,6 +220,7 @@ rust_binary(
         "consolidation_worker",
         "ruflo",
         "observability",
+        "scalable_deployment",
         "output_parser",
         "pubsub",
 
