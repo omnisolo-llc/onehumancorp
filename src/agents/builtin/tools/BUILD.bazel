@@ -6,6 +6,7 @@ rust_library(
         "agent_tool.rs",
         "anthropic_memory.rs",
         "bash.rs",
+        "bash_security.rs",
         "booking.rs",
         "edit.rs",
         "finance.rs",
@@ -73,6 +74,19 @@ rust_library(
 )
 
 load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "bash_security_test",
+    srcs = ["bash_security.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:regex",
+    ],
+)
 
 rust_test(
     name = "pydantic_test",

@@ -20,6 +20,11 @@ impl ToolExecutor for BashExecutor {
             .as_str()
             .ok_or_else(|| ToolError::LlmRecoverable("bash: command is required".to_string()))?
             .to_string();
+
+        if let Err(e) = super::bash_security::validate_bash_command(&command) {
+            return Err(ToolError::LlmRecoverable(format!("bash: {}", e)));
+        }
+
         let timeout_secs = args["timeout"].as_f64().unwrap_or(120.0);
         let timeout = Duration::from_secs_f64(timeout_secs.max(1.0).min(600.0));
 
