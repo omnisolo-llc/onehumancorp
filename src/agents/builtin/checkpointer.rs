@@ -10,6 +10,7 @@ pub struct Checkpoint {
     pub thread_id: String,
     pub checkpoint_id: String,
     pub parent_id: Option<String>,
+    // Implementation Mechanic: State Management: Git Commit Checkpointing
     pub data: serde_json::Value,
     pub metadata: serde_json::Value,
     pub created_at: DateTime<Utc>,
