@@ -58,7 +58,51 @@ impl OHCSandboxManager for LocalSandbox {
             }
         }
 
-        match Command::new("sh").arg("-c").arg(cmd).output().await {
+                #[cfg(target_os = "linux")]
+        let output_res = {
+            use crate::harness::sandbox::{SandboxAdapter, SandboxPolicy};
+            use crate::harness::sandbox::linux_sandbox::LinuxSandbox;
+            use crate::harness::network_proxy::NetworkProxy;
+            use tokio::net::TcpListener;
+            use tokio::sync::watch;
+
+            let mut policy = SandboxPolicy::default();
+            policy.blocked_domains = self.config.blocked_domains.clone();
+            policy.disabled_commands = self.config.disabled_commands.clone();
+            policy.read_only_paths = self.config.read_only_paths.clone();
+
+            let mut linux_sandbox = LinuxSandbox::new(None);
+            let _ = linux_sandbox.update_config(&serde_json::to_string(&policy).unwrap()).await;
+
+            let wrapped_cmd = match linux_sandbox.wrap_command(cmd).await {
+                Ok(c) => c,
+                Err(e) => return Err(ViolationEvent {
+                    reason: e,
+                    command: cmd.to_string(),
+                }),
+            };
+
+            let mut command = Command::new("sh");
+            command.arg("-c").arg(wrapped_cmd);
+
+            let (tx, rx) = watch::channel(false);
+            if let Ok(listener) = TcpListener::bind("127.0.0.1:0").await {
+                let proxy_addr = listener.local_addr().unwrap();
+                let proxy = NetworkProxy::new(self.config.blocked_domains.clone());
+                tokio::spawn(proxy.run(listener, rx));
+                command.env("HTTP_PROXY", format!("http://127.0.0.1:{}", proxy_addr.port()));
+                command.env("HTTPS_PROXY", format!("http://127.0.0.1:{}", proxy_addr.port()));
+            }
+
+            let result = command.output().await;
+            let _ = tx.send(true);
+            result
+        };
+
+        #[cfg(not(target_os = "linux"))]
+        let output_res = Command::new("sh").arg("-c").arg(cmd).output().await;
+
+        match output_res {
             Ok(output) => {
                 if output.status.success() {
                     Ok((true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string()))
