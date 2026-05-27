@@ -48,6 +48,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
         run: sudo xcode-select -s /Applications/Xcode.app
