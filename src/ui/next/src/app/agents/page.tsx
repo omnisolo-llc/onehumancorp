@@ -15,10 +15,10 @@ export default function AgentsPage() {
   const fetchFeed = async () => {
     setFeedLoading(true);
     try {
-      const res = await fetch('/api/agents/feed');
+      const res = await fetch('/api/agents/approvals/activity');
       if (res.ok) {
         const data = await res.json();
-        setFeed(data.feed || []);
+        setFeed(data.pending_approvals || []);
       }
     } catch (e) {
       console.error('Failed to fetch feed:', e);
@@ -58,6 +58,7 @@ export default function AgentsPage() {
       if (res.ok) {
         // Remove the processed approval from the list
         setApprovals(prev => prev.filter(req => req.id !== id));
+        fetchFeed(); // Refresh the activity feed
       } else {
         console.error('Failed to process approval');
       }
@@ -177,7 +178,7 @@ export default function AgentsPage() {
                         <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {item.department}
                         </span>
-                        <span className="text-xs text-gray-400 font-medium">{item.timestamp}</span>
+                        <span className="text-xs text-gray-400 font-medium">{item.status === "Approved" ? "Approved" : item.status === "Rejected" ? "Rejected" : "Draft"}</span>
                       </div>
                       <p className="text-gray-800 text-sm font-medium leading-relaxed">
                         {item.description}
