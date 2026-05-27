@@ -6439,3 +6439,44 @@ async fn test_stripe_retry_limit() {
         let val = lock.get_variable::<u64>("agent_secret").unwrap();
         assert_eq!(*val, 42);
     }
+
+    #[tokio::test]
+    async fn test_progressive_skills_mechanic() {
+        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        struct SpyLlmClient {
+            system_prompt: std::sync::Mutex<String>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for SpyLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                *self.system_prompt.lock().unwrap() = req.system;
+                Ok(ChatResponse {
+                    message: Message::assistant("Got it"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let skills_dir = temp_dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+        std::fs::write(skills_dir.join("test_skill.md"), "# Secret Skill\nKeywords: analyze\n\nALWAYS perform deep analysis.").unwrap();
+
+        let client = Arc::new(SpyLlmClient { system_prompt: std::sync::Mutex::new(String::new()) });
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_progressive_skills = true;
+        cfg.progressive_skills_dir = Some(skills_dir.to_string_lossy().to_string());
+        cfg.developer_instructions = "Base Instructions".to_string();
+
+        let mut on_event = |_| {};
+        let _ = agent.run(&cfg, "Please analyze this data", &mut on_event).await;
+
+        let prompt = client.system_prompt.lock().unwrap().clone();
+        assert!(prompt.contains("Base Instructions"));
+        assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
+        assert!(prompt.contains("ALWAYS perform deep analysis."));
+    }
