@@ -37,6 +37,8 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
@@ -893,26 +895,16 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Items</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        if (productCount >= 10) {
-                            setShowPaywallModal(true);
-                        } else {
-                            setProductCount(prev => prev + 1);
-                            if (!productAdded) {
-                                setProductAdded(true);
-                                setTrialDaysLeft(prev => prev + 7);
-                            }
-                        }
-                    }}
+                    onClick={() => setShowAddItemModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
                 >
-                    <span>+ Add Product</span>
+                    <span>+ Add Item</span>
                 </button>
             </div>
          </section>
@@ -1183,6 +1175,80 @@ export default function Dashboard() {
                  </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+                <button onClick={() => setNewItemType('product')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'product' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Physical Product</button>
+                <button onClick={() => setNewItemType('service')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'service' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Service</button>
+                <button onClick={() => setNewItemType('digital')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'digital' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Digital Good</button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                </div>
+
+                {newItemType === 'product' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="10" />
+                    </div>
+                )}
+
+                {newItemType === 'service' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="60" />
+                    </div>
+                )}
+
+                {newItemType === 'digital' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
+                        <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                    </div>
+                )}
+            </div>
+
+            <button
+                onClick={() => {
+                    setShowAddItemModal(false);
+                    if (productCount >= 10) {
+                        setShowPaywallModal(true);
+                    } else {
+                        setProductCount(prev => prev + 1);
+                        if (!productAdded) {
+                            setProductAdded(true);
+                            setTrialDaysLeft(prev => prev + 7);
+                        }
+                    }
+                }}
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
+            >
+                Save {newItemType === 'product' ? 'Product' : newItemType === 'service' ? 'Service' : 'Digital Good'}
+            </button>
           </div>
         </div>
       )}
