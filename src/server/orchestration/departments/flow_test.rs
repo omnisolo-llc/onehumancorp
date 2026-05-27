@@ -83,6 +83,134 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_operations_inventory_deduction() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        orchestrator.register_department(ops_agent).await;
+
+        let tenant_id = "test-tenant-inv-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, organization_id, inventory_count) VALUES ('prod-1', $1, $1, 10) ON CONFLICT DO NOTHING")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, organization_id, inventory_count) VALUES ('prod-1', ?, ?, 10) ON CONFLICT DO NOTHING")
+                    .bind(&tenant_id)
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.order.created".to_string(),
+            payload: serde_json::json!({
+                "order_id": "12345",
+                "items": [{"product_id": "prod-1", "quantity": 3}]
+            }),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let new_inventory: i64 = match &db.store {
+            DbStore::Postgres => {
+                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = 'prod-1' AND tenant_id = $1")
+                    .bind(&tenant_id)
+                    .fetch_one(&db.pool)
+                    .await
+                    .unwrap_or(0)
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query_scalar("SELECT inventory_count FROM products WHERE id = 'prod-1' AND tenant_id = ?")
+                    .bind(&tenant_id)
+                    .fetch_one(pool)
+                    .await
+                    .unwrap_or(0)
+            }
+        };
+
+        assert_eq!(new_inventory, 7, "Inventory should be deducted by 3");
+    }
+
+    #[tokio::test]
+    async fn test_customer_success_draft_reply() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        orchestrator.register_department(cs_agent).await;
+
+        let tenant_id = "test-tenant-cs-draft".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.order.fulfillment_ready".to_string(),
+            payload: serde_json::json!({"order_id": "999"}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+        let req = pending.iter().find(|req| req.description.contains("Send personalized thank you"));
+        assert!(req.is_some(), "ApprovalRequest should be created");
+
+        let payload = req.unwrap().payload.as_ref().unwrap();
+        let drafted_message = payload.get("drafted_message").and_then(|v| v.as_str());
+        assert!(drafted_message.is_some(), "Payload should contain drafted_message");
+        assert!(drafted_message.unwrap().contains("Thank you"), "Drafted message should be a default thank you string if Minimax isn't running");
+    }
+
+    #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
         if std::env::var("DATABASE_URL").is_err() {

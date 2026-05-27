@@ -38,6 +38,53 @@ impl Department for OperationsAgent {
         };
 
         let action_description = if event.event_type == "tenant.order.created" {
+            // Deduct inventory
+            if let Some(items) = event.payload.get("items").and_then(|v| v.as_array()) {
+                let db = &self.orchestrator.db;
+                for item in items {
+                    if let Some(product_id) = item.get("product_id").and_then(|v| v.as_str()) {
+                        let quantity = item.get("quantity").and_then(|v| v.as_i64()).unwrap_or(1) as i32;
+                        match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                let row = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND tenant_id = $3")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(&event.tenant_id)
+                                    .execute(&db.pool)
+                                    .await;
+                                if let Ok(res) = row {
+                                    if res.rows_affected() == 0 {
+                                        let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - $1 WHERE id = $2 AND organization_id = $3")
+                                            .bind(quantity)
+                                            .bind(product_id)
+                                            .bind(&event.tenant_id)
+                                            .execute(&db.pool)
+                                            .await;
+                                    }
+                                }
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                let row = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND tenant_id = ?")
+                                    .bind(quantity)
+                                    .bind(product_id)
+                                    .bind(&event.tenant_id)
+                                    .execute(pool)
+                                    .await;
+                                if let Ok(res) = row {
+                                    if res.rows_affected() == 0 {
+                                        let _ = sqlx::query("UPDATE products SET inventory_count = inventory_count - ? WHERE id = ? AND organization_id = ?")
+                                            .bind(quantity)
+                                            .bind(product_id)
+                                            .bind(&event.tenant_id)
+                                            .execute(pool)
+                                            .await;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             "Process Order & Update Inventory".to_string()
         } else {
             "Create order and booking".to_string()

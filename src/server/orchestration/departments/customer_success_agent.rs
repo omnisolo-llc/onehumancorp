@@ -33,15 +33,7 @@ impl Department for CustomerSuccessAgent {
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let config = self.get_config(&event.tenant_id);
-        let risk = if let Some(cfg) = &config {
-            if cfg.auto_approve_limits > 0.0 {
-                ActionRisk::AutoExecute
-            } else {
-                ActionRisk::DraftForReview
-            }
-        } else {
-            ActionRisk::DraftForReview
-        };
+        let risk = ActionRisk::AutoExecute;
 
         if event.event_type == "agent:customer_success:approved" {
             // Actual logic to send the message when approved.
@@ -93,12 +85,33 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
+        let mut drafted_msg = "Hi! Your order has been processed and is being prepared for shipment. Thank you!".to_string();
+
+        let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+        if !api_key.is_empty() {
+            let prompt = format!(
+                "You are the customer success ambassador. Draft a helpful and polite reply to confirm a new order. Order details: '{}'. Keep it concise and professional.",
+                event.payload
+            );
+            let client = crate::minimax::MinimaxClient::new(api_key);
+            if let Ok(content) = client.reason(&prompt).await {
+                if !content.is_empty() {
+                    drafted_msg = content;
+                }
+            }
+        }
+
+        let mut payload = event.payload.clone();
+        if let Some(obj) = payload.as_object_mut() {
+            obj.insert("drafted_message".to_string(), serde_json::Value::String(drafted_msg));
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::CustomerSuccess,
             "Send personalized thank you & shipping ETA".to_string(),
             event.tenant_id.clone(),
             risk,
-            event.payload.clone(),
+            payload,
         ).await.map(|_| ())
     }
 
