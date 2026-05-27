@@ -2439,8 +2439,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
+    let tooltips_json = serde_json::to_string(&*get_tooltips_registry().read().unwrap()).unwrap_or_else(|_| "{}".to_string());
     let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}",
+        "/api/v1/health" => "{\"status\":\"ok\"}".to_string(),
         _ => r##"
             <!DOCTYPE html>
             <html>
@@ -3008,7 +3009,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
+
+
+                    <script>
+                        window.OHC_TOOLTIPS = {tooltips_json};
+
+                        // Scribe: Tooltips Implementation
+                        document.addEventListener("DOMContentLoaded", () => {
+                            const tooltipEl = document.createElement("div");
+                            tooltipEl.id = "global-tooltip-bubble";
+                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+                            document.body.appendChild(tooltipEl);
+
+                            let tooltipTimeout = null;
+
+                            function showTooltip(el, text) {
+                                tooltipEl.textContent = text;
+                                tooltipEl.style.display = "block";
+                                const rect = el.getBoundingClientRect();
+                                const tooltipRect = tooltipEl.getBoundingClientRect();
+                                let top = rect.top - tooltipRect.height - 8;
+                                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+                                if (top < 0) top = rect.bottom + 8;
+                                if (left < 0) left = 8;
+                                if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 8;
+
+                                tooltipEl.style.top = top + "px";
+                                tooltipEl.style.left = left + "px";
+                            }
+
+                            function hideTooltip() {
+                                tooltipEl.style.display = "none";
+                            }
+
+
+                            document.querySelectorAll("[placeholder], [id]").forEach(el => {
+                                const placeholderKey = el.getAttribute("placeholder");
+                                const idKey = el.getAttribute("id") + "-tooltip";
+
+                                let key = null;
+                                if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
+                                    key = placeholderKey;
+                                } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
+                                    key = idKey;
+                                }
+
+                                if (key) {
+                                    const text = window.OHC_TOOLTIPS[key];
+
+                                    // Desktop Hover
+                                    el.addEventListener("mouseenter", () => showTooltip(el, text));
+                                    el.addEventListener("mouseleave", hideTooltip);
+
+                                    // Mobile Long Press
+                                    el.addEventListener("touchstart", (e) => {
+                                        tooltipTimeout = setTimeout(() => {
+                                            showTooltip(el, text);
+                                        }, 500); // 500ms for long press
+                                    }, {passive: true});
+
+                                    el.addEventListener("touchend", () => {
+                                        clearTimeout(tooltipTimeout);
+                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
+                                    });
+
+                                    el.addEventListener("touchmove", () => {
+                                        clearTimeout(tooltipTimeout);
+                                        hideTooltip();
+                                    }, {passive: true});
+                                }
+                            });
+                        });
+                    </script>
                 </head>
+
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
@@ -5563,42 +5638,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let tooltipRegistry = {};
-                        let activeTooltipTimeout = null;
 
-                        async function initTooltips() {
-                            try {
-                                const res = await fetch('/api/tooltips');
-                                tooltipRegistry = await res.json();
-                                const tbox = document.createElement('div');
-                                tbox.className = 'tooltip-box';
-                                tbox.id = 'dynamic-tooltip';
-                                document.body.appendChild(tbox);
-                                attachTooltipListeners();
-                            } catch(e) { console.error(e); }
-                        }
 
-                        function attachTooltipListeners() {
-                            const elements = document.querySelectorAll('[placeholder$="-tooltip"]');
-                            const tbox = document.getElementById('dynamic-tooltip');
-                            elements.forEach(el => {
-                                const key = el.getAttribute('placeholder');
-                                if(!tooltipRegistry[key]) return;
-                                const showTooltip = (e) => {
-                                    clearTimeout(activeTooltipTimeout);
-                                    tbox.textContent = tooltipRegistry[key];
-                                    tbox.classList.add('show');
-                                    const rect = el.getBoundingClientRect();
-                                    tbox.style.left = Math.max(8, rect.left + (rect.width/2) - (tbox.offsetWidth/2)) + 'px';
-                                    tbox.style.top = Math.max(8, rect.top - tbox.offsetHeight - 8) + 'px';
-                                };
-                                const hideTooltip = () => { activeTooltipTimeout = setTimeout(() => { tbox.classList.remove('show'); }, 100); };
-                                el.addEventListener('mouseenter', showTooltip);
-                                el.addEventListener('mouseleave', hideTooltip);
-                                el.addEventListener('touchstart', (e) => { activeTooltipTimeout = setTimeout(() => showTooltip(e), 500); });
-                                el.addEventListener('touchend', () => { clearTimeout(activeTooltipTimeout); hideTooltip(); });
-                            });
-                        }
+
+
 
                         // Scribe: Help Chat Logic
                         async function submitHelpQuery() {
@@ -5623,6 +5666,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
                         }
+
 
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
@@ -5717,7 +5761,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         document.addEventListener('DOMContentLoaded', () => {
-                            initTooltips();
+
                             renderHelpCenter();
                             renderVideos();
                         });
@@ -5794,7 +5838,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
                 </body>
             </html>
-        "##,
+        "##.replace("{tooltips_json}", &tooltips_json),
     };
     axum::response::Html(content)
 }
