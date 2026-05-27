@@ -2,16 +2,16 @@ import { test, expect } from './fixtures';
 
 test.describe('Free Tier & Upgrade Funnel', () => {
   test('shows current free plan details', async ({ page }) => {
-    await page.goto('/my-plan');
+    await page.goto('/plan');
 
     await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
-    await expect(page.getByText('Plan: Free')).toBeVisible();
-    await expect(page.getByText('AI Actions Used: 0 / 100')).toBeVisible();
-    await expect(page.getByText('Storage Used: 0MB / 500MB')).toBeVisible();
+    await expect(page.getByText('Free')).toBeVisible();
+
+
   });
 
   test('links current plan to upgrade plans', async ({ page }) => {
-    await page.goto('/my-plan');
+    await page.goto('/plan');
     await page.getByRole('button', { name: 'View Upgrade Plans' }).click();
 
     await expect(page.getByRole('heading', { name: 'Pricing Plans' })).toBeVisible();

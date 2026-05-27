@@ -72,7 +72,7 @@ export default function CostDashboardPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Business Advisory Dashboard</h1>
+        <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Cost & AI Usage</h1>
         <div className="flex gap-2">
             <button onClick={() => router.push('/plan')} className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
             Back to My Plan
@@ -83,7 +83,7 @@ export default function CostDashboardPage() {
       <main className="p-6 md:p-8 flex-1 max-w-4xl mx-auto w-full flex flex-col gap-6">
 
         <section className="p-6 shadow-sm" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Advisory Summary</h2>
+            <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">AI Usage Summary</h2>
             <p className="text-gray-700 font-medium leading-relaxed">
               Here's what happened this week and what you should do next:<br/><br/>
               - Your revenue is steady, but your AI marketing campaigns are driving more traffic.<br/>
