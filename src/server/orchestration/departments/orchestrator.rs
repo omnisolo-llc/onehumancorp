@@ -472,7 +472,7 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
-                        results.push(ApprovalRequest {
+                        results.push(ApprovalRequest { payload: "".to_string(),
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
@@ -512,7 +512,7 @@ impl DepartmentOrchestrator {
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
-                        results.push(ApprovalRequest {
+                        results.push(ApprovalRequest { payload: "".to_string(),
                             id: row.get("id"),
                             tenant_id: row.get("tenant_id"),
                             department,
