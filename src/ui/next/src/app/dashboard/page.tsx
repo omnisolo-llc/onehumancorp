@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
+  const router = useRouter();
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
@@ -357,9 +359,9 @@ export default function Dashboard() {
                Seasonal Promos ✨
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
+             <button onClick={() => { if (!hasPro) { setShowSoftPaywall(true); } else { router.push('/agents'); } }} className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
-             </Link>
+             </button>
              <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
                <span>⚡️</span> KAIROS
              </Link>
@@ -1662,11 +1664,11 @@ export default function Dashboard() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Unlock AI Business Insights and AI Departments. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
-              onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
+              onClick={() => { setShowSoftPaywall(false); router.push('/pricing'); }}
               className="w-full py-4 rounded-xl font-bold text-white mb-4 transition-all shadow-md hover:shadow-lg hover:opacity-90"
               style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
             >
