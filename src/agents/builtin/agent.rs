@@ -1994,7 +1994,7 @@ impl Agent {
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
-                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Business owner has been notified. Please try again later.".to_string();
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         return Err(err_msg.into());
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {

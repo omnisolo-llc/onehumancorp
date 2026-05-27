@@ -161,6 +161,27 @@ impl TaskWorker {
             if current_time - last_failure < 30 {
                 error!("Circuit breaker OPEN: builtin agent is currently marked as unavailable due to repeated failures.");
                 // ML-Resilience: paused state
+
+                // Actual implementation for business owner notification
+                let notification_payload = serde_json::json!({
+                    "issue_id": issue.id,
+                    "issue_name": issue.name,
+                    "event": "agent_paused",
+                    "reason": "Circuit breaker OPEN due to repeated failures. LLM API is unavailable."
+                });
+
+                let msg = crate::ohc::orchestration::Message {
+                    id: format!("notify-{}", issue.id),
+                    from_agent: "SYSTEM".to_string(),
+                    to_agent: "OWNER".to_string(),
+                    r#type: "SystemNotification".to_string(),
+                    content: notification_payload.to_string(),
+                    meeting_id: "".to_string(),
+                    occurred_at_unix: chrono::Utc::now().timestamp(),
+                };
+
+                let _ = hub.clone().publish(msg);
+
                 return Err("Circuit breaker OPEN. Agent in paused state. Business owner has been notified.".to_string());
             } else {
                 // Allow a single trial request by temporarily acting as half-open (we don't reset failures yet)
