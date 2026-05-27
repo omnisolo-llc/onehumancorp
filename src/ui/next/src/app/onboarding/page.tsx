@@ -22,7 +22,84 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          method: 'GET',
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.startResult) setStartResult(data.startResult);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load state', err);
+      }
+    };
+
+    loadState();
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const saveState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+            startResult
+          })
+        });
+      } catch (err) {
+        console.error('Failed to save state', err);
+      }
+    };
+
+    const debounceId = setTimeout(() => {
+      saveState();
+    }, 1000);
+
+    return () => clearTimeout(debounceId);
+  }, [
+    isLoaded, step, businessDescription, businessName, businessType,
+    categories, websiteTemplate, firstProductName, firstProductPrice,
+    startResult
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
