@@ -85,6 +85,7 @@ rust_library(
         "//src/server/integrations/jitsi:server_integrations_jitsi",
         "//src/server/integrations/listmonk:server_integrations_listmonk",
         "//src/server/integrations/mailchimp:server_integrations_mailchimp",
+        "//src/server/integrations/mailerlite:server_integrations_mailerlite",
         "//src/server/integrations/manychat:server_integrations_manychat",
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
