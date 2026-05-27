@@ -1,9 +1,11 @@
 use super::manager::SandboxPolicy;
+#[cfg(target_os = "linux")]
 use crate::harness::network::proxy::NetworkBridgeProxy;
 
 pub struct BashWrapper {
     read_only_paths: Vec<String>,
     blocked_domains: Vec<String>,
+    #[cfg(target_os = "linux")]
     network_proxy: Option<NetworkBridgeProxy>,
 }
 
@@ -12,6 +14,7 @@ impl BashWrapper {
         BashWrapper {
             read_only_paths: Vec::new(),
             blocked_domains: Vec::new(),
+            #[cfg(target_os = "linux")]
             network_proxy: None,
         }
     }
@@ -20,12 +23,15 @@ impl BashWrapper {
         self.read_only_paths = policy.read_only_paths;
         self.blocked_domains = policy.blocked_domains;
 
-        if !self.blocked_domains.is_empty() {
-            let mut proxy = NetworkBridgeProxy::new(self.blocked_domains.clone());
-            let _ = proxy.start();
-            self.network_proxy = Some(proxy);
-        } else {
-            self.network_proxy = None;
+        #[cfg(target_os = "linux")]
+        {
+            if !self.blocked_domains.is_empty() {
+                let mut proxy = NetworkBridgeProxy::new(self.blocked_domains.clone());
+                let _ = proxy.start();
+                self.network_proxy = Some(proxy);
+            } else {
+                self.network_proxy = None;
+            }
         }
     }
 
@@ -41,10 +47,13 @@ impl BashWrapper {
             preamble.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.blocked_domains.join(",")));
         }
 
-        if let Some(proxy) = &self.network_proxy {
-            preamble.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
-            preamble.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
-            preamble.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(proxy) = &self.network_proxy {
+                preamble.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
+                preamble.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
+                preamble.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
+            }
         }
 
         format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""))
@@ -75,6 +84,7 @@ mod tests {
         let wrapped = wrapper.wrap("echo hello");
         assert!(wrapped.contains("export READ_ONLY_PATHS='/etc:/var';"));
         assert!(wrapped.contains("export BLOCKED_DOMAINS='evil.com';"));
+        #[cfg(target_os = "linux")]
         assert!(wrapped.contains("export HTTP_PROXY='unix:///tmp/ohc-agent-http-"));
         assert!(wrapped.contains("echo hello"));
     }

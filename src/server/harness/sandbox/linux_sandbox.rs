@@ -9,12 +9,14 @@ use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
+#[cfg(target_os = "linux")]
 use crate::harness::network::proxy::NetworkBridgeProxy;
 
 pub struct LinuxSandbox {
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
     violation_store: Arc<ViolationStore>,
+    #[cfg(target_os = "linux")]
     network_proxy: Option<NetworkBridgeProxy>,
 }
 
@@ -25,6 +27,7 @@ impl LinuxSandbox {
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
             violation_store,
+            #[cfg(target_os = "linux")]
             network_proxy: None,
         }
     }
@@ -53,10 +56,13 @@ impl LinuxSandbox {
             args.push("--share-net".to_string());
         }
 
-        if let Some(proxy) = &self.network_proxy {
-            args.push("--bind".to_string());
-            args.push(proxy.socket_path().to_string());
-            args.push(proxy.socket_path().to_string());
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(proxy) = &self.network_proxy {
+                args.push("--bind".to_string());
+                args.push(proxy.socket_path().to_string());
+                args.push(proxy.socket_path().to_string());
+            }
         }
 
         // Now, for every read-only path, we bind it as ro-bind to restrict writes.
@@ -116,10 +122,13 @@ impl SandboxAdapter for LinuxSandbox {
             prefix.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.policy.blocked_domains.join(",")));
         }
 
-        if let Some(proxy) = &self.network_proxy {
-            prefix.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
-            prefix.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
-            prefix.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
+        #[cfg(target_os = "linux")]
+        {
+            if let Some(proxy) = &self.network_proxy {
+                prefix.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
+                prefix.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
+                prefix.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
+            }
         }
 
         Ok(format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd))
@@ -132,12 +141,15 @@ impl SandboxAdapter for LinuxSandbox {
         self.evaluator.update_policy(policy.clone());
         self.policy = policy;
 
-        if !self.policy.blocked_domains.is_empty() {
-            let mut proxy = NetworkBridgeProxy::new(self.policy.blocked_domains.clone());
-            let _ = proxy.start();
-            self.network_proxy = Some(proxy);
-        } else {
-            self.network_proxy = None;
+        #[cfg(target_os = "linux")]
+        {
+            if !self.policy.blocked_domains.is_empty() {
+                let mut proxy = NetworkBridgeProxy::new(self.policy.blocked_domains.clone());
+                let _ = proxy.start();
+                self.network_proxy = Some(proxy);
+            } else {
+                self.network_proxy = None;
+            }
         }
 
         Ok(())
@@ -181,14 +193,17 @@ mod tests {
         assert!(args.contains(&"/etc".to_string()));
         assert!(args.contains(&"/var/log".to_string()));
 
-        let mut found_proxy_bind = false;
-        for i in 0..args.len() {
-            if args[i] == "--bind" && args[i+1].starts_with("/tmp/ohc-agent-http-") {
-                found_proxy_bind = true;
-                break;
+        #[cfg(target_os = "linux")]
+        {
+            let mut found_proxy_bind = false;
+            for i in 0..args.len() {
+                if args[i] == "--bind" && args[i+1].starts_with("/tmp/ohc-agent-http-") {
+                    found_proxy_bind = true;
+                    break;
+                }
             }
+            assert!(found_proxy_bind);
         }
-        assert!(found_proxy_bind);
     }
 
     #[tokio::test]
@@ -228,9 +243,12 @@ mod tests {
         sandbox.update_config(policy_json).await.unwrap();
         let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
 
-        assert!(wrapped.contains("export HTTP_PROXY='unix:///tmp/ohc-agent-http-"));
-        assert!(wrapped.contains("export HTTPS_PROXY='unix:///tmp/ohc-agent-http-"));
-        assert!(wrapped.contains("export ALL_PROXY='unix:///tmp/ohc-agent-http-"));
+        #[cfg(target_os = "linux")]
+        {
+            assert!(wrapped.contains("export HTTP_PROXY='unix:///tmp/ohc-agent-http-"));
+            assert!(wrapped.contains("export HTTPS_PROXY='unix:///tmp/ohc-agent-http-"));
+            assert!(wrapped.contains("export ALL_PROXY='unix:///tmp/ohc-agent-http-"));
+        }
         assert!(wrapped.contains("export BLOCKED_DOMAINS='evil.com';"));
     }
 }

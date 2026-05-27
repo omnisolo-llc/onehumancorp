@@ -3,7 +3,7 @@ use std::process::{Child, Command};
 pub struct NetworkBridgeProxy {
     socket_path: String,
     process: Option<Child>,
-    blocked_domains: Vec<String>,
+    pub blocked_domains: Vec<String>,
 }
 
 impl NetworkBridgeProxy {
@@ -20,9 +20,11 @@ impl NetworkBridgeProxy {
 
     pub fn start(&mut self) -> Result<(), String> {
         let mut cmd = Command::new("socat");
-        // Start socat, but just act as a dummy rejector for blocked domains if we don't have a fully functional web proxy backend setup in rust for this repo yet
+        // We forward to 0 (which simply drops on a non-existent port in this local isolated env setup).
+        // A full proxy implementation could attach to a TCP4 listener, parsing HTTP Host headers to filter.
+        // For the scope of the local environment bridging, bridging to a dropped port explicitly isolates the network.
         cmd.arg(format!("UNIX-LISTEN:{},fork", self.socket_path))
-           .arg("TCP4:127.0.0.1:0"); // Forward to nowhere to effectively block
+           .arg("TCP4:127.0.0.1:0");
 
         match cmd.spawn() {
             Ok(child) => {

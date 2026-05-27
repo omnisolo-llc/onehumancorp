@@ -16,7 +16,11 @@ rust_library(
         "sandbox/macos_sandbox.rs",
         "mcp/mod.rs",
         "mcp/client.rs",
-    ],
+        "network/mod.rs",
+    ] + select({
+        "@platforms//os:linux": ["network/proxy.rs", "sandbox/linux_sandbox.rs"],
+        "//conditions:default": [],
+    }),
     crate_root = "mod.rs",
     edition = "2024",
     visibility = ["//visibility:public"],
