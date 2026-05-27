@@ -110,6 +110,14 @@ mod parity_tests {
         let org_id = "test_org_parity";
 
         if let DbStore::Sqlite(pool) = &sqlite_db.store {
+            // Insert tenant first to satisfy foreign key constraints
+            sqlx::query("INSERT OR IGNORE INTO tenants (id, name) VALUES (?, ?)")
+                .bind(org_id)
+                .bind("Test Org")
+                .execute(pool)
+                .await
+                .unwrap();
+
             sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES (?, ?, ?, ?)")
                 .bind(&customer_id)
                 .bind(org_id)
@@ -128,6 +136,13 @@ mod parity_tests {
         }
 
         if let Some(ref db) = pg_db {
+            sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                .bind(org_id)
+                .bind("Test Org")
+                .execute(&db.pool)
+                .await
+                .unwrap();
+
             sqlx::query("INSERT INTO customers (id, tenant_id, email, name) VALUES ($1, $2, $3, $4)")
                 .bind(&customer_id)
                 .bind(org_id)

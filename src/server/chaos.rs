@@ -443,6 +443,7 @@ mod tests {
             // Memory exhaustion simulation
             let mut vec: Vec<u8> = Vec::with_capacity(1024 * 10);
             // CPU exhaustion spinloop
+            #[allow(clippy::empty_loop)]
             loop {
                 vec.push(1);
                 if vec.len() > 1024 * 100 {
