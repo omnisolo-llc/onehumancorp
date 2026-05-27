@@ -97,11 +97,10 @@ impl KairosOrchestrator {
                 if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
-                        "INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES ($1, $2, $3, 'EXECUTING', 'COMPLETED', $4, $5)"
+                        "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES ($1, $2, 'EXECUTING', 'COMPLETED', $3, $4)"
                     )
                     .bind(trans_id)
                     .bind(task_id)
-                    .bind(if task_type == "swarm" { "swarm_task" } else { "shared_task" })
                     .bind(agent_id)
                     .bind(now)
                     .execute(&mut *tx)
@@ -156,11 +155,10 @@ impl KairosOrchestrator {
                 if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
                     sqlx::query(
-                        "INSERT INTO state_machine_transitions (id, entity_id, entity_type, from_state, to_state, agent_id, occurred_at) VALUES (?, ?, ?, 'EXECUTING', 'COMPLETED', ?, ?)"
+                        "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES (?, ?, 'EXECUTING', 'COMPLETED', ?, ?)"
                     )
                     .bind(trans_id)
                     .bind(task_id)
-                    .bind(if task_type == "swarm" { "swarm_task" } else { "shared_task" })
                     .bind(agent_id)
                     .bind(now.to_rfc3339())
                     .execute(&mut *tx)
@@ -579,6 +577,20 @@ mod tests {
         .await
         .unwrap();
 
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS state_machine_transitions (
+                id TEXT PRIMARY KEY,
+                task_id TEXT,
+                from_state TEXT,
+                to_state TEXT,
+                agent_id TEXT,
+                transitioned_at TEXT
+            )"
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
         let db = Arc::new(DB {
             pool: sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://dummy").unwrap(),
             store: DbStore::Sqlite(pool.clone()),
@@ -660,6 +672,17 @@ mod tests {
         // Now claim Task 2
         let task2 = orchestrator.claim_shared_task("tenant1", "agent2").await.unwrap().unwrap();
         assert_eq!(task2.id, "2");
+
+        // Complete Task 2
+        orchestrator.complete_task("2", "shared", "agent2").await.unwrap();
+
+        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks WHERE id = '2'").fetch_one(&pool).await.unwrap();
+        assert_eq!(row.0, "COMPLETED");
+
+        let trans: (String, String, String) = sqlx::query_as("SELECT task_id, from_state, to_state FROM state_machine_transitions WHERE task_id = '2' AND to_state = 'COMPLETED'").fetch_one(&pool).await.unwrap();
+        assert_eq!(trans.0, "2");
+        assert_eq!(trans.1, "EXECUTING");
+        assert_eq!(trans.2, "COMPLETED");
     }
 
     #[tokio::test]
