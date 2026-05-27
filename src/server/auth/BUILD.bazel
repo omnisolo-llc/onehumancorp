@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_auth",
@@ -33,4 +33,15 @@ rust_library(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
+)
+
+rust_test(
+    name = "server_auth_unit_test",
+    size = "small",
+    crate = ":server_auth",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

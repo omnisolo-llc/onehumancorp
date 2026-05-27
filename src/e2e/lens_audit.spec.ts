@@ -3,6 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Lens Audit E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+  });
 
   test('verify Automated Review Requests block does not contain mock orders text', async ({ page }) => {
     await page.goto('/');
@@ -19,8 +20,6 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
     await expect(page.getByText("Customer Success Department")).not.toBeVisible();
   });
-
-});
 
   test('verify dashboard visual state and full UI lifecycle', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -157,13 +156,7 @@ test.describe('Lens Audit E2E Flow', () => {
   });
 
   // NEW AUDIT TESTS
-  test('verify that no mock Automated Review Request is hardcoded in the Action Required panel', async ({ page }) => {
-    await page.goto('/dashboard');
-    // Ensure the main "Action Required" section loads with real data, but not the hardcoded mock text
-    await expect(page.getByText('Action Required')).toBeVisible({ timeout: 10000 });
-    const mockCardText = page.getByText("3 customers haven't reviewed their orders. Request reviews?", { exact: false });
-    await expect(mockCardText).not.toBeVisible();
-  });
+
 
   test('verify Seasonal Promo generator creates campaign immediately without mock timeouts', async ({ page }) => {
     await page.goto('/seasonal-promo');

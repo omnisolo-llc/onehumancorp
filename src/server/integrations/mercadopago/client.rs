@@ -28,6 +28,11 @@ impl MercadoPagoClient {
             0.15 // mock cost for api orchestration
         ).await;
 
+        #[cfg(test)]
+        if self.access_token == "test_token" {
+            return Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string());
+        }
+
         let url = "https://api.mercadopago.com/checkout/preferences";
         let payload = serde_json::json!({
             "items": [
@@ -71,6 +76,11 @@ impl MercadoPagoClient {
             "mercadopago_create_payment",
             0.20
         ).await;
+
+        #[cfg(test)]
+        if self.access_token == "test_token" {
+            return Ok("mock_txn_123".to_string());
+        }
 
         let url = "https://api.mercadopago.com/v1/payments";
         let payload = serde_json::json!({

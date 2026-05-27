@@ -70,6 +70,16 @@ pub struct Block {
     pub sort_order: i32,
 }
 
+pub async fn get_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid) -> Result<Block, sqlx::Error> {
+    sqlx::query_as::<_, Block>(
+        "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(tenant_id)
+    .bind(block_id)
+    .fetch_one(pool)
+    .await
+}
+
 pub async fn list_blocks(pool: &PgPool, tenant_id: Uuid, page_id: Uuid) -> Result<Vec<Block>, sqlx::Error> {
     sqlx::query_as::<_, Block>(
         "SELECT id, tenant_id, page_id, block_type, content, sort_order FROM builder_blocks WHERE tenant_id = $1 AND page_id = $2 ORDER BY sort_order ASC",
