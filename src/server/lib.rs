@@ -1692,7 +1692,6 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         "failed_payment" => settings.sms_alert_failed_payment,
         "new_order" => settings.sms_alert_new_order,
         "urgent_booking" => settings.sms_alert_urgent_booking,
-        "draft_approval" => true, // Ensure approval notifications are sent
         _ => false,
     };
 
@@ -2027,7 +2026,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             // Generate OTP securely
@@ -2061,8 +2060,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
         }))
         .route("/api/settings/sms-confirm", axum::routing::post({
-            let _settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -2089,7 +2088,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .route("/api/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
                 let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -3047,34 +3046,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
 
                         <!-- Milestone Viral Share Loop Banner -->
-                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">
+                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
                             <div class="flex items-center gap-4">
-                                <div id="milestone-banner-preview" style="width: 120px; height: 63px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.1);">
-                                    <img id="milestone-banner-img" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-                                </div>
+                                <span class="text-3xl" style="font-size: 32px;">🎉</span>
                                 <div>
-                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked!</h3>
+                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked: Your First Customers!</h3>
                                     <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
                                 </div>
                             </div>
                             <button
-                                id="milestone-share-btn"
-                                onclick="shareMilestoneToX('first_sale')"
-                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold shadow-sm transition-colors hover:bg-orange-50"
-                                style="background: white; color: #667eea; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
+                                onclick="const tenant = localStorage.getItem('tenant_id') || 'DEFAULT'; window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just reached ' + document.getElementById('milestone-customers-count').textContent + ' customers on my store! Start your own business today with One Human Corp: ohc://join?ref=' + tenant)}`, '_blank'); dismissMilestoneShareBanner();"
+                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-orange-500 shadow-sm transition-colors hover:bg-orange-50"
+                                style="background: white; color: #f97316; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
                             >
                                 Share & Claim Reward
                             </button>
-                        </div>
-
-                        <!-- Success Milestones Widget -->
-                        <div id="milestones-widget" class="card glass" style="margin-top: 24px; display: none;">
-                            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 20px;">🏆</span> Recent Achievements
-                            </h3>
-                            <div id="milestones-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
-                                <!-- Milestones will be injected here -->
-                            </div>
                         </div>
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
@@ -3308,7 +3294,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Automated AI Review Requests -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                                <h3 style="margin: 0; color: var(--text-primary);">Automated review requests for recent orders <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
 
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
@@ -4184,7 +4170,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
@@ -4717,62 +4703,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
-                            let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
-                                const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
-                                htmlBody += '<div style="margin-top: 15px;">' +
-                                    '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
-                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
-                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; background: #1DA1F2; color: white; text-decoration: none; border-radius: 4px;">Share to X</a>' +
-                                    '</div>';
-                            }
-                            document.getElementById('milestone-body').innerHTML = htmlBody;
+                            document.getElementById('milestone-body').textContent = body;
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
                         function dismissMilestone() {
                             document.getElementById('milestone-card').style.display = 'none';
-                        }
-
-                        function shareMilestoneToX(milestoneId) {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: ohc://join?ref=${tenant}`);
-                            const url = encodeURIComponent(window.location.origin + '/join?ref=' + tenant);
-
-                            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
-                            dismissMilestoneShareBanner();
-                        }
-
-                        async function fetchMilestones() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            try {
-                                const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    const container = document.getElementById('milestones-list');
-                                    const widget = document.getElementById('milestones-widget');
-
-                                    const reached = data.milestones.filter(m => m.reached);
-                                    if (reached.length > 0) {
-                                        widget.style.display = 'block';
-                                        container.innerHTML = reached.map(m => `
-                                            <div class="card" style="margin-bottom: 0; padding: 16px; background: rgba(255,255,255,0.5); border: 1px solid var(--border);">
-                                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                                    <h4 style="margin: 0; font-size: 15px;">${m.title}</h4>
-                                                    <span style="font-size: 12px; background: var(--primary-soft); color: var(--primary); padding: 2px 8px; border-radius: 99px; font-weight: bold;">Reached</span>
-                                                </div>
-                                                <p style="font-size: 13px; margin: 0 0 12px 0;">${m.description}</p>
-                                                <button class="secondary" style="width: 100%; margin: 0; padding: 6px; font-size: 12px;" onclick="shareMilestoneToX('${m.id}')">Share Success</button>
-                                            </div>
-                                        `).join('');
-                                    } else {
-                                        widget.style.display = 'none';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching milestones:', e);
-                            }
                         }
 
                         function dismissMilestoneShareBanner() {
@@ -5397,16 +5333,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const countEl = document.getElementById('milestone-customers-count');
                                     const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
                                     if (banner && countEl && !dismissed) {
-                                        if (metricsData.active_customers >= 1) {
+                                        if (metricsData.active_customers > 0) {
                                             banner.style.display = 'flex';
                                             banner.classList.remove('hidden');
                                             countEl.textContent = metricsData.active_customers;
-
-                                            // Set preview image and update share button
-                                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                            const mid = metricsData.active_customers >= 10 ? '10th_order' : 'first_sale';
-                                            document.getElementById('milestone-banner-img').src = `/api/v1/growth/milestone/card?tenant=${tenant}&milestone_id=${mid}`;
-                                            document.getElementById('milestone-share-btn').onclick = () => shareMilestoneToX(mid);
                                         } else {
                                             banner.style.display = 'none';
                                             banner.classList.add('hidden');
@@ -5415,7 +5345,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
                                 fetchApprovals();
                                 fetchActivityFeed();
                             }
