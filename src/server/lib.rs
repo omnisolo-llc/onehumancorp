@@ -38,7 +38,6 @@ pub use ::server_auth as auth;
 pub mod hub;
 pub mod minimax;
 pub mod billing;
-pub mod ultraplan;
 pub mod autodream;
 pub mod autodream_pipeline;
 pub mod tasks;

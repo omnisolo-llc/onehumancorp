@@ -22,3 +22,4 @@ pub mod statemachine_test;
 pub mod sandbox;
 pub mod sandbox_ask;
 pub mod local_sandbox;
+pub mod ultraplan;

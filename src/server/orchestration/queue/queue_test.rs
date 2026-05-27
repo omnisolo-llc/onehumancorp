@@ -142,3 +142,52 @@ async fn test_sqlite_fail_backoff() {
     let diff = run_after.signed_duration_since(expected_time).num_milliseconds().abs();
     assert!(diff < 1000, "run_after timestamp should be roughly Utc::now() + backoff time, but got difference of {} ms", diff);
 }
+
+#[tokio::test]
+async fn test_sqlite_complete() {
+    let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+
+    sqlx::query(
+        "CREATE TABLE sub_agent_jobs (
+            id TEXT PRIMARY KEY,
+            organization_id TEXT,
+            parent_task_id TEXT,
+            agent_role TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'QUEUED',
+            attempts INTEGER DEFAULT 0,
+            max_attempts INTEGER DEFAULT 3,
+            run_after TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            locked_until TIMESTAMPTZ,
+            created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+        )"
+    ).execute(&pool).await.unwrap();
+
+    let queue = super::SQLiteTaskQueue::new(std::sync::Arc::new(pool.clone()));
+
+    let job = super::Job {
+        id: "job-complete-1".to_string(),
+        tenant_id: "system".to_string(),
+        parent_task_id: "parent-1".to_string(),
+        agent_role: "test-role".to_string(),
+        payload: "{}".to_string(),
+        status: "QUEUED".to_string(),
+        attempts: 0,
+        max_attempts: 3,
+        run_after: chrono::Utc::now() - chrono::Duration::seconds(10),
+        locked_until: None,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+    };
+
+    queue.enqueue(job).await.unwrap();
+
+    queue.complete("job-complete-1").await.unwrap();
+
+    use sqlx::Row;
+    let row = sqlx::query("SELECT status FROM sub_agent_jobs WHERE id = 'job-complete-1'").fetch_one(&pool).await.unwrap();
+
+    let status: String = row.get("status");
+    assert_eq!(status, "COMPLETED");
+}

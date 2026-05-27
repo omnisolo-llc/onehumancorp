@@ -57,6 +57,16 @@ impl UltraPlanManager {
         plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
     }
 
+    pub fn transition_plan_status(&self, plan_id: &str, new_status: &str) -> Result<(), String> {
+        let mut plans = self.plans.write().unwrap();
+        if let Some(plan) = plans.get_mut(plan_id) {
+            plan.status = new_status.to_string();
+            plan.updated_at = Utc::now();
+            Ok(())
+        } else {
+            Err("ultra plan not found".to_string())
+        }
+    }
 }
 
 #[allow(dead_code)]
@@ -106,5 +116,25 @@ mod tests {
         
         let fetched = manager.get_ultra_plan(&plan.id).unwrap();
         assert_eq!(fetched.id, plan.id);
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+
+    #[test]
+    fn test_transition_plan_status() {
+        let manager = UltraPlanManager::new();
+        let state_machine = serde_json::json!({"phase": "INIT"});
+        let plan = manager.create_plan("mission2".to_string(), state_machine.clone()).unwrap();
+
+        assert_eq!(plan.status, "DELIBERATING");
+
+        manager.transition_plan_status(&plan.id, "EXECUTING").unwrap();
+
+        let fetched = manager.get_ultra_plan(&plan.id).unwrap();
+        assert_eq!(fetched.status, "EXECUTING");
+        assert!(fetched.updated_at >= plan.updated_at);
     }
 }

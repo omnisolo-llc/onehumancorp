@@ -182,6 +182,31 @@ impl TaskManager {
 
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
+
+        let deps_all_completed = {
+            if let Some(task) = tasks.get(task_id) {
+                let mut all_completed = true;
+                for dep_id in &task.dependencies {
+                    if let Some(dep_task) = tasks.get(dep_id) {
+                        if dep_task.status != "COMPLETED" {
+                            all_completed = false;
+                            break;
+                        }
+                    } else {
+                        all_completed = false;
+                        break;
+                    }
+                }
+                all_completed
+            } else {
+                false
+            }
+        };
+
+        if !deps_all_completed {
+            return Ok(None);
+        }
+
         if let Some(task) = tasks.get_mut(task_id) {
             if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
