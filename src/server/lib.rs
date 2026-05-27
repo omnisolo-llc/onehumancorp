@@ -2584,6 +2584,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             padding: 32px;
                             max-width: 1120px;
                             margin: 0 auto;
+                            border-radius: 16px;
                             animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
                         }
                         @keyframes fadeIn {
@@ -2618,6 +2619,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             border: 1px solid rgba(255, 255, 255, 0.1);
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border-radius: 16px;
                         }
                         h1, h2, h3 { color: var(--text); margin-top: 0; }
                         input, textarea, select { 
@@ -2627,6 +2629,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             background: rgba(255,255,255,0.94); 
                             border: 1px solid var(--border); 
                             border-radius: 8px;
+                            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
                             color: var(--text); 
                             font-size: 14px;
                             font-family: inherit;
@@ -2640,10 +2643,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
                         button {
-            min-height: 44px;
-            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
+                            transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+                            border-radius: 8px;
                             padding: 10px 18px;
                             background: var(--primary); 
                             border: 1px solid transparent; 
@@ -2750,16 +2753,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         @media (max-width: 375px) {
-                            #setup-screen {
-                                padding: 24px;
-                                margin: 20px auto;
-                                border-radius: 12px;
+                            #setup-screen, #team-screen {
+                                padding: 16px;
+                                margin: 10px;
+                                border-radius: 16px;
                             }
                             #setup-screen button {
-            min-height: 44px;
-            min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
+                                min-height: 44px;
+                                min-width: 44px;
+                                border-radius: 8px;
+                                transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
                             }
                         }
 
@@ -3477,7 +3482,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page (Your Team) -->
-                    <div id="team-screen" class="screen">
+                    <div id="team-screen" class="screen glass">
                         <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
