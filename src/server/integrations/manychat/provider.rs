@@ -36,6 +36,14 @@ impl ManychatProvider {
     pub async fn fetch_conversations(&self) -> Result<Vec<String>, String> {
         self._client.fetch_conversations().await
     }
+
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        self._client.handle_webhook(payload).await
+    }
+
+    pub async fn send_message(&self, to: &str, body: &str) -> Result<(), String> {
+        self._client.send_message(to, body).await
+    }
 }
 
 #[cfg(test)]

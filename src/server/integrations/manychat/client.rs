@@ -10,4 +10,12 @@ impl ManychatClient {
     pub async fn fetch_conversations(&self) -> Result<Vec<String>, String> {
         Ok(vec!["Test Conversation 1".to_string()])
     }
+
+    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
+        Ok(())
+    }
+
+    pub async fn send_message(&self, _to: &str, _body: &str) -> Result<(), String> {
+        Ok(())
+    }
 }

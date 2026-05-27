@@ -396,6 +396,22 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn manychat_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "manychat" {
+                let clients = self.manychat_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.handle_webhook(payload).await;
+        }
+
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_event_types(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "calendly" {
@@ -453,6 +469,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.send_message(platform, to, body).await;
         }
+
+        let manychat_client = {
+            if integration_id == "manychat" {
+                let clients = self.manychat_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = manychat_client {
+            return c.send_message(to, body).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -498,6 +527,19 @@ impl IntegrationsRegistry {
         if let Some(c) = client {
             return c.handle_webhook(payload).await;
         }
+
+        let manychat_client = {
+            if integration_id == "manychat" {
+                let clients = self.manychat_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = manychat_client {
+            return c.handle_webhook(payload).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
