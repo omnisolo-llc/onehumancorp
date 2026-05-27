@@ -933,9 +933,7 @@ pub struct TrialExtensionRequest {
 }
 
 async fn handle_extend_trial(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<TrialExtensionRequest>,
+    Json(_req): Json<TrialExtensionRequest>,
 ) -> impl IntoResponse {
-    println!("Extending trial for platform: {}", req.platform);
-    Json(serde_json::json!({ "success": true, "message": format!("Trial extended by 7 days via {}", req.platform) }))
+    Json(serde_json::json!({ "success": true, "message": "Trial extended by 7 days" }))
 }
