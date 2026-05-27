@@ -92,6 +92,7 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route("/promotions/generate", post(handle_generate_promotion))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -392,6 +393,37 @@ async fn handle_generate_discount_share(
     // we omit the direct `.add` call or use an existing log/metric method instead.
 
     Ok(Json(DiscountShareResponse { share_url }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionRequest {
+    pub tenant: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionResponse {
+    pub message: String,
+    pub discount_code: String,
+}
+
+async fn handle_generate_promotion(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromotionRequest>,
+) -> Result<Json<GeneratePromotionResponse>, StatusCode> {
+    // In a real application we would use the authenticated user's tenant ID
+    // and an AI provider to generate the promotion.
+    // For now, simulate it.
+    let code = format!("PROMO_{}_{}", req.tenant.to_uppercase(), uuid::Uuid::new_v4().to_string().chars().take(4).collect::<String>().to_uppercase());
+
+    let generated = format!(
+        "Special Flash Sale! Use code {} at checkout for 20% off your next order. Shop now to grow your business!",
+        code
+    );
+
+    Ok(Json(GeneratePromotionResponse {
+        message: generated,
+        discount_code: code,
+    }))
 }
 
 async fn handle_team_invites_metrics(
@@ -830,6 +862,31 @@ mod tests {
         let metrics_json = res.unwrap().0;
         let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
         assert_eq!(count_step1, 1);
+    }
+
+    #[tokio::test]
+    async fn test_handle_generate_promotion() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = GeneratePromotionRequest {
+            tenant: "my-tenant".to_string(),
+        };
+
+        let res = handle_generate_promotion(Extension(state.clone()), Json(req)).await;
+        assert!(res.is_ok());
+
+        let res_json = res.unwrap().0;
+        assert!(res_json.discount_code.starts_with("PROMO_MY-TENANT_"));
+        assert!(res_json.message.contains(&res_json.discount_code));
+        assert!(res_json.message.contains("Special Flash Sale!"));
     }
 }
 
