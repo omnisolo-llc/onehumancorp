@@ -3146,8 +3146,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
                                 </div>
                             </div>
-                            <button
-                                id="milestone-share-btn"
+                            <button id="milestone-share-btn"
                                 onclick="shareMilestoneToX('first_sale')"
                                 class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold shadow-sm transition-colors hover:bg-orange-50"
                                 style="background: white; color: #667eea; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
@@ -3256,7 +3255,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <!-- CTA Overlay -->
                                 <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.5); backdrop-filter: blur(2px); border-radius: 12px;">
                                     <p style="margin: 0 0 12px 0; font-weight: 600; color: #1D1D1F; text-align: center; max-width: 80%;">Unlock predictive analytics & AI recommendations to grow faster.</p>
-                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3);" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
+                                    <button class="primary" style="padding: 8px 24px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,102,255,0.3); border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="if(confirm('Upgrade to Pro to access Advanced AI Insights?')) { showScreen('pricing-screen'); }">Upgrade to Pro</button>
                                 </div>
                             </div>
                         </div>
@@ -3272,7 +3271,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="agent-activity-feed" style="background: rgba(255, 255, 255, 0.5); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.8); overflow: hidden;">
 <div style="padding: 32px; text-align: center; color: var(--text-secondary);"><div style="display: inline-block; width: 32px; height: 32px; border: 2px solid rgba(0,0,0,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 12px;"></div><p style="margin: 0; font-size: 14px;">Waiting for team activity...</p></div>
                             </div>
-                            <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600;" onclick="simulateOrder()">Simulate Activity</button>
+                            <button class="secondary" style="width: 100%; margin-top: 16px; font-weight: 600; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="simulateOrder()">Simulate Activity</button>
                         </div>
                         <div id="extra-menu" class="card glass" style="display: none;">
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
@@ -3309,7 +3308,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <label for="promo-discount" style="display: block; margin-bottom: 8px; font-weight: 500;">Discount Percentage</label>
                             <input type="number" id="promo-discount" placeholder="20" style="width: 100%; margin-bottom: 24px; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);">
 
-                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="generateSeasonalPromo()">Generate Campaign</button>
+                            <button class="primary" style="width: 100%; font-size: 16px; padding: 16px; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="generateSeasonalPromo()">Generate Campaign</button>
                         </div>
 
                         <div id="promo-result" class="card glass" style="display: none; background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,249,255,0.9) 100%); border-left: 4px solid var(--primary); margin-top: 24px;">
@@ -3332,21 +3331,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p style="font-size: 14px; font-weight: bold; margin-bottom: 8px; position: relative; z-index: 1; color: white;">Your Referral Link</p>
                             <div style="background: rgba(0,0,0,0.2); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; max-width: 500px; margin: 0 auto; border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 1;">
                                 <p id="referral-link" style="margin: 0; font-family: monospace; font-size: 14px; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;">ohc://join?ref=DEFAULT</p>
-                                <button style="margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); alert('Copied');">Copy</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin: 0; background: white; color: var(--primary, #0066ff); font-weight: 700; border: none; padding: 8px 16px; border-radius: 8px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); alert('Copied');">Copy</button>
                             </div>
 
                             <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; width: 100%; max-width: 375px;" onclick="navigator.clipboard.writeText('ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 2000);">Copy Invite Message</button>
                                 <div id="invite-copied-msg" style="display: none; width: 100%; font-size: 14px; color: #a7f3d0; margin-top: 4px;">Invite message copied!</div>
                             </div>
 
                             <div style="display: flex; gap: 8px; justify-content: center; margin-top: 16px; position: relative; z-index: 1; flex-wrap: wrap;">
-                                <button style="background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
-                                <button style="background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
-                                <button style="background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: #E1306C; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://instagram.com', '_blank')">Share to Instagram</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://wa.me/?text=Launch+your+business+on+OHC!', '_blank')">WhatsApp</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: #1DA1F2; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600;" onclick="window.open('https://twitter.com/intent/tweet?text=Launch+your+business+on+OHC!', '_blank')">X / Twitter</button>
                             </div>
                             <div style="margin-top: 16px; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;">
-                                <button style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.4); padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onclick="navigator.clipboard.writeText('Join OHC using my link! ohc://join?ref=DEFAULT'); document.getElementById('invite-copied-msg').style.display='inline-block'; setTimeout(() => document.getElementById('invite-copied-msg').style.display='none', 3000);">Copy Invite Message</button>
                                 <div id="invite-copied-msg" style="display: none; margin-top: 8px; color: white; font-weight: bold; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 4px;">Invite message copied!</div>
                             </div>
                         </div>
@@ -3367,19 +3366,19 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass">
                             <h3 style="margin-bottom: 20px;">Share with 1-Tap</h3>
                             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-                                <button style="margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Instagram story editor...')">
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin: 0; width: 100%; background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px; border-radius: 8px;" onclick="alert('Opening Instagram story editor...')">
                                     <span style="font-size: 24px;">📷</span>
                                     <span>Share to Instagram</span>
                                 </button>
-                                <button style="margin: 0; width: 100%; background: #25D366; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening WhatsApp...')">
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin: 0; width: 100%; background: #25D366; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px; border-radius: 8px;" onclick="alert('Opening WhatsApp...')">
                                     <span style="font-size: 24px;">💬</span>
                                     <span>WhatsApp</span>
                                 </button>
-                                <button style="margin: 0; width: 100%; background: #0077b5; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening LinkedIn...')">
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin: 0; width: 100%; background: #0077b5; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px; border-radius: 8px;" onclick="alert('Opening LinkedIn...')">
                                     <span style="font-size: 24px;">💼</span>
                                     <span>LinkedIn</span>
                                 </button>
-                                <button style="margin: 0; width: 100%; background: #ea4335; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px;" onclick="alert('Opening Email draft...')">
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin: 0; width: 100%; background: #ea4335; color: white; border: none; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; gap: 8px; border-radius: 8px;" onclick="alert('Opening Email draft...')">
                                     <span style="font-size: 24px;">✉️</span>
                                     <span>Email</span>
                                 </button>
@@ -3391,7 +3390,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h3 style="margin-bottom: 12px;">Embed on Your Website</h3>
                             <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Showcase your OHC storefront directly on your existing blog or website to maximize reach.</p>
                             <textarea id="embed-code" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 12px; margin-bottom: 12px; padding: 8px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); background: rgba(0,0,0,0.02);">&lt;iframe src="https://mybusiness.ohc.store" width="100%" height="600px" style="border:none; border-radius:12px;"&gt;&lt;/iframe&gt;</textarea>
-                            <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%;">Copy Embed Code</button>
+                            <button onclick="navigator.clipboard.writeText(document.getElementById('embed-code').value); alert('Embed code copied!');" style="width: 100%; border-radius: 8px; background-color: #0066FF; color: white; border: none;">Copy Embed Code</button>
                         </div>
 
                         <!-- Automated AI Review Requests -->
@@ -3403,7 +3402,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
                                 ✓ Campaign sent to <span id="review-emails-sent">0</span> customers!
                             </div>
-                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
+                            <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border-radius: 8px;">✨ Send AI Review Requests</button>
                         </div>
 
                         <!-- Social Media Discount Share -->
@@ -3412,7 +3411,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 style="margin: 0; color: var(--text-primary);">Social Media Discount Share <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
                             <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Offer a 10% discount on social media when you hit a new milestone. Drive instant traffic back to your store!</p>
-                            <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff;">🐦 Share 10% Off on X (Twitter)</button>
+                            <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff; border-radius: 8px;">🐦 Share 10% Off on X (Twitter)</button>
                         </div>
 
                         <!-- Growth Loop: Interactive Analytics Soft Paywall -->
@@ -3453,8 +3452,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <p style="margin: 0; font-size: 14px;">Track who signed up and when your rewards activate.</p>
                                 </div>
                                 <div style="display: flex; gap: 8px;">
-                                    <button class="secondary" style="margin: 0;" onclick="alert('History shown')">View Referral Logs</button>
-                                    <button class="secondary" style="margin: 0;" onclick="alert('Data exported')">Export Data</button>
+                                    <button class="secondary" style="margin: 0; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="alert('History shown')">View Referral Logs</button>
+                                    <button class="secondary" style="margin: 0; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="alert('Data exported')">Export Data</button>
                                 </div>
                             </div>
                         </div>
@@ -3466,7 +3465,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('dashboard-screen')">< Back</button>
                         <h1>Customer Inbox</h1>
                         <div class="card glass" onclick="this.classList.toggle('active')">
-                            <h3>Maya <button class="secondary" style="float: right;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
+                            <h3>Maya <button class="secondary" style="float: right; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="event.stopPropagation(); const hint = document.getElementById('ai-draft-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
                             <p id="ai-draft-hint" style="display: none; background: #eef2ff; padding: 12px; border-radius: 8px; font-size: 14px; border-left: 4px solid var(--primary); clear: both; margin-bottom: 12px; color: #1a1a1b;">Use AI Draft to quickly write a professional reply. You can edit it before sending.</p>
                             <p>Do you do vegan cakes?</p>
                             <button onclick="draftInboxReply(this)">✨ AI Draft</button>
@@ -3505,10 +3504,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
                             <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Autonomous Booking Agent</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Enable your AI agent to auto-schedule appointments from the unified inbox without any third-party tools.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                            <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
                         </div>
 
-                        <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
+                        <button id="meetings-title" style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600; border-radius: 8px;"
                                 onclick="document.getElementById('scheduler').style.display='block'; this.style.display='none'">
                             + Schedule New Appointment
                         </button>
@@ -3518,8 +3517,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Team Sync - 14:00</p>
                             <p style="color: #FF9500; font-weight: 500;">In 10 mins</p>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #34C759; color: white; border: none;" onclick="showScreen('meeting-room-screen')">Join Start</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #FF3B30; color: white; border: none;" onclick="this.parentElement.parentElement.innerHTML='<p>Canceled</p>'">Cancel Delete</button>
                             </div>
                         </div>
 
@@ -3532,18 +3531,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input type="email" placeholder="Participant Email" style="min-height: 44px; border-radius: 8px; padding: 0 12px; border: 1px solid var(--border);">
                             </div>
                             <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px;">
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
-                                <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1D1D1F; color: white; border: none; flex: 1;" onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; flex: 1;" onclick="alert('Participant added')">Add</button>
+                                <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1D1D1F; color: white; border: none; flex: 1;" onclick="document.getElementById('scheduler').style.display='none'; document.getElementById('meetings-title').style.display='block'">Save</button>
                             </div>
                         </div>
 
                         <div class="tabs" style="display: flex; gap: 8px; overflow-x: auto; margin-bottom: 16px; padding-bottom: 8px;">
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('History shown')">📜 View Log</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Records')">Past</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Calendar')">Calendar</button>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap;" onclick="alert('Archive')">Archive</button>
+                            <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap; background-color: #0066FF; color: white; border: none;" onclick="alert('History shown')">📜 View Log</button>
+                            <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap; background-color: #0066FF; color: white; border: none;" onclick="alert('Records')">Past</button>
+                            <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap; background-color: #0066FF; color: white; border: none;" onclick="alert('Calendar')">Calendar</button>
+                            <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; white-space: nowrap; background-color: #0066FF; color: white; border: none;" onclick="alert('Archive')">Archive</button>
                         </div>
-                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%;" onclick="showScreen('dashboard-screen')">Back</button>
+                        <button class="secondary" style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; width: 100%; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="showScreen('dashboard-screen')">Back</button>
                     </div>
 
                     <!-- Meeting Room Screen -->
@@ -3569,7 +3568,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="team-screen" class="screen">
                         <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
-                        <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
+                        <button style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"margin-bottom: 20px; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
@@ -3602,11 +3601,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Sales Agent</h3>
                                 <p style="color: var(--accent-orange);">Status: Needs Approval (1)</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Generated quote for custom cake.</p>
-                                <button style="margin-top: 15px; width: 100%;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
+                                <button style="margin-top: 15px; width: 100%; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="event.stopPropagation(); showScreen('dashboard-screen')">Review Pending Approvals</button>
                             </div>
                         </div>
 
-                        <button class="secondary" style="margin-top: 20px;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
+                        <button class="secondary" style="margin-top: 20px; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                     <script>
@@ -3828,15 +3827,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h2>Global SMS Notifications for Critical Alerts</h2>
                         <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Get immediate text alerts for urgent business events.</p>
                         <div style="margin-bottom: 12px;">
-                            <input type="text" id="sms-critical-phone" placeholder="Mobile Phone Number (e.g. +1234567890)" style="width: 100%; max-width: 300px; margin-bottom: 8px;" />
+                            <input type="text" id="sms-critical-phone" placeholder="Mobile Phone Number (e.g. +1234567890)" style="width: 100%; max-width: 300px; margin-bottom: 8px; border-radius: 8px;" />
                             <br/>
-                            <button onclick="verifySmsNumber()" id="btn-verify-sms" style="background: var(--primary); color: white;">Verify Number</button>
+                            <button onclick="verifySmsNumber()" id="btn-verify-sms" style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: var(--primary); color: white; border-radius: 8px;">Verify Number</button>
                         </div>
 
                         <div id="sms-otp-container" style="display: none; margin-bottom: 12px; background: rgba(0, 102, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(0, 102, 255, 0.2);">
                             <p style="font-size: 14px; margin-bottom: 8px;">A 6-digit code has been sent. Enter it below:</p>
-                            <input type="text" id="sms-critical-otp" placeholder="123456" style="width: 100px; margin-right: 8px;" />
-                            <button onclick="confirmSmsNumber()" style="background: var(--accent-green); color: white;">Confirm OTP</button>
+                            <input type="text" id="sms-critical-otp" placeholder="123456" style="width: 100px; margin-right: 8px; border-radius: 8px;" />
+                            <button onclick="confirmSmsNumber()" style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: var(--accent-green); color: white; border-radius: 8px;">Confirm OTP</button>
                         </div>
                         <div id="sms-verified-badge" style="display: none; margin-bottom: 12px; color: var(--accent-green); font-weight: 600; font-size: 14px;">
                             ✓ Number Verified
@@ -4004,7 +4003,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </li>
                             </ul>
                         </div>
-                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px;">Back to My Plan</button>
+                        <button onclick="showScreen('my-plan-screen')" style="margin-top: 24px; border-radius: 8px; background-color: #0066FF; color: white; border: none;">Back to My Plan</button>
                     </div>
 
                     <!-- Advisory Dashboard Screen -->
@@ -4110,90 +4109,90 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; position: relative;">
                         <div id="setup-error" class="error" style="display: none; margin: 16px; border-radius: 8px; padding: 12px; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); color: #FF3B30;"></div>
                         <h1 style="margin-bottom: 24px; padding: 0 16px; margin-top: 16px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
+                            <button onclick="nextStep(2)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">🚀 Start My Business Next</button>
+                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">⚡ Instant Build (AI) →</button>
                         </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>What kind of business are you building?</h1>
                             <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep(3)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
+                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🛒 <span>Online Store</span></button>
+                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🛠️ <span>Service Business</span></button>
+                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🍕 <span>Restaurant / Food</span></button>
+                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🎨 <span>Creative</span></button>
+                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🏠 <span>Local Business</span></button>
+                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Give your business a name</h1>
                             <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
                             <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep('generating')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Generate Description</button>
+                            <button onclick="nextStep(4)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
+                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>What do you sell?</h1>
                             <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-digital" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-services" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-subscriptions" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0; border-radius: 8px;"> 📦 Physical Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-digital" style="width: auto; margin: 0; border-radius: 8px;"> 📄 Digital Products</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-services" style="width: auto; margin: 0; border-radius: 8px;"> 📅 Services / Appointments</label>
+                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-subscriptions" style="width: auto; margin: 0; border-radius: 8px;"> 🔁 Subscriptions</label>
                             </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep(5)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
+                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Add your first product or service</h1>
                             <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
                             <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
+                            <button onclick="nextStep('generating')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Generate AI Description</button>
+                            <button onclick="nextStep(6)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
+                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
+                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Online</button>
+                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Both Online & In-person</button>
+                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Create your account</h1>
                             <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
                             <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
                             <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
+                            <button onclick="nextStep(8)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
                         </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
+                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Modern</button>
+                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Bold</button>
                             <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
                                 <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
                                 <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
                                 <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
                             </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
+                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
                         </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
+                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🌐 Free OHC Domain</button>
+                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">🔗 Connect Custom Domain</button>
+                            <button onclick="nextStep(10)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Next →</button>
                         </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
+                            <button onclick="publishBusiness(this)" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;"><span>Publish my business</span> <span>→</span></button>
                         </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
+                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4);">
                             <h1>🎉 Success! Your business is live! 🎉</h1>
                             <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
+                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">View Welcome Checklist →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Launch My Business →</button>
                         </div>
 
                         <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
@@ -4203,14 +4202,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>⬜ Add 3 more products</p>
                             <p>⬜ Connect Instagram</p>
                             <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Go to Dashboard →</button>
                         </div>
 
                         <div id="step-ai" class="hidden" style="display: none;">
                             <h1>Describe your business in a sentence</h1>
                             <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                            <button onclick="generateAI()" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Generate Storefront →</button>
+                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Back</button>
                         </div>
                         <div id="step-generating" class="hidden" style="display: none;">
                             <div class="card glass" style="padding: 60px 40px; text-align: center;">
@@ -4223,7 +4222,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         </div>
                         <div id="step-launch-ai" class="hidden" style="display: none;">
                             <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
+                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px; background-color: #0066FF; color: white; border: none;">Continue to Dashboard →</button>
                         </div>
                     </div>
 
@@ -4246,10 +4245,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div class="card glass" style="margin-top: 24px; border-left: 4px solid #0066ff;">
                                 <h3>Social Share Card (OG)</h3>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate a beautiful "Powered by OHC" image to share your store on social media.</p>
-                                <button onclick="generateOgCard()" style="width: 100%; margin-bottom: 16px;" class="secondary">Preview Share Card</button>
+                                <button onclick="generateOgCard()" style="width: 100%; margin-bottom: 16px; border-radius: 8px; background-color: #0066FF; color: white; border: none;" class="secondary">Preview Share Card</button>
                                 <div id="og-card-preview-container" style="display: none; text-align: center;">
                                     <img id="og-card-img" src="" style="width: 100%; max-width: 400px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;" />
-                                    <button onclick="shareOgCardToX()" style="width: 100%; background: #000; color: white;">Share to X (Twitter)</button>
+                                    <button onclick="shareOgCardToX()" style="width: 100%; background: #000; color: white; border-radius: 8px;">Share to X (Twitter)</button>
                                 </div>
                             </div>
                         </div>
@@ -4263,24 +4262,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="sheet-content">
                                 <!-- Dynamic form inputs -->
                             </div>
-                            <button style="margin-top: 16px; width: 100%;" onclick="saveBlockChanges()">Save</button>
+                            <button style="margin-top: 16px; width: 100%; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="saveBlockChanges()">Save</button>
                         </div>
 
                         <!-- Embed Setup Bottom Sheet -->
                         <!-- Soft Paywall Modal -->
                         <div id="soft-paywall-modal" class="bottom-sheet glass" style="padding: 24px; text-align: center; max-height: 90vh; overflow-y: auto; z-index: 2000;">
                             <div style="display: flex; justify-content: flex-end;">
-                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="background: transparent; border: none; font-size: 24px; cursor: pointer;">×</button>
+                                <button class="bottom-sheet-close" onclick="closeSoftPaywall()" style="border-radius: 8px;  background-color: #0066FF; color: white; border: none;"background: transparent; border: none; font-size: 24px; cursor: pointer; border-radius: 8px;">×</button>
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
                             <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
-                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
+                            <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white; border-radius: 8px;">Upgrade to Pro</button>
 
                             <div style="margin: 16px 0; color: var(--text-secondary); font-size: 14px;">OR</div>
 
-                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2;">
+                            <button onclick="claimTrialExtension()" style="width: 100%; padding: 14px; border-radius: 12px; font-weight: bold; background: white; color: #1DA1F2; border: 2px solid #1DA1F2; border-radius: 8px;">
                                 🐦 Share on X to get 7 Days Free
                             </button>
                         </div>
@@ -4293,7 +4292,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div style="padding: 16px;">
                                 <p>Copy the code below to embed your storefront onto another website.</p>
                                 <textarea id="embed-code-textarea" readonly style="width:100%; height:120px; font-family:monospace; margin-top:8px; border-radius:4px; border:1px solid #ccc; padding:8px;"></textarea>
-                                <button style="margin-top: 16px; width: 100%;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
+                                <button style="margin-top: 16px; width: 100%; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="navigator.clipboard.writeText(document.getElementById('embed-code-textarea').value); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy to Clipboard', 2000);">Copy to Clipboard</button>
                             </div>
                         </div>
 
@@ -4305,13 +4304,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div class="domain-setup active" id="domain-step-1">
                                 <p>Choose your domain option:</p>
-                                <button class="secondary" style="width:100%; margin-bottom:8px;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
-                                <button class="secondary" style="width:100%;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
+                                <button class="secondary" style="width:100%; margin-bottom:8px; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="selectDomain('free')">🌐 Free OHC Subdomain</button>
+                                <button class="secondary" style="width:100%; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="selectDomain('custom')">🔗 Connect Custom Domain</button>
                             </div>
                             <div class="domain-setup" id="domain-step-free">
                                 <p>Your free domain:</p>
                                 <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
-                                <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
+                                <button style="margin-top: 16px; width: 100%; border-radius: 8px; background-color: #0066FF; color: white; border: none;" onclick="publishStorefront()">Publish</button>
                             </div>
                         </div>
 
@@ -4502,7 +4501,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         innerHtml += `<div style="padding:16px; border:1px dashed var(--primary); border-radius:8px; text-align:center; margin-top: 16px;">
                                             <p><strong>${escapeHtml(block.content.title)}</strong></p>
                                             <p>${escapeHtml(block.content.offer)}</p>
-                                            <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
+                                            <button class="secondary" style="width:100%; margin-bottom:8px; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;">Share to WhatsApp</button>
                                             <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
                                         </div>`;
                                     }
@@ -4546,7 +4545,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             let html = '';
                             for (const key in block.content) {
                                 html += `<label style="display:block; margin-top:8px;">${key}</label>`;
-                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box;"/>`;
+                                html += `<input type="text" id="edit-${key}" value="${block.content[key]}" style="width:100%; box-sizing:border-box; border-radius: 8px;"/>`;
                             }
                             document.getElementById('sheet-content').innerHTML = html;
                             document.getElementById('block-editor-sheet').classList.add('open');
@@ -4853,7 +4852,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                     <span style="font-size: 12px; background: var(--primary-soft); color: var(--primary); padding: 2px 8px; border-radius: 99px; font-weight: bold;">Reached</span>
                                                 </div>
                                                 <p style="font-size: 13px; margin: 0 0 12px 0;">${m.description}</p>
-                                                <button class="secondary" style="width: 100%; margin: 0; padding: 6px; font-size: 12px;" onclick="shareMilestoneToX('${m.id}')">Share Success</button>
+                                                <button class="secondary" style="width: 100%; margin: 0; padding: 6px; font-size: 12px; border-radius: 8px; border: 1px solid #ccc; background: white; color: #1D1D1F;" onclick="shareMilestoneToX('${m.id}')">Share Success</button>
                                             </div>
                                         `).join('');
                                     } else {
@@ -5897,7 +5896,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Help Center</h1>
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
-                            <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);" onkeyup="filterHelpCenter()">
+                            <input type="text" id="help-search" placeholder="Search for help..." style="max-width: 400px; width: 100%; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); border-radius: 8px;" onkeyup="filterHelpCenter()">
                             <button onclick="document.getElementById('ai-chat-widget').style.display='flex'" placeholder="ask-ai-tooltip">Ask AI</button>
                         </div>
 
