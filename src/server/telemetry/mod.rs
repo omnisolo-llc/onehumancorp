@@ -705,21 +705,6 @@ pub async fn record_api_call_cost(
     .await
 }
 
-pub async fn record_mcp_proxy_connections_active(
-    pool: &PgPool,
-    spiffe_id: &str,
-    delta: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_mcp_proxy_connections_active",
-        "gauge",
-        delta,
-        serde_json::json!({ "spiffe_id": spiffe_id }),
-    )
-    .await
-}
-
 pub async fn record_swarm_job_latency_by_entity(
     pool: &PgPool,
     mode: &str,
@@ -855,10 +840,9 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("credential")
         || k.contains("email")
         || k.contains("phone")
-        || (k.contains("user_id") && !k.contains("tenant_id") && !k.contains("organization_id"))
         || k.contains("ssn")
         || k.contains("address")
-        || (k.contains("name") && !k.contains("metric_name"))
+        || k.contains("name")
         || k.contains("pii")
         || k.contains("jwt")
         || k.contains("bearer")

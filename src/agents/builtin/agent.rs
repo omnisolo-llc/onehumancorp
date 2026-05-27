@@ -258,32 +258,22 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
     }
 
     // Order: more deeply-nested files take precedence
-    // We must respect the 32 KiB cap while preserving the deepest files.
     let mut combined = String::new();
-    let max_bytes: usize = 32 * 1024;
-    let separator = "\n\n---\n\n";
-
     for (i, content) in contents.iter().enumerate() {
-        let prefix = if i > 0 { separator } else { "" };
-
-        let remaining_space = max_bytes.saturating_sub(combined.len());
-        if remaining_space == 0 {
-            break;
+        if i > 0 {
+            combined.push_str("\n\n---\n\n");
         }
+        combined.push_str(content);
+    }
 
-        let mut to_add = format!("{}{}", prefix, content);
-        if combined.len() + to_add.len() > max_bytes {
-            let mut end_idx = remaining_space;
-            while end_idx > 0 && !to_add.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            to_add.truncate(end_idx);
-            combined.push_str(&to_add);
-            combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
-            break;
-        } else {
-            combined.push_str(&to_add);
+    let max_bytes = 32 * 1024;
+    if combined.len() > max_bytes {
+        let mut end_idx = max_bytes;
+        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
+            end_idx -= 1;
         }
+        combined.truncate(end_idx);
+        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
     }
 
     combined
@@ -847,7 +837,7 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                                let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
                             let mut retry_count = 0;
@@ -945,7 +935,7 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
-                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+                        let _final_res: Result<String, crate::types::ToolError> = Err(e);
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
@@ -971,7 +961,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -3337,7 +3327,7 @@ mod tests {
             description: "read".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let client = Arc::new(LLMCompilerMockClient {
@@ -3465,7 +3455,7 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -3663,21 +3653,21 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "mutating_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -3721,7 +3711,7 @@ mod tests {
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -3765,7 +3755,7 @@ mod tests {
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -3865,7 +3855,7 @@ mod tests {
             description: "test".to_string(),
                 is_read_only: false,
             parameters: Value::Null,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         }];
 
         let agent = Agent::new(client, tools);
@@ -3951,21 +3941,11 @@ mod tests {
             ]),
         });
 
-        pub struct MockToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for MockToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("tool output".to_string())
-            }
-        }
-
-        let tools: Vec<Tool> = vec![
-            Tool {
                 name: "test_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             }
         ];
 
@@ -4397,14 +4377,14 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
             Tool {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ];
 
@@ -4452,7 +4432,7 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
-                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+                execute: Arc::new(MockToolExecutor),
             },
         ]);
 
@@ -4616,7 +4596,7 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({"type": "object"}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -5005,7 +4985,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: serde_json::Value::Null,
             is_read_only: false,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let mut agent = Agent::new(client, vec![mutating_tool]);
@@ -5081,7 +5061,7 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
             is_read_only: false,
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![mutating_tool]);
@@ -5255,7 +5235,7 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -5302,7 +5282,7 @@ mod tests {
             description: "mutates".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         // We'll mock it so the LLM calls the tool, then stops
@@ -5594,7 +5574,7 @@ mod tests {
             description: "test".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object", "properties": {}}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         }]);
 
         let mut events = vec![];
@@ -6230,7 +6210,7 @@ mod hierarchical_prompt_tests {
             description: "test".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({"type": "object", "properties": {}}),
-            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: Arc::new(MockToolExecutor),
         };
 
         let agent = Agent::new(client.clone(), vec![tool]);

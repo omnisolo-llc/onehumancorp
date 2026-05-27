@@ -44,7 +44,7 @@ graph TD
 
 ## Validation & Implementation Feasibility
 
-This architectural shift is feasible in the current Rust backend. The codebase already has storage abstractions under `src/server/storage/` and MCP service modules under `src/server/services/mcp/`; implementation should extend those Rust modules with local and S3-backed providers selected from runtime configuration.
+This architectural shift is highly feasible. It requires introducing an interface (`mcp.BlobProvider`) in the Go backend (`src/server/agents/mcp`) and implementing two concrete providers: `LocalBlobProvider` and `S3BlobProvider`. A factory pattern will evaluate the environment variables at boot time and inject the appropriate provider into the MCP server registry.
 
 This report finalizes the market research phase and initiates the mission queueing for implementation.
 

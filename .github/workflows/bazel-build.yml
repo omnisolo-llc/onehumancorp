@@ -5,10 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -36,9 +38,6 @@ jobs:
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
-          - name: android
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
          # - name: windows-arm64
           #  runner: windows-11-arm
          #   bazel_config: windows_arm64
@@ -51,20 +50,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Free runner disk space
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
-
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
         run: sudo xcode-select -s /Applications/Xcode.app
@@ -72,6 +57,40 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - .bazelrc
+            - .bazelversion
+            - repositories.bzl
+            - bazel/rules/**/*.bzl
+            - bazel/patches/**
+            - Cargo.lock
+            - Cargo.toml
+            - pnpm-lock.yaml
+            - package-lock.json
+            - package.json
+            - go.mod
+            - go.sum
+          external-cache: |
+            manifest:
+              npm:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - pnpm-lock.yaml
+                - package.json
+              tauri_cargo_vendor:
+                - MODULE.bazel
+                - Cargo.lock
+              crates:
+                - MODULE.bazel
+                - MODULE.bazel.lock
+                - Cargo.lock
+                - Cargo.toml
+          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -81,7 +100,6 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
-        if: matrix.name != 'android'
         run: |
           bazelisk query '
             kind(".* rule", //...)
@@ -120,7 +138,7 @@ jobs:
         run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'android'
+        if: matrix.name == 'linux-x86_64'
         run: |
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
