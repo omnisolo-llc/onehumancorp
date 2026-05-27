@@ -1,41 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function Integrations() {
   const [activeTab, setActiveTab] = useState("all");
-  const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "meta_cloud_api", name: "Meta Cloud API", category: "operations", status: "disconnected", icon: "💬", description: "Unified Inbox for IG, FB, and WhatsApp." },
+    { id: "google_calendar_api", name: "Google Calendar API", category: "operations", status: "disconnected", icon: "📅", description: "Two-way synchronization for appointments." },
+    { id: "mailchimp_marketing_api", name: "Mailchimp Marketing API", category: "marketing", status: "disconnected", icon: "📨", description: "Automatic synchronization of customer lists." },
+    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept local payment methods like Pix in LATAM." },
+    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Real-time checkout rates and one-click PDF labels." },
+    { id: "twilio_programmable_sms", name: "Twilio Programmable SMS", category: "operations", status: "disconnected", icon: "🔔", description: "Automated SMS confirmations and reminders." },
+    { id: "zoom_api", name: "Zoom API", category: "operations", status: "disconnected", icon: "📹", description: "Auto-generated unique meeting links for bookings." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
-    }
+    alert(`Connecting ${id} via OAuth...`);
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === id ? { ...integration, status: "connected" } : integration
+    ));
   };
 
   return (
