@@ -3106,7 +3106,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
-                            <h3>Approval Inbox</h3>
+                            <h3>Pending Actions Hub</h3>
                         </div>
                         <div class="card glass" id="activity-feed"></div>
                         <div class="card glass">
@@ -3585,19 +3585,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (!container) return;
 
                                     if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3>';
                                         data.pending_approvals.forEach(approval => {
+                                            const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
                                             container.innerHTML += `
-                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
-                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
+                                                    ${payloadStr}
+                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                                    </div>
                                                 </div>
                                             `;
                                         });
                                     } else {
-                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
                                     }
                                 }
                             } catch (e) {
@@ -3606,6 +3610,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function decideApproval(id, approved) {
+                            const card = document.getElementById('approval-card-' + id);
+                            if (card) {
+                                card.style.display = 'none';
+                            }
                             try {
                                 const res = await fetch('/api/agents/approvals/' + id, {
                                     method: 'POST',
@@ -3617,11 +3625,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (res.ok) {
                                     fetchApprovals();
-                                fetchActivityFeed();
+                                    fetchActivityFeed();
                                 } else {
+                                    if (card) card.style.display = 'block';
                                     alert('Failed to process approval.');
                                 }
                             } catch (e) {
+                                if (card) card.style.display = 'block';
                                 console.error('Error processing approval:', e);
                             }
                         }
