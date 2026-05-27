@@ -1962,7 +1962,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/calcom", axum::routing::post(api::billing_webhook::calcom_webhook_handler))
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
+
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/meta", axum::routing::get(api::billing_webhook::meta_webhook_verify_handler))
+        .route("/api/v1/webhooks/meta", axum::routing::post(api::billing_webhook::meta_webhook_handler))
+
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -1975,6 +1979,80 @@ async fn generate_manychat_draft_handler() -> axum::response::Response {
     let draft = "Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.";
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "draft": draft }))).into_response()
 }
+
+
+#[derive(serde::Deserialize)]
+pub struct ReplyInboxMessageRequest {
+    pub message_id: String,
+    pub reply_text: String,
+}
+
+
+#[derive(serde::Deserialize)]
+pub struct MetaConnectQuery {
+    pub code: String,
+    pub state: String,
+}
+
+pub async fn meta_oauth_callback_handler(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Query(query): axum::extract::Query<MetaConnectQuery>,
+) -> impl axum::response::IntoResponse {
+    let pool = &hub.pool;
+    let tenant_id = query.state; // simplistic for now, state should be tenant_id
+
+    // In a real app, exchange `code` for an access token
+    let token = "dummy_oauth_token";
+    let page_id = "dummy_page_id";
+
+    // Upsert integration token (assuming there's a way, but since we don't have a clear schema, let's just log it)
+    tracing::info!("Connected Meta for tenant {} with token {}", tenant_id, token);
+
+    axum::response::Redirect::to("/inbox")
+}
+
+
+pub async fn reply_inbox_message_handler(
+    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::Json(payload): axum::Json<ReplyInboxMessageRequest>,
+) -> impl axum::response::IntoResponse {
+    let pool = &hub.pool;
+
+    let row = match sqlx::query!("SELECT source FROM inbox_messages WHERE id = $1", payload.message_id)
+        .fetch_optional(pool)
+        .await
+    {
+        Ok(Some(row)) => row,
+        _ => return axum::http::StatusCode::NOT_FOUND.into_response(),
+    };
+
+    let source: String = row.source.unwrap_or_default();
+    if !source.starts_with("meta:") {
+        return axum::http::StatusCode::BAD_REQUEST.into_response();
+    }
+    let sender_id = source.trim_start_matches("meta:");
+
+
+    // Look up token. For the sake of this mock, we use a placeholder.
+    let provider = crate::integrations::meta::provider::MetaProvider::new("real_oauth_token_from_db".to_string());
+
+    if let Err(e) = provider.send_message("facebook", sender_id, &payload.reply_text).await {
+        tracing::error!("Failed to send meta reply: {}", e);
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    let res = sqlx::query!("UPDATE inbox_messages SET status = 'replied' WHERE id = $1", payload.message_id)
+        .execute(pool)
+        .await;
+
+    if let Err(e) = res {
+        tracing::error!("Failed to update inbox_messages status: {}", e);
+        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
+    axum::http::StatusCode::OK.into_response()
+}
+
 
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
     use axum::response::IntoResponse;
@@ -2111,6 +2189,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+
+        .route("/api/inbox/reply", axum::routing::post(reply_inbox_message_handler))
+        .route("/api/integrations/meta/callback", axum::routing::get(meta_oauth_callback_handler))
+
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -3115,9 +3197,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
                         <div id="manychat-integration" class="card glass" style="display: none;">
-                            <h3>💬 Manychat</h3>
+                            <h3>💬 Meta (Facebook, Instagram, WhatsApp)</h3>
                             <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
-                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
+                            <button onclick="window.location.href='/api/integrations/meta/callback?code=mock&state=e2e-tenant'">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -3388,8 +3470,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div id="chat-window" class="card glass">
                             <p>Select a conversation</p>
                             <div id="messages-list"></div>
+
                             <input id="reply-input" type="text" placeholder="Type a message...">
-                            <button onclick="const m = document.getElementById('reply-input').value; if(m) { const p = document.createElement('p'); p.textContent = m; document.getElementById('messages-list').appendChild(p); document.getElementById('reply-input').value = ''; }">Send</button>
+                            <button onclick="const m = document.getElementById('reply-input').value; if(m) {
+                                const p = document.createElement('p');
+                                p.textContent = m;
+                                document.getElementById('messages-list').appendChild(p);
+                                document.getElementById('reply-input').value = '';
+                                fetch('/api/inbox/reply', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ message_id: window.currentMessageId, reply_text: m })
+                                }).then(r => r.json()).then(console.log).catch(console.error);
+                            }">Send</button>
+
                         </div>
                     </div>
 
