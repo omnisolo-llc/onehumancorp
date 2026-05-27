@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
-import ApprovalInbox from './components/ApprovalInbox';
+import ActionFeed, { ActionItem } from './components/ActionFeed';
 
 export type ApprovalRequest = {
   id: string;
@@ -12,6 +12,13 @@ export type ApprovalRequest = {
   status: string;
   action_risk: string;
   payload?: any;
+};
+
+export type FeedResponseItem = {
+  id: string;
+  department: string;
+  description: string;
+  timestamp: string;
 };
 
 const DEPARTMENTS = [
@@ -26,39 +33,53 @@ const DEPARTMENTS = [
 
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [feedItems, setFeedItems] = useState<FeedResponseItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchApprovals = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/agents/approvals');
-      if (response.ok) {
-        const data = await response.json();
-        setApprovals(data.pending_approvals || []);
+      const [approvalsRes, feedRes] = await Promise.all([
+        fetch('/api/agents/approvals'),
+        fetch('/api/agents/feed')
+      ]);
+
+      let newApprovals = [];
+      if (approvalsRes.ok) {
+        const data = await approvalsRes.json();
+        newApprovals = data.pending_approvals || [];
       }
+
+      let newFeed = [];
+      if (feedRes.ok) {
+        const data = await feedRes.json();
+        newFeed = data.feed || [];
+      }
+
+      setApprovals(newApprovals);
+      setFeedItems(newFeed);
     } catch (error) {
-      console.error("Failed to fetch approvals", error);
+      console.error("Failed to fetch data", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchApprovals();
+    fetchData();
   }, []);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (id: string, newBody?: string) => {
     try {
       setApprovals(prev => prev.filter(a => a.id !== id));
       const response = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved: true })
+        body: JSON.stringify({ approved: true, newBody })
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to approve", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
@@ -70,28 +91,30 @@ export default function TeamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved: false })
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to reject", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
-  if (selectedDepartment) {
-    const deptInfo = DEPARTMENTS.find(d => d.id === selectedDepartment);
-    const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
-
-    return (
-      <ApprovalInbox
-        departmentId={selectedDepartment}
-        departmentName={deptInfo?.name || selectedDepartment}
-        approvals={deptApprovals}
-        onBack={() => setSelectedDepartment(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
-    );
-  }
+  const actionFeedItems: ActionItem[] = [
+    ...approvals.map(a => ({
+      type: 'approval' as const,
+      id: a.id,
+      department: a.department,
+      description: a.description,
+      title: `${a.department} drafted a response.`,
+      body: a.payload?.generated_response || a.description || "Draft content..."
+    })),
+    ...feedItems.map(f => ({
+      type: 'completed' as const,
+      id: f.id,
+      department: f.department,
+      description: f.description,
+      timestamp: f.timestamp
+    }))
+  ];
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
@@ -113,23 +136,33 @@ export default function TeamPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar flex flex-col gap-6">
           {loading ? (
              <div className="flex justify-center py-10">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
              </div>
           ) : (
-            DEPARTMENTS.map(dept => {
-              const pendingCount = approvals.filter(a => a.department === dept.id).length;
-              return (
-                <DepartmentCard
-                  key={dept.id}
-                  name={dept.name}
-                  pendingCount={pendingCount}
-                  onClick={() => setSelectedDepartment(dept.id)}
-                />
-              );
-            })
+            <>
+              <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar -mx-4 px-4 snap-x snap-mandatory">
+                {DEPARTMENTS.map(dept => {
+                  const pendingCount = approvals.filter(a => a.department === dept.name).length;
+                  return (
+                    <div key={dept.id} className="snap-center shrink-0 w-[240px]">
+                      <DepartmentCard
+                        name={dept.name}
+                        pendingCount={pendingCount}
+                        onClick={() => {}}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4 tracking-tight">Action Feed</h2>
+                <ActionFeed items={actionFeedItems} onApprove={handleApprove} onReject={handleReject} />
+              </div>
+            </>
           )}
         </div>
       </div>
