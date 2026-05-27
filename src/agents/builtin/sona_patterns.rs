@@ -11,7 +11,6 @@ pub struct TrajectoryPattern {
     pub outcome_score: f32, // 0.0 to 1.0 representing success
 }
 
-#[derive(Debug)]
 pub struct PatternMatcher {
     patterns: Vec<TrajectoryPattern>,
 }
