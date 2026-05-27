@@ -85,6 +85,7 @@ rust_library(
         "tool_executor_engine.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
+        "visual_orchestration.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
