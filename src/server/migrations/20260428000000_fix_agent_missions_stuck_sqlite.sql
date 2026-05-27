@@ -23,12 +23,12 @@ CREATE TABLE agent_missions (
 );
 
 -- 3. Copy the data back explicitly.
--- We include all critical columns including organization_id.
+-- We include all existing columns to ensure a lossless 1:1 copy.
 INSERT INTO agent_missions (
-    id, status, payload, created_at, updated_at, tenant_id, synced_to_cloud, organization_id
+    id, status, payload, created_at, updated_at, tenant_id, cloud_mission_id, sync_error, last_synced_at, synced_to_cloud, _sync_status, version, mission_log, organization_id
 )
 SELECT
-    id, status, payload, created_at, updated_at, tenant_id, synced_to_cloud, organization_id
+    id, status, payload, created_at, updated_at, tenant_id, cloud_mission_id, sync_error, last_synced_at, synced_to_cloud, _sync_status, version, mission_log, organization_id
 FROM _temp_agent_missions;
 
 -- 4. Drop the temporary table.
