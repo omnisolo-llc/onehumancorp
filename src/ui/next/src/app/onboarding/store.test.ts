@@ -69,10 +69,50 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v4'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
+  });
+
+  it('should sync state to backend and handle error correctly', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    await useOnboardingStore.getState().syncStateToBackend();
+    expect(global.fetch).toHaveBeenCalled();
+    expect(useOnboardingStore.getState().error).toBe('Failed to save progress to backend.');
+  });
+
+  it('should load state from backend and handle error correctly', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500
+    });
+
+    await useOnboardingStore.getState().loadStateFromBackend();
+    expect(global.fetch).toHaveBeenCalled();
+    expect(useOnboardingStore.getState().error).toBe('Failed to load progress from backend.');
+  });
+
+  it('should load state from backend successfully', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        step: 2,
+        businessName: 'Loaded Name',
+        websiteTemplate: 'Bold',
+      })
+    });
+
+    await useOnboardingStore.getState().loadStateFromBackend();
+    expect(global.fetch).toHaveBeenCalled();
+    const state = useOnboardingStore.getState();
+    expect(state.step).toBe(2);
+    expect(state.businessName).toBe('Loaded Name');
+    expect(state.websiteTemplate).toBe('Bold');
   });
 });

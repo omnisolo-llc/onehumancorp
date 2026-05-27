@@ -13,6 +13,8 @@ describe('OnboardingWizard', () => {
       isLoading: false,
       error: '',
       startResult: null,
+      syncStateToBackend: vi.fn().mockResolvedValue(undefined),
+      loadStateFromBackend: vi.fn().mockResolvedValue(undefined),
     });
 
     global.fetch = vi.fn();
