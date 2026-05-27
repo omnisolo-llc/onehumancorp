@@ -6,6 +6,9 @@ describe('useOnboardingStore', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
+      whatDoYouCreate: '',
+      instagramHandle: '',
+      stripeConnected: false,
       businessDescription: '',
       isLoading: false,
       error: '',
@@ -16,6 +19,9 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
+    expect(state.whatDoYouCreate).toBe('');
+    expect(state.instagramHandle).toBe('');
+    expect(state.stripeConnected).toBe(false);
     expect(state.businessDescription).toBe('');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
@@ -64,15 +70,28 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductPrice).toBe('5.00');
   });
 
+  it('should update new persona state keys correctly', () => {
+    useOnboardingStore.getState().setWhatDoYouCreate('I make vegan cakes');
+    useOnboardingStore.getState().setInstagramHandle('@vegancakes');
+    useOnboardingStore.getState().setStripeConnected(true);
+
+    const state = useOnboardingStore.getState();
+    expect(state.whatDoYouCreate).toBe('I make vegan cakes');
+    expect(state.instagramHandle).toBe('@vegancakes');
+    expect(state.stripeConnected).toBe(true);
+  });
+
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().setInstagramHandle('@persisted');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v4'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
+    expect(storedState.state.instagramHandle).toBe('@persisted');
   });
 });

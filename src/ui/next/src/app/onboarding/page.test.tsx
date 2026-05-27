@@ -9,6 +9,9 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
+      whatDoYouCreate: '',
+      instagramHandle: '',
+      stripeConnected: false,
       businessDescription: '',
       isLoading: false,
       error: '',
@@ -25,12 +28,15 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    expect(screen.getByText("Launch your creator business")).toBeInTheDocument();
+    expect(screen.getByText("What do you create?")).toBeInTheDocument();
+    expect(screen.getByText("What is your Instagram handle?")).toBeInTheDocument();
+    expect(screen.getByText("Connect Stripe for deposits")).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Generate Storefront/i });
     expect(button).toBeDisabled();
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it('Handles instant generation successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
@@ -52,44 +58,34 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
+    const createInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(createInput, 'I bake cakes');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const instaInput = screen.getByPlaceholderText(/your\.handle/i);
+    await userEvent.type(instaInput, 'maya_bakes');
+
+    const stripeToggle = screen.getByText('Connect Stripe for deposits');
+    await userEvent.click(stripeToggle);
+
+    const button = screen.getByRole('button', { name: /Generate Storefront/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
+    // Trigger submission
     await act(async () => {
       button.click();
     });
 
-    // Verify it transitions to Step 2: Review Details
-    await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
-
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await act(async () => {
-      continueButton.click();
-    });
-
-    // Verify it transitions to Step 3: Style & Team
-    await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify it transitions to Step 5 (Live Screen) on success
+    // Verify it transitions instantly to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(screen.getByText(/Marketing Agent is now optimizing/i)).toBeInTheDocument();
     });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    const startCallBody = JSON.parse((global.fetch as any).mock.calls[1][1].body);
+    expect(startCallBody.social_links.instagram).toBe('maya_bakes');
+    expect(startCallBody.payment_pref).toBe('stripe');
   });
 
   it('Step 1: Handles intake API failure', async () => {
@@ -102,10 +98,10 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
+    const createInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(createInput, 'I am a baker in NY');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    const button = screen.getByRole('button', { name: /Generate Storefront/i });
 
     await act(async () => {
       button.click();
@@ -114,15 +110,20 @@ describe('OnboardingWizard', () => {
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+      expect(screen.getByText("Launch your creator business")).toBeInTheDocument();
     });
   });
 
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
+  it('Step 1: Handles start API failure and returns to Step 1', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
+    // Mock intake success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        business_type: 'Bakery',
+      })
+    });
 
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
@@ -131,20 +132,23 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const createInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(createInput, 'I am a baker in NY');
+
+    const button = screen.getByRole('button', { name: /Generate Storefront/i });
 
     await act(async () => {
-      launchButton.click();
+      button.click();
     });
 
-    // Verify error appears and step goes back to 3
+    // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+      expect(screen.getByText("Launch your creator business")).toBeInTheDocument();
     });
   });
 
-  it('Step 5: Shows Live Screen with correct links', async () => {
+  it('Step 5: Shows Live Screen with correct links and Marketing Agent mention', async () => {
     useOnboardingStore.setState({
       step: 5,
       startResult: { message: "Your business has been successfully launched." }

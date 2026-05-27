@@ -6,6 +6,9 @@ import { useOnboardingStore } from './store';
 export default function OnboardingWizard() {
   const {
     step, setStep,
+    whatDoYouCreate, setWhatDoYouCreate,
+    instagramHandle, setInstagramHandle,
+    stripeConnected, setStripeConnected,
     businessDescription, setBusinessDescription,
     businessName, setBusinessName,
     businessType, setBusinessType,
@@ -24,14 +27,16 @@ export default function OnboardingWizard() {
     setIsLoaded(true);
   }, []);
 
-  const handleIntake = async () => {
+  const handleInstantGeneration = async () => {
     setIsLoading(true);
     setError('');
+    setStep(4); // Go straight to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
+      // 1. Intake API call
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
         headers: {
@@ -39,7 +44,7 @@ export default function OnboardingWizard() {
           'X-Tenant-ID': tenantId,
           'X-User-ID': userId,
         },
-        body: JSON.stringify({ description: businessDescription })
+        body: JSON.stringify({ description: whatDoYouCreate })
       });
 
       if (!intakeRes.ok) {
@@ -48,30 +53,19 @@ export default function OnboardingWizard() {
 
       const intakeData = await intakeRes.json();
 
-      setBusinessType(intakeData.business_type || 'Online Store');
-      setBusinessName(intakeData.business_name || 'My Business');
-      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
-      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
+      const calculatedBusinessType = intakeData.business_type || 'Creator/Maker';
+      const calculatedBusinessName = intakeData.business_name || (instagramHandle ? `${instagramHandle} Store` : 'My Business');
+      const calculatedProductName = intakeData.initial_products?.[0]?.name || 'Custom Product';
+      const calculatedProductPrice = intakeData.initial_products?.[0]?.price || '0.00';
+      const calculatedCategories = intakeData.categories || ['physical', 'creator'];
 
-      setStep(2); // Go to review step
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred processing details');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      setBusinessType(calculatedBusinessType);
+      setBusinessName(calculatedBusinessName);
+      setFirstProductName(calculatedProductName);
+      setFirstProductPrice(calculatedProductPrice);
+      setCategories(calculatedCategories);
 
-  const handleStartOnboarding = async () => {
-    setIsLoading(true);
-    setError('');
-    setStep(4); // Go to loading screen
-
-    try {
-      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
-
+      // 2. Start API call (instantly following intake)
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
         headers: {
@@ -80,19 +74,23 @@ export default function OnboardingWizard() {
           'X-User-ID': userId,
         },
         body: JSON.stringify({
-          business_type: businessType,
-          company_name: businessName,
-          company_description: businessDescription,
-          selling_categories: categories,
-          payment_pref: 'online',
+          business_type: calculatedBusinessType,
+          company_name: calculatedBusinessName,
+          company_description: whatDoYouCreate,
+          selling_categories: calculatedCategories,
+          payment_pref: stripeConnected ? 'stripe' : 'none',
           admin_email: 'admin@ohc.app',
           admin_name: 'Admin',
           admin_password: 'password123',
-          website_template: websiteTemplate,
-          first_product_name: firstProductName,
-          first_product_price: firstProductPrice,
+          website_template: websiteTemplate || 'Modern',
+          first_product_name: calculatedProductName,
+          first_product_price: calculatedProductPrice,
           domain_choice: 'subdomain',
-          price_type: 'fixed'
+          price_type: 'fixed',
+          social_links: {
+            instagram: instagramHandle
+          },
+          marketing_agent_focus: 'convert_instagram_followers'
         })
       });
 
@@ -106,9 +104,8 @@ export default function OnboardingWizard() {
 
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'An error occurred during onboarding');
-      setStep(3); // Go back to last input screen on error
-    } finally {
+      setError(err.message || 'An error occurred during instant generation');
+      setStep(1); // Go back to start on error
       setIsLoading(false);
     }
   };
@@ -132,137 +129,59 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Launch your creator business</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
-              </p>
-
-              <div className="space-y-4 flex-1">
-                <textarea
-                  value={businessDescription}
-                  onChange={(e) => setBusinessDescription(e.target.value)}
-                  placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
-                />
-              </div>
-
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={handleIntake}
-                  disabled={!businessDescription.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
-                >
-                  {isLoading ? 'Analyzing...' : 'Generate My Business'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Here's what our AI figured out. Feel free to tweak these.
-              </p>
-
-              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
-                  <input
-                    type="text"
-                    value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
-                  <input
-                    type="text"
-                    value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
-                      <input
-                        type="text"
-                        value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                   <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
-                      <input
-                        type="text"
-                        value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
-                      />
-                   </div>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={() => setStep(3)}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+                Answer 3 quick questions. We'll generate your mobile storefront instantly.
               </p>
 
               <div className="space-y-4 flex-1">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
-                      <div
-                        key={template}
-                        onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold">{template}</div>
-                      </div>
-                    ))}
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">What do you create?</label>
+                  <textarea
+                    value={whatDoYouCreate}
+                    onChange={(e) => setWhatDoYouCreate(e.target.value)}
+                    placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
+                    className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-24 resize-none transition-all shadow-inner"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">What is your Instagram handle?</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-3.5 text-gray-400">@</span>
+                    <input
+                      type="text"
+                      value={instagramHandle}
+                      onChange={(e) => setInstagramHandle(e.target.value.replace(/^@/, ''))}
+                      placeholder="your.handle"
+                      className="w-full pl-8 p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <div
+                    onClick={() => setStripeConnected(!stripeConnected)}
+                    className={`flex items-center justify-between p-4 rounded-[8px] border cursor-pointer transition-all ${stripeConnected ? 'border-[#0066FF] bg-[#0066FF]/5' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30'} backdrop-blur-sm`}
+                  >
+                    <div>
+                      <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">Connect Stripe for deposits</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Receive payments instantly</div>
+                    </div>
+                    <div className={`w-12 h-6 rounded-full transition-colors relative ${stripeConnected ? 'bg-[#34C759]' : 'bg-gray-300 dark:bg-gray-700'}`}>
+                      <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${stripeConnected ? 'translate-x-6' : ''}`}></div>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
+                  onClick={handleInstantGeneration}
+                  disabled={!whatDoYouCreate.trim() || isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  Launch Store
+                  {isLoading ? 'Building...' : 'Generate Storefront'}
                 </button>
               </div>
             </div>
@@ -292,9 +211,12 @@ export default function OnboardingWizard() {
                 </svg>
               </div>
               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-4 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
+              <div className="bg-[#0066FF]/10 text-[#0066FF] p-3 rounded-[8px] text-xs font-semibold mb-8 max-w-[280px]">
+                🤖 Marketing Agent is now optimizing to convert your Instagram followers into storefront visitors.
+              </div>
 
               <div className="w-full space-y-3 mt-auto">
                 <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
