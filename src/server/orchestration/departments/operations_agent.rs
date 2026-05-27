@@ -68,7 +68,7 @@ impl Department for OperationsAgent {
                                     .bind(quantity)
                                     .bind(product_id)
                                     .bind(&event.tenant_id)
-                                    .execute(pool)
+                                    .execute(&*pool)
                                     .await;
                                 if let Ok(res) = row {
                                     if res.rows_affected() == 0 {
@@ -76,7 +76,7 @@ impl Department for OperationsAgent {
                                             .bind(quantity)
                                             .bind(product_id)
                                             .bind(&event.tenant_id)
-                                            .execute(pool)
+                                            .execute(&*pool)
                                             .await;
                                     }
                                 }
