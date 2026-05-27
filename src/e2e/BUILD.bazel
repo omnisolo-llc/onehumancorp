@@ -11,7 +11,6 @@ sh_binary(
         "//scripts:run-playwright.mjs",
         "//src/server",
     ],
-
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -19,21 +18,12 @@ sh_binary(
     visibility = ["//visibility:public"],
 )
 
-# Per-spec Playwright test targets plus the stable aggregate used by
-# `bazel test //...`.
-# Run CI suite: bazel test //src/e2e:playwright
+# Per-spec Playwright test targets.
+# These intentionally do not depend on //src/server:server; the manual
+# run_playwright_e2e target owns building and starting the local server.
+# Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
-    ci_specs = [
-        "grandmother_test.spec.ts",
-        "help.spec.ts",
-        "kairos_orchestration.spec.ts",
-        "landing_ux.spec.ts",
-        "login.spec.ts",
-        "login_ux.spec.ts",
-        "telemetry_sync.spec.ts",
-        "viral_embed.spec.ts",
-    ],
     specs = glob(["*.spec.ts"]),
     server = "//src/server:server",
 )
