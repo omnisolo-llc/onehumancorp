@@ -8,7 +8,7 @@ use ::server_telemetry::record_bubblewrap_violation;
 use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
-use crate::telemetry::store::ViolationStore;
+use super::super::telemetry::store::ViolationStore;
 
 pub struct LinuxSandbox {
     evaluator: PermissionEvaluator,
