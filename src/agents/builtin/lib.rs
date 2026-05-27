@@ -59,6 +59,7 @@ pub mod hibernation;
 pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
+pub mod cloud_deployment;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
