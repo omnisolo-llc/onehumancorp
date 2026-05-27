@@ -30,8 +30,14 @@ test.describe('Onboarding Wizard', () => {
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
-    // 2. Simplified Mobile First Onboarding - wait for it to generate (Step 2 & 3)
-    // Step 2 is automatic, so wait for Step 3 directly
+    // 2. Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // 3. You're Live!
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // Verify shareable link is present
@@ -76,6 +82,13 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // 3. You're Live!
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // 4. Verify Dashboard redirect and action banner

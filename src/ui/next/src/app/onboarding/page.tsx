@@ -20,9 +20,80 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
+
   useEffect(() => {
     setIsLoaded(true);
+
+    // Load remote state on mount for cross-device persistence
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const remoteState = await res.json();
+          if (remoteState && remoteState.step && remoteState.step > 1 && remoteState.step < 5) {
+            if (remoteState.businessDescription) setBusinessDescription(remoteState.businessDescription);
+            if (remoteState.businessName) setBusinessName(remoteState.businessName);
+            if (remoteState.businessType) setBusinessType(remoteState.businessType);
+            if (remoteState.categories && remoteState.categories.length > 0) setCategories(remoteState.categories);
+            if (remoteState.websiteTemplate) setWebsiteTemplate(remoteState.websiteTemplate);
+            if (remoteState.firstProductName) setFirstProductName(remoteState.firstProductName);
+            if (remoteState.firstProductPrice) setFirstProductPrice(remoteState.firstProductPrice);
+            setStep(remoteState.step);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load remote state', e);
+      }
+    };
+
+    loadState();
   }, []);
+
+  // Save on state changes but debounce it or tie it to step transitions
+  const saveWizardState = async (currentStep: number, overrides: any = {}) => {
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const state = {
+        step: currentStep,
+        businessDescription: overrides.businessDescription !== undefined ? overrides.businessDescription : businessDescription,
+        businessName: overrides.businessName !== undefined ? overrides.businessName : businessName,
+        businessType: overrides.businessType !== undefined ? overrides.businessType : businessType,
+        categories: overrides.categories !== undefined ? overrides.categories : categories,
+        websiteTemplate: overrides.websiteTemplate !== undefined ? overrides.websiteTemplate : websiteTemplate,
+        firstProductName: overrides.firstProductName !== undefined ? overrides.firstProductName : firstProductName,
+        firstProductPrice: overrides.firstProductPrice !== undefined ? overrides.firstProductPrice : firstProductPrice
+      };
+
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify(state)
+      });
+    } catch (e) {
+      console.error('Failed to save wizard state', e);
+    }
+  };
+
+  const handleNextStep = (nextStep: number, overrides: any = {}) => {
+    setStep(nextStep);
+    saveWizardState(nextStep, overrides);
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -54,7 +125,13 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
+      handleNextStep(2, {
+        businessName: intakeData.business_name || businessName,
+        businessType: intakeData.business_type || businessType,
+        categories: intakeData.categories || categories,
+        firstProductName: (intakeData.initial_products && intakeData.initial_products.length > 0) ? intakeData.initial_products[0].name : firstProductName,
+        firstProductPrice: (intakeData.initial_products && intakeData.initial_products.length > 0) ? intakeData.initial_products[0].price : firstProductPrice
+      }); // Go to review step and save overrides to avoid stale state
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -66,7 +143,7 @@ export default function OnboardingWizard() {
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
-    setStep(4); // Go to loading screen
+    handleNextStep(4); // Go to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -102,12 +179,12 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json();
       setStartResult(result);
-      setStep(5); // Go to "You're Live" screen
+      handleNextStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      setStep(3); // Go back to last input screen on error
+      handleNextStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
@@ -117,7 +194,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -220,7 +297,7 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => handleNextStep(3)}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -232,7 +309,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => handleNextStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
