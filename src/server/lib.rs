@@ -666,7 +666,10 @@ impl HubService for MyHubService {
 
         let plan_name = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => "Free",
+            ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
             ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
+            ::server_pricing::rate_limit::PlanTier::Standard => "Standard",
+            ::server_pricing::rate_limit::PlanTier::Advanced => "Advanced",
             ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
             ::server_pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
@@ -676,7 +679,10 @@ impl HubService for MyHubService {
 
         let next_bill_estimated = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => 0,
+            ::server_pricing::rate_limit::PlanTier::Entry => 5,
             ::server_pricing::rate_limit::PlanTier::Starter => 9,
+            ::server_pricing::rate_limit::PlanTier::Standard => 19,
+            ::server_pricing::rate_limit::PlanTier::Advanced => 24,
             ::server_pricing::rate_limit::PlanTier::Pro => 29,
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
@@ -2961,6 +2967,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             opacity: 1;
             transform: translateY(0);
             position: relative;
+            border-radius: 16px;
         }
 
         #setup-screen button, #setup-screen input {
@@ -4106,8 +4113,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; position: relative;">
+                        <div id="setup-error" class="error" style="display: none; margin: 16px; border-radius: 8px; padding: 12px; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); color: #FF3B30;"></div>
+                        <h1 style="margin-bottom: 24px; padding: 0 16px; margin-top: 16px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
@@ -5085,6 +5093,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
+                        let errorTimeout = null;
+                        function showError(message) {
+                            const errDiv = document.getElementById('setup-error');
+                            if (errDiv) {
+                                errDiv.innerText = message;
+                                errDiv.style.display = 'block';
+                                if (errorTimeout) clearTimeout(errorTimeout);
+                                errorTimeout = setTimeout(() => { errDiv.style.display = 'none'; }, 4000);
+                            }
+                        }
 
                         function validateInputs(stepId) {
                             if (stepId === 3 && currentStep === 2) {
@@ -5093,7 +5111,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
                                 if (!valid) {
-                                    alert('Please select a business type');
+                                    showError('Please select a business type');
                                     return false;
                                 }
                             }
@@ -5102,7 +5120,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let valid = false;
                                 inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
+                                    showError('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -5110,11 +5128,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
                                 const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
+                                    showError('Please enter a product or service name');
                                     return false;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
+                                    showError('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
@@ -5122,7 +5140,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
+                                    showError('Please enter a valid email address');
                                     return false;
                                 }
                             }
