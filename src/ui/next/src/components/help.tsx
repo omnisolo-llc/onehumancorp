@@ -212,9 +212,6 @@ export function HelpWidget() {
                   <button onClick={() => startWalkthrough([{ targetId: "generate-btn", message: "Activate your AI agent." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Activate your AI Support Agent</span>
                   </button>
-                  <button onClick={() => startWalkthrough([{ targetId: "todays-sales", message: "This shows your total sales for today." }, { targetId: "approval-inbox", message: "Review and approve tasks from your AI workforce." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
-                    <span className="font-bold text-blue-800 text-sm block">Tour: Dashboard Analytics</span>
-                  </button>
                   <button onClick={() => startWalkthrough([{ targetId: "help-widget-container", message: "Agents join the Virtual Meeting Room to debate and plan before executing tasks." }, { targetId: "help-widget-container", message: "Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol)." }])} className="w-full text-left bg-blue-50 p-3 rounded-xl shadow-sm border border-blue-100 hover:bg-blue-100 transition-colors">
                     <span className="font-bold text-blue-800 text-sm block">Tour: Virtual Meeting Room & UltraPlan</span>
                   </button>
