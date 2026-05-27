@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import LimitReachedModal from '../../components/LimitReachedModal';
 
 export default function AgentsPage() {
   const [activeTab, setActiveTab] = useState<'departments' | 'feed' | 'approvals'>('departments');
@@ -11,6 +12,21 @@ export default function AgentsPage() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [activeAgents, setActiveAgents] = useState<string[]>(['operations']);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+
+  const handleToggleAgent = (deptId: string) => {
+    if (activeAgents.includes(deptId)) {
+      setActiveAgents(activeAgents.filter(id => id !== deptId));
+    } else {
+      if (activeAgents.length >= 1) {
+        setShowLimitModal(true);
+      } else {
+        setActiveAgents([...activeAgents, deptId]);
+      }
+    }
+  };
+
 
   const fetchFeed = async () => {
     setFeedLoading(true);
@@ -140,8 +156,19 @@ export default function AgentsPage() {
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
                   </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="font-bold text-gray-900 font-outfit text-lg">{dept.name}</h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleAgent(dept.id);
+                        }}
+                        className={`w-10 h-6 rounded-full transition-colors relative flex-shrink-0 ${activeAgents.includes(dept.id) ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                      >
+                        <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${activeAgents.includes(dept.id) ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                      </button>
+                    </div>
                     <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">{dept.role}</p>
                     <p className="text-sm text-gray-600 leading-relaxed">{dept.description}</p>
 
@@ -241,6 +268,14 @@ export default function AgentsPage() {
           )}
         </main>
       </div>
+
+      {showLimitModal && (
+        <LimitReachedModal
+          limitType="agents"
+          onClose={() => setShowLimitModal(false)}
+        />
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
