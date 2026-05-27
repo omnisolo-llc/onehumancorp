@@ -13,6 +13,9 @@ export default function CheckoutPage() {
   const handlePayment = async () => {
     setIsProcessing(true);
 
+    // Simulate payment processing
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     // Fetch dynamic referral link
     try {
       const response = await fetch("/api/v1/growth/referrals/generate", {
@@ -57,7 +60,11 @@ export default function CheckoutPage() {
 
           <button
             onClick={() => {
-              router.push('/dashboard');
+              alert('Connecting to Stripe Terminal...');
+              setTimeout(() => {
+                alert('Tap successful! Payment processed.');
+                router.push('/dashboard');
+              }, 1500);
             }}
             className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
           >
