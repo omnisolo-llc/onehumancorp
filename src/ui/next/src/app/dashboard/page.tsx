@@ -372,7 +372,53 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Business Analytics Widget */}
+         <section className="mb-6 animate-fade-in">
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+               <div className="flex items-center gap-4">
+                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
+               </div>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+               </div>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
+               </div>
+           </div>
+
+           {/* Advanced AI Insights Soft Paywall */}
+           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
+               <div className="filter blur-sm select-none opacity-50">
+                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
+                   <div className="flex gap-4">
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                   </div>
+               </div>
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
+                       Unlock predictive analytics to foresee trends and boost your revenue.
+                   </p>
+                   <button
+                       onClick={() => {
+                           if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+                               window.location.href = '/pricing';
+                           }
+                       }}
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                       Upgrade to Pro
+                   </button>
+               </div>
+           </div>
+         </section>
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
