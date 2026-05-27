@@ -261,6 +261,7 @@ async fn handle_storefront_embed(
 <!DOCTYPE html>
 <html>
 <head>
+    <meta name="offline-banner" content="Offline Mode - Browse Only">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -271,9 +272,16 @@ async fn handle_storefront_embed(
         .btn {{ display: block; width: 100%; text-align: center; background: #007bff; color: white; padding: 10px; text-decoration: none; border-radius: 4px; font-weight: bold; }}
         .footer {{ text-align: center; margin-top: 16px; font-size: 0.85rem; }}
         .footer a {{ color: {link_color}; text-decoration: none; font-weight: bold; }}
+        #offline-banner {{ display: none; background: #ff9800; color: white; text-align: center; padding: 8px; font-size: 14px; font-weight: bold; }}
     </style>
 </head>
 <body>
+    <div id="offline-banner">Offline Mode - Browse Only</div>
+    <script>
+        if (!navigator.onLine) document.getElementById('offline-banner').style.display = 'block';
+        window.addEventListener('offline', () => document.getElementById('offline-banner').style.display = 'block');
+        window.addEventListener('online', () => document.getElementById('offline-banner').style.display = 'none');
+    </script>
     <div class="card">
         <h2 class="title">{safe_name}</h2>
         <p class="price">{safe_price}</p>
@@ -285,7 +293,12 @@ async fn handle_storefront_embed(
 </body>
 </html>
 "##);
-    axum::response::Html(html)
+
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"));
+    headers.insert(axum::http::header::ETAG, axum::http::HeaderValue::from_str(&format!("W/\"{}\"", uuid::Uuid::new_v4())).unwrap());
+    // In axum, we can return a tuple (headers, body)
+    (headers, axum::response::Html(html))
 }
 
 async fn handle_og_card(
@@ -321,10 +334,12 @@ async fn handle_og_card(
   <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
 </svg>"##);
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert(axum::http::header::CONTENT_TYPE, axum::http::HeaderValue::from_static("image/svg+xml"));
+    headers.insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("public, max-age=31536000, immutable"));
+    headers.insert(axum::http::header::ETAG, axum::http::HeaderValue::from_str(&format!("W/\"{}\"", uuid::Uuid::new_v4())).unwrap());
+
+    (headers, svg)
 }
 
 async fn handle_check_milestones(
