@@ -8,3 +8,4 @@ pub struct ProviderMetadata {
     pub category: String,
     pub base_url: String,
 }
+pub mod inbox_router;
