@@ -19,10 +19,84 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Sync state from backend on mount
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const stateData = await res.json();
+          if (stateData && Object.keys(stateData).length > 0) {
+            if (stateData.step) setStep(stateData.step);
+            if (stateData.businessDescription) setBusinessDescription(stateData.businessDescription);
+            if (stateData.businessName) setBusinessName(stateData.businessName);
+            if (stateData.businessType) setBusinessType(stateData.businessType);
+            if (stateData.categories) setCategories(stateData.categories);
+            if (stateData.websiteTemplate) setWebsiteTemplate(stateData.websiteTemplate);
+            if (stateData.firstProductName) setFirstProductName(stateData.firstProductName);
+            if (stateData.firstProductPrice) setFirstProductPrice(stateData.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch onboarding state:', err);
+      }
+    };
+
+    fetchState();
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    // Focus input field on step 1 when loaded
+    if (step === 1 && inputRef.current) {
+        inputRef.current.focus();
+    }
+
+    const saveState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error('Failed to save onboarding state:', err);
+      }
+    };
+
+    const debounceTimer = setTimeout(saveState, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -139,8 +213,15 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1">
                 <textarea
+                  ref={inputRef}
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && businessDescription.trim() && !isLoading) {
+                      e.preventDefault();
+                      handleIntake();
+                    }
+                  }}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
                   className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
