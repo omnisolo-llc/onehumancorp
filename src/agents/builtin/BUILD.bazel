@@ -84,6 +84,7 @@ rust_library(
         "tools_gating.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
+        "agentic_seek.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -214,6 +215,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "registry",
     "gpt_researcher",
     "local_provider",
+    "agentic_seek",
     "sona_patterns",
 ]
 
