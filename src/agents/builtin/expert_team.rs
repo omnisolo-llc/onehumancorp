@@ -3,8 +3,6 @@ use crate::types::{ChatRequest, Message, Role, ToolCall};
 use futures::future::join_all;
 
 #[async_trait::async_trait]
-#[async_trait::async_trait]
-#[async_trait::async_trait]
 pub trait ExpertTeamLlmClient: Send + Sync {
     async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
@@ -109,16 +107,19 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
                 Ok(output) => {
                     // Merge skills back
                     for skill in &skills {
-                        trace.record_skill(&skill);
+                        trace.record_skill(skill);
                     }
 
                     // Enforce "condensed summaries" rule: wrap subagent output such that they only return 1k-2k tokens.
                     // We simulate this by truncating the text.
                     let max_length = 2000;
-                    let condensed = if output.len() > max_length {
-                        format!("{}... [Condensed]", &output[..max_length])
+                    let output_str: &str = output.as_ref();
+                    let condensed = if output_str.len() > max_length {
+                        let mut iter = output_str.char_indices();
+                        let max_byte_index = iter.nth(max_length).map_or(output_str.len(), |(i, _)| i);
+                        format!("{}... [Condensed]", &output_str[..max_byte_index])
                     } else {
-                        output
+                        output_str.to_string()
                     };
 
                     condensed_summaries.push(condensed);
@@ -202,7 +203,7 @@ impl QualityGates {
 mod tests {
     use super::*;
 
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use crate::types::{ChatResponse, Usage};
 
     struct MockExpertLlm {
         role_resp: String,
