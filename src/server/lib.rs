@@ -3088,6 +3088,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
+                                <div id="milestone-share-options" style="display: none; margin: 16px 0;">
+                                    <p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>
+                                    <div style="display: flex; gap: 8px;">
+                                        <a id="milestone-share-wa" href="#" target="_blank" style="padding: 8px 12px; background: #25D366; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;">Share to WhatsApp</a>
+                                        <a id="milestone-share-x" href="#" target="_blank" style="padding: 8px 12px; background: #000; color: white; text-decoration: none; border-radius: 4px; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;">Share to X</a>
+                                    </div>
+                                </div>
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
@@ -4704,6 +4711,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             document.getElementById('milestone-body').textContent = body;
+
+                            const shareOptions = document.getElementById('milestone-share-options');
+                            if (title.includes('10th Order')) {
+                                shareOptions.style.display = 'block';
+                                const shareText = encodeURIComponent('Just hit my 10th Order on OHC! Start your business too: ohc://join?ref=milestone');
+                                document.getElementById('milestone-share-wa').href = `https://wa.me/?text=${shareText}`;
+                                document.getElementById('milestone-share-x').href = `https://twitter.com/intent/tweet?text=${shareText}`;
+                            } else {
+                                shareOptions.style.display = 'none';
+                            }
+
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
