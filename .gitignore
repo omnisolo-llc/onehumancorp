@@ -54,7 +54,6 @@ go.work.sum
 /bazel-*
 
 coverage_html/
-/coverage/
 /artifacts/
 
 # See https://www.dartlang.org/guides/libraries/private-files

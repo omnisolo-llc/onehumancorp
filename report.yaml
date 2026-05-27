@@ -1,0 +1,5 @@
+issue_category: cleanup
+debt_report:
+  description: "Bump version to v0.4.42"
+  impact: "low"
+  mitigation: "Version bumped correctly across Cargo, npm, Helm, and Bazel"
