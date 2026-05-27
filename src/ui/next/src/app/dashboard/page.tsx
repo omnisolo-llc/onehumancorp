@@ -395,26 +395,6 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
-         {!hasPro && (
-           <section className="mb-6 animate-fade-in">
-             <div className="p-6 shadow-md rounded-2xl border transition-all flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
-               <div>
-                   <div className="flex items-center gap-3 mb-2">
-                     <div className="text-2xl">🚀</div>
-                     <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Ready to scale?</h2>
-                   </div>
-                   <p className="text-gray-600 font-inter text-sm leading-relaxed max-w-lg">
-                     Upgrade to Pro for unlimited agents, advanced analytics, and custom domains. Grow your business faster and without limits.
-                   </p>
-               </div>
-               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
-                 Upgrade to Pro
-               </Link>
-             </div>
-           </section>
-         )}
-
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
@@ -534,25 +514,6 @@ export default function Dashboard() {
                      </button>
                  </WithTooltip>
              </div>
-         </section>
-
-         {/* Plain-Language Weekly Financial Brief */}
-         <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
-                <div className="flex items-start gap-4">
-                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                   </div>
-                   <div>
-                       <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
-                       <p className="text-gray-800 text-sm leading-relaxed">
-                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
-                       </p>
-                   </div>
-                </div>
-            </div>
          </section>
 
          {/* Business Snapshot */}
