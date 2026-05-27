@@ -1,5 +1,4 @@
 use std::sync::RwLock;
-use ::server_ohc::orchestration::*;
 use chrono::Utc;
 
 pub struct IntegrationCredentials {
@@ -598,21 +597,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn mercadopago_create_payment(&self, integration_id: &str, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        let client = {
-            if integration_id == "mercadopago" {
-                let clients = self.mercadopago_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.create_payment(amount, description, payer_email).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn mercadopago_handle_webhook(&self, integration_id: &str, payload: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mercadopago" {
@@ -658,8 +642,8 @@ impl IntegrationsRegistry {
 
         let client_jitsi = {
             if integration_id == "jitsi" {
-                let clients = self.jitsi_clients.read().unwrap();
-                clients.get(integration_id).cloned()
+                // There is no jitsi client in the registry so just return None
+                None::<std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>
             } else {
                 None
             }

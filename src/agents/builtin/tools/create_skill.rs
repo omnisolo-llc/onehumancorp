@@ -6,7 +6,7 @@ use super::{Tool, ToolExecutor};
 
 
 struct CreateSkillExecutor {
-    memory_store: (),
+    _memory_store: (),
     // We are mocking persistence for now as LongTermMemory is not exported easily
 }
 
@@ -30,7 +30,7 @@ impl ToolExecutor for CreateSkillExecutor {
     }
 }
 
-pub fn create_skill_tool(memory_store: ()) -> Tool {
+pub fn create_skill_tool(_memory_store: ()) -> Tool {
     Tool {
         name: "CreateSkill".to_string(),
         description: "Curates recent complex trajectory into a reusable autonomous skill.".to_string(),
@@ -53,6 +53,6 @@ pub fn create_skill_tool(memory_store: ()) -> Tool {
             },
             "required": ["name", "description", "instruction"]
         }),
-        execute: Arc::new(CreateSkillExecutor { memory_store }),
+        execute: Arc::new(CreateSkillExecutor { _memory_store: () }),
     }
 }

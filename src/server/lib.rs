@@ -2026,7 +2026,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             // Generate OTP securely
@@ -2060,8 +2060,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
         }))
         .route("/api/settings/sms-confirm", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let _settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -2088,7 +2088,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .route("/api/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
                 let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);

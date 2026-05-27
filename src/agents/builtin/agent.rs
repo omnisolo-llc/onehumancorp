@@ -961,7 +961,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+                            let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -3941,13 +3941,6 @@ mod tests {
             ]),
         });
 
-        pub struct MockToolExecutor;
-        #[async_trait::async_trait]
-        impl ToolExecutor for MockToolExecutor {
-            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Ok("tool output".to_string())
-            }
-        }
 
         let tools: Vec<Tool> = vec![
             Tool {
@@ -5670,7 +5663,7 @@ mod tests {
 mod stream_tests {
     use super::*;
     use crate::llm::LlmClient;
-    use crate::types::{ChatRequest, ChatResponse, Message, Usage};
+    use crate::types::{ChatRequest, ChatResponse, Usage};
     use std::sync::Arc;
 
     struct StreamMockLlmClient {
@@ -5939,7 +5932,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6213,7 +6206,7 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
+        use crate::types::{ChatRequest, ChatResponse, ToolCall, ToolResult, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
         let tool = Tool {
             name: "test_tool".to_string(),
@@ -6239,7 +6232,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6313,7 +6306,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall, Usage};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]

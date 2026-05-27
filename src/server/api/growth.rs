@@ -380,7 +380,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(state): Extension<GrowthState>,
+    Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
