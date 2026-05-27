@@ -11,7 +11,7 @@
 services:
   # ─── Infrastructure ───────────────────────────────────────────────────────
   postgres:
-    image: pgvector/pgvector:pg16
+    image: postgres:16
     command: ["postgres", "-c", "wal_level=logical"]
     environment:
       POSTGRES_USER: ohc
