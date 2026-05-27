@@ -67,9 +67,9 @@ impl IntegrationsRegistry {
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             manychat_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
-            alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            alipay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -272,6 +272,14 @@ impl IntegrationsRegistry {
             let mut clients = self.manychat_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::manychat::provider::ManychatProvider::new(creds.api_token.clone())));
         }
+        if integration_id == "shippo" {
+            let mut clients = self.shippo_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "zoom" {
+            let mut clients = self.zoom_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::zoom::provider::ZoomProvider::new(creds.api_token.clone())));
+        }
 
         if integration_id == "sendgrid" {
             let mut clients = self.sendgrid_clients.write().unwrap();
@@ -392,6 +400,21 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn generate_and_email_label(&self, integration_id: &str, rate_id: &str, email: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "shippo" {
+                let clients = self.shippo_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.generate_and_email_label(rate_id, email).await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -660,6 +683,21 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn generate_meeting_for_booking(&self, integration_id: &str, booking_id: &str, topic: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "zoom" {
+                let clients = self.zoom_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.generate_meeting_for_booking(booking_id, topic).await;
+        }
         Err("integration not found or not supported".to_string())
     }
 

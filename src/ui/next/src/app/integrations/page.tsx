@@ -16,24 +16,23 @@ export default function Integrations() {
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "🐒", description: "Email marketing, ads, landing pages, and CRM tools." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "🚢", description: "Multi-carrier shipping software for e-commerce." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "🎥", description: "Auto-Generated Meeting Links for online lessons." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const handleConnect = (id: string) => {
+    alert(`Connecting ${id.charAt(0).toUpperCase() + id.slice(1)} via OAuth...`);
+    setIntegrations(prev => prev.map(integration =>
+      integration.id === id ? { ...integration, status: "connected" } : integration
+    ));
+
     if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
       router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
+    } else if (id === 'manychat') {
       router.push('/inbox');
     }
   };
