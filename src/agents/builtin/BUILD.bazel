@@ -83,6 +83,7 @@ rust_library(
         "swarm_topology.rs",
         "tools_gating.rs",
         "verification_loops.rs",
+        "scalable_multi_agent.rs",
         "visual_workflow.rs",
     ],
     crate_name = "ohc_builtin_agent",
