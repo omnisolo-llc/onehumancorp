@@ -109,8 +109,20 @@ pub fn create_blob_provider() -> Arc<dyn BlobProvider> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use axum::{
+        Router,
+        extract::State,
+        http::StatusCode,
+        routing::{get, put},
+    };
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use tempfile::tempdir;
-    use mockito::Server;
+
+    #[derive(Clone)]
+    struct MockS3State {
+        gets: Arc<AtomicUsize>,
+        puts: Arc<AtomicUsize>,
+    }
 
     #[tokio::test]
     async fn test_local_blob_provider() {
@@ -134,48 +146,79 @@ mod tests {
 
     #[tokio::test]
     async fn test_s3_blob_provider() {
-        let mut server = Server::new_async().await;
+        let state = MockS3State {
+            gets: Arc::new(AtomicUsize::new(0)),
+            puts: Arc::new(AtomicUsize::new(0)),
+        };
+        let app = Router::new()
+            .route(
+                "/ohc-multi-tenant-blobs/test_s3.txt",
+                get(|State(state): State<MockS3State>| async move {
+                    state.gets.fetch_add(1, Ordering::SeqCst);
+                    "s3 content"
+                }),
+            )
+            .route(
+                "/ohc-multi-tenant-blobs/test_s3_write.txt",
+                put(|State(state): State<MockS3State>| async move {
+                    state.puts.fetch_add(1, Ordering::SeqCst);
+                    StatusCode::OK
+                }),
+            )
+            .with_state(state.clone());
 
-        let mock_get = server.mock("GET", "/ohc-multi-tenant-blobs/test_s3.txt")
-            .with_status(200)
-            .with_body("s3 content")
-            .create_async().await;
-
-        let mock_put = server.mock("PUT", "/ohc-multi-tenant-blobs/test_s3_write.txt")
-            .with_status(200)
-            .create_async().await;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            axum::serve(listener, app).await.unwrap();
+        });
 
         let provider = S3BlobProvider {
             bucket: "ohc-multi-tenant-blobs".to_string(),
-            endpoint: server.url(),
+            endpoint,
             client: reqwest::Client::new(),
         };
 
         // Test reading
         let content = provider.read_blob("test_s3.txt").await.unwrap();
         assert_eq!(content, "s3 content");
-        mock_get.assert_async().await;
+        assert_eq!(state.gets.load(Ordering::SeqCst), 1);
 
         // Test writing
         provider.write_blob("test_s3_write.txt", "new content").await.unwrap();
-        mock_put.assert_async().await;
+        assert_eq!(state.puts.load(Ordering::SeqCst), 1);
     }
 
     #[test]
     fn test_create_blob_provider() {
-        // Reset env
-        env::remove_var("OHC_STANDALONE");
-        env::remove_var("OHC_MULTITENANT");
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE", None::<&str>),
+                ("OHC_MULTITENANT", None::<&str>),
+            ],
+            || {
+                let _provider = create_blob_provider();
+            },
+        );
 
-        // Test default
-        let _provider = create_blob_provider();
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE", None::<&str>),
+                ("OHC_MULTITENANT", Some("true")),
+            ],
+            || {
+                let _provider_mt = create_blob_provider();
+            },
+        );
 
-        // Test multitenant
-        env::set_var("OHC_MULTITENANT", "true");
-        let _provider_mt = create_blob_provider();
-
-        // Test standalone overrides multitenant
-        env::set_var("OHC_STANDALONE", "true");
-        let _provider_st = create_blob_provider();
+        temp_env::with_vars(
+            vec![
+                ("OHC_STANDALONE", Some("true")),
+                ("OHC_MULTITENANT", Some("true")),
+            ],
+            || {
+                let _provider_st = create_blob_provider();
+            },
+        );
     }
 }
