@@ -4,39 +4,21 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export type ActionCard = {
-  id: string;
   department: string;
   description: string;
-  status: 'pending' | 'approved';
+  status: 'pending';
 };
 
 export default function TeamChatPage() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<{id: string, role: 'user'|'system', content: string, card?: ActionCard}[]>([]);
+  const [messages, setMessages] = useState<{role: 'user'|'system', content: string, card?: ActionCard}[]>([]);
   const router = useRouter();
-
-  const handleApprove = (msgId: string) => {
-    setMessages(prev => prev.map(msg => {
-      if (msg.id === msgId && msg.card) {
-        return {
-          ...msg,
-          card: {
-            ...msg.card,
-            status: 'approved'
-          }
-        };
-      }
-      return msg;
-    }));
-  };
 
   const handleSend = async () => {
     if (!message.trim()) return;
     const userMsg = message;
     setMessage('');
-
-    const userMsgId = Date.now().toString() + '-user';
-    setMessages(prev => [...prev, {id: userMsgId, role: 'user', content: userMsg}]);
+    setMessages(prev => [...prev, {role: 'user', content: userMsg}]);
 
     try {
       const response = await fetch('/api/agents/chat', {
@@ -51,24 +33,26 @@ export default function TeamChatPage() {
       if (response.ok) {
         const data = await response.json();
 
-        const msgId = Date.now().toString() + '-system';
+        let deptName = data.department_assigned || 'operations';
+        if (deptName === 'marketing') deptName = 'The Promoter';
+        else if (deptName === 'operations') deptName = 'The Manager';
+        else if (deptName === 'sales') deptName = 'The Salesperson';
+
         setMessages(prev => [...prev, {
-          id: msgId,
           role: 'system',
           content: "I've drafted an action for your approval.",
           card: {
-            id: Date.now().toString() + '-card',
-            department: data.agent || 'The Manager',
-            description: data.description || `Drafted action based on: "${userMsg}"`,
+            department: deptName,
+            description: `Drafted action based on: "${userMsg}"`,
             status: 'pending'
           }
         }]);
 
       } else {
-        setMessages(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Failed to process your request. Ensure backend auth is provided."}]);
+        setMessages(prev => [...prev, {role: 'system', content: "Failed to process your request. Ensure backend auth is provided."}]);
       }
     } catch (e) {
-      setMessages(prev => [...prev, {id: Date.now().toString(), role: 'system', content: "Error connecting to the team."}]);
+      setMessages(prev => [...prev, {role: 'system', content: "Error connecting to the team."}]);
     }
   };
 
@@ -98,8 +82,8 @@ export default function TeamChatPage() {
             </div>
           </div>
 
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+          {messages.map((msg, i) => (
+            <div key={i} className={`flex gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
               {msg.role === 'system' && (
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-1">
                   <span className="text-xs font-bold text-blue-600">OHC</span>
@@ -115,31 +99,21 @@ export default function TeamChatPage() {
                 {/* Action Card if present */}
                 {msg.card && (
                   <div className="bg-white/60 backdrop-blur-md border border-gray-200 rounded-xl p-4 shadow-sm relative overflow-hidden" data-testid="action-card">
-                    <div className={`absolute top-0 left-0 w-full h-1 ${msg.card.status === 'approved' ? 'bg-green-500' : 'bg-gradient-to-r from-blue-400 to-indigo-500'}`}></div>
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
                     <div className="flex items-center gap-2 mb-2">
-                      {msg.card.status === 'pending' ? (
-                        <span className="text-xs font-bold px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full uppercase tracking-wide">Needs Approval</span>
-                      ) : (
-                        <span className="text-xs font-bold px-2 py-0.5 bg-green-100 text-green-700 rounded-full uppercase tracking-wide">Approved</span>
-                      )}
+                       <span className="text-xs font-bold px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full uppercase tracking-wide">Needs Approval</span>
                     </div>
                     <p className="text-sm font-semibold text-gray-900 mb-1">{msg.card.department}</p>
                     <p className="text-xs text-gray-600 mb-4">{msg.card.description}</p>
 
-                    {msg.card.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApprove(msg.id)}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors"
-                          data-testid="approve-action-btn"
-                        >
-                          Approve & Execute
-                        </button>
-                        <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
-                          Edit
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex gap-2">
+                      <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition-colors">
+                        Approve & Execute
+                      </button>
+                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-medium py-2 px-3 rounded-lg transition-colors">
+                        Edit
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
