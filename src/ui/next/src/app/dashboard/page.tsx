@@ -1009,6 +1009,34 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Pre-Launch Waitlist */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Pre-Launch Waitlist</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">New Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build Hype Before Launch</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate a viral waitlist campaign. Customers who join can refer their friends to move up the queue and unlock special rewards, helping you build an audience organically.</p>
+                    <Link
+                        href="/waitlist-campaign"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-pink-600 text-white font-semibold rounded-xl shadow-md hover:bg-pink-700 transition-all font-inter text-sm"
+                    >
+                        <span>Create Waitlist Campaign</span>
+                    </Link>
+                </div>
+                <div className="w-full md:w-1/3 bg-pink-50 rounded-xl p-4 flex flex-col items-center justify-center border border-pink-100 min-h-[160px]">
+                    <div className="text-4xl mb-3">🚀</div>
+                    <span className="text-sm font-medium text-pink-600 text-center">Acquire users early</span>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Social Share Cards */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
