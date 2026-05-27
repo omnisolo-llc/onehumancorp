@@ -773,7 +773,7 @@ impl DB {
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 set_org_context(&mut *tx, "system").await?;
-                let shared_rows = sqlx::query("SELECT id, tenant_id, payload::text FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let shared_rows = sqlx::query("UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id IN (SELECT id FROM shared_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE FOR UPDATE SKIP LOCKED LIMIT 25) RETURNING id, tenant_id, payload::text").fetch_all(&mut *tx).await?;
                 for row in shared_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -781,7 +781,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let swarm_rows = sqlx::query("UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id IN (SELECT id FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE FOR UPDATE SKIP LOCKED LIMIT 25) RETURNING id::text, payload::text").fetch_all(&mut *tx).await?;
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");

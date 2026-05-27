@@ -65,16 +65,29 @@ impl AutoDreamPipeline {
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Find tasks that are COMPLETED but not yet in autodream_memories
-        let query = "
+        let mut tx = self.db.pool.begin().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+        let query = if self.db.is_sqlite() {
+            "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
-        ";
+            "
+        } else {
+            "
+            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
+            FROM shared_tasks t
+            LEFT JOIN autodream_memories m ON t.id = m.task_id
+            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            FOR UPDATE OF t SKIP LOCKED
+            LIMIT 100
+            "
+        };
 
         let tasks = sqlx::query(query)
-            .fetch_all(&self.db.pool)
+            .fetch_all(&mut *tx)
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
@@ -138,6 +151,8 @@ impl AutoDreamPipeline {
             }
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
+
+        tx.commit().await.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
         Ok(())
     }
