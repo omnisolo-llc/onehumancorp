@@ -5,15 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '**.md'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  BAZEL_BUILD_FLAGS: "--remote_download_minimal"
 
 permissions:
   contents: read
@@ -37,9 +38,6 @@ jobs:
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
-          - name: android
-            runner: ubuntu-latest
-            bazel_config: linux_x86_64
          # - name: windows-arm64
           #  runner: windows-11-arm
          #   bazel_config: windows_arm64
@@ -51,20 +49,6 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6
-
-      - name: Free runner disk space
-        if: startsWith(matrix.runner, 'ubuntu')
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -82,19 +66,16 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
-        if: matrix.name != 'android'
         run: |
           bazelisk query '
             kind(".* rule", //...)
             except kind(".*_test rule", //...)
             except attr("tags", "manual", //...)
             except //src/ui/tauri:all
-            except //deploy:all
           ' > build-targets.txt
           xargs -r bazelisk build \
             --config=${{ matrix.bazel_config }} \
             --skip_incompatible_explicit_targets \
-            $BAZEL_BUILD_FLAGS \
             < build-targets.txt
 
       - name: Install Linux Tauri desktop dependencies
@@ -116,21 +97,19 @@ jobs:
           bazelisk build \
             //src/ui/tauri:app \
             --config=linux_x86_64 \
-            --//src/ui/tauri:build_tauri=true \
-            $BAZEL_BUILD_FLAGS
+            --//src/ui/tauri:build_tauri=true
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
-        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
+        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'android'
+        if: matrix.name == 'linux-x86_64'
         run: |
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64 \
-            $BAZEL_BUILD_FLAGS
+            --config=linux_x86_64
 
       - name: Install iOS signing assets
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -162,8 +141,8 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 $BAZEL_BUILD_FLAGS
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild $BAZEL_BUILD_FLAGS
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
