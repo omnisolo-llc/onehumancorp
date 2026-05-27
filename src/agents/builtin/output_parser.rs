@@ -129,7 +129,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             current_req.tools.push(schema_tool);
         }
 
-        let mut attempt = 0;
+        let mut attempt = 1;
         loop {
             let resp = match self.llm.chat(current_req.clone()).await {
                 Ok(r) => r,
@@ -140,7 +140,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
             match self.parser.parse_message(msg) {
                 Ok(parsed) => return Ok(parsed),
                 Err(parse_error_msg) => {
-                    if attempt >= max_retries {
+                    if attempt > max_retries {
                         return Err(ToolError::LlmRecoverable(format!(
                             "Output parsing failed after {} retries. Last error: {}",
                             max_retries, parse_error_msg

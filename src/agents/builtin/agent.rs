@@ -841,7 +841,7 @@ impl Agent {
                                 return (id, final_res);
                             }
                             let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                            let max_retries = std::cmp::min(cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                             let final_res;
 
                             loop {
@@ -976,7 +976,7 @@ impl Agent {
                             continue;
                         }
                         let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                        let max_retries = std::cmp::min(cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                         let final_res;
 
                         loop {
@@ -1300,7 +1300,7 @@ impl Agent {
         for (_, tc) in &read_only_calls {
             let tc_clone = tc.clone();
             let session_tools_clone = session_tools.to_vec();
-            let max_retries = cfg.max_retries;
+            let max_retries = std::cmp::min(cfg.max_retries, 2);
 
             let is_read_only = session_tools_clone.iter().find(|t| t.name == tc_clone.name).map(|t| t.is_read_only).unwrap_or(false);
             if let Err(e) = crate::tools_gating::ToolGater::check_gating(&tc_clone, is_read_only, cfg) {
@@ -1385,7 +1385,7 @@ impl Agent {
             }
 
             let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
+            let max_retries = std::cmp::min(cfg.max_retries, 2);
             let result = loop {
                 match self.execute_tool(&tc, session_tools, &[]).await {
                     Ok(res) => break res,
@@ -2208,7 +2208,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
+                    let max_retries = std::cmp::min(cfg.max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
                             Ok(r) => {
