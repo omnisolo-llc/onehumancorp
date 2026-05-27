@@ -82,7 +82,6 @@ rust_library(
         "sqlite_memory.rs",
         "swarm_topology.rs",
         "tools_gating.rs",
-        "tool_executor_engine.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
     ],
