@@ -9,7 +9,9 @@ describe('OnboardingWizard', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      businessDescription: '',
+      businessName: '',
+      businessCategory: '',
+      businessGoal: '',
       isLoading: false,
       error: '',
       startResult: null,
@@ -25,12 +27,12 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    expect(screen.getByText("What is the name of your business?")).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
 
-  it('Step 1: Enables button when text is entered and handles successful onboarding', async () => {
+  it('Step 1-3: Flows correctly and handles successful onboarding', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
@@ -52,25 +54,42 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
+    // Step 1: Business Name
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Cakes/i);
+    await userEvent.type(nameInput, 'Maya Bakery');
 
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-    expect(button).not.toBeDisabled();
+    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
+    expect(nextBtn1).not.toBeDisabled();
+    await act(async () => { nextBtn1.click(); });
 
-    // Use act to click the button and trigger the async flow
-    await act(async () => {
-      button.click();
-    });
+    // Step 2: Business Category
+    await waitFor(() => expect(screen.getByText("What kind of business is it?")).toBeInTheDocument());
+    const categoryInput = screen.getByPlaceholderText(/e.g. Food\/Bakery/i);
+    await userEvent.type(categoryInput, 'Bakery');
 
-    // Verify it transitions to step 3 on success
+    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
+    expect(nextBtn2).not.toBeDisabled();
+    await act(async () => { nextBtn2.click(); });
+
+    // Step 3: Business Goal
+    await waitFor(() => expect(screen.getByText("What is your main goal?")).toBeInTheDocument());
+    const goalInput = screen.getByPlaceholderText(/e.g. Sell my custom cakes online/i);
+    await userEvent.type(goalInput, 'Sell cakes');
+
+    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    expect(generateBtn).not.toBeDisabled();
+
+    // Trigger submission
+    await act(async () => { generateBtn.click(); });
+
+    // Verify it transitions to step 5 on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
     });
   });
 
-  it('Step 1: Handles intake API failure', async () => {
+  it('Step 3: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
@@ -78,25 +97,27 @@ describe('OnboardingWizard', () => {
       ok: false
     });
 
+    // We start directly from Step 3 for this test
+    useOnboardingStore.setState({
+      step: 3,
+      businessName: 'Maya Bakery',
+      businessCategory: 'Bakery',
+      businessGoal: 'Sell cakes'
+    });
+
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
-
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-
-    await act(async () => {
-      button.click();
-    });
+    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    await act(async () => { generateBtn.click(); });
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+      expect(screen.getByText("What is the name of your business?")).toBeInTheDocument();
     });
   });
 
-  it('Step 1: Handles start API failure', async () => {
+  it('Step 3: Handles start API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
@@ -110,27 +131,28 @@ describe('OnboardingWizard', () => {
       ok: false
     });
 
+    useOnboardingStore.setState({
+      step: 3,
+      businessName: 'Maya Bakery',
+      businessCategory: 'Bakery',
+      businessGoal: 'Sell cakes'
+    });
+
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
-
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-
-    await act(async () => {
-      button.click();
-    });
+    const generateBtn = screen.getByRole('button', { name: /Generate My Business/i });
+    await act(async () => { generateBtn.click(); });
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+      expect(screen.getByText("What is the name of your business?")).toBeInTheDocument();
     });
   });
 
-  it('Step 3: Shows Live Screen with correct links', async () => {
+  it('Step 5: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
-      step: 3,
+      step: 5,
       startResult: { message: "Your business has been successfully launched." }
     });
 

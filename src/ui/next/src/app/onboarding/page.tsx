@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
   const {
     step, setStep,
-    businessDescription, setBusinessDescription,
+    businessName, setBusinessName,
+    businessCategory, setBusinessCategory,
+    businessGoal, setBusinessGoal,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -18,14 +20,24 @@ export default function OnboardingWizard() {
     setIsLoaded(true);
   }, []);
 
+  const handleNextStep = () => {
+    setStep(step + 1);
+  };
+
+  const handlePrevStep = () => {
+    setStep(step - 1);
+  };
+
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
-    setStep(2); // Go to loading screen
+    setStep(4); // Go to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const businessDescription = `${businessName} is a ${businessCategory}. Goal: ${businessGoal}`;
 
       // Step A: Intake
       const intakeRes = await fetch('/api/onboarding/intake', {
@@ -44,13 +56,11 @@ export default function OnboardingWizard() {
 
       const intakeData = await intakeRes.json();
 
-      // We will map intake data to the start request
-      // We need a deterministic but sensible fallback if intakeData doesn't parse well
-      const businessType = intakeData.business_type || 'Online Store';
-      const companyName = intakeData.business_name || 'My Business';
+      const businessType = intakeData.business_type || businessCategory || 'Online Store';
+      const companyName = intakeData.business_name || businessName || 'My Business';
       const firstProductName = intakeData.initial_products?.[0]?.name || 'First Product';
       const firstProductPrice = intakeData.initial_products?.[0]?.price || '10.00';
-      const categories = intakeData.categories || ['physical'];
+      const categories = intakeData.categories || [businessCategory.toLowerCase()];
 
       // Step B: Start Onboarding
       const startRes = await fetch('/api/onboarding/start', {
@@ -83,7 +93,7 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json();
       setStartResult(result);
-      setStep(3); // Go to "You're Live" screen
+      setStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
@@ -109,29 +119,104 @@ export default function OnboardingWizard() {
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
-                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+                <span className="text-2xl font-bold text-[#0066FF]">1</span>
               </div>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What is the name of your business?</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
-                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+                Don't worry, you can change this later.
               </p>
 
               <div className="space-y-4 flex-1">
-                <textarea
-                  value={businessDescription}
-                  onChange={(e) => setBusinessDescription(e.target.value)}
-                  placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="e.g. Maya's Cakes"
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all shadow-inner min-h-[44px]"
                 />
               </div>
 
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-6 flex justify-between gap-4">
+                <button
+                  onClick={handleNextStep}
+                  disabled={!businessName.trim()}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50 min-h-[44px]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                <span className="text-2xl font-bold text-[#0066FF]">2</span>
+              </div>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What kind of business is it?</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                Choose a category that best describes what you do.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <input
+                  type="text"
+                  value={businessCategory}
+                  onChange={(e) => setBusinessCategory(e.target.value)}
+                  placeholder="e.g. Food/Bakery"
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all shadow-inner min-h-[44px]"
+                />
+              </div>
+
+              <div className="mt-auto pt-6 flex justify-between gap-4">
+                <button
+                  onClick={handlePrevStep}
+                  className="bg-gray-200 dark:bg-gray-700 text-[#1D1D1F] dark:text-white px-6 py-4 rounded-[8px] font-bold shadow-md hover:bg-gray-300 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  Back
+                </button>
+                <button
+                  onClick={handleNextStep}
+                  disabled={!businessCategory.trim()}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50 min-h-[44px]"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                <span className="text-2xl font-bold text-[#0066FF]">3</span>
+              </div>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What is your main goal?</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                Tell us what you want to achieve.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <input
+                  type="text"
+                  value={businessGoal}
+                  onChange={(e) => setBusinessGoal(e.target.value)}
+                  placeholder="e.g. Sell my custom cakes online"
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all shadow-inner min-h-[44px]"
+                />
+              </div>
+
+              <div className="mt-auto pt-6 flex justify-between gap-4">
+                <button
+                  onClick={handlePrevStep}
+                  className="bg-gray-200 dark:bg-gray-700 text-[#1D1D1F] dark:text-white px-6 py-4 rounded-[8px] font-bold shadow-md hover:bg-gray-300 active:scale-[0.98] transition-all min-h-[44px]"
+                >
+                  Back
+                </button>
                 <button
                   onClick={handleStartOnboarding}
-                  disabled={!businessDescription.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                  disabled={!businessGoal.trim() || isLoading}
+                  className="flex-1 bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50 min-h-[44px]"
                 >
                   Generate My Business
                 </button>
@@ -139,7 +224,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 4 && (
              <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -154,7 +239,7 @@ export default function OnboardingWizard() {
              </div>
           )}
 
-          {step === 3 && startResult && (
+          {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,13 +261,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px] flex items-center justify-center"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all min-h-[44px] flex items-center justify-center"
                 >
                   Preview Storefront
                 </a>

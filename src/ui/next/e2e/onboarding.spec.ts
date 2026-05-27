@@ -6,16 +6,39 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+    await expect(page.locator('text="What is the name of your business?"')).toBeVisible();
 
-    // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    // Fill in the Business Name
+    const nameInput = page.locator('input[placeholder="e.g. Maya\'s Cakes"]');
+    await nameInput.fill('Maya Bakery');
+
+    const nextBtn1 = page.locator('button:has-text("Next")');
+    await expect(nextBtn1).toBeEnabled();
+    await nextBtn1.click();
+
+    // Step 2: Business Category
+    await expect(page.locator('text="What kind of business is it?"')).toBeVisible();
+    const categoryInput = page.locator('input[placeholder="e.g. Food/Bakery"]');
+    await categoryInput.fill('Bakery');
+
+    const nextBtn2 = page.locator('button:has-text("Next")');
+    await expect(nextBtn2).toBeEnabled();
+    await nextBtn2.click();
+
+    // Step 3: Business Goal
+    await expect(page.locator('text="What is your main goal?"')).toBeVisible();
+    const goalInput = page.locator('input[placeholder="e.g. Sell my custom cakes online"]');
+    await goalInput.fill('Sell cakes');
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 200,
-      json: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+      json: {
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Custom Cake', price: '25.00' }]
+      }
     }));
 
     await page.route('**/api/onboarding/start', route => route.fulfill({
@@ -26,7 +49,7 @@ test.describe('Onboarding Wizard Flow', () => {
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();
 
-    // 2. Simplified Mobile First Onboarding - wait for it to generate
+    // Step 4. wait for it to generate
     await expect(page.locator('text="Building Your Business..."')).toBeVisible({ timeout: 5000 });
 
     // Step 5: Live Screen
@@ -41,7 +64,7 @@ test.describe('Onboarding Wizard Flow', () => {
     await dashboardLink.click();
     await page.waitForURL('**/dashboard');
 
-    await expect(page.locator('text="Morning Briefing"')).toBeVisible();
-    await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
+    await expect(page.locator('text="Daily Brief"')).toBeVisible();
+    await expect(page.locator('a:has-text("Upgrade to Starter")')).toBeVisible();
   });
 });
