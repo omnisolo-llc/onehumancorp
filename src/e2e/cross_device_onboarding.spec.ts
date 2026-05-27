@@ -18,9 +18,8 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     // 2. Start flow and type business description
     await page1.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...').fill('I bake custom vegan cakes');
 
-    // Instead of clicking next and waiting for network, we'll just wait for the state sync debounce
     // Wait for the debounce save state to trigger
-    await page1.waitForTimeout(1500);
+    await page1.waitForTimeout(3000);
 
     // Close context 1 to prove we aren't relying on local storage across sessions
     await context1.close();
@@ -39,7 +38,8 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
     // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...')).toHaveValue('I bake custom vegan cakes', { timeout: 15000 });
+    const input_box = page2.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...');
+    await expect(input_box).toHaveValue('I bake custom vegan cakes', { timeout: 15000 });
 
     // Continue the flow
     await page2.route('**/api/onboarding/intake', async route => route.fulfill({
@@ -52,6 +52,7 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
             initial_products: [{ name: "Custom Vegan Cake", price: "45.00" }]
         })
     }));
+    await page2.waitForSelector('button:not([disabled])');
     await page2.getByRole('button', { name: /Generate My Business/i }).click();
 
     // Wait for step 2 (Review Details)
@@ -62,7 +63,7 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await businessNameInput.fill('Maya\'s Cross-Device Bakery');
 
     // Wait for debounce save
-    await page2.waitForTimeout(1500);
+    await page2.waitForTimeout(3000);
     await context2.close();
 
     // 4. Open yet another browser session (Device 3)
