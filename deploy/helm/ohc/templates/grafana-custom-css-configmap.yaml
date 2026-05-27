@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-custom-css
+  name: ohc-grafana-custom-css
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
 data:
