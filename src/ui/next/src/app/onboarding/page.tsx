@@ -14,9 +14,44 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Read state from server on mount
   useEffect(() => {
-    setIsLoaded(true);
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    fetch('/api/onboarding/state', {
+      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data) {
+        if (data.step) setStep(data.step);
+        if (data.businessDescription) setBusinessDescription(data.businessDescription);
+        if (data.startResult) setStartResult(data.startResult);
+      }
+    })
+    .catch(err => console.error('Failed to restore onboarding state', err))
+    .finally(() => setIsLoaded(true));
   }, []);
+
+  // Sync state to server on changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (step === 1 && !businessDescription && !startResult) return; // Don't sync empty initial state unnecessarily
+
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const timer = setTimeout(() => {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ step, businessDescription, startResult })
+      }).catch(err => console.error('Failed to sync onboarding state', err));
+    }, 1000); // debounce 1s
+
+    return () => clearTimeout(timer);
+  }, [step, businessDescription, startResult, isLoaded]);
 
   const handleStartOnboarding = async () => {
     setIsLoading(true);
@@ -98,7 +133,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -122,6 +157,16 @@ export default function OnboardingWizard() {
                 <textarea
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (businessDescription.trim() && !isLoading) {
+                        handleStartOnboarding();
+                      }
+                    }
+                  }}
+                  enterKeyHint="done"
+                  autoCapitalize="sentences"
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
                   className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
