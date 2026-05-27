@@ -516,6 +516,25 @@ export default function Dashboard() {
              </div>
          </section>
 
+         {/* Plain-Language Weekly Financial Brief */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
+            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
+                <div className="flex items-start gap-4">
+                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                   </div>
+                   <div>
+                       <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
+                       <p className="text-gray-800 text-sm leading-relaxed">
+                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
+                       </p>
+                   </div>
+                </div>
+            </div>
+         </section>
+
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
