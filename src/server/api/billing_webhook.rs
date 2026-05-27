@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::Json,
     http::StatusCode,
     response::IntoResponse,
 };
@@ -71,7 +71,10 @@ pub async fn stripe_webhook_handler(
                 // Update Database
                 let tier_string = match tier {
                     PlanTier::Free => "Free",
+                    PlanTier::Entry => "Entry",
                     PlanTier::Starter => "Starter",
+                    PlanTier::Standard => "Standard",
+                    PlanTier::Advanced => "Advanced",
                     PlanTier::Pro => "Pro",
                     PlanTier::Business => "Business",
                 };
@@ -283,14 +286,12 @@ pub async fn razorpay_webhook_handler(
 
 
 #[derive(Debug, Deserialize)]
-#[allow(non_snake_case)]
 pub struct CalComEvent {
     pub triggerEvent: String,
     pub payload: CalComPayload,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(non_snake_case)]
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
