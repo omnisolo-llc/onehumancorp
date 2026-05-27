@@ -7,7 +7,7 @@ test.describe('Referral Program', () => {
   });
 
   test('displays referral link and share tools', async ({ page }) => {
-    await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
+    await expect(page.locator('#referral-link')).toContainText('https://ohc.store/join?ref=DEFAULT');
     await expect(page.getByText('Share Tools')).toBeVisible();
     await expect(page.getByRole('button', { name: /Share to Instagram/ })).toBeVisible();
   });

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const tenantRaw = searchParams.get('tenant') || 'my-store';
+  const tenantRaw = searchParams.get('tenant') || 'embed';
   const tenant = encodeURIComponent(tenantRaw);
   const theme = searchParams.get('theme') || 'light';
 
@@ -147,7 +147,7 @@ export async function GET(request: Request) {
 
         <!-- Product Info -->
         <div class="content">
-            <h2 class="title font-outfit">Premium Collection</h2>
+            <h2 class="title font-outfit">Premium Product</h2>
             <p class="desc">Discover our exclusive, high-quality products curated just for you. Buy directly from this widget!</p>
 
             <div class="price-row">
@@ -161,9 +161,9 @@ export async function GET(request: Request) {
             </a>
 
             <!-- Viral Growth Loop Footer -->
-            <div class="footer">
+            <div class="footer powered-by-footer">
                <span>⚡ Powered by</span>
-               <a href="ohc://join?ref=${tenant}" target="_blank">OHC</a>
+               <a href="https://ohc.store/join?ref=${tenant}&utm_source=embed_widget" target="_blank">OHC</a>
             </div>
         </div>
       </div>

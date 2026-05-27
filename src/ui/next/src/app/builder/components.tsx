@@ -217,9 +217,9 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
     return (
-      <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
+      <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6 powered-by-footer">
         <a
-          href={`ohc://join?ref=${tenantId}`}
+          href={`https://ohc.store/join?ref=${tenantId}&utm_source=powered_by`} target="_blank"
           className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
           <span className="font-inter">Powered by</span>

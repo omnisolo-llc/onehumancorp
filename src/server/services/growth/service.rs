@@ -198,7 +198,7 @@ impl GrowthService for MyGrowthService {
                 .split("&utm_source=")
                 .next()
                 .unwrap_or("")
-                .strip_prefix("ohc://join?ref=")
+                .strip_prefix("https://ohc.store/join?ref=")
                 .unwrap_or("error")
                 .to_string()
         } else {

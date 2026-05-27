@@ -11,7 +11,7 @@ test.describe('Viral Referral Loop', () => {
 
   test('should display the referral link widget', async ({ page }) => {
     await expect(page.getByText('Your Referral Link')).toBeVisible();
-    await expect(page.locator('#referral-link')).toContainText('ohc://join?ref=DEFAULT');
+    await expect(page.locator('#referral-link')).toContainText('https://ohc.store/join?ref=DEFAULT');
   });
 
   test('should copy referral link', async ({ page }) => {

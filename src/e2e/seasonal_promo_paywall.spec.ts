@@ -40,7 +40,7 @@ test.describe('Viral Trial Extension Soft Paywall Loop on Seasonal Promo', () =>
     const newPage = await pagePromise;
     await newPage.waitForLoadState();
     expect(newPage.url()).toContain('twitter.com/intent/tweet');
-    expect(newPage.url()).toContain('ohc://join?ref=');
+    expect(newPage.url()).toContain('https://ohc.store/join?ref=');
     await newPage.close();
 
     // Verify the alert message
