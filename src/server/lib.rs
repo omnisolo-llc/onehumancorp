@@ -59,6 +59,7 @@ pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
+pub mod sync;
 pub mod interop;
 
 pub mod benchmarks;
