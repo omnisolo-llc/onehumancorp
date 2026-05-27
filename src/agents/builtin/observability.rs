@@ -1,6 +1,11 @@
 use std::sync::Arc;
+<<<<<<< HEAD
+use serde_json::Value;
+use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, ToolCall};
+=======
 
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse,  ToolCall};
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
 
 /// DeerFlow Unique Harness Innovations: Built-in observability: LangSmith and Langfuse integration
 pub trait ObservabilityProvider: Send + Sync {
@@ -14,13 +19,22 @@ pub trait ObservabilityProvider: Send + Sync {
 }
 
 pub struct LangSmithProvider {
+<<<<<<< HEAD
+    api_key: String,
+    project_name: String,
+=======
     _api_key: String,
     _project_name: String,
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
 }
 
 impl LangSmithProvider {
     pub fn new(api_key: String, project_name: String) -> Self {
+<<<<<<< HEAD
+        Self { api_key, project_name }
+=======
         Self { _api_key: api_key, _project_name: project_name }
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
     }
 }
 
@@ -49,13 +63,22 @@ impl ObservabilityProvider for LangSmithProvider {
 }
 
 pub struct LangfuseProvider {
+<<<<<<< HEAD
+    public_key: String,
+    secret_key: String,
+=======
     _public_key: String,
     _secret_key: String,
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
 }
 
 impl LangfuseProvider {
     pub fn new(public_key: String, secret_key: String) -> Self {
+<<<<<<< HEAD
+        Self { public_key, secret_key }
+=======
         Self { _public_key: public_key, _secret_key: secret_key }
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
     }
 }
 

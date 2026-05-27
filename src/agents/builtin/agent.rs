@@ -837,7 +837,11 @@ impl Agent {
 
                         if let Some(tool) = tt_clone.iter().find(|t| t.name == name) {
                             if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+<<<<<<< HEAD
+                                let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+=======
                                 let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
                                 return (id, final_res);
                             }
                             let mut retry_count = 0;
@@ -935,7 +939,11 @@ impl Agent {
 
                     let gating_err = crate::tools_gating::ToolGater::check_gating(&tc, false, &cfg_arc_node);
                     if let Err(e) = gating_err {
+<<<<<<< HEAD
+                        let final_res: Result<String, crate::types::ToolError> = Err(e);
+=======
                         let _final_res: Result<String, crate::types::ToolError> = Err(e);
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
                         match final_res {
                             Ok(_) => unreachable!(),
                             Err(crate::types::ToolError::LlmRecoverable(msg)) => {
@@ -961,7 +969,11 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+<<<<<<< HEAD
+                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+=======
                             let _final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -3327,7 +3339,11 @@ mod tests {
             description: "read".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let client = Arc::new(LLMCompilerMockClient {
@@ -3455,7 +3471,11 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ];
 
@@ -3653,21 +3673,33 @@ mod tests {
                 description: "read".to_string(),
                 is_read_only: true,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
             Tool {
                 name: "mutating_tool".to_string(),
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
             Tool {
                 name: "high_risk_tool".to_string(),
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ];
 
@@ -3711,7 +3743,11 @@ mod tests {
                 description: "write".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ]);
 
@@ -3755,7 +3791,11 @@ mod tests {
                 description: "delete".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ]);
 
@@ -3855,7 +3895,11 @@ mod tests {
             description: "test".to_string(),
                 is_read_only: false,
             parameters: Value::Null,
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         }];
 
         let agent = Agent::new(client, tools);
@@ -3941,11 +3985,28 @@ mod tests {
             ]),
         });
 
+<<<<<<< HEAD
+        pub struct MockToolExecutor;
+        #[async_trait::async_trait]
+        impl ToolExecutor for MockToolExecutor {
+            async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
+                Ok("tool output".to_string())
+            }
+        }
+
+        let tools: Vec<Tool> = vec![
+            Tool {
+=======
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
                 name: "test_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: serde_json::Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             }
         ];
 
@@ -4377,14 +4438,22 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
             Tool {
                 name: "safe_tool".to_string(),
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ];
 
@@ -4432,7 +4501,11 @@ mod tests {
                 description: "test".to_string(),
                 is_read_only: false,
                 parameters: Value::Null,
+<<<<<<< HEAD
+                execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
                 execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
             },
         ]);
 
@@ -4596,7 +4669,11 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({"type": "object"}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -4985,7 +5062,11 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: serde_json::Value::Null,
             is_read_only: false,
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let mut agent = Agent::new(client, vec![mutating_tool]);
@@ -5061,7 +5142,11 @@ mod tests {
             description: "A mutating tool".to_string(),
             parameters: Value::Null,
             is_read_only: false,
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let agent = Agent::new(client, vec![mutating_tool]);
@@ -5235,7 +5320,11 @@ mod tests {
             description: "".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let agent = Agent::new(client, vec![tool]);
@@ -5282,7 +5371,11 @@ mod tests {
             description: "mutates".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         // We'll mock it so the LLM calls the tool, then stops
@@ -5574,7 +5667,11 @@ mod tests {
             description: "test".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object", "properties": {}}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         }]);
 
         let mut events = vec![];
@@ -6210,7 +6307,11 @@ mod hierarchical_prompt_tests {
             description: "test".to_string(),
             is_read_only: false,
             parameters: serde_json::json!({"type": "object", "properties": {}}),
+<<<<<<< HEAD
+            execute: Arc::new(crate::agent::tests::MockToolExecutor),
+=======
             execute: Arc::new(MockToolExecutor),
+>>>>>>> 8f4cf653 (💰 Miser: Add miser verification)
         };
 
         let agent = Agent::new(client.clone(), vec![tool]);
