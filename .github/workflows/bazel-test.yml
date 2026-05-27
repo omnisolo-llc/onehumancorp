@@ -60,4 +60,8 @@ jobs:
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            //...
+            $(bazelisk query '
+              kind(".*_test rule", //...)
+              except attr("tags", "manual", //...)
+              except attr("tags", "requires-android", //...)
+            ')

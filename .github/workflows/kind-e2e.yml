@@ -91,4 +91,8 @@ jobs:
             --nocache_test_results \
             --test_output=streamed \
             --test_summary=terse \
-            --test_timeout=300,600,900,1800
+            --test_timeout=300,600,900,1800 \
+            $(bazelisk query '
+              //deploy:kind_e2e_test
+              except attr("tags", "requires-android", //...)
+            ')

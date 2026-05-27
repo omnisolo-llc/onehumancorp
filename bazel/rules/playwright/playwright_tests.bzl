@@ -48,6 +48,7 @@ def define_playwright_tests(specs, data = [], server = None):
                 "no-remote-exec",
                 "requires-docker",
                 "no-sandbox",
+                "requires-android",
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],
@@ -73,6 +74,7 @@ def define_playwright_tests(specs, data = [], server = None):
             "requires-docker",
             "no-sandbox",
             "manual",
+            "requires-android",
         ],
         target_compatible_with = select({
             "@platforms//os:linux": [],

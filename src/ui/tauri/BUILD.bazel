@@ -192,6 +192,7 @@ tauri_mobile_package(
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    tags = ["requires-android"],
     visibility = ["//visibility:public"],
 )
 
@@ -206,6 +207,7 @@ tauri_mobile_package(
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
+    tags = ["requires-android"],
     visibility = ["//visibility:public"],
 )
 
