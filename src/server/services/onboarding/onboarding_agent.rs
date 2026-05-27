@@ -174,6 +174,7 @@ impl OnboardingAgent {
                 ("The Accountant", "tenant.payment.success"),
                 ("The Protector", "tenant.contract.signed"),
                 ("The Advisor", "tenant.report.generated"),
+                ("The Scout", "tenant.seo.optimized"),
             ];
 
             for (agent_role, topic) in event_topics {
@@ -2418,6 +2419,7 @@ impl OnboardingAgent {
             ("Finance & Payments", "The Accountant", "Finance"),
             ("Legal & Compliance", "The Protector", "Legal"),
             ("Business Advisory", "The Advisor", "Advisory"),
+            ("Discovery & SEO", "The Scout", "Discovery"),
         ];
 
         for (name, role, role_id) in default_agents {
@@ -2499,9 +2501,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(agents.len(), 7);
+        assert_eq!(agents.len(), 8);
 
-        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor"];
+        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor", "The Scout"];
         for role in expected_roles {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }
