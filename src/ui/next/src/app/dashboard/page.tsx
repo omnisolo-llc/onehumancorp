@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { WalkthroughTarget } from '../../components/Walkthrough';
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -392,18 +393,20 @@ export default function Dashboard() {
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
-                        <button
-                            onClick={() => setShowAdvanced(!showAdvanced)}
-                            className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                        >
-                            <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
-                        </button>
-                    </div>
-                </div>
+                <WalkthroughTarget id="approval-inbox">
+                  <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                      <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
+                          <button
+                              onClick={() => setShowAdvanced(!showAdvanced)}
+                              className={`w-10 h-6 rounded-full transition-colors duration-300 relative ${showAdvanced ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                          >
+                              <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvanced ? 'translate-x-4' : 'translate-x-0'}`}></span>
+                          </button>
+                      </div>
+                  </div>
+                </WalkthroughTarget>
                 <div className="flex flex-col gap-4">
                     {approvals.map(approval => {
                         // Extract plain english message and payload
@@ -535,10 +538,12 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
-                <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
-                    <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
-                </div>
+                <WalkthroughTarget id="todays-sales">
+                  <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
+                      <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                      <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
+                  </div>
+                </WalkthroughTarget>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
                     <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
