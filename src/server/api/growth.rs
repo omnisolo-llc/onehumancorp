@@ -479,6 +479,8 @@ async fn handle_team_invite_accept(
 
     match tracker.accept_invite(&req.id).await {
         Ok(_) => Ok(Json(())),
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -494,6 +496,9 @@ async fn handle_create_team_invite(
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(_) => Ok(Json(())),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+
+        Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+        _ => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
