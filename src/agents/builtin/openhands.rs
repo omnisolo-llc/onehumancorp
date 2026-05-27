@@ -19,7 +19,7 @@ impl OpenHandsSdk {
     /// Exposes a CLI-like execution method mirroring the OpenHands implementation
     pub async fn execute_cli_task(&self, task: &str) -> Result<String, String> {
         let cfg = AgentRunConfig::default();
-        let mut on_event = |_| {};
+        let mut on_event = |_e: AgentEvent| {};
 
         match self.agent.run(&cfg, task, &mut on_event).await {
             Ok(output) => Ok(output),
