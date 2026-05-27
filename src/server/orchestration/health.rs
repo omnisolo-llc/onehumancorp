@@ -33,7 +33,7 @@ pub async fn run_health_monitor(
 
             if let Some(sync_errors) = health.get("sync_error_count").and_then(|v| v.as_i64()) {
                 if sync_errors > 10 {
-                    tracing::trace!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
+                    tracing::warn!("HEALTH MONITOR: High sync error count detected: {}", sync_errors);
                 } else if sync_errors > 0 {
                     tracing::trace!("HEALTH MONITOR: Sync errors present but below threshold: {}", sync_errors);
                 }

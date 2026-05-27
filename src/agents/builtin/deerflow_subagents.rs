@@ -9,19 +9,16 @@ use crate::agent::{Agent, AgentRunConfig};
 pub struct DeerFlowOrchestrator {
     pub lead_llm: Arc<dyn LlmClient>,
     pub sub_agent_factory: Box<dyn Fn(String) -> Arc<Agent> + Send + Sync>,
-    pub max_concurrency: usize,
 }
 
 impl DeerFlowOrchestrator {
     pub fn new(
         lead_llm: Arc<dyn LlmClient>,
         sub_agent_factory: impl Fn(String) -> Arc<Agent> + Send + Sync + 'static,
-        max_concurrency: usize,
     ) -> Self {
         Self {
             lead_llm,
             sub_agent_factory: Box::new(sub_agent_factory),
-            max_concurrency,
         }
     }
 
@@ -70,23 +67,21 @@ impl DeerFlowOrchestrator {
             return Err("Lead agent decomposed task into 0 sub-tasks.".into());
         }
 
-        // Step 2: Spawn parallel sub-agents with concurrency limits without enforcing Send bounds
-        use futures::stream::StreamExt;
-
-        let mut stream = futures::stream::iter(sub_tasks.iter().enumerate().map(|(i, sub_task)| {
+        // Step 2: Spawn parallel sub-agents
+        let mut futures = Vec::new();
+        for (i, sub_task) in sub_tasks.iter().enumerate() {
             let sub_agent = (self.sub_agent_factory)(format!("SubAgent-{}", i));
             let sub_task_clone = sub_task.clone();
             let config_clone = config.clone();
-            async move {
+
+            let fut = async move {
                 let mut on_event = |_| {};
                 sub_agent.run(&config_clone, &sub_task_clone, &mut on_event).await
-            }
-        })).buffered(self.max_concurrency);
-
-        let mut results = Vec::new();
-        while let Some(res) = stream.next().await {
-            results.push(res);
+            };
+            futures.push(fut);
         }
+
+        let results = join_all(futures).await;
 
         // Step 3: Synthesize results
         let mut combined_results = String::new();
@@ -172,7 +167,7 @@ mod tests {
             Arc::new(Agent::new(sub_llm as Arc<dyn LlmClient>, vec![]))
         };
 
-        let orchestrator = DeerFlowOrchestrator::new(lead_llm, factory, 2);
+        let orchestrator = DeerFlowOrchestrator::new(lead_llm, factory);
         let config = AgentRunConfig::default();
 
         let final_result = orchestrator.execute_task("Do complex thing", &config).await.unwrap();
