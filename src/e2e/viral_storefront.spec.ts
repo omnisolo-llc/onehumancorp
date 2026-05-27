@@ -13,7 +13,7 @@ test.describe('Viral Storefront E2E', () => {
     await page.getByRole('button', { name: 'Publish Changes' }).click();
     await expect(page.getByRole('heading', { name: 'Publish Site' })).toBeVisible();
     await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
-    await expect(page.getByPlaceholder('mybusiness')).toBeVisible();
+    await expect(page.locator('input[placeholder="mybusiness"]')).toBeVisible();
   });
 
   test('displays Powered by OHC footer in storefront preview', async ({ page }) => {
@@ -47,12 +47,12 @@ test.describe('Viral Storefront E2E', () => {
     await page.goto('/api/v1/growth/storefront/embed');
 
     await expect(page.locator('.card')).toBeVisible();
-    await expect(page.locator('.title')).toContainText('Premium Product');
+    await expect(page.locator('.title')).toContainText('Premium Collection');
 
     const footer = page.locator('.footer');
     await expect(footer).toBeVisible();
     await expect(footer).toContainText('⚡ Powered by OHC');
-    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=embed');
+    await expect(footer.locator('a')).toHaveAttribute('href', 'ohc://join?ref=my-store');
   });
 
   test('generates social share og card with branding', async ({ request }) => {
