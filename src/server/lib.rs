@@ -4002,141 +4002,107 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
-                        <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-                            <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
-                            <p>Zero tech skills needed. We do the heavy lifting.</p>
-                            <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
-                            <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
-                        </div>
-                        <div id="step-2" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>What kind of business are you building?</h1>
-                            <input type="text" id="step-2-business-type" placeholder="Business type" style="border-radius: 8px;" />
-                            <button onclick="nextStep(3)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="setBusinessType('Online Store')" style="border-radius: 8px;">🛒 <span>Online Store</span></button>
-                            <button class="secondary" onclick="setBusinessType('Service Business')" style="border-radius: 8px;">🛠️ <span>Service Business</span></button>
-                            <button class="secondary" onclick="setBusinessType('Restaurant / Food')" style="border-radius: 8px;">🍕 <span>Restaurant / Food</span></button>
-                            <button class="secondary" onclick="setBusinessType('Creative')" style="border-radius: 8px;">🎨 <span>Creative</span></button>
-                            <button class="secondary" onclick="setBusinessType('Local Business')" style="border-radius: 8px;">🏠 <span>Local Business</span></button>
-                            <br/><button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-3" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Give your business a name</h1>
-                            <input type="text" id="step-3-business-name" autocomplete="organization" enterkeyhint="next" placeholder="What is your business called?" style="border-radius: 8px;" />
-                            <input type="text" id="step-3-business-name-2" autocomplete="organization" enterkeyhint="next" placeholder="e.g. Maya's Cakes" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate Description</button>
-                            <button onclick="nextStep(4)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(2)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-4" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>What do you sell?</h1>
-                            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-physical" style="width: auto; margin: 0;"> 📦 Physical Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-digital" style="width: auto; margin: 0;"> 📄 Digital Products</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-services" style="width: auto; margin: 0;"> 📅 Services / Appointments</label>
-                                <label style="display: flex; align-items: center; gap: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: rgba(255,255,255,0.3);"><input type="checkbox" id="step-4-subscriptions" style="width: auto; margin: 0;"> 🔁 Subscriptions</label>
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; display: flex; flex-direction: column; min-height: 600px;">
+
+                        <div id="step-1" style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px;">
+                            <div style="width: 64px; height: 64px; background: rgba(0, 102, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                                <svg style="width: 32px; height: 32px; color: #0066FF;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                             </div>
-                            <button onclick="nextStep(5)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(3)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-5" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Add your first product or service</h1>
-                            <input type="text" id="step-5-product-name" enterkeyhint="next" placeholder="What is the name of this product?" style="border-radius: 8px;" />
-                            <input type="text" id="step-5-product-price" inputmode="decimal" enterkeyhint="next" placeholder="0.00" style="border-radius: 8px;" />
-                            <button onclick="nextStep('generating')" style="border-radius: 8px;">Generate AI Description</button>
-                            <button onclick="nextStep(6)" style="border-radius: 8px;">Next →</button>
-                            <button class="secondary" onclick="nextStep(4)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-6" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>How do you want to receive payments?</h1>
-                            <button class="secondary" onclick="setPaymentPref('online')" style="border-radius: 8px;">Online</button>
-                            <button class="secondary" onclick="setPaymentPref('both')" style="border-radius: 8px;">Both Online & In-person</button>
-                            <br/><button class="secondary" onclick="nextStep(5)" style="border-radius: 8px;">Back</button>
-                        </div>
-                        <div id="step-7" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Create your account</h1>
-                            <input type="text" id="step-7-user-name" autocomplete="name" enterkeyhint="next" placeholder="e.g. Maya Smith" style="border-radius: 8px;" />
-                            <input type="email" id="step-7-user-email" autocomplete="email" enterkeyhint="next" placeholder="you@email.com" style="border-radius: 8px;" />
-                            <input type="password" id="step-7-user-password" autocomplete="new-password" enterkeyhint="done" placeholder="Password" style="border-radius: 8px;" />
-                            <button onclick="nextStep(8)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-8" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Select a Template</h1>
-                            <button class="secondary" onclick="setTemplate('Modern', this)" style="border-radius: 8px;">Modern</button>
-                            <button class="secondary" onclick="setTemplate('Bold', this)" style="border-radius: 8px;">Bold</button>
-                            <div style="margin-top: 24px; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,165,0,0.1)); border: 1px solid rgba(255,165,0,0.3);">
-                                <h3 style="margin-bottom: 8px;">✨ Premium Templates</h3>
-                                <p style="font-size: 13px; margin-bottom: 12px;">Unlock professional, high-converting designs optimized for your industry.</p>
-                                <button class="secondary" style="border-radius: 8px; background: rgba(255,255,255,0.9); width: 100%; border-color: rgba(255,165,0,0.4);" onclick="alert('Upgrade flow triggered!')">Upgrade to Premium</button>
-                            </div>
-                            <button onclick="nextStep(9)" style="margin-top: 16px; border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-9" class="hidden" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Choose your domain</h1>
-                            <button class="secondary" onclick="setDomainChoice('subdomain', this)" style="border-radius: 8px;">🌐 Free OHC Domain</button>
-                            <button class="secondary" onclick="setDomainChoice('custom', this)" style="border-radius: 8px;">🔗 Connect Custom Domain</button>
-                            <button onclick="nextStep(10)" style="border-radius: 8px;">Next →</button>
-                        </div>
-                        <div id="step-10" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>Ready to launch!</h1>
-                            <button onclick="publishBusiness(this)" style="border-radius: 8px;"><span>Publish my business</span> <span>→</span></button>
-                        </div>
-                        <div id="step-100" style="display: none; border-radius: 16px; padding: 20px;">
-                            <h1>🎉 Success! Your business is live! 🎉</h1>
-                            <p>Your business is now live!</p>
-                            <button onclick="showScreen('checklist-screen')" style="border-radius: 8px;">View Welcome Checklist →</button>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Launch My Business →</button>
+                            <h1 style="font-size: 28px; margin-bottom: 8px;">Tell us about your business</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.</p>
+
+                            <textarea id="step-1-description" placeholder="e.g. I bake custom vegan cakes in Portland, OR..." style="width: 100%; height: 120px; padding: 16px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.3); resize: none; margin-bottom: 24px; font-family: inherit; font-size: 16px;"></textarea>
+
+                            <button onclick="handleIntake(this)" style="width: 100%; padding: 16px; border-radius: 8px; font-weight: bold; margin-top: auto;">Generate Storefront</button>
                         </div>
 
-                        <div id="checklist-screen" class="screen" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; padding: 24px; margin: 16px;">
-                            <h1>Welcome Checklist</h1>
-                            <h1>You're set up! Here's what to do next:</h1>
-                            <p>✅ Business live</p>
-                            <p>⬜ Add 3 more products</p>
-                            <p>⬜ Connect Instagram</p>
-                            <p>⬜ Share your link with a friend</p>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Go to Dashboard →</button>
+                        <div id="step-2" class="hidden" style="display: none; flex: 1; flex-direction: column; padding: 24px;">
+                            <button class="secondary" onclick="nextStep(1)" style="align-self: flex-start; margin-bottom: 16px; border: none; background: none; color: #0066FF; padding: 0; display: flex; align-items: center; gap: 4px;">
+                                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+                            </button>
+                            <h1 style="font-size: 28px; margin-bottom: 8px;">Review Details</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">Here's what our AI figured out. Feel free to tweak these.</p>
+
+                            <div style="display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding-right: 8px; margin-bottom: 24px;">
+                                <div>
+                                    <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; display: block;">Business Name</label>
+                                    <input type="text" id="step-2-name" style="width: 100%; padding: 12px; border-radius: 8px;" />
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; display: block;">Business Type</label>
+                                    <input type="text" id="step-2-type" style="width: 100%; padding: 12px; border-radius: 8px;" />
+                                </div>
+                                <div>
+                                    <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; display: block;">Categories (Comma separated)</label>
+                                    <input type="text" id="step-2-categories" style="width: 100%; padding: 12px; border-radius: 8px;" />
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <div>
+                                        <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; display: block;">First Product</label>
+                                        <input type="text" id="step-2-product" style="width: 100%; padding: 12px; border-radius: 8px;" />
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; display: block;">Price</label>
+                                        <input type="text" id="step-2-price" style="width: 100%; padding: 12px; border-radius: 8px;" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="saveReviewDetailsAndNext(this)" style="width: 100%; padding: 16px; border-radius: 8px; font-weight: bold; margin-top: auto;">Continue</button>
                         </div>
 
-                        <div id="step-ai" class="hidden" style="display: none;">
-                            <h1>Describe your business in a sentence</h1>
-                            <input type="text" id="step-ai-prompt" enterkeyhint="done" placeholder="e.g. I run a local bakery called Maya's Cakes..." style="border-radius: 8px;" />
-                            <button onclick="generateAI()" style="border-radius: 8px;">Generate Storefront →</button>
-                            <button class="secondary" onclick="nextStep(1)" style="border-radius: 8px;">Back</button>
+                        <div id="step-3" class="hidden" style="display: none; flex: 1; flex-direction: column; padding: 24px;">
+                            <button class="secondary" onclick="nextStep(2)" style="align-self: flex-start; margin-bottom: 16px; border: none; background: none; color: #0066FF; padding: 0; display: flex; align-items: center; gap: 4px;">
+                                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg> Back
+                            </button>
+                            <h1 style="font-size: 28px; margin-bottom: 8px;">Style & Team</h1>
+                            <p style="color: var(--text-secondary); margin-bottom: 24px;">Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.</p>
+
+                            <div style="margin-bottom: 24px;">
+                                <label style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; display: block;">Website Template</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                    <button class="secondary selected" onclick="selectTemplateUI('Modern', this)" style="padding: 12px; border-radius: 8px; font-weight: bold;">Modern</button>
+                                    <button class="secondary" onclick="selectTemplateUI('Minimal', this)" style="padding: 12px; border-radius: 8px; font-weight: bold;">Minimal</button>
+                                    <button class="secondary" onclick="selectTemplateUI('Bold', this)" style="padding: 12px; border-radius: 8px; font-weight: bold;">Bold</button>
+                                    <button class="secondary" onclick="selectTemplateUI('Classic', this)" style="padding: 12px; border-radius: 8px; font-weight: bold;">Classic</button>
+                                </div>
+                            </div>
+
+                            <button onclick="handleStartOnboarding(this)" style="width: 100%; padding: 16px; border-radius: 8px; font-weight: bold; margin-top: auto;">Launch Store</button>
                         </div>
-                        <div id="step-generating" class="hidden" style="display: none;">
-                            <div class="card glass" style="padding: 60px 40px; text-align: center;">
-                                <div class="shimmer" style="height: 40px; width: 80%; margin: 0 auto 24px;"></div>
-                                <h1 class="outfit">Designing your storefront...</h1>
-                                <p>Our AI is crafting a custom experience for your brand.</p>
-                                <div class="shimmer" style="height: 200px; width: 100%; margin-top: 32px;"></div>
-                                <p style="margin-top: 24px; color: var(--text-secondary); font-size: 14px;">This usually takes about 30 seconds.</p>
+
+                        <div id="step-4" class="hidden" style="display: none; flex: 1; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;">
+                            <div style="width: 96px; height: 96px; position: relative; margin-bottom: 32px;">
+                                <div style="position: absolute; inset: 0; border: 4px solid rgba(0, 102, 255, 0.2); border-radius: 50%;"></div>
+                                <div class="spin" style="position: absolute; inset: 0; border: 4px solid #0066FF; border-radius: 50%; border-top-color: transparent;"></div>
+                            </div>
+                            <h1 style="font-size: 24px; margin-bottom: 16px;">Building Your Business...</h1>
+                            <div style="color: var(--text-secondary); font-size: 14px;">
+                                <p style="margin-bottom: 8px; animation: pulse 2s infinite;">Generating your product catalog</p>
+                                <p style="margin-bottom: 8px; animation: pulse 2s infinite 0.5s;">Configuring payment settings</p>
+                                <p style="margin-bottom: 8px; animation: pulse 2s infinite 1s;">Designing your storefront</p>
+                                <p style="animation: pulse 2s infinite 1.5s;">Onboarding your AI agents</p>
                             </div>
                         </div>
-                        <div id="step-launch-ai" class="hidden" style="display: none;">
-                            <h1>Your live storefront!</h1>
-                            <button onclick="showScreen('dashboard-screen')" style="border-radius: 8px;">Continue to Dashboard →</button>
+
+                        <div id="step-5" class="hidden" style="display: none; flex: 1; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;">
+                            <div style="width: 80px; height: 80px; background: rgba(52, 199, 89, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 24px;">
+                                <svg style="width: 40px; height: 40px; color: #34C759;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                            </div>
+                            <h1 style="font-size: 28px; margin-bottom: 8px;">You're Live!</h1>
+                            <p id="step-5-message" style="color: var(--text-secondary); margin-bottom: 32px;">Your business has been successfully launched.</p>
+
+                            <div style="width: 100%; margin-top: auto;">
+                                <div style="padding: 12px; background: rgba(255,255,255,0.4); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 24px;">
+                                    <p style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px;">Your Shareable Link</p>
+                                    <p style="color: #0066FF; font-weight: bold; font-size: 16px;">my-business.ohc.store</p>
+                                </div>
+                                <button onclick="showScreen('dashboard-screen')" style="width: 100%; padding: 16px; border-radius: 8px; font-weight: bold; background: var(--text); color: var(--bg); margin-bottom: 12px;">Go to Dashboard</button>
+                                <button onclick="showScreen('storefront-builder-screen')" class="secondary" style="width: 100%; padding: 16px; border-radius: 8px; font-weight: bold;">Preview Storefront</button>
+                            </div>
                         </div>
+
                     </div>
-
-
-                    <!-- Storefront Builder Screen -->
-                    <div id="storefront-builder-screen" class="screen glass" style="display: none;">
-                        <div class="builder-container">
-                            <div class="builder-header">
-                                <h1>Edit Website</h1>
-                                <button class="secondary" onclick="showEmbedSetup()">Embed</button>
-                                <button class="secondary" id="toggle-rearrange-btn" onclick="toggleRearrangeMode()">Rearrange</button>
-                            </div>
-
-                            <div class="builder-preview" id="builder-preview-container">
-                                <!-- Draft Blocks render here -->
-                            </div>
-
-                            <button class="fab" onclick="showDomainSetup()">Publish Changes</button>
-
                             <div class="card glass" style="margin-top: 24px; border-left: 4px solid #0066ff;">
                                 <h3>Social Share Card (OG)</h3>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Generate a beautiful "Powered by OHC" image to share your store on social media.</p>
@@ -5143,6 +5109,268 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             content: b.content
                                         }));
                                     }
+
+                        function selectTemplateUI(template, btn) {
+                            onboardingState.website_template = template;
+                            const buttons = btn.parentElement.querySelectorAll('button');
+                            buttons.forEach(b => {
+                                b.classList.remove('selected');
+                                b.style.borderColor = 'var(--border)';
+                                b.style.background = 'transparent';
+                            });
+                            btn.classList.add('selected');
+                            btn.style.borderColor = '#0066FF';
+                            btn.style.background = 'rgba(0,102,255,0.1)';
+                        }
+
+                        async function handleIntake(btn) {
+                            const descInput = document.getElementById('step-1-description');
+                            const description = descInput ? descInput.value : '';
+
+                        function selectTemplateUI(template, btn) {
+                            onboardingState.website_template = template;
+                            const buttons = btn.parentElement.querySelectorAll('button');
+                            buttons.forEach(b => {
+                                b.classList.remove('selected');
+                                b.style.borderColor = 'var(--border)';
+                                b.style.background = 'transparent';
+                            });
+                            btn.classList.add('selected');
+                            btn.style.borderColor = '#0066FF';
+                            btn.style.background = 'rgba(0,102,255,0.1)';
+                        }
+
+                        async function handleIntake(btn) {
+                            const descInput = document.getElementById('step-1-description');
+                            const description = descInput ? descInput.value : '';
+                            if (!description.trim()) {
+                                alert('Please provide a description.');
+                                return;
+                            }
+
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = 'Analyzing...';
+                            btn.disabled = true;
+
+                            try {
+                                const response = await fetch('/api/onboarding/intake', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ description })
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+
+                                    onboardingState.company_description = description;
+                                    onboardingState.business_type = data.business_type || 'Online Store';
+                                    onboardingState.business_name = data.business_name || 'My Business';
+                                    onboardingState.selling_categories = data.categories || ['physical'];
+
+                                    if (data.initial_products && data.initial_products.length > 0) {
+                                        onboardingState.first_product_name = data.initial_products[0].name;
+                                        onboardingState.first_product_price = data.initial_products[0].price;
+                                    } else {
+                                        onboardingState.first_product_name = 'First Product';
+                                        onboardingState.first_product_price = '10.00';
+                                    }
+
+                                    // Populate review inputs
+                                    document.getElementById('step-2-name').value = onboardingState.business_name;
+                                    document.getElementById('step-2-type').value = onboardingState.business_type;
+                                    document.getElementById('step-2-categories').value = onboardingState.selling_categories.join(', ');
+                                    document.getElementById('step-2-product').value = onboardingState.first_product_name;
+                                    document.getElementById('step-2-price').value = onboardingState.first_product_price;
+
+                                    nextStep(2);
+                                } else {
+                                    alert('Failed to process business details');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error communicating with server.');
+                            } finally {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            }
+                        }
+
+                        function saveReviewDetailsAndNext(btn) {
+                            onboardingState.business_name = document.getElementById('step-2-name').value;
+                            onboardingState.business_type = document.getElementById('step-2-type').value;
+                            onboardingState.selling_categories = document.getElementById('step-2-categories').value.split(',').map(s => s.trim());
+                            onboardingState.first_product_name = document.getElementById('step-2-product').value;
+                            onboardingState.first_product_price = document.getElementById('step-2-price').value;
+                            nextStep(3);
+                        }
+
+                        async function handleStartOnboarding(btn) {
+                            nextStep(4); // Loading step
+
+                            try {
+                                const payload = {
+                                    business_type: onboardingState.business_type,
+                                    company_name: onboardingState.business_name,
+                                    company_description: onboardingState.company_description || '',
+                                    selling_categories: onboardingState.selling_categories,
+                                    payment_pref: 'online',
+                                    admin_email: 'admin@ohc.app',
+                                    admin_name: 'Admin',
+                                    admin_password: 'password123',
+                                    website_template: onboardingState.website_template || 'Modern',
+                                    first_product_name: onboardingState.first_product_name,
+                                    first_product_price: onboardingState.first_product_price,
+                                    domain_choice: 'subdomain',
+                                    price_type: 'fixed'
+                                };
+
+                                const res = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.message) {
+                                        document.getElementById('step-5-message').textContent = data.message;
+                                    }
+                                    nextStep(5);
+                                } else {
+                                    console.error('Failed to publish business');
+                                    alert('Failed to publish business. Please try again.');
+                                    nextStep(3);
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error publishing business.');
+                                nextStep(3);
+                            }
+                        }
+
+                        function nextStep(stepId) {
+                            const screens = [1, 2, 3, 4, 5];
+                            screens.forEach(s => {
+                                const el = document.getElementById('step-' + s);
+                                if (el) {
+                                    el.style.display = (s === stepId) ? 'flex' : 'none';
+                                }
+                            });
+                        }
+                            if (!description.trim()) {
+                                alert('Please provide a description.');
+                                return;
+                            }
+
+                            const originalText = btn.innerHTML;
+                            btn.innerHTML = 'Analyzing...';
+                            btn.disabled = true;
+
+                            try {
+                                const response = await fetch('/api/onboarding/intake', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ description })
+                                });
+
+                                if (response.ok) {
+                                    const data = await response.json();
+
+                                    onboardingState.company_description = description;
+                                    onboardingState.business_type = data.business_type || 'Online Store';
+                                    onboardingState.business_name = data.business_name || 'My Business';
+                                    onboardingState.selling_categories = data.categories || ['physical'];
+
+                                    if (data.initial_products && data.initial_products.length > 0) {
+                                        onboardingState.first_product_name = data.initial_products[0].name;
+                                        onboardingState.first_product_price = data.initial_products[0].price;
+                                    } else {
+                                        onboardingState.first_product_name = 'First Product';
+                                        onboardingState.first_product_price = '10.00';
+                                    }
+
+                                    // Populate review inputs
+                                    document.getElementById('step-2-name').value = onboardingState.business_name;
+                                    document.getElementById('step-2-type').value = onboardingState.business_type;
+                                    document.getElementById('step-2-categories').value = onboardingState.selling_categories.join(', ');
+                                    document.getElementById('step-2-product').value = onboardingState.first_product_name;
+                                    document.getElementById('step-2-price').value = onboardingState.first_product_price;
+
+                                    nextStep(2);
+                                } else {
+                                    alert('Failed to process business details');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error communicating with server.');
+                            } finally {
+                                btn.innerHTML = originalText;
+                                btn.disabled = false;
+                            }
+                        }
+
+                        function saveReviewDetailsAndNext(btn) {
+                            onboardingState.business_name = document.getElementById('step-2-name').value;
+                            onboardingState.business_type = document.getElementById('step-2-type').value;
+                            onboardingState.selling_categories = document.getElementById('step-2-categories').value.split(',').map(s => s.trim());
+                            onboardingState.first_product_name = document.getElementById('step-2-product').value;
+                            onboardingState.first_product_price = document.getElementById('step-2-price').value;
+                            nextStep(3);
+                        }
+
+                        async function handleStartOnboarding(btn) {
+                            nextStep(4); // Loading step
+
+                            try {
+                                const payload = {
+                                    business_type: onboardingState.business_type,
+                                    company_name: onboardingState.business_name,
+                                    company_description: onboardingState.company_description || '',
+                                    selling_categories: onboardingState.selling_categories,
+                                    payment_pref: 'online',
+                                    admin_email: 'admin@ohc.app',
+                                    admin_name: 'Admin',
+                                    admin_password: 'password123',
+                                    website_template: onboardingState.website_template || 'Modern',
+                                    first_product_name: onboardingState.first_product_name,
+                                    first_product_price: onboardingState.first_product_price,
+                                    domain_choice: 'subdomain',
+                                    price_type: 'fixed'
+                                };
+
+                                const res = await fetch('/api/onboarding/start', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(payload)
+                                });
+
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.message) {
+                                        document.getElementById('step-5-message').textContent = data.message;
+                                    }
+                                    nextStep(5);
+                                } else {
+                                    console.error('Failed to publish business');
+                                    alert('Failed to publish business. Please try again.');
+                                    nextStep(3);
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert('Error publishing business.');
+                                nextStep(3);
+                            }
+                        }
+
+                        function nextStep(stepId) {
+                            const screens = [1, 2, 3, 4, 5];
+                            screens.forEach(s => {
+                                const el = document.getElementById('step-' + s);
+                                if (el) {
+                                    el.style.display = (s === stepId) ? 'flex' : 'none';
+                                }
+                            });
+                        }
 
                                     // Show builder screen directly
                                     setTimeout(() => {

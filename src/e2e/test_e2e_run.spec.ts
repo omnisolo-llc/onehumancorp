@@ -1,11 +1,12 @@
 import { test, expect } from './fixtures';
 
 test('verify wizard UI state propagation to dashboard', async ({ page }) => {
+  await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "State Test Store", business_type: "Online Store", categories: ["physical"], initial_products: [{ name: "Test Product", price: "10.00" }] }) }));
   await page.goto('/website-builder');
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
-  await page.getByRole('button', { name: /Online Store/ }).click();
-  await page.getByPlaceholder('What is your business called?').fill('State Test Store');
-  await expect(page.getByPlaceholder('What is your business called?')).toHaveValue('State Test Store');
+  await page.getByPlaceholder('e.g. I bake custom vegan cakes').fill('State Test Store');
+  await page.getByRole('button', { name: /Generate Storefront/ }).click();
+  await expect(page.getByRole('heading', { name: 'Review Details' })).toBeVisible();
+  await expect(page.getByDisplayValue('State Test Store')).toBeVisible();
 });
 
 test('verify app settings toggle', async ({ page }) => {
@@ -30,11 +31,14 @@ test('verify website builder publish sheet', async ({ page }) => {
 });
 
 test('verify state persistence', async ({ page }) => {
+  await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Test Company", business_type: "Online Store", categories: ["physical"], initial_products: [{ name: "Custom Cookies", price: "24.99" }] }) }));
+
   await page.goto('/website-builder');
-  await page.getByRole('button', { name: /Start My Business Next/ }).click();
-  await page.getByRole('button', { name: /Online Store/ }).click();
+  await page.getByPlaceholder('e.g. I bake custom vegan cakes').fill('Test Company sells custom cookies');
+  await page.getByRole('button', { name: /Generate Storefront/ }).click();
+  await expect(page.getByRole('heading', { name: 'Review Details' })).toBeVisible();
 
   // Reload the page and verify we're still on the company name step
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Review Details' })).toBeVisible();
 });

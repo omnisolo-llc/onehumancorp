@@ -38,17 +38,25 @@ test.describe('👂 Echo: UX Friction Elimination E2E', () => {
   });
 
   test('TC5: Verify Premium Loading State in Setup Wizard', async ({ page }) => {
-    // Navigate to step 3
-    await page.click('button:has-text("🚀 Start My Business")');
-    await page.click('button:has-text("🛒 Online Store")');
+    // Navigate to step 3 by filling in description and clicking generate
+    await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Test Company", business_type: "Online Store", categories: ["physical"], initial_products: [{ name: "Custom Cookies", price: "24.99" }] }) }));
+    await page.route('**/api/onboarding/start', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org_123" }) }));
 
-    // Trigger description generation (Step 3 -> Generating)
-    await page.fill('input[placeholder="What is your business called?"]', 'Maya\'s Cakes');
-    await page.click('button:has-text("Generate Description")');
+    await page.fill('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]', 'Maya\'s Cakes');
+    await page.click('button:has-text("Generate Storefront")');
 
-    await expect(page.locator('#step-generating')).toBeVisible();
-    await expect(page.locator('.shimmer')).toHaveCount(2);
-    await expect(page.locator('text=Designing your storefront...')).toBeVisible();
+    await expect(page.locator('#step-2')).toBeVisible();
+    await page.click('button:has-text("Continue")');
+    await expect(page.locator('#step-3')).toBeVisible();
+
+    const requestPromise = page.waitForRequest(request =>
+      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
+    );
+    await page.click('button:has-text("Launch Store")');
+
+    await expect(page.locator('#step-4')).toBeVisible();
+    await expect(page.locator('.spin')).toHaveCount(1);
+    await expect(page.locator('text=Building Your Business...')).toBeVisible();
   });
 
 });

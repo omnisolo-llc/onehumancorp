@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Audit: Correct glassmorphism implementation and jargon-free requirements', () => {
   test('verify glassmorphism styling on dark and light mode', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.getByRole('button', { name: /Start My Business Next/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Generate Storefront/ })).toBeVisible();
 
     // Verify glassmorphism CSS
     const glassEl = page.locator('.glass-container').first();
