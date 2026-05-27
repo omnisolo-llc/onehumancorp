@@ -5,12 +5,12 @@ test.describe("AI Agent Department UI Mocks", () => {
     await page.goto("/");
   });
 
-  test("draft-to-approval flow for AI Agent Departments", async ({
-    page,
-  }) => {
+  test("draft-to-approval flow for AI Agent Departments", async ({ page }) => {
     await page.goto("/team");
 
-    const ambassadorCard = page.locator("button", { hasText: "The Ambassador" });
+    const ambassadorCard = page.locator("button", {
+      hasText: "The Ambassador",
+    });
     await expect(ambassadorCard).toContainText("awaiting approval");
     await ambassadorCard.click();
 
@@ -48,7 +48,9 @@ test.describe("AI Agent Department UI Mocks", () => {
   }) => {
     await page.goto("/team");
 
-    const ambassadorCard = page.locator("button", { hasText: "The Ambassador" });
+    const ambassadorCard = page.locator("button", {
+      hasText: "The Ambassador",
+    });
     await expect(ambassadorCard).toContainText("1 item awaiting approval");
 
     await ambassadorCard.click();
@@ -68,7 +70,9 @@ test.describe("AI Agent Department UI Mocks", () => {
 
     await expect(page.locator("h1")).toContainText("The Promoter");
     await expect(
-      page.getByText("Generated 7-day social media plan for Vegan Celebration Cake"),
+      page.getByText(
+        "Generated 7-day social media plan for Vegan Celebration Cake",
+      ),
     ).toBeVisible();
 
     await page.getByRole("button", { name: "Approve" }).click();
@@ -80,7 +84,9 @@ test.describe("AI Agent Department UI Mocks", () => {
     await page.goto("/team");
 
     await page.locator("button", { hasText: "The Salesperson" }).click();
-    const highRiskBadge = page.locator("span", { hasText: "High Risk" }).first();
+    const highRiskBadge = page
+      .locator("span", { hasText: "High Risk" })
+      .first();
     await expect(highRiskBadge).toBeVisible();
     await expect(highRiskBadge).toHaveClass(/bg-orange-100/);
     await expect(highRiskBadge).toHaveClass(/text-orange-700/);
@@ -143,7 +149,9 @@ test.describe("AI Agent Department UI Mocks", () => {
       page.locator("button", { hasText: "The Ambassador" }),
     ).toContainText("awaiting approval", { timeout: 10000 });
 
-    const ambassadorCard = page.locator("button", { hasText: "The Ambassador" });
+    const ambassadorCard = page.locator("button", {
+      hasText: "The Ambassador",
+    });
     await expect(ambassadorCard).toContainText("awaiting approval");
     await ambassadorCard.click();
 
@@ -155,7 +163,9 @@ test.describe("AI Agent Department UI Mocks", () => {
     await expect(approvalCard).toBeVisible();
 
     await approvalCard.getByRole("button", { name: "Approve" }).click();
-    await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("All Caught Up!")).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("UI: End-to-End CUJ - Respects tenant throttling limits and safely returns 429", async ({
@@ -165,16 +175,20 @@ test.describe("AI Agent Department UI Mocks", () => {
     let exhausted = false;
     // We send up to 105 requests. Since the default budget is 100, it should eventually return 429.
     for (let i = 0; i < 105; i++) {
-        const res = await request.post("/api/agents/webhook", {
-            data: { tenant_id: "e2e-tenant", source: "stripe", message: "order_placed" },
-        });
+      const res = await request.post("/api/agents/webhook", {
+        data: {
+          tenant_id: "e2e-tenant",
+          source: "stripe",
+          message: "order_placed",
+        },
+      });
 
-        if (res.status() === 429) {
-            exhausted = true;
-            break;
-        } else if (res.status() !== 200) {
-            throw new Error(`Unexpected status code: ${res.status()}`);
-        }
+      if (res.status() === 429) {
+        exhausted = true;
+        break;
+      } else if (res.status() !== 200) {
+        throw new Error(`Unexpected status code: ${res.status()}`);
+      }
     }
 
     expect(exhausted).toBe(true);
@@ -182,6 +196,39 @@ test.describe("AI Agent Department UI Mocks", () => {
     await page.goto("/team");
     await expect(page.locator("h1")).toContainText("Your Team");
     // System should not crash
-    await expect(page.locator("button", { hasText: "The Ambassador" })).toBeVisible();
+    await expect(
+      page.locator("button", { hasText: "The Ambassador" }),
+    ).toBeVisible();
+  });
+
+  test("UI: Check empty inbox behavior", async ({ page }) => {
+    await page.goto("/team");
+    const legalCard = page.locator("button", { hasText: "The Protector" });
+    await legalCard.click();
+    await expect(page.locator("h1")).toContainText("The Protector");
+    await expect(page.getByText("All Caught Up!")).toBeVisible();
+  });
+
+  test("UI: Check back button works in ApprovalInbox", async ({ page }) => {
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await expect(page.locator("h1")).toContainText("The Promoter");
+    await page.locator("svg").first().click(); // This is the back button
+    await expect(page.locator("h1")).toContainText("Your Team");
+  });
+
+  test("UI: Handle error on approve gracefully", async ({ page }) => {
+    // Intercept to mock error response
+    await page.route("**/api/agents/approvals/*", (route) => route.abort());
+    await page.goto("/team");
+    const promoterCard = page.locator("button", { hasText: "The Promoter" });
+    await promoterCard.click();
+    await page.getByRole("button", { name: "Approve" }).click();
+    await expect(
+      page.getByText(
+        "Generated 7-day social media plan for Vegan Celebration Cake",
+      ),
+    ).toBeVisible();
   });
 });
