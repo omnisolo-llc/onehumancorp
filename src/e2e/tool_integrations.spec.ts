@@ -47,7 +47,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('can connect Social Media Accounts', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Ayrshare...');
+      expect(dialog.message()).toContain('Connecting to Instagram Direct Messages...');
       dialog.accept();
     });
     await connectButton.click();
@@ -56,7 +56,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('can connect Customer Booking', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Customer Booking' }).getByRole('button', { name: 'Set up my booking link' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Cal.com...');
+      expect(dialog.message()).toContain('Connecting to Outlook Calendar...');
       dialog.accept();
     });
     await connectButton.click();

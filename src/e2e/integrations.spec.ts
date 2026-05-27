@@ -28,7 +28,7 @@ test.describe('Integrations Page', () => {
     await page.getByRole('button', { name: 'Back to Dashboard' }).click();
     await page.getByRole('button', { name: 'Integrations' }).click();
 
-    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Instagram Direct Messages/ })).toBeVisible();
     await expect(page.locator('#manychat-integration').getByRole('button', { name: 'Configure' })).toBeVisible();
   });
 

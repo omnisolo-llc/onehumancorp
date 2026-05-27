@@ -9,14 +9,13 @@ export default function Integrations() {
 
   const [integrations, setIntegrations] = useState([
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "instagram", name: "Instagram Direct Messages", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
+    { id: "outlook", name: "Outlook Calendar", category: "operations", status: "disconnected", icon: "📅", description: "Professional scheduling sync for B2B consultants." },
+    { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Affordable, simple newsletter tool for boutique owners." },
+    { id: "alipay", name: "Alipay", category: "finance", status: "disconnected", icon: "🌎", description: "Accept payments from international tourists easily." },
+    { id: "shipengine", name: "ShipEngine", category: "operations", status: "disconnected", icon: "📦", description: "Find rates and print labels for physical goods." },
+    { id: "vonage", name: "Vonage", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable, cost-effective SMS reminders for global audiences." },
+    { id: "teams", name: "Microsoft Teams", category: "operations", status: "disconnected", icon: "📹", description: "Seamless, secure meetings without manual link generation." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -29,8 +28,8 @@ export default function Integrations() {
       ));
       router.push("/dashboard");
     }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
+    if (id === 'instagram') {
+      alert("Connecting Instagram Direct Messages via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
