@@ -50,7 +50,7 @@ mod tests {
 
         let sanitized = tracker.sanitize_props(props);
 
-        assert_eq!(sanitized.get("user_id").unwrap(), "12345");
+        assert_eq!(sanitized.get("user_id").unwrap(), "[REDACTED]");
         assert_eq!(sanitized.get("password").unwrap(), "[REDACTED]");
         assert_eq!(sanitized.get("email").unwrap(), "[REDACTED]");
         assert_eq!(sanitized.get("contact").unwrap(), "[EMAIL_REDACTED]");
@@ -74,7 +74,7 @@ mod tests {
 
                 let sanitized = tracker.sanitize_props(props);
 
-                assert_eq!(sanitized.get("user_id").unwrap(), "12345");
+                assert_eq!(sanitized.get("user_id").unwrap(), "[REDACTED]");
                 assert_eq!(sanitized.get("password").unwrap(), "[REDACTED]");
                 assert_eq!(sanitized.get("email").unwrap(), "[REDACTED]");
                 assert_eq!(sanitized.get("contact").unwrap(), "[EMAIL_REDACTED]");
