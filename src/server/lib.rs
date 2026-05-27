@@ -2461,6 +2461,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             --primary-soft: #e8f2ff;
                             --accent-green: #34C759;
                             --accent-orange: #FF9500;
+                            --accent-red: #FF3B30;
                             --bg: #eef1f5;
                             --surface: rgba(255, 255, 255, 0.86);
                             --surface-strong: #ffffff;
@@ -2492,7 +2493,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
                         body {
                             min-height: 100vh;
-                            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', sans-serif;
+                            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
                             background:
                                 radial-gradient(circle at 18% 0%, rgba(0, 111, 255, 0.08), transparent 28%),
                                 linear-gradient(180deg, rgba(255,255,255,0.72), rgba(238,241,245,0.96));
@@ -2502,7 +2503,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             -webkit-font-smoothing: antialiased;
                         }
                         h1, h2, h3, h4, .outfit {
-                            font-family: inherit;
+                            font-family: 'Outfit', inherit;
                             letter-spacing: 0;
                         }
                         h1 {
@@ -2535,6 +2536,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
+                        }
+
+                        /* Setup Screen Transitions */
+                        #setup-screen > div {
+                            transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                        }
+                        #setup-screen > div.hidden {
+                            opacity: 0;
+                            transform: translateY(10px);
+                            pointer-events: none;
                         }
                         nav { 
                             padding: 0 28px; 
@@ -4304,22 +4315,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (state) {
                                 if (state.step) currentStep = state.step;
                                 inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
+                                        // Do not override user typed input if they started typing before state loaded
                                         if (input.type === 'checkbox') {
-                                            input.checked = state[key];
+                                            if (input.checked === false && state[key] === true) {
+                                                input.checked = state[key];
+                                            }
                                         } else {
-                                            input.value = state[key];
+                                            if (input.value === '') {
+                                                input.value = state[key];
+                                            }
                                         }
                                     }
                                 });
                                 // Restore screen visually without calling nextStep to avoid validation
                                 if (currentStep && currentStep !== 1) {
-                                    document.getElementById('step-1').style.display = 'none';
+                                    document.querySelectorAll('#setup-screen > div').forEach(d => {
+                                        if (d.id && (d.id.startsWith('step-') || d.id === 'checklist-screen')) {
+                                            d.classList.add('hidden');
+                                            d.style.display = 'none';
+                                        }
+                                    });
                                     const currentStepEl = document.getElementById(`step-${currentStep}`);
                                     if (currentStepEl) {
                                         currentStepEl.style.display = 'block';
-                                        currentStepEl.classList.remove('hidden');
+
+                                        // Wait a moment for display to apply before removing hidden to trigger transition
+                                        setTimeout(() => currentStepEl.classList.remove('hidden'), 10);
                                     }
                                 }
 
@@ -4933,42 +4956,88 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            // Clear previous errors
+                            document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
+                                input.style.border = "";
+                            });
+
                             if (stepId === 3 && currentStep === 2) {
+                                const bizTypeInput = document.getElementById('step-2-business-type');
+                                if (bizTypeInput && bizTypeInput.value.trim() !== '') {
+                                    return true;
+                                }
                                 let valid = false;
                                 document.querySelectorAll('#step-2 button.secondary').forEach(b => {
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
                                 if (!valid) {
-                                    alert('Please select a business type');
+                                    alert('Please select or type a business type');
                                     return false;
                                 }
                             }
                             if (stepId === 4 && currentStep === 3) {
                                 const inputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
+                                inputs.forEach(inp => {
+                                    if (inp.value.trim().length >= 3) {
+                                        valid = true;
+                                        inp.style.border = "";
+                                    } else {
+                                        inp.style.border = "1px solid #FF3B30";
+                                    }
+                                });
                                 if (!valid) {
                                     alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
-                            if (stepId === 6 && currentStep === 5) {
-                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
-                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
-                                if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
+                            if (stepId === 5 && currentStep === 4) {
+                                const checkboxes = document.querySelectorAll('#step-4 input[type="checkbox"]');
+                                let valid = false;
+                                checkboxes.forEach(cb => { if (cb.checked) valid = true; });
+                                if (!valid) {
+                                    alert('Please select at least one product or service type');
                                     return false;
                                 }
+                            }
+                            if (stepId === 6 && currentStep === 5) {
+                                const nameInput = document.getElementById('step-5-product-name');
+                                const priceInput = document.getElementById('step-5-product-price');
+                                let valid = true;
+                                if (!nameInput || nameInput.value.trim().length === 0) {
+                                    if (nameInput) nameInput.style.border = "1px solid #FF3B30";
+                                    valid = false;
+                                }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
+                                    if (priceInput) priceInput.style.border = "1px solid #FF3B30";
+                                    valid = false;
+                                }
+                                if (!valid) {
+                                    alert('Please enter a valid product name and price (e.g., 10.00)');
                                     return false;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
-                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                const nameInput = document.getElementById('step-7-user-name');
+                                const emailInput = document.getElementById('step-7-user-email');
+                                const passInput = document.getElementById('step-7-user-password');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                                let valid = true;
+
+                                if (!nameInput || nameInput.value.trim().length < 2) {
+                                    if (nameInput) nameInput.style.border = "1px solid #FF3B30";
+                                    valid = false;
+                                }
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
+                                    if (emailInput) emailInput.style.border = "1px solid #FF3B30";
+                                    valid = false;
+                                }
+                                if (!passInput || passInput.value.trim().length < 6) {
+                                    if (passInput) passInput.style.border = "1px solid #FF3B30";
+                                    valid = false;
+                                }
+                                if (!valid) {
+                                    alert('Please enter valid account details (password >= 6 characters)');
                                     return false;
                                 }
                             }
@@ -4981,19 +5050,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
                                 // Enhanced Input Validation - only validate when moving forward
-                                let hasError = false;
                                 if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
+                                    if (!validateInputs(stepId)) return;
                                 }
-                                if (hasError) return;
 
                                 try {
                                     const stateData = { step: stepId };

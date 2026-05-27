@@ -16,7 +16,7 @@ test.describe('Business Setup Wizard - Part 2', () => {
     await page.getByRole('button', { name: /Restaurant/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Maya Cakes');
     await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Physical Products/).check();
+    await page.getByText('Physical Products').click();
     await page.getByRole('button', { name: /Next/ }).click();
 
     await page.getByPlaceholder('What is the name of this product?').fill('Custom Vegan Cookies');
@@ -31,7 +31,7 @@ test.describe('Business Setup Wizard - Part 2', () => {
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Store');
     await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Digital Products/).check();
+    await page.getByText('Digital Products').click();
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByPlaceholder('What is the name of this product?').fill('Template Pack');
     await page.getByPlaceholder('0.00').fill('19.00');

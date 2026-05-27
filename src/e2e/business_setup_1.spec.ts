@@ -28,7 +28,7 @@ test.describe('Business Setup Wizard', () => {
     await page.getByRole('button', { name: /Online Store/ }).click();
     await page.getByPlaceholder('What is your business called?').fill('Test Company');
     await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Physical Products/).check();
+    await page.getByText('Physical Products').click();
     await page.getByRole('button', { name: /Next/ }).click();
     await page.getByPlaceholder('What is the name of this product?').fill('Custom Cookies');
     await page.getByPlaceholder('0.00').fill('24.99');
