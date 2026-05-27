@@ -14,6 +14,9 @@ export default function StorefrontBuilderPage() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [tenantId, setTenantId] = useState("storefront");
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
   const { startWalkthrough } = useWalkthrough();
 
   useEffect(() => {
@@ -283,7 +286,15 @@ export default function StorefrontBuilderPage() {
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
           <span>Preview Mode</span>
-          <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowEmbedModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded transition-colors"
+            >
+              Embed
+            </button>
+            <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-24 pt-8 hide-scrollbar">
@@ -335,6 +346,43 @@ export default function StorefrontBuilderPage() {
           </WithTooltip>
         </div>
       </div>
+
+      {/* Embed Setup Sheet */}
+      <div
+        id="embed-setup-sheet"
+        className={`fixed inset-x-0 bottom-0 z-[60] bg-white/90 backdrop-blur-xl border-t border-gray-200 shadow-2xl transition-transform duration-300 ease-in-out ${showEmbedModal ? 'translate-y-0 open' : 'translate-y-full'}`}
+        style={{ borderRadius: '24px 24px 0 0', padding: '24px' }}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-gray-900 font-outfit">Embed Storefront</h2>
+          <button
+            onClick={() => setShowEmbedModal(false)}
+            className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="mb-4">
+          <p className="text-sm text-gray-600 mb-3">Copy the code below to embed your storefront onto another website.</p>
+          <textarea
+            id="embed-code-textarea"
+            readOnly
+            className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono text-gray-600 focus:outline-none resize-none"
+            value={`<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`}
+          />
+        </div>
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(`<iframe src="${origin}/api/v1/growth/storefront/embed" width="320" height="400" frameborder="0" style="border: 1px solid #eaeaea; border-radius: 8px;"></iframe>`);
+            setEmbedCopied(true);
+            setTimeout(() => setEmbedCopied(false), 2000);
+          }}
+          className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${embedCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
+        >
+          {embedCopied ? 'Copied!' : 'Copy to Clipboard'}
+        </button>
+      </div>
+
     </div>
   );
 }

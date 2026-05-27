@@ -147,7 +147,7 @@ export async function GET(request: Request) {
 
         <!-- Product Info -->
         <div class="content">
-            <h2 class="title font-outfit">Premium Collection</h2>
+            <h2 class="title font-outfit">Premium Product</h2>
             <p class="desc">Discover our exclusive, high-quality products curated just for you. Buy directly from this widget!</p>
 
             <div class="price-row">
