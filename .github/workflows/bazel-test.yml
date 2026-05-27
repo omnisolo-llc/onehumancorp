@@ -53,13 +53,12 @@ jobs:
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
-      - name: Test hermetic targets
+      - name: Test all targets
         run: |
           bazelisk test \
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
-            --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
-            --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             //...
