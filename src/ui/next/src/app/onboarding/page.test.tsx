@@ -33,6 +33,12 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
+    // Mock state fetch success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -42,6 +48,12 @@ describe('OnboardingWizard', () => {
         categories: ['food'],
         initial_products: [{ name: 'Cake', price: '20' }]
       })
+    });
+
+    // Mock state save success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
     });
 
     // Mock start success
@@ -95,6 +107,12 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
+    // Mock state fetch success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
@@ -123,6 +141,12 @@ describe('OnboardingWizard', () => {
 
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
+
+    // Mock state fetch success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
 
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
