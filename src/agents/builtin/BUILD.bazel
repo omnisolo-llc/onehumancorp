@@ -13,6 +13,7 @@ rust_library(
         "core.rs",
         "expert_team.rs",
         "hnsw_memory.rs",
+        "scalable_cloud.rs",
         "output_parser.rs",
         "pubsub.rs",
         "types.rs",
