@@ -8,7 +8,7 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 export default function StorefrontBuilderPage() {
   const [bio, setBio] = useState("");
   const [blocks, setBlocks] = useState<any[]>([]);
-  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live">("idle");
+  const [status, setStatus] = useState<"idle" | "generating" | "draft" | "live" | "checklist">("idle");
   const [liveUrl, setLiveUrl] = useState("");
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -23,7 +23,7 @@ export default function StorefrontBuilderPage() {
     const savedBio = localStorage.getItem("ohc_builder_bio");
     if (savedBio) setBio(savedBio);
 
-    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live";
+    const savedStatus = localStorage.getItem("ohc_builder_status") as "idle" | "generating" | "draft" | "live" | "checklist";
     if (savedStatus) setStatus(savedStatus);
 
     const savedBlocks = localStorage.getItem("ohc_builder_blocks");
@@ -258,7 +258,7 @@ export default function StorefrontBuilderPage() {
           <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
           </div>
-          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">You're Live!</h1>
+          <h1 className="text-3xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">🎉 CONFETTI SUCCESS 🎉</h1>
           <p className="text-gray-500 dark:text-[#a1a1a6] mb-6 text-sm">Your automated storefront is successfully published.</p>
 
           <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
@@ -269,9 +269,40 @@ export default function StorefrontBuilderPage() {
           <button
             className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
             style={{ borderRadius: '8px' }}
-            onClick={() => updateStatus("idle")}
+            onClick={() => updateStatus("checklist")}
           >
-            Go to Dashboard
+            View Welcome Checklist →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "checklist") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative rounded-[16px] overflow-hidden glass-container text-left p-8 justify-center mac-glass-container">
+          <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-4">Welcome Checklist</h1>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-[#e5e5e7] mb-6">You're set up! Here's what to do next:</h2>
+
+          <div className="space-y-4 mb-8">
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">✅ Business live</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Add 3 more products</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Connect Instagram</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Share your link with a friend</p>
+          </div>
+
+          <button
+            className="w-full bg-blue-600 text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-blue-700"
+            style={{ borderRadius: '8px' }}
+            onClick={() => {
+              updateStatus("idle");
+              if (typeof window !== 'undefined') {
+                 window.location.href = '/dashboard';
+              }
+            }}
+          >
+            Go to Dashboard →
           </button>
         </div>
       </div>

@@ -462,7 +462,7 @@ export default function BuilderPage() {
             <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
           </div>
 
-          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-2 tracking-tight">You're Live!</h1>
+          <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-2 tracking-tight">🎉 CONFETTI SUCCESS 🎉</h1>
           <p className="text-gray-500 mb-8 text-sm max-w-[240px]">Your business is now open to the world. Scan the code to see it.</p>
 
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
@@ -567,9 +567,40 @@ export default function BuilderPage() {
 
           <button
             className="w-full bg-white/40 dark:bg-black/20 text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
-            onClick={() => setStatus("idle")}
+            onClick={() => setStatus("checklist")}
           >
-            Go to Dashboard
+            View Welcome Checklist →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "checklist") {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl px-6 pt-12 pb-8">
+          <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-4">Welcome Checklist</h1>
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-[#e5e5e7] mb-6">You're set up! Here's what to do next:</h2>
+
+          <div className="space-y-4 mb-8 w-full text-left">
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">✅ Business live</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Add 3 more products</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Connect Instagram</p>
+            <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Share your link with a friend</p>
+          </div>
+
+          <button
+            className="w-full bg-blue-600 text-white font-bold p-4 active:scale-[0.98] transition-all hover:bg-blue-700 mt-auto"
+            style={{ borderRadius: '8px' }}
+            onClick={() => {
+              setStatus("idle");
+              if (typeof window !== 'undefined') {
+                 window.location.href = '/dashboard';
+              }
+            }}
+          >
+            Go to Dashboard →
           </button>
         </div>
       </div>

@@ -291,7 +291,7 @@ export default function OnboardingWizard() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">🎉 CONFETTI SUCCESS 🎉</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
@@ -304,17 +304,39 @@ export default function OnboardingWizard() {
                    </div>
                 </div>
 
-                <a
-                  href="/dashboard"
+                <button
+                  onClick={() => setStep(6)}
                   className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
                 >
-                  Go to Dashboard
-                </a>
+                  View Welcome Checklist →
+                </button>
                 <a
                   href="/builder"
                   className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
+                </a>
+              </div>
+            </div>
+          )}
+          {step === 6 && (
+            <div className="flex flex-col flex-1 text-left animate-fade-in">
+              <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-4">Welcome Checklist</h1>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-[#e5e5e7] mb-6">You're set up! Here's what to do next:</h2>
+
+              <div className="space-y-4 mb-8">
+                <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">✅ Business live</p>
+                <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Add 3 more products</p>
+                <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Connect Instagram</p>
+                <p className="text-sm text-gray-700 dark:text-[#a1a1a6]">⬜ Share your link with a friend</p>
+              </div>
+
+              <div className="w-full space-y-3 mt-auto">
+                <a
+                  href="/dashboard"
+                  className="block text-center w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
+                >
+                  Go to Dashboard →
                 </a>
               </div>
             </div>
