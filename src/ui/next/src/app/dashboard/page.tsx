@@ -18,6 +18,7 @@ export default function Dashboard() {
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
@@ -852,6 +853,38 @@ export default function Dashboard() {
                 </div>
             </div>
          </section>
+
+         {/* Growth Loop: Milestone Celebration */}
+         {showMilestoneBanner && (
+           <section className="mb-8 animate-fade-in">
+              <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                  <div className="flex-1 text-white">
+                      <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl">🎉</span>
+                          <h3 className="text-xl font-bold font-outfit text-white">Milestone Unlocked: Your First Customers!</h3>
+                      </div>
+                      <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
+                      <button
+                          onClick={() => {
+                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const url = `ohc://join?ref=${tenant}`;
+                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              setShowMilestoneBanner(false);
+                          }}
+                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
+                      >
+                          Share & Claim Reward
+                      </button>
+                  </div>
+                  <div className="hidden md:flex flex-col items-center justify-center p-4">
+                      <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                          <span className="text-4xl font-bold text-white">100</span>
+                      </div>
+                  </div>
+              </div>
+           </section>
+         )}
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
