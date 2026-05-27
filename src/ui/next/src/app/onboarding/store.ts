@@ -3,28 +3,26 @@ import { persist } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
-  businessType: string;
+  businessDescription: string;
   businessName: string;
-  businessCategory: string;
+  businessType: string;
+  categories: string[];
+  websiteTemplate: string;
   firstProductName: string;
   firstProductPrice: string;
-  template: string;
-  domain: string;
   isLoading: boolean;
   error: string;
-  intakeData: any;
   startResult: any;
   setStep: (step: number) => void;
-  setBusinessType: (type: string) => void;
+  setBusinessDescription: (desc: string) => void;
   setBusinessName: (name: string) => void;
-  setBusinessCategory: (category: string) => void;
+  setBusinessType: (type: string) => void;
+  setCategories: (categories: string[]) => void;
+  setWebsiteTemplate: (template: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
-  setTemplate: (template: string) => void;
-  setDomain: (domain: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
-  setIntakeData: (data: any) => void;
   setStartResult: (result: any) => void;
 }
 
@@ -32,32 +30,30 @@ export const useOnboardingStore = create<OnboardingState>()(
   persist(
     (set) => ({
       step: 1,
-  businessType: '',
-  businessName: '',
-  businessCategory: '',
-  firstProductName: '',
-  firstProductPrice: '',
-  template: 'Modern',
-  domain: 'free',
-  isLoading: false,
-  error: '',
-  intakeData: null,
-  startResult: null,
-  setStep: (step) => set({ step }),
-  setBusinessType: (businessType) => set({ businessType }),
-  setBusinessName: (businessName) => set({ businessName }),
-  setBusinessCategory: (businessCategory) => set({ businessCategory }),
-  setFirstProductName: (firstProductName) => set({ firstProductName }),
-  setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
-  setTemplate: (template) => set({ template }),
-  setDomain: (domain) => set({ domain }),
-  setIsLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  setIntakeData: (intakeData) => set({ intakeData }),
+      businessDescription: '',
+      businessName: '',
+      businessType: 'Online Store',
+      categories: [],
+      websiteTemplate: 'Modern',
+      firstProductName: '',
+      firstProductPrice: '',
+      isLoading: false,
+      error: '',
+      startResult: null,
+      setStep: (step) => set({ step }),
+      setBusinessDescription: (businessDescription) => set({ businessDescription }),
+      setBusinessName: (businessName) => set({ businessName }),
+      setBusinessType: (businessType) => set({ businessType }),
+      setCategories: (categories) => set({ categories }),
+      setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
+      setFirstProductName: (firstProductName) => set({ firstProductName }),
+      setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setIsLoading: (isLoading) => set({ isLoading }),
+      setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage', // name of the item in the storage (must be unique)
+      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
     }
   )
 );

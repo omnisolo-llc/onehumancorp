@@ -283,12 +283,14 @@ pub async fn razorpay_webhook_handler(
 
 
 #[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
 pub struct CalComEvent {
     pub triggerEvent: String,
     pub payload: CalComPayload,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
