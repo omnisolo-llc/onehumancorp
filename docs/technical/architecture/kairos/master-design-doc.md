@@ -44,7 +44,7 @@ The Teammate Mesh facilitates real-time coordination without delays.
 
 **Degradation Strategy:**
 - **Cloud-Native:** Uses `redis` (Redis Pub/Sub) and `CentrifugeNode` for broad network event distribution.
-- **Standalone:** Uses local in-process transport for fast local IPC.
+- **Standalone:** Uses Go channels for fast, local IPC.
 
 ## 3. autoDream (The Memory)
 The autoDream pipeline consolidates ephemeral task data into long-term vector embeddings.

@@ -1,1 +1,0 @@
-import { defineConfig, devices } from '@playwright/test'; export default defineConfig({ testDir: './verification_tests', projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }], });

@@ -23,7 +23,6 @@ rust_library(
         "marketplace.rs",
         "marketplace_tool.rs",
         "pydantic.rs",
-        "goose_wrapper.rs",
         "repo_map.rs",
         "ollama.rs",
         "read.rs",

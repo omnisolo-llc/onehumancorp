@@ -4,10 +4,7 @@ test.describe('Onboarding Wizard', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
   test('Maya (The Home Baker) onboarding flow', async ({ page }) => {
-    // Intercept intake and start API calls
     await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Maya's Cakes", business_type: "Bakery", categories: ["food", "physical"], initial_products: [{ name: "Custom Vegan Cake", price: "45.00" }] }) }));
-    await page.route('**/api/onboarding/start', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org_123" }) }));
-
     // 0. Start from UI Login
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
@@ -18,24 +15,58 @@ test.describe('Onboarding Wizard', () => {
     // Wait for Dashboard
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    // 1. Acquisition & Onboarding start
+    // 1. Acquisition & Onboarding start (assuming a "Start Business Setup" or similar button is on dashboard,
+    // or direct navigation if that's the only way from an empty dashboard)
+    // For now we'll navigate directly to onboarding after login as a user starting the wizard
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // Fill in the description
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...').fill('I bake custom vegan cakes in Portland, OR');
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Sell custom cakes");
 
-    // Click Generate
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
 
-    // 2. Simplified Mobile First Onboarding - wait for it to generate (Step 2 & 3)
-    // Step 2 is automatic, so wait for Step 3 directly
+    // Step 2
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+
+    // Fill in the business name
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Maya's Cakes");
+
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 3
+    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
+
+    // Fill in the niche
+    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I bake custom vegan cakes");
+
+    // Click Generate Draft
+    await page.getByRole('button', { name: /Generate Draft/i }).click();
+
+    // 2. Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
+
+    // Verify keyboard optimizations for price input
+    const priceInput = page.getByPlaceholder('0.00');
+    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
+    await expect(priceInput).toHaveAttribute('pattern', '[0-9]*\\.?[0-9]*');
+
+    // Verify glassmorphism aesthetics applied
+    await expect(priceInput).toHaveClass(/backdrop-blur/);
+
+    // Configure products and domain before publishing
+    await page.getByRole('button', { name: 'Playful' }).click();
+    await page.getByRole('button', { name: /Connect Custom Domain/i }).click();
+
+    // Publish
+    await page.getByRole('button', { name: /Publish Now/i }).click();
+
+    // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
-
-    // Verify shareable link is present
-    await expect(page.getByText('my-business.ohc.store')).toBeVisible();
 
     // 4. Verify Dashboard redirect and action banner
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
@@ -49,10 +80,7 @@ test.describe('Onboarding Wizard', () => {
   });
 
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
-    // Intercept intake and start API calls
     await page.route('**/api/onboarding/intake', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ business_name: "Carlos Plumbing", business_type: "Service", categories: ["service"], initial_products: [{ name: "Pipe Fix", price: "80.00" }] }) }));
-    await page.route('**/api/onboarding/start', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ message: "Your business has been successfully launched.", organization_id: "org_456" }) }));
-
     // 0. Start from UI Login
     await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
@@ -67,15 +95,46 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "What do you do?" })).toBeVisible();
 
-    // Fill in the description
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...').fill('I am a freelance handyman in Miami');
+    // Fill in the business type
+    await page.getByPlaceholder("e.g. Sell cakes, plumbing").fill("Plumbing");
 
-    // Click Generate
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 2
+    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+
+    // Fill in the business name
+    await page.getByPlaceholder("e.g. Maya's Cakes").fill("Carlos Plumbing");
+
+    // Click Next
+    await page.getByRole('button', { name: /Next/i }).click();
+
+    // Step 3
+    await expect(page.getByRole('heading', { name: "What's your niche?" })).toBeVisible();
+
+    // Fill in the niche
+    await page.getByPlaceholder("e.g. I bake custom wedding cakes").fill("I fix pipes and leaks");
+
+    // Click Generate Draft
+    await page.getByRole('button', { name: /Generate Draft/i }).click();
 
     // 2. Simplified Mobile First Onboarding - wait for it to generate
+    await expect(page.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
+
+    // Verify keyboard optimizations for price input
+    const priceInput = page.getByPlaceholder('0.00');
+    await expect(priceInput).toHaveAttribute('inputMode', 'decimal');
+
+    // Configure products and domain before publishing
+    await page.getByRole('button', { name: 'Modern' }).click();
+
+    // Publish
+    await page.getByRole('button', { name: /Publish Now/i }).click();
+
+    // 3. Activation
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // 4. Verify Dashboard redirect and action banner

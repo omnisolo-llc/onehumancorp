@@ -321,13 +321,12 @@ mod tests {
             }
         }
 
-        search_dirs.push(std::env::current_dir().unwrap());
         let mut checked_files = 0;
 
         for dir in &search_dirs {
             if dir.exists() {
                 let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
-                    e.path().components().all(|c| c.as_os_str() != "external" && c.as_os_str() != "node_modules" && c.as_os_str() != ".npm")
+                    e.path().components().all(|c| c.as_os_str() != "external")
                 });
 
                 for entry in walker

@@ -55,9 +55,9 @@ export default function ApprovalInbox({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
-      <div className="w-[375px] max-w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
+      <div className="w-[375px] min-h-[812px] bg-gradient-to-br from-gray-50 to-gray-100 shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200">
         {/* Header */}
-        <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
+        <div className="pt-12 pb-6 px-6 bg-white/60 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex items-center gap-4">
           <button
             onClick={onBack}
             className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm border border-gray-100 text-gray-500 hover:text-gray-900 transition-colors"
@@ -131,17 +131,17 @@ export default function ApprovalInbox({
 
               <div
                 key={req.id}
-                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
+                className="bg-white/65 backdrop-blur-[30px] saturate-[210%] border border-white/40 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]"
               >
                 <div className="flex items-center gap-2 mb-3">
                   <span
                     className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      req.action_risk?.toLowerCase() === "high"
+                      req.action_risk.toLowerCase() === "high"
                         ? "bg-orange-100 text-orange-700"
                         : "bg-blue-100 text-blue-700"
                     }`}
                   >
-                    {req.action_risk ? req.action_risk.charAt(0).toUpperCase() + req.action_risk.slice(1).toLowerCase() : 'Unknown'} Risk
+                    {req.action_risk} Risk
                   </span>
                   <span className="text-xs text-gray-400 font-medium">
                     {req.status}

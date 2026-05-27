@@ -65,6 +65,7 @@ graph TD;
 | `src/server/` | **Rust** | API server, auth, dashboard handlers, integrations, billing, and runtime wiring |
 | `src/agents/` | **Rust** | Built-in agent implementations |
 | `src/proto/` | **Protobuf** | gRPC service definitions |
+| `src/tests/` | **Python / Shell** | Repository-local validation helpers and test utilities |
 | `src/e2e/` | **TypeScript** | Playwright E2E tests |
 | `deploy/` | **YAML / Shell** | Docker Compose, Helm charts, and deployment helpers |
 | `docs/` | **Markdown** | Architecture, roadmap, feature specs, and developer documentation |
@@ -73,7 +74,7 @@ graph TD;
 
 The Swarm is powered by the KAIROS engine which maintains stability via three core pillars. For deep architectural dives into these systems, consult the feature documentation:
 - **[Distributed State Machine](docs/features/kairos/distributed_state_machine.md):** Learn how agent transitions are rigorously tracked to prevent deadlocks.
-- **[Sub-Agent Queue](docs/technical/architecture/kairos/sub-agent-queue-design.md):** Learn how agent tasks are routed securely in the background.
+- **[Sub-Agent Queue](docs/features/kairos/sub_agent_queue.md):** Learn how vast amounts of agent tasks are routed securely in the background.
 - **[AutoDream Pipeline](docs/features/kairos/autodream_pipelines.md):** Learn how episodic memory is intelligently converted to long-term embedded vector truth.
 
 ### Remote clients and standalone mode
@@ -84,16 +85,24 @@ Headless server deployments keep the API, auth, health probes, and metrics onlin
 
 ### Multi-tenancy
 
-In cloud-native mode (`OHC_MULTITENANT=true`), tenant isolation is enforced in the
-Rust server through authenticated `organization_id` claims, org-scoped service
-methods, and shared-database query filtering. The active server entrypoint is
-`src/server/lib.rs`, with Axum HTTP routes, tonic gRPC services, and service
-modules under `src/server/services/`.
+In cloud-native mode (`OHC_MULTITENANT=true`) the `TenantRegistry` in
+`src/server/dashboard/tenant.go` lazily provisions an organisation-scoped
+`Server` per `organization_id` and routes authenticated requests to the correct
+tenant handler. Dashboard snapshots, meetings, agent operations, approvals,
+handoffs, and other server-local state are isolated per tenant handler, and the
+HTTP layer filters org-visible data when shared persistence is used.
 
 Shared-database persistence hardening is still ongoing, so the repo should not
 yet claim perfect end-to-end schema-level tenant isolation for every future
-query path. The runtime supports org-scoped authentication, dashboard, billing,
-onboarding, orchestration, and growth surfaces for shared-service deployments.
+query path. The runtime now supports the correct routing model and org-scoped
+API surface for shared-service deployments.
+
+New organisations are provisioned via:
+```
+POST /api/orgs/register   { "id": "acme", "name": "Acme Corp", "domain": "acme.com" }
+```
+After provisioning, users whose JWT includes `"organization_id": "acme"` are
+routed exclusively to the Acme tenant.
 
 ## Quick Start
 
@@ -205,15 +214,13 @@ bazelisk run //src/server:server
 | `OHC_LLM_BASE_URL` | Generic OpenAI-compatible API root such as `https://api.example.com/v1`; endpoint URLs ending in `/chat/completions` are normalized |
 | `OPENAI_BASE_URL` | Optional OpenAI-compatible API root for `OHC_LLM_PROVIDER=openai` |
 | `MINIMAX_BASE_URL` | Optional MiniMax-compatible API root; defaults to `https://api.minimax.chat/v1` |
-| `DATABASE_URL` | PostgreSQL DSN by default. Use a `sqlite://...` URL plus `OHC_SQLITE_KEY` for standalone SQLite-backed state |
-| `OHC_PORT` | HTTP/Axum port. Defaults to `18789` in the Rust server; Docker Compose maps the packaged server on `8080` |
-| `OHC_GRPC_PORT` | gRPC/tonic port. Defaults to `8081` |
-| `OHC_STANDALONE` | Set `true` to force standalone mode and SQLite enforcement |
-| `OHC_SQLITE_KEY` | Required when using standalone SQLite-backed state |
+| `DATABASE_URL` | PostgreSQL DSN. When unset, the server falls back to in-memory repositories and local SQLite-backed SIPDB support |
 | `OHC_MULTITENANT` | Set `true` for multi-tenant cloud-native mode |
-| `OHC_HEADLESS` | Set `true` for API-only/headless integration behavior |
+| `OHC_HEADLESS` | Set `true` for API-only deployments that should not serve the web UI |
+| `OHC_SERVE_UI` | Optional override to force UI serving on or off |
 | `OHC_CORE_URL` | URL of the Rust `ohc-core` sidecar |
 | `MCP_BUNDLE_DIR` | Directory for MCP bundles |
+| `FRONTEND_STATIC_DIR` | Path to compiled frontend assets. Tauri currently packages `src/ui/tauri/next_out`; `src/ui/next/out` is legacy/prototype output |
 | `OHC_BOOTSTRAP_ORG_ID` | Optional bootstrap tenant ID used to serve unauthenticated routes in multi-tenant mode |
 | `OHC_BOOTSTRAP_ORG_NAME` | Optional bootstrap tenant display name |
 | `OHC_BOOTSTRAP_CEO_NAME` | Optional bootstrap tenant CEO name |
@@ -221,9 +228,6 @@ bazelisk run //src/server:server
 | `OHC_DEFAULT_AGENT_ROLE` | Optional role for the bootstrapped internal default agent |
 | `OHC_DEFAULT_AGENT_REGION` | Optional region/runtime label for the bootstrapped internal default agent (defaults to `docker`) |
 | `OHC_DEFAULT_TENANT_ID` | Default tenant used by local E2E login when the browser form does not submit an explicit organization ID; defaults to `e2e-tenant` in the test harness |
-| `OHC_LLM_CONFIG_PATH` | Optional Tauri/built-in agent provider config path. Defaults to `.ohc/ai-provider.json` |
-
-Tauri packages static assets from `src/ui/tauri/next_out` via `src/ui/tauri/tauri.conf.json`. The `src/ui/next/out` tree is legacy/prototype output.
 
 Kubernetes secrets are used to inject credentials at runtime without committing them to source.
 
