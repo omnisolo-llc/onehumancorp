@@ -93,18 +93,14 @@ impl NetworkProxy {
 
         if is_blocked {
             record_bubblewrap_violation("unknown_agent", "unknown_task", "network_access_denied");
-            let _ = client_stream.write_all(b"HTTP/1.1 403 Forbidden
-
-").await;
+            let _ = client_stream.write_all(b"HTTP/1.1 403 Forbidden\r\n\r\n").await;
             return Ok(());
         }
 
         let mut server_stream = TcpStream::connect(format!("{}:{}", target_host, target_port)).await?;
 
         if first_line.starts_with("CONNECT ") {
-            client_stream.write_all(b"HTTP/1.1 200 Connection Established
-
-").await?;
+            client_stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n").await?;
         } else {
             server_stream.write_all(&buffer[..bytes_read]).await?;
         }
@@ -134,9 +130,7 @@ mod tests {
             if let Ok((mut stream, _)) = listener.accept().await {
                 let mut buf = [0; 1024];
                 let _ = stream.read(&mut buf).await;
-                let _ = stream.write_all(b"HTTP/1.1 200 OK
-
-Hello").await;
+                let _ = stream.write_all(b"HTTP/1.1 200 OK\r\n\r\nHello").await;
             }
         });
         addr
@@ -153,10 +147,7 @@ Hello").await;
         tokio::spawn(proxy.run(proxy_listener, rx));
 
         let mut client = TcpStream::connect(proxy_addr).await.unwrap();
-        let request = format!("GET / HTTP/1.1
-Host: 127.0.0.1:{}
-
-", server_addr.port());
+        let request = format!("GET / HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n", server_addr.port());
         client.write_all(request.as_bytes()).await.unwrap();
 
         let mut response = String::new();
@@ -177,10 +168,7 @@ Host: 127.0.0.1:{}
         tokio::spawn(proxy.run(proxy_listener, rx));
 
         let mut client = TcpStream::connect(proxy_addr).await.unwrap();
-        let request = format!("GET / HTTP/1.1
-Host: 127.0.0.1:{}
-
-", server_addr.port());
+        let request = format!("GET / HTTP/1.1\r\nHost: 127.0.0.1:{}\r\n\r\n", server_addr.port());
         client.write_all(request.as_bytes()).await.unwrap();
 
         let mut response = String::new();
