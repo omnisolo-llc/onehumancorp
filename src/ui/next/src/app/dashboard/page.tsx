@@ -8,8 +8,6 @@ export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
-  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
-  const [campaignSuccess, setCampaignSuccess] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -221,16 +219,6 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleSendCampaign = () => {
-    if (!hasPro) {
-      setShowSoftPaywall(true);
-      return;
-    }
-
-    setIsSendingCampaign(false);
-    setCampaignSuccess(true);
-  };
-
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
@@ -240,7 +228,6 @@ export default function Dashboard() {
     setHasPro(true);
     setShowSoftPaywall(false);
     alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-    handleSendCampaign();
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -424,7 +411,7 @@ export default function Dashboard() {
                                         </div>
                                         <div>
                                             <h3 className="font-semibold text-lg font-outfit text-gray-900 capitalize">
-                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'CustomerSuccess' : approval.department} Department
+                                                {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? 'Customer Success' : approval.department} Department
                                             </h3>
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
@@ -534,37 +521,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Automated AI Review Requests Growth Loop */}
-         <section className="mb-6">
-            <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated AI Review Requests
-                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                            New Growth Loop
-                        </span>
-                    </h3>
-                </div>
-                <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
-                </p>
-
-                {campaignSuccess ? (
-                    <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
-                    </div>
-                ) : (
-                    <button
-                        onClick={handleSendCampaign}
-                        disabled={isSendingCampaign}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
-                        style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
-                    >
-                        {isSendingCampaign ? 'Generating drafts...' : '✨ Send AI Review Requests'}
-                    </button>
-                )}
-            </div>
-         </section>
 
 
          {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
