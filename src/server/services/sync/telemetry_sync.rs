@@ -236,7 +236,7 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Sequential);
+        let daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Sequential);
         let start = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), daemon.sync_metrics()).await;
         let seq_duration = start.elapsed();
@@ -252,7 +252,7 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let par_daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Parallel);
+        let par_daemon = crate::services::sync::telemetry_sync::TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), crate::services::sync::telemetry_sync::perf::CoordinatorMode::Parallel);
         let start_par = Instant::now();
         let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_daemon.sync_metrics()).await;
         let par_duration = start_par.elapsed();

@@ -1,7 +1,7 @@
 use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use crate::tasks::SharedTask;
+use ::server_lib::tasks::SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
@@ -326,7 +326,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ::server_lib::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -372,7 +372,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: dt_created,
             updated_at: dt_updated,
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ::server_lib::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -426,7 +426,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ::server_lib::tasks::ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -476,7 +476,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ::server_lib::tasks::ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -778,7 +778,7 @@ mod tests {
         let service = TaskDecompositionService::new(db, mesh);
 
         let task_id = "test-mission-123";
-        let task = crate::tasks::SharedTask {
+        let task = ::server_lib::tasks::SharedTask {
             id: task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-123".to_string(),
@@ -815,7 +815,7 @@ mod tests {
 
         // Simulate failure
         let fail_task_id = "test-fail-123";
-        let fail_task = crate::tasks::SharedTask {
+        let fail_task = ::server_lib::tasks::SharedTask {
             id: fail_task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -880,7 +880,7 @@ mod tests {
         let service = TaskDecompositionService::new(db.clone(), mesh.clone());
 
         // Create task 1
-        let task1 = crate::tasks::SharedTask {
+        let task1 = ::server_lib::tasks::SharedTask {
             id: "task-1".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -905,7 +905,7 @@ mod tests {
         service.create_task(task1).await.unwrap();
 
         // Create task 2 depending on task 1
-        let task2 = crate::tasks::SharedTask {
+        let task2 = ::server_lib::tasks::SharedTask {
             id: "task-2".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -986,7 +986,7 @@ mod tests {
         let service = TaskDecompositionService::new(db_pg.clone(), mesh.clone());
 
         // Create task 1
-        let task1 = crate::tasks::SharedTask {
+        let task1 = ::server_lib::tasks::SharedTask {
             id: "task-pg-1".to_string(),
             organization_id: "org-pg".to_string(),
             mission_id: "mission-pg".to_string(),
@@ -1012,7 +1012,7 @@ mod tests {
 
         // If creation succeeded (DB migrated), let's proceed to task 2
         if let Ok(_) = service.get_task("task-pg-1").await {
-            let task2 = crate::tasks::SharedTask {
+            let task2 = ::server_lib::tasks::SharedTask {
                 id: "task-pg-2".to_string(),
                 organization_id: "org-pg".to_string(),
                 mission_id: "mission-pg".to_string(),

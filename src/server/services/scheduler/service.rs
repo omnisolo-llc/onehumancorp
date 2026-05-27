@@ -3,7 +3,7 @@ use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::scheduler_service_server::SchedulerService;
 use std::sync::Arc;
 use crate::hub::Hub;
-use crate::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
+use ::server_lib::scheduler::{Task, Schedule, ScheduleType, TaskStatus};
 use chrono::{Utc, TimeZone};
 
 pub struct MySchedulerService {

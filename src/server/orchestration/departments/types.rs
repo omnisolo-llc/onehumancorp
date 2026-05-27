@@ -97,13 +97,7 @@ pub struct ApprovalRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ApprovalStatus {
-    PendingApproval,
+    Pending,
     Approved,
     Rejected,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DepartmentDashboardStatus {
-    pub department: DepartmentType,
-    pub pending_approvals: i64,
-    pub completed_actions: i64,
 }

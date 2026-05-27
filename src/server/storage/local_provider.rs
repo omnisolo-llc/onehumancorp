@@ -15,17 +15,7 @@ pub struct LocalProvider {
 impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            let mut builder = std::fs::DirBuilder::new();
-            builder.recursive(true).mode(0o700);
-            builder.create(&abs_path)?;
-        }
-        #[cfg(not(unix))]
-        {
-            fs::create_dir_all(&abs_path)?;
-        }
+        fs::create_dir_all(&abs_path)?;
         Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
     }
 
@@ -149,19 +139,7 @@ impl Provider for LocalProvider {
 
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::DirBuilderExt;
-                let mut builder = std::fs::DirBuilder::new();
-                builder.recursive(true).mode(0o700);
-                // `std::fs::DirBuilder` doesn't have an async equivalent in `tokio::fs` with mode directly
-                // so we use standard library here since it's acceptable for directory creation
-                builder.create(parent)?;
-            }
-            #[cfg(not(unix))]
-            {
-                tokio::fs::create_dir_all(parent).await?;
-            }
+            tokio::fs::create_dir_all(parent).await?;
         }
 
         // Quota Enforcement

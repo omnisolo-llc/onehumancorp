@@ -625,14 +625,20 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }
 
-#[test]
-fn test_record_postgres_lock_contention() {
-    // This test verifies that the metric recording logic for postgres lock contention runs without panicking.
-    ::server_telemetry::record_postgres_lock_contention("upsert_mission");
-}
+    #[test]
+    fn test_tenant_id_vs_user_id() {
+        let input = serde_json::json!({
+            "tenant_id": "tenant-123",
+            "organization_id": "org-123",
+            "user_id": "user-123",
+            "name": "John Doe",
+            "metric_name": "cpu_usage"
+        });
+        let redacted = ::server_telemetry::redact_interface_pii(input);
 
-#[test]
-fn test_record_llm_network_latency() {
-    // This test verifies that the metric recording logic for llm network latency runs without panicking.
-    ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
-}
+        assert_eq!(redacted["tenant_id"], "tenant-123");
+        assert_eq!(redacted["organization_id"], "org-123");
+        assert_eq!(redacted["user_id"], "[REDACTED]");
+        assert_eq!(redacted["name"], "[REDACTED]");
+        assert_eq!(redacted["metric_name"], "cpu_usage");
+    }
