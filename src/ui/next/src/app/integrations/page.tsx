@@ -9,32 +9,39 @@ export default function Integrations() {
 
   const [integrations, setIntegrations] = useState([
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
+    { id: "meta", name: "Meta Business Suite", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+    { id: "google_calendar", name: "Google Calendar", category: "operations", status: "disconnected", icon: "📅", description: "Native Calendar Sync for Automated Booking." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📨", description: "Automated Email Campaigns." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Multi-Carrier Shipping & Automated Label Generation." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Automated Video Conferencing." },
     { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
-  const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
+  const handleConnect = async (id: string) => {
+    try {
+      const response = await fetch(`/api/integrations/${id}/connect`, { method: "POST" });
+      if (response.ok) {
+        const data = await response.json();
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === id ? { ...integration, status: "connected" } : integration
+        ));
+        if (data.url) {
+          router.push(data.url);
+        }
+      } else {
+        alert(`Failed to connect ${id}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`Error connecting ${id}`);
     }
   };
 

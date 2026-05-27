@@ -392,3 +392,110 @@ pub async fn manychat_webhook_handler(
         _ => StatusCode::OK.into_response()
     }
 }
+
+#[derive(Debug, Deserialize)]
+pub struct MetaEvent {
+    pub object: String,
+    pub entry: Vec<serde_json::Value>,
+}
+
+pub async fn meta_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<MetaEvent>,
+) -> impl IntoResponse {
+    match payload.object.as_str() {
+        "page" | "instagram" | "whatsapp_business_account" => {
+            tracing::info!("Incoming notification from Meta integration");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MailchimpEvent {
+    pub r#type: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn mailchimp_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<MailchimpEvent>,
+) -> impl IntoResponse {
+    match payload.r#type.as_str() {
+        "subscribe" | "unsubscribe" => {
+            tracing::info!("Incoming notification from Mailchimp integration");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ShippoEvent {
+    pub event: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn shippo_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<ShippoEvent>,
+) -> impl IntoResponse {
+    match payload.event.as_str() {
+        "track_updated" => {
+            tracing::info!("Incoming notification from Shippo integration");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ZoomEvent {
+    pub event: String,
+    pub payload: serde_json::Value,
+}
+
+pub async fn zoom_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<ZoomEvent>,
+) -> impl IntoResponse {
+    match payload.event.as_str() {
+        "meeting.started" | "meeting.ended" => {
+            tracing::info!("Incoming notification from Zoom integration");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TwilioEvent {
+    pub MessageStatus: String,
+}
+
+pub async fn twilio_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<TwilioEvent>,
+) -> impl IntoResponse {
+    match payload.MessageStatus.as_str() {
+        "delivered" | "failed" => {
+            tracing::info!("Incoming notification from Twilio integration");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct GoogleCalendarEvent {
+    pub id: String,
+}
+
+pub async fn google_calendar_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(_payload): Json<GoogleCalendarEvent>,
+) -> impl IntoResponse {
+    tracing::info!("Incoming notification from Google Calendar integration");
+    StatusCode::OK.into_response()
+}
