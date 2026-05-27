@@ -32,7 +32,7 @@ test('verify website builder publish sheet', async ({ page }) => {
 test('verify state persistence', async ({ page }) => {
   await page.goto('/website-builder');
   await page.getByRole('button', { name: /Start My Business Next/ }).click();
-  await page.getByRole('button', { name: /Online Store/ }).click();
+  await page.getByText('Online Store').first().click();
 
   // Reload the page and verify we're still on the company name step
   await page.reload();
