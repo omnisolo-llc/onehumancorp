@@ -3130,10 +3130,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
-                        <div id="manychat-integration" class="card glass" style="display: none;">
-                            <h3>💬 Manychat</h3>
-                            <p style="font-size: 13px; color: #555; margin-bottom: 12px;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
-                            <button onclick="alert('Configure Manychat'); showScreen('inbox-screen')">Configure</button>
+                        <div id="manychat-integration" class="card glass" style="display: none; border-radius: 16px; margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</div>
+                                <span id="manychat-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
+                            </div>
+                            <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Manychat</h3>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Unified social media inbox for Instagram, Facebook, and WhatsApp.</p>
+                            <button id="manychat-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('manychat', 'Configure Manychat', 'inbox-screen')">Configure</button>
                         </div>
                         <!-- Business Analytics Widget with Soft Paywall -->
                         <div class="card glass" style="margin-bottom: 24px; position: relative; overflow: hidden;">
@@ -3630,10 +3634,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
 
+
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <h1 style="margin: 0; font-family: 'Outfit', sans-serif;">Connect Tools</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -3642,76 +3647,83 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                             <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Social Media Accounts</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</div>
+                                    <span id="ayrshare-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Social Media Accounts</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Manage all your social media messages and posts in one place.</p>
+                                <button id="ayrshare-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('ayrshare', 'Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Cal.com Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Booking</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</div>
+                                    <span id="calcom-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let customers book appointments directly on your personal calendar.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Set up my booking link</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Customer Booking</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Let customers book appointments directly on your personal calendar.</p>
+                                <button id="calcom-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('calcom', 'Connecting to Cal.com...')">Set up my booking link</button>
                             </div>
 
                             <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Emails</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</div>
+                                    <span id="listmonk-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Customer Emails</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Send email updates and promotions to your customers.</p>
+                                <button id="listmonk-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('listmonk', 'Setting up Listmonk...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Local Payments</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</div>
+                                    <span id="mercadopago-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get paid easily using local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Local Payments</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Get paid easily using local payment methods in Latin America.</p>
+                                <button id="mercadopago-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('mercadopago', 'Setting up Mercado Pago...')">Accept local payments</button>
                             </div>
 
                             <!-- EasyPost Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Shipping Labels</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</div>
+                                    <span id="easypost-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Shipping Labels</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Print shipping labels and automatically track packages for your orders.</p>
+                                <button id="easypost-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('easypost', 'Setting up EasyPost...')">Set up shipping</button>
                             </div>
 
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Text Notifications</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</div>
+                                    <span id="twilio-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automatic text message updates to your customers about their orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Text Notifications</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Send automatic text message updates to your customers about their orders.</p>
+                                <button id="twilio-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('twilio', 'Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
                             <!-- Jitsi Meet Integration -->
                             <div class="card glass" style="border-radius: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Online Meetings</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
+                                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                                    <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</div>
+                                    <span id="jitsi-status" style="font-size: 10px; font-weight: bold; padding: 4px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; background: #f3f4f6; color: #6b7280;">disconnected</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-weight: bold; margin-bottom: 8px;">Online Meetings</h3>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; flex-grow: 1;">Host online video meetings with your customers easily without extra downloads.</p>
+                                <button id="jitsi-btn" style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7; padding: 12px; font-weight: 600;" onclick="connectIntegration('jitsi', 'Setting up Jitsi Meet...')">Create my meeting room</button>
                             </div>
                         </div>
 
-                        <!-- Elements Required by E2E test -->
+                        <!-- Elements Required by legacy testing framework -->
                         <div style="display: none;">
                             <h1>Connect Custom Software</h1>
                             <h1>Custom Integration</h1>
@@ -3721,7 +3733,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Manage your custom software connections here.</p>
                         </div>
                     </div>
-
                     <!-- Settings Screen -->
                     <div id="settings-screen" class="screen">
                         <h1>Settings</h1>
@@ -5804,7 +5815,26 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             renderHelpCenter();
                             renderVideos();
                         });
+                        function connectIntegration(id, alertMsg, screenRedirect) {
+                            alert(alertMsg);
+                            const statusEl = document.getElementById(id + '-status');
+                            const btnEl = document.getElementById(id + '-btn');
+                            if (statusEl) {
+                                statusEl.textContent = 'connected';
+                                statusEl.style.background = '#dcfce7';
+                                statusEl.style.color = '#15803d';
+                            }
+                            if (btnEl) {
+                                btnEl.textContent = 'Manage';
+                                btnEl.style.background = '#f9fafb';
+                                btnEl.style.color = '#374151';
+                            }
+                            if (screenRedirect) {
+                                showScreen(screenRedirect);
+                            }
+                        }
                     </script>
+
                     <!-- Scribe: Documentation HTML Scaffolding -->
                     <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
