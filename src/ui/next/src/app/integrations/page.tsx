@@ -46,7 +46,7 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Tools</h1>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
             <p className="text-gray-400 text-sm">Seamlessly connect your favorite apps to streamline your business operations.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">

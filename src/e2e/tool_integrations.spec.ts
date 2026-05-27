@@ -5,12 +5,12 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     // Dismiss the upgrade modal if it appears
     page.on('dialog', dialog => dialog.accept());
     await page.goto('/');
-    await page.getByText('Connect Tools').click();
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
+    await page.getByText('Tool Integrations').click();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
   });
 
   test('shows premium integrations dashboard header and copy', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
     await expect(page.getByText('Seamlessly connect your favorite apps to streamline your business operations.')).toBeVisible();
   });
 

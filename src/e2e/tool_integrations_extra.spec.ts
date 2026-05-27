@@ -5,8 +5,8 @@ test.describe('Tool Integrations Categories and Responsiveness', () => {
     // Dismiss the upgrade modal if it appears
     page.on('dialog', dialog => dialog.accept());
     await page.goto('/');
-    await page.getByText('Connect Tools').click();
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
+    await page.getByText('Tool Integrations').click();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
   });
 
   test('filters by marketing category', async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe('Tool Integrations Categories and Responsiveness', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     // Check elements are still visible
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tool Integrations' }).first()).toBeVisible();
     await expect(page.locator('div.card.glass').first()).toBeVisible();
 
     // Ensure the tabs are accessible
