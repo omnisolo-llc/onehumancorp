@@ -89,7 +89,7 @@ impl Department for DummyDepartment {
             description,
             status: match risk {
                 ActionRisk::AutoExecute => ApprovalStatus::Approved,
-                ActionRisk::DraftForReview => ApprovalStatus::Pending,
+                ActionRisk::DraftForReview => ApprovalStatus::PendingApproval,
             },
             action_risk: risk.clone(),
             payload: None,
@@ -284,20 +284,96 @@ impl DepartmentOrchestrator {
                     tenant_id,
                     department,
                     description: description.clone(),
-                    status: ApprovalStatus::Pending,
+                    status: ApprovalStatus::PendingApproval,
                     action_risk: ActionRisk::DraftForReview,
                     payload: Some(_action_payload),
                 };
                 self.add_approval_request(req.clone()).await;
+
+                let _ = crate::dispatch_critical_sms(
+                    "draft_approval",
+                    &format!("{} requires your approval: {}", department, description)
+                ).await;
+
                 Ok(req.clone())
             }
         }
     }
 
+    pub async fn get_department_status(&self, tenant_id: &str) -> Vec<crate::orchestration::departments::types::DepartmentDashboardStatus> {
+        let mut results = HashMap::new();
+        for dep in vec![
+            DepartmentType::Operations,
+            DepartmentType::Marketing,
+            DepartmentType::Sales,
+            DepartmentType::CustomerSuccess,
+            DepartmentType::Finance,
+            DepartmentType::Legal,
+            DepartmentType::BusinessAdvisory,
+        ] {
+            results.insert(dep, crate::orchestration::departments::types::DepartmentDashboardStatus {
+                department: dep,
+                pending_approvals: 0,
+                completed_actions: 0,
+            });
+        }
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = $1 GROUP BY department, status")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let count: i64 = row.get("count");
+
+                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
+                            if let Some(status) = results.get_mut(&dep) {
+                                if status_str == "PENDING_APPROVAL" {
+                                    status.pending_approvals += count;
+                                } else {
+                                    status.completed_actions += count;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = ? GROUP BY department, status")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let count: i64 = row.get("count");
+
+                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
+                            if let Some(status) = results.get_mut(&dep) {
+                                if status_str == "PENDING_APPROVAL" {
+                                    status.pending_approvals += count;
+                                } else {
+                                    status.completed_actions += count;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        results.into_values().collect()
+    }
+
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
         let now = Utc::now();
         let status_str = match req.status {
-            ApprovalStatus::Pending => "PENDING",
+            ApprovalStatus::PendingApproval => "PENDING_APPROVAL",
             ApprovalStatus::Approved => "APPROVED",
             ApprovalStatus::Rejected => "REJECTED",
         };
@@ -344,14 +420,14 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             DbStore::Postgres => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING' AND id > $2 ORDER BY id ASC LIMIT $3")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING_APPROVAL' AND id > $2 ORDER BY id ASC LIMIT $3")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING' ORDER BY id ASC LIMIT $2")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT $2")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
@@ -364,10 +440,10 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING" => ApprovalStatus::Pending,
+                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            _ => ApprovalStatus::Pending,
+                            _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
@@ -392,14 +468,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING' AND id > ? ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING_APPROVAL' AND id > ? ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING' ORDER BY id ASC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status = 'PENDING_APPROVAL' ORDER BY id ASC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -412,10 +488,10 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING" => ApprovalStatus::Pending,
+                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            _ => ApprovalStatus::Pending,
+                            _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
@@ -445,14 +521,14 @@ impl DepartmentOrchestrator {
         match &self.db.store {
             DbStore::Postgres => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' AND id < $2 ORDER BY id DESC LIMIT $3")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING_APPROVAL' AND id < $2 ORDER BY id DESC LIMIT $3")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING' ORDER BY id DESC LIMIT $2")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = $1 AND status != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT $2")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(&self.db.pool)
@@ -465,10 +541,10 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING" => ApprovalStatus::Pending,
+                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            _ => ApprovalStatus::Pending,
+                            _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
@@ -493,14 +569,14 @@ impl DepartmentOrchestrator {
             }
             DbStore::Sqlite(pool) => {
                 let fetch_res = if let Some(ref cur) = cursor {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' AND id < ? ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING_APPROVAL' AND id < ? ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(cur)
                         .bind(limit)
                         .fetch_all(pool)
                         .await
                 } else {
-                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING' ORDER BY id DESC LIMIT ?")
+                    sqlx::query("SELECT id, tenant_id, department, description, status, action_risk, payload FROM agent_approvals WHERE tenant_id = ? AND status != 'PENDING_APPROVAL' ORDER BY id DESC LIMIT ?")
                         .bind(tenant_id)
                         .bind(limit)
                         .fetch_all(pool)
@@ -513,10 +589,10 @@ impl DepartmentOrchestrator {
                         let status_str: String = row.get("status");
                         let department = DepartmentType::from_str(&dep_str).unwrap_or(DepartmentType::Operations);
                         let status = match status_str.as_str() {
-                            "PENDING" => ApprovalStatus::Pending,
+                            "PENDING_APPROVAL" => ApprovalStatus::PendingApproval,
                             "APPROVED" => ApprovalStatus::Approved,
                             "REJECTED" => ApprovalStatus::Rejected,
-                            _ => ApprovalStatus::Pending,
+                            _ => ApprovalStatus::PendingApproval,
                         };
                         let risk_str: String = row.get("action_risk");
                         let action_risk = ActionRisk::from_str(&risk_str).unwrap_or(ActionRisk::DraftForReview);
