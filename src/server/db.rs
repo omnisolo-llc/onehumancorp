@@ -693,6 +693,16 @@ impl DB {
                         timestamp TIMESTAMP NOT NULL,
                         sync_status TEXT NOT NULL
                     );
+
+                    CREATE TABLE IF NOT EXISTS business_milestones (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        milestone_type TEXT NOT NULL,
+                        reached_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        shared_at TIMESTAMP,
+                        metadata TEXT DEFAULT '{}',
+                        UNIQUE(tenant_id, milestone_type)
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }
