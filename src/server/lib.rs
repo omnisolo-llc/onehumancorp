@@ -333,6 +333,7 @@ async fn http_metrics_handler(
 
 async fn http_login_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     payload: HttpLoginRequest,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -433,8 +434,31 @@ async fn http_login_handler(
     let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
     let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let issued_at = chrono::Utc::now().timestamp();
-    let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "e2e-local-jwt-secret-change-me-32-bytes".to_string());
+    let user = ::server_auth::User {
+        id: id.clone(),
+        username: username.clone(),
+        email: email.clone(),
+        password_hash: "".to_string(),
+        roles: roles.clone(),
+        active: true,
+        organization_id: Some(tenant_id.clone()),
+        created_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
+        updated_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
+        oidc_subject: None,
+    };
+
+    let token = match store.issue_token(&user) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("failed to issue login token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
     let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
@@ -446,21 +470,7 @@ async fn http_login_handler(
         session_id: None,
         jti: uuid::Uuid::new_v4().to_string(),
     };
-    let token = match jsonwebtoken::encode(
-        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
-        &claims,
-        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
-    ) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!("failed to issue login token: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
+    // token issued above via store
 
     (
         StatusCode::OK,
@@ -2192,9 +2202,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .route(
             "/api/v1/auth/login",
-            axum::routing::post(move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
-                let db = db_for_login.clone();
-                async move { http_login_handler(db, payload).await }
+            axum::routing::post({
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
+                    let db = db_for_login.clone();
+                    let store = store.clone();
+                    async move { http_login_handler(db, store, payload).await }
+                }
             }),
         )
         .route(
