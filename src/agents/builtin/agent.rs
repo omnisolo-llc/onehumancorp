@@ -1787,9 +1787,26 @@ impl Agent {
             }
         }
 
+
         if final_cfg.enable_langgraph_mechanic {
             return self_with_memory.run_langgraph(&final_cfg, initial_message, session_tools, &mut messages, on_event).await;
         }
+
+        // TAO Orchestrator override
+        if std::env::var("OHC_ENABLE_TAO_ORCHESTRATOR").unwrap_or_default() == "true" {
+            let temp_agent = std::sync::Arc::new(Agent {
+                llm: self.llm.clone(),
+                tools: self.tools.clone(),
+                progress: self.progress.clone(),
+                memory_store: self.memory_store.clone(),
+                checkpointer: self.checkpointer.clone(),
+                observation_store: self.observation_store.clone(),
+                native_env: self.native_env.clone(),
+            });
+            let tao = crate::tao_orchestrator::TaoOrchestrator::new(temp_agent, final_cfg.max_iterations);
+            return tao.run_tao_loop(&final_cfg, initial_message, &session_tools, on_event).await;
+        }
+
 
         if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
             if let Some(resume_id) = &final_cfg.resume_from_checkpoint_id {
@@ -2848,7 +2865,7 @@ impl Agent {
         Ok(())
     }
 
-    async fn execute_tool(
+    pub async fn execute_tool(
         &self,
         tc: &ToolCall,
         session_tools: &[Tool],
