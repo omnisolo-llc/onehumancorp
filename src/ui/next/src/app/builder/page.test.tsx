@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import BuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { useBuilderStore } from './store';
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
@@ -14,6 +15,18 @@ describe('BuilderPage V2', () => {
   beforeEach(() => {
     global.fetch = vi.fn();
     localStorage.clear();
+    useBuilderStore.setState({
+      bio: "",
+      businessName: "",
+      businessCategory: "",
+      vibe: "",
+      wizardStep: 1,
+      blocks: [],
+      drafts: [],
+      status: "onboarding",
+      businessGoal: null,
+      liveUrl: "",
+    });
   });
 
   afterEach(() => {
