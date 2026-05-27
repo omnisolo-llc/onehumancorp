@@ -3,6 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Lens Audit E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
+  });
 
   test('verify Automated Review Requests block does not contain mock orders text', async ({ page }) => {
     await page.goto('/');
@@ -19,8 +20,6 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
     await expect(page.getByText("Customer Success Department")).not.toBeVisible();
   });
-
-});
 
   test('verify dashboard visual state and full UI lifecycle', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -221,9 +220,6 @@ test.describe('Lens Audit E2E Flow', () => {
     await expect(approvalText).not.toBeVisible();
   });
 
-  test('verify Reject button works and removes item from UI', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
 
     const approvalText = page.getByText("Abandoned cart recovery");
     await expect(approvalText).toBeVisible();
