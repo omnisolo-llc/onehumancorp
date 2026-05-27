@@ -1990,68 +1990,71 @@ pub struct ReplyInboxMessageRequest {
 
 #[derive(serde::Deserialize)]
 pub struct MetaConnectQuery {
-    pub code: String,
+    pub _code: Option<String>,
     pub state: String,
 }
 
+
 pub async fn meta_oauth_callback_handler(
-    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Extension(hub): axum::extract::Extension<std::sync::Arc<crate::hub::Hub>>,
     axum::extract::Query(query): axum::extract::Query<MetaConnectQuery>,
 ) -> impl axum::response::IntoResponse {
     let pool = &hub.pool;
     let tenant_id = query.state; // simplistic for now, state should be tenant_id
 
     // In a real app, exchange `code` for an access token
-    let token = "dummy_oauth_token";
-    let page_id = "dummy_page_id";
+    let _token = "dummy_oauth_token";
+    let _page_id = "dummy_page_id";
 
     // Upsert integration token (assuming there's a way, but since we don't have a clear schema, let's just log it)
-    tracing::info!("Connected Meta for tenant {} with token {}", tenant_id, token);
+    tracing::info!("Connected Meta for tenant {} with token {}", tenant_id, _token);
 
     axum::response::Redirect::to("/inbox")
 }
 
-
 pub async fn reply_inbox_message_handler(
-    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Extension(hub): axum::extract::Extension<std::sync::Arc<crate::hub::Hub>>,
     axum::Json(payload): axum::Json<ReplyInboxMessageRequest>,
 ) -> impl axum::response::IntoResponse {
     let pool = &hub.pool;
 
-    let row = match sqlx::query!("SELECT source FROM inbox_messages WHERE id = $1", payload.message_id)
+
+    use sqlx::Row;
+    let row = match sqlx::query("SELECT source FROM inbox_messages WHERE id = $1").bind(payload.message_id.clone())
+
         .fetch_optional(pool)
         .await
     {
         Ok(Some(row)) => row,
-        _ => return axum::http::StatusCode::NOT_FOUND.into_response(),
+        _ => return axum::response::Response::builder().status(axum::http::StatusCode::NOT_FOUND).body(axum::body::Body::empty()).unwrap(),
     };
 
-    let source: String = row.source.unwrap_or_default();
+    let source: String = row.try_get("source").unwrap_or_default();
     if !source.starts_with("meta:") {
-        return axum::http::StatusCode::BAD_REQUEST.into_response();
+        return axum::response::Response::builder().status(axum::http::StatusCode::BAD_REQUEST).body(axum::body::Body::empty()).unwrap();
     }
     let sender_id = source.trim_start_matches("meta:");
-
 
     // Look up token. For the sake of this mock, we use a placeholder.
     let provider = crate::integrations::meta::provider::MetaProvider::new("real_oauth_token_from_db".to_string());
 
     if let Err(e) = provider.send_message("facebook", sender_id, &payload.reply_text).await {
         tracing::error!("Failed to send meta reply: {}", e);
-        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
     }
 
-    let res = sqlx::query!("UPDATE inbox_messages SET status = 'replied' WHERE id = $1", payload.message_id)
+    let res = sqlx::query("UPDATE inbox_messages SET status = 'replied' WHERE id = $1").bind(payload.message_id.clone())
         .execute(pool)
         .await;
 
     if let Err(e) = res {
         tracing::error!("Failed to update inbox_messages status: {}", e);
-        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
     }
 
-    axum::http::StatusCode::OK.into_response()
+    axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
 }
+
 
 
 async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>) -> axum::response::Response {
@@ -2104,7 +2107,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             // Generate OTP securely
@@ -2138,8 +2141,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
         }))
         .route("/api/settings/sms-confirm", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let _settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -2165,8 +2168,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }
         }))
         .route("/api/settings/sms-preferences", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let _settings_store = settings_store.clone();
+            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
                 let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -2190,9 +2193,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
 
-        .route("/api/inbox/reply", axum::routing::post(reply_inbox_message_handler))
-        .route("/api/integrations/meta/callback", axum::routing::get(meta_oauth_callback_handler))
 
+        .route("/api/inbox/reply", axum::routing::post(reply_inbox_message_handler).layer(axum::extract::Extension(hub.clone())))
+        .route("/api/integrations/meta/callback", axum::routing::get(meta_oauth_callback_handler).layer(axum::extract::Extension(hub.clone())))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -3374,7 +3377,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Automated AI Review Requests -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated review requests for recent orders <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
 
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
@@ -3721,71 +3724,71 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Social Media Accounts</h3>
+                                    <h3 style="margin: 0;">Ayrshare</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Unified API for posting and retrieving messages across social networks.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect</button>
                             </div>
 
                             <!-- Cal.com Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Booking</h3>
+                                    <h3 style="margin: 0;">Cal.com</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let customers book appointments directly on your personal calendar.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Set up my booking link</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Config Booking & Calendar Sync.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Connect</button>
                             </div>
 
                             <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Emails</h3>
+                                    <h3 style="margin: 0;">Listmonk</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Embedded, No-Jargon Email Campaigns.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Connect</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Local Payments</h3>
+                                    <h3 style="margin: 0;">Mercado Pago</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get paid easily using local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Accept credit cards and local payment methods in Latin America.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Connect</button>
                             </div>
 
                             <!-- EasyPost Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Shipping Labels</h3>
+                                    <h3 style="margin: 0;">EasyPost</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Painless Shipping Labels & Tracking.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Connect</button>
                             </div>
 
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Text Notifications</h3>
+                                    <h3 style="margin: 0;">Twilio</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automatic text message updates to your customers about their orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Reliable SMS alerts for new orders and customer notifications.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect</button>
                             </div>
 
                             <!-- Jitsi Meet Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Online Meetings</h3>
+                                    <h3 style="margin: 0;">Jitsi Meet</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Zero-Setup Online Lessons and video conferencing.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Connect</button>
                             </div>
                         </div>
 
@@ -4262,7 +4265,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 

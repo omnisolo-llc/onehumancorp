@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Json},
+    extract::Json,
     http::StatusCode,
     response::IntoResponse,
 };
@@ -65,7 +65,7 @@ pub async fn stripe_webhook_handler(
 
                 // Update Redis Rate Limiter
                 if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
                 }
 
                 // Update Database
@@ -96,12 +96,12 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(_e) = res {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
                 }
 
-                StatusCode::OK.into_response()
+                axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
             } else {
-                StatusCode::BAD_REQUEST.into_response()
+                axum::response::Response::builder().status(axum::http::StatusCode::BAD_REQUEST).body(axum::body::Body::empty()).unwrap()
             }
         },
         "customer.subscription.deleted" => {
@@ -115,7 +115,7 @@ pub async fn stripe_webhook_handler(
 
                 // Update Redis
                 if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
                 }
 
                 // Update DB
@@ -139,12 +139,12 @@ pub async fn stripe_webhook_handler(
                 };
 
                 if let Err(_e) = res {
-                    return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
                 }
 
-                StatusCode::OK.into_response()
+                axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
             } else {
-                StatusCode::BAD_REQUEST.into_response()
+                axum::response::Response::builder().status(axum::http::StatusCode::BAD_REQUEST).body(axum::body::Body::empty()).unwrap()
             }
         },
         "invoice.payment_failed" => {
@@ -158,11 +158,11 @@ pub async fn stripe_webhook_handler(
                     let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
                 });
             }
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
         _ => {
             // Unhandled event types are ignored successfully
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         }
     }
 }
@@ -187,7 +187,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -196,9 +196,9 @@ pub async fn mercadopago_webhook_handler(
             // and extract the tenant_id and tier from the metadata.
             // For mock purposes, assume we process it similarly to Stripe.
             // We just return OK.
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
-        _ => StatusCode::OK.into_response()
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
 
@@ -272,30 +272,28 @@ pub async fn razorpay_webhook_handler(
 
             if let Err(e) = res {
                 tracing::error!("Failed to update order status: {:?}", e);
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                return axum::response::Response::builder().status(axum::http::StatusCode::INTERNAL_SERVER_ERROR).body(axum::body::Body::empty()).unwrap();
             }
 
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
-        _ => StatusCode::OK.into_response()
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
 
 
 #[derive(Debug, Deserialize)]
-#[allow(non_snake_case)]
 pub struct CalComEvent {
-    pub triggerEvent: String,
+    pub trigger_event: String,
     pub payload: CalComPayload,
 }
 
 #[derive(Debug, Deserialize)]
-#[allow(non_snake_case)]
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
-    pub startTime: String,
-    pub endTime: String,
+    pub start_time: String,
+    pub end_time: String,
     pub attendees: Vec<CalComAttendee>,
 }
 
@@ -306,19 +304,19 @@ pub struct CalComAttendee {
 }
 
 pub async fn calcom_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
-    match payload.triggerEvent.as_str() {
+    match payload.trigger_event.as_str() {
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 
             // In a real app, create calendar events in the OHC dashboard
             // and auto-generate meeting links (e.g., Zoom).
             tracing::info!("Created booking: {}", booking_uid);
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
-        _ => StatusCode::OK.into_response()
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
 
@@ -337,16 +335,16 @@ pub struct ResendEventData {
 }
 
 pub async fn resend_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ResendEvent>,
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
         "email.bounced" | "email.complained" => {
             // Automatically clean the tenant's mailing list
             tracing::info!("Message bounced/complained: [REDACTED]");
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
-        _ => StatusCode::OK.into_response()
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
 
@@ -360,16 +358,16 @@ pub struct AyrshareEvent {
 }
 
 pub async fn ayrshare_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<AyrshareEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "social_message" => {
             // Ingest inbound messages into a unified OHC inbox table
             tracing::info!("Incoming notification from integration: [REDACTED]");
-            StatusCode::OK.into_response()
+            axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
         },
-        _ => StatusCode::OK.into_response()
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
 
@@ -434,7 +432,7 @@ pub async fn meta_webhook_verify_handler(
     if let Some(challenge) = query.hub_challenge {
         return (axum::http::StatusCode::OK, challenge).into_response();
     }
-    axum::http::StatusCode::BAD_REQUEST.into_response()
+    axum::response::Response::builder().status(axum::http::StatusCode::BAD_REQUEST).body(axum::body::Body::empty()).unwrap()
 }
 
 
@@ -478,16 +476,16 @@ pub async fn meta_webhook_handler(
         }
     }
 
-    axum::http::StatusCode::OK.into_response()
+    axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
 }
 
 
 pub async fn manychat_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
-        "ok" => StatusCode::OK.into_response(),
-        _ => StatusCode::OK.into_response()
+        "ok" => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap(),
+        _ => axum::response::Response::builder().status(axum::http::StatusCode::OK).body(axum::body::Body::empty()).unwrap()
     }
 }
