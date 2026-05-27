@@ -340,8 +340,7 @@ pub async fn resend_webhook_handler(
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
         "email.bounced" | "email.complained" => {
-            // Automatically clean the tenant's mailing list
-            tracing::info!("Email bounced/complained: {:?}", payload.data.to);
+            tracing::info!("delivery failed");
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
@@ -363,8 +362,7 @@ pub async fn ayrshare_webhook_handler(
 ) -> impl IntoResponse {
     match payload.action.as_str() {
         "social_message" => {
-            // Ingest inbound messages into a unified OHC inbox table
-            tracing::info!("Received message from {}: {}", payload.platform, payload.message);
+            tracing::info!("incoming social");
             StatusCode::OK.into_response()
         },
         _ => StatusCode::OK.into_response()
