@@ -5,8 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
   workflow_dispatch:
 
 concurrency:
@@ -32,6 +30,11 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
 
       - name: Install Kubernetes tools
         run: |
@@ -66,40 +69,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: ${{ github.event_name != 'pull_request' }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy

@@ -705,6 +705,21 @@ pub async fn record_api_call_cost(
     .await
 }
 
+pub async fn record_mcp_proxy_connections_active(
+    pool: &PgPool,
+    spiffe_id: &str,
+    delta: f32,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_mcp_proxy_connections_active",
+        "gauge",
+        delta,
+        serde_json::json!({ "spiffe_id": spiffe_id }),
+    )
+    .await
+}
+
 pub async fn record_swarm_job_latency_by_entity(
     pool: &PgPool,
     mode: &str,

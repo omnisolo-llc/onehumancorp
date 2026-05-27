@@ -1,5 +1,13 @@
 load("@rules_rust//rust:defs.bzl", "rust_library")
 
+exports_files(
+    [
+        "mod.rs",
+        "service.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
 rust_library(
     name = "server_services_b2b",
     srcs = [

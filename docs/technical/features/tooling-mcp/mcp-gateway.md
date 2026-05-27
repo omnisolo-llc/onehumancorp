@@ -21,14 +21,15 @@ The OHC platform leverages the Model Context Protocol (MCP) to provide agents wi
 ## 3. Detailed Design
 
 ### 3.1 The MCP Switchboard Logic
-The backend server (`src/dashboard/server.go`) maintains a `Registry` of available MCP servers. When an agent emits a tool call, the `Hub` routes it based on the `Category`:
-```go
-type MCPTool struct {
-    ID          string `json:"id"`
-    Name        string `json:"name"`
-    Description string `json:"description"`
-    Category    string `json:"category"` // code, infra, docs, comms
-    Status      string `json:"status"`   // available, busy, offline
+The Rust backend maintains registries under `src/server/integrations/mcp/`, `src/server/services/mcp/`, and built-in agent MCP tooling. When an agent emits a tool call, the Hub routes it by category and capability:
+```rust
+#[derive(serde::Serialize, serde::Deserialize)]
+struct McpTool {
+    id: String,
+    name: String,
+    description: String,
+    category: String,
+    status: String,
 }
 ```
 

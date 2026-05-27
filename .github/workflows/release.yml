@@ -58,6 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
         run: |
@@ -70,40 +76,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-${{ matrix.name }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -180,6 +152,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
         run: |
@@ -204,40 +182,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-desktop-${{ matrix.name }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -526,6 +470,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
         run: |
@@ -566,40 +516,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-mobile-${{ matrix.name }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -653,6 +569,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install Linux build dependencies
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
@@ -664,40 +585,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}-server-web-image
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -912,40 +799,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ runner.os }}-bazel-disk-${{ github.workflow }}
-          repository-cache: |
-            - MODULE.bazel
-            - MODULE.bazel.lock
-            - WORKSPACE
-            - .bazelrc
-            - .bazelversion
-            - repositories.bzl
-            - bazel/rules/**/*.bzl
-            - bazel/patches/**
-            - Cargo.lock
-            - Cargo.toml
-            - pnpm-lock.yaml
-            - package-lock.json
-            - package.json
-            - go.mod
-            - go.sum
-          external-cache: |
-            manifest:
-              npm:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - pnpm-lock.yaml
-                - package.json
-              tauri_cargo_vendor:
-                - MODULE.bazel
-                - Cargo.lock
-              crates:
-                - MODULE.bazel
-                - MODULE.bazel.lock
-                - Cargo.lock
-                - Cargo.toml
-          cache-save: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
