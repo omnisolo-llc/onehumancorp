@@ -43,7 +43,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_tenant_llm_cost_cents[5m])) by (tenant_id)",
+          "expr": "sum(rate(ohc_tenant_llm_cost_cents_total[5m])) by (tenant_id)",
           "legendFormat": "{{tenant_id}}",
           "refId": "A"
         }

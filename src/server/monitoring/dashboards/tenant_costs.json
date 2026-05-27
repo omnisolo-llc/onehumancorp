@@ -110,7 +110,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (organization_id) (increase(ohc_mission_cost_cents[24h])) / 100",
+          "expr": "sum by (organization_id) (increase(ohc_mission_cost_cents_total[24h])) / 100",
           "instant": false,
           "legendFormat": "{{organization_id}}",
           "range": true,
@@ -200,7 +200,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "ohc_storage_rw_cost",
+          "expr": "ohc_storage_rw_cost_total",
           "instant": false,
           "legendFormat": "{{organization_id}}",
           "range": true,
@@ -290,7 +290,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by (organization_id, entity) (increase(ohc_api_call_cost[24h]))",
+          "expr": "sum by (organization_id, entity) (increase(ohc_api_call_cost_total[24h]))",
           "instant": false,
           "legendFormat": "{{organization_id}} - {{entity}}",
           "range": true,

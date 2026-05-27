@@ -40,7 +40,7 @@
       },
       "targets": [
         {
-          "expr": "sum(increase(ohc_agent_cost[1h])) by (organization_id)",
+          "expr": "sum(increase(ohc_agent_cost_total[1h])) by (organization_id)",
           "legendFormat": "{{organization_id}}",
           "refId": "A"
         }
@@ -59,7 +59,7 @@
       },
       "targets": [
         {
-          "expr": "sum(rate(ohc_api_call_cost[5m])) by (organization_id)",
+          "expr": "sum(rate(ohc_api_call_cost_total[5m])) by (organization_id)",
           "legendFormat": "{{organization_id}}",
           "refId": "A"
         }

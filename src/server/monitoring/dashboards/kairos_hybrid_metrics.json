@@ -485,7 +485,7 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum(rate(ohc_mission_cost_cents[5m])) by (tenant_id)",
+          "expr": "sum(rate(ohc_mission_cost_cents_total[5m])) by (tenant_id)",
           "legendFormat": "{{tenant_id}}",
           "range": true,
           "refId": "A"

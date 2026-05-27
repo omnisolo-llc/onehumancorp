@@ -20,7 +20,7 @@ impl ViolationStore {
         let meter = global::meter("ohc.harness.telemetry");
         let violation_counter = meter.u64_counter("ohc_agent_violations_total").build();
         let token_usage_counter = meter.u64_counter("ohc_tenant_token_usage_total").build();
-        let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents").build();
+        let llm_cost_counter = meter.u64_counter("ohc_tenant_llm_cost_cents_total").build();
         let storage_bytes_counter = meter.u64_counter("ohc_storage_bytes_total").build();
         let rate_limit_checks_total = meter.u64_counter("ohc_rate_limit_checks_total").build();
         let rate_limit_exceeded_total = meter.u64_counter("ohc_rate_limit_exceeded_total").build();
