@@ -136,7 +136,7 @@ pub struct QualityGates;
 
 impl QualityGates {
     /// Pre-flight (e.g., initialization check).
-    /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy Expert Team Feature).
+    /// Ensures there are exactly 6 agents initialization (Tencent Workbuddy: Expert Team Feature).
     pub fn pre_flight<T: ExpertTeamLlmClient + ?Sized>(manager: &ExpertTeamManager<T>, task: &str) -> Result<(), String> {
         // Enforce 6 agent initialization
         // 1 Lead (already in manager) + 5 Domain/Quality experts = 6 total
@@ -156,21 +156,40 @@ impl QualityGates {
             return Err("Pre-merge Gate Failed: No summaries to merge.".to_string());
         }
 
-        // Check for similarity (dummy implementation to represent the logic)
-        // If the outputs are too similar, we reject them.
+        // 75% similarity deduplication using Jaccard index on word tokens
         for i in 0..summaries.len() {
             for j in (i + 1)..summaries.len() {
-                if summaries[i] == summaries[j] {
-                    return Err("Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs. Deduplication required.".to_string());
+                let set_i: std::collections::HashSet<&str> = summaries[i].split_whitespace().collect();
+                let set_j: std::collections::HashSet<&str> = summaries[j].split_whitespace().collect();
+
+                let intersection = set_i.intersection(&set_j).count() as f64;
+                let union = set_i.union(&set_j).count() as f64;
+
+                if union > 0.0 {
+                    let jaccard_similarity = intersection / union;
+                    if jaccard_similarity > 0.75 {
+                        return Err("Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs. Deduplication required.".to_string());
+                    }
                 }
             }
         }
 
-        // Check for structural completeness (e.g. 8-chapter completeness)
-        // We simulate this by checking if the combined outputs contain enough information.
+        // 8-chapter completeness check
         let combined = summaries.join("\n");
-        if combined.len() < 50 {
-            return Err("Pre-merge Gate Failed: Outputs do not meet the minimum completeness criteria (e.g., missing chapters).".to_string());
+        let required_chapters = [
+            "Chapter 1", "Chapter 2", "Chapter 3", "Chapter 4",
+            "Chapter 5", "Chapter 6", "Chapter 7", "Chapter 8",
+        ];
+
+        let mut missing_chapters = Vec::new();
+        for &chapter in &required_chapters {
+            if !combined.contains(chapter) {
+                missing_chapters.push(chapter);
+            }
+        }
+
+        if !missing_chapters.is_empty() {
+            return Err(format!("Pre-merge Gate Failed: Outputs do not meet the minimum completeness criteria. Missing: {}.", missing_chapters.join(", ")));
         }
 
         Ok(())
@@ -223,11 +242,11 @@ mod tests {
     #[tokio::test]
     async fn test_expert_team_successful_execution() {
         let experts = vec![
-            DomainExpert { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary...".to_string() }) },
-            DomainExpert { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary...".to_string() }) },
-            DomainExpert { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary...".to_string() }) },
-            DomainExpert { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary...".to_string() }) },
-            DomainExpert { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary...".to_string() }) },
+            DomainExpert { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary... Chapter 1 and Chapter 2 unique words alpha beta".to_string() }) },
+            DomainExpert { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary... Chapter 3 and Chapter 4 distinct terms gamma delta".to_string() }) },
+            DomainExpert { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary... Chapter 5 and Chapter 6 different phrasing epsilon zeta".to_string() }) },
+            DomainExpert { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary... Chapter 7 some original ideas eta theta".to_string() }) },
+            DomainExpert { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary... Chapter 8 finalizing the text iota kappa".to_string() }) },
         ];
         let manager = ExpertTeamManager::new("Project Director", experts);
 
@@ -268,12 +287,23 @@ mod tests {
     #[test]
     fn test_pre_merge_failure_high_similarity() {
         let summaries = vec![
-            "Identical output about market analysis".to_string(),
-            "Identical output about market analysis".to_string(),
+            "Identical output about market analysis Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
+            "Identical output about market analysis Chapter 1 Chapter 2 Chapter 3 Chapter 4 Chapter 5 Chapter 6 Chapter 7 Chapter 8".to_string(),
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
         assert!(res.unwrap_err().contains("High similarity detected"));
+    }
+
+    #[test]
+    fn test_pre_merge_failure_missing_chapters() {
+        let summaries = vec![
+            "Research summary... Chapter 1 and Chapter 2 unique words alpha beta".to_string(),
+            "Financial summary... Chapter 3 and Chapter 4 distinct terms gamma delta".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Missing: Chapter 5, Chapter 6, Chapter 7, Chapter 8"));
     }
 
     #[test]
