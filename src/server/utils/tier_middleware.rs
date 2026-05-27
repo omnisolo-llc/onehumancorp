@@ -16,14 +16,35 @@ pub async fn tier_middleware(
         None => "system".to_string(), // In tests or unauth paths
     };
 
-    // Very simple placeholder: in a real system we might inspect the request path to determine the action cost
-    // For this example, we just simulate a 1-action check for protected paths
-    let mut warning_msg = None;
-    if req.uri().path().starts_with("/api/v1/protected") || req.uri().path().starts_with("/api/v1/autodream") {
-        match rate_limiter.record_action(&tenant_id, "default_agent").await {
+    // We intercept action dispatches (e.g. AI agents) and product creation paths.
+    // In a real system, the cost might be dynamic, but we enforce the limit here.
+    if req.uri().path().starts_with("/api/v1/protected") ||
+       req.uri().path().starts_with("/api/v1/autodream") ||
+       req.uri().path().starts_with("/api/v1/products") ||
+       req.uri().path().starts_with("/api/agents/dispatch") {
+
+        let limit_check = if req.uri().path().starts_with("/api/v1/products") {
+            rate_limiter.check_product_quota(&tenant_id).await
+        } else if req.uri().path().starts_with("/api/agents/dispatch") {
+            rate_limiter.check_agent_quota(&tenant_id).await
+        } else {
+            rate_limiter.record_action(&tenant_id, "default_agent").await
+        };
+
+        match limit_check {
             Ok(status) => {
                 if status.soft_limit_reached {
-                    warning_msg = Some(status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string()));
+                    let msg = status.user_message.unwrap_or_else(|| "Tier limit reached. Please upgrade.".to_string());
+                    let payload = serde_json::json!({
+                        "error": "LIMIT_EXCEEDED",
+                        "message": msg
+                    });
+
+                    return axum::response::Response::builder()
+                        .status(axum::http::StatusCode::PAYMENT_REQUIRED)
+                        .header(axum::http::header::CONTENT_TYPE, "application/json")
+                        .body(axum::body::Body::from(payload.to_string()))
+                        .unwrap();
                 }
             }
             Err(e) => {
@@ -32,13 +53,7 @@ pub async fn tier_middleware(
         }
     }
 
-    let mut res = next.run(req).await;
-    if let Some(msg) = warning_msg {
-        if let Ok(header_value) = axum::http::HeaderValue::from_str(&msg) {
-            res.headers_mut().insert("x-ratelimit-warning", header_value);
-        }
-    }
-    res
+    next.run(req).await
 }
 
 #[cfg(test)]
@@ -104,15 +119,18 @@ mod tests {
 
                 // Because we didn't send a valid Claims extension (no auth middleware here to set it),
                 // it defaults to "system" tenant. If "system" has no limits hit, it might return 200,
-                // or 402 if we hit the limit. We can't strictly assert 402 without setting the "system" usage too.
+                // or 402 if we hit the limit. We strictly assert 402 here by setting the "system" usage too.
                 let _: () = conn.set("tenant:system:actions_used", 101).await.unwrap();
                 let res2 = client.get(&format!("http://{}/api/v1/protected/action", addr))
                     .send()
                     .await
                     .unwrap();
 
-                assert_eq!(res2.status(), StatusCode::OK);
-                assert!(res2.headers().contains_key("x-ratelimit-warning"));
+                assert_eq!(res2.status(), StatusCode::PAYMENT_REQUIRED);
+
+                let body_bytes = res2.bytes().await.unwrap();
+                let body: serde_json::Value = serde_json::from_slice(&body_bytes).unwrap();
+                assert_eq!(body["error"], "LIMIT_EXCEEDED");
             }
         }
     }

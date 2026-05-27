@@ -34,7 +34,22 @@ export default function CheckoutPage() {
 
     setIsProcessing(false);
     setShowSuccessModal(true);
+
+    // Instant Resumption feature
+    const pendingAction = sessionStorage.getItem('pending_action');
+    if (pendingAction) {
+      try {
+        const action = JSON.parse(pendingAction);
+        console.log("Resuming pending action:", action);
+        sessionStorage.removeItem('pending_action');
+        // Actually execute the resumption fetch in background
+        fetch(action.url, action.options).catch(e => console.error("Resumption failed:", e));
+      } catch (e) {
+        console.error("Error parsing pending action", e);
+      }
+    }
   };
+
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>

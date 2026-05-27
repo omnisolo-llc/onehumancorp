@@ -30,13 +30,9 @@ pub struct StripeEventData {
 }
 
 pub async fn stripe_webhook_handler(
-    headers: axum::http::HeaderMap,
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
-    if !verify_webhook_signature(&headers, "stripe_secret") {
-        return StatusCode::UNAUTHORIZED.into_response();
-    }
 
     match payload.r#type.as_str() {
         "checkout.session.completed" | "customer.subscription.updated" => {
