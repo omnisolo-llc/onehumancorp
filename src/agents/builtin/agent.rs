@@ -1726,6 +1726,13 @@ impl Agent {
         let mut session_tools = self.tools.clone();
         let active_tools = std::sync::Arc::new(tokio::sync::RwLock::new(std::collections::HashSet::new()));
 
+        if final_cfg.enable_observation_masking {
+            let has_recall = session_tools.iter().any(|t| t.name == "RecallObservation");
+            if !has_recall {
+                session_tools.push(crate::tools::recall::recall_observation_tool(self.observation_store.clone()));
+            }
+        }
+
         // Tool Scoping: *Vercel Metric:* Removed 80% of tools from v0 for better results.
         if final_cfg.enable_vercel_tool_scoping_metric && session_tools.len() > 5 {
             let keep_count = (session_tools.len() as f64 * 0.2).max(1.0) as usize;
@@ -2241,7 +2248,9 @@ impl Agent {
                     Ok(r) => {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
-                        self.observation_store.insert(tc.id.clone(), r.clone());
+                        if final_cfg.enable_observation_masking {
+                            self.observation_store.insert(tc.id.clone(), r.clone());
+                        }
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -2429,7 +2438,7 @@ impl Agent {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
-                            self.observation_store.insert(tc.id.clone(), r.clone());
+                            // Do not insert into self.observation_store here. We will insert later to handle errors.
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -2554,9 +2563,14 @@ impl Agent {
                 let idx = tool_calls.iter().position(|t| t.id == tc.id).unwrap();
                 tool_results[idx] = ToolResult {
                     tool_call_id: tc.id.clone(),
-                    content,
+                    content: content.clone(),
                     error,
                 };
+
+                // Observation Masking Mechanic: Store the raw observation
+                if final_cfg.enable_observation_masking {
+                    self.observation_store.insert(tc.id.clone(), content);
+                }
             }
 
             if final_cfg.enable_observation_masking {
