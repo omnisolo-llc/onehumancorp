@@ -2637,6 +2637,14 @@ impl Agent {
             }
 
             // Cross-Department Memory Consolidation: Auto-store task result if successful
+            if final_cfg.enable_observation_masking {
+                crate::observation_masking::apply_observation_masking(
+                    &mut messages,
+                    final_cfg.observation_masking_threshold,
+                    final_cfg.observation_masking_size_limit,
+                );
+            }
+
             if iteration == max_iterations - 1 || tool_calls.is_empty() {
                 // This is the last iteration or no more tool calls (terminal)
                 // We'll store the final thought in long-term memory if configured
