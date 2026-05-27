@@ -19,19 +19,32 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec![
+            "tenant.insight.trending".to_string(),
+            "tenant.yield.price_dropped".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
 
-        self.orchestrator.execute_action(
-            DepartmentType::Marketing,
-            "Draft social media campaign for trending item".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        if event.event_type == "tenant.yield.price_dropped" {
+            self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                "Draft flash sale SMS for discounted item".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            ).await.map(|_| ())
+        } else {
+            self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                "Draft social media campaign for trending item".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                event.payload.clone(),
+            ).await.map(|_| ())
+        }
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {

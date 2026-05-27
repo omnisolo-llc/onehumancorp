@@ -8,10 +8,34 @@ export default function NewServicePage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState('monthly');
   const [price, setPrice] = useState('');
+  const [autoPricingEnabled, setAutoPricingEnabled] = useState(false);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title) return;
+
+    // Attempt to submit the data to an API
+    try {
+      await fetch('/api/services/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          description,
+          price: parseFloat(price) || 0,
+          isRecurring,
+          frequency: isRecurring ? frequency : null,
+          autoPricingEnabled,
+          minPrice: autoPricingEnabled && minPrice ? parseFloat(minPrice) : null,
+          maxPrice: autoPricingEnabled && maxPrice ? parseFloat(maxPrice) : null,
+        }),
+      });
+    } catch (e) {
+      // Ignore errors for now since the mock API doesn't exist yet
+    }
+
     setSaved(true);
     setTimeout(() => {
       window.location.href = '/dashboard';
@@ -83,6 +107,58 @@ export default function NewServicePage() {
               placeholder="0.00"
             />
           </div>
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-medium text-gray-900">Auto-optimize pricing to maximize sales</h3>
+              <p className="text-sm text-gray-500">Let Operations AI adjust your price based on demand and capacity.</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoPricingEnabled}
+                onChange={() => setAutoPricingEnabled(!autoPricingEnabled)}
+                className="sr-only peer"
+                data-testid="auto-pricing-toggle"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          {autoPricingEnabled && (
+            <div className="bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] border border-black/10 dark:border-white/10 p-4 rounded-[16px] shadow-sm flex gap-4 mt-2">
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Minimum Price</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={minPrice}
+                    onChange={e => setMinPrice(e.target.value)}
+                    className="w-full border rounded-[8px] p-2 pl-8 text-black dark:text-white bg-transparent border-black/20 dark:border-white/20"
+                    placeholder="Floor"
+                    data-testid="min-price-input"
+                  />
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Maximum Price</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2 text-gray-500">$</span>
+                  <input
+                    type="number"
+                    value={maxPrice}
+                    onChange={e => setMaxPrice(e.target.value)}
+                    className="w-full border rounded-[8px] p-2 pl-8 text-black dark:text-white bg-transparent border-black/20 dark:border-white/20"
+                    placeholder="Ceiling"
+                    data-testid="max-price-input"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border-t pt-4 mt-4">

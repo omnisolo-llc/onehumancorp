@@ -15,6 +15,7 @@ exports_files(
         "sales_agent.rs",
         "throttling.rs",
         "types.rs",
+        "yield_engine.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -36,6 +37,7 @@ rust_library(
         "sales_agent.rs",
         "throttling.rs",
         "types.rs",
+        "yield_engine.rs",
         "//src/server/orchestration/departments/memory:e2e_journey_test.rs",
         "//src/server/orchestration/departments/memory:layer.rs",
         "//src/server/orchestration/departments/memory:mod.rs",

@@ -22,10 +22,22 @@ impl Department for OperationsAgent {
         vec![
             "tenant.quote.accepted".to_string(),
             "tenant.order.created".to_string(),
+            "tenant.yield.evaluate".to_string(),
         ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
+        if event.event_type == "tenant.yield.evaluate" {
+            self.orchestrator.execute_action(
+                DepartmentType::Operations,
+                "Evaluate inventory yield".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute,
+                event.payload.clone(),
+            ).await?;
+            return crate::orchestration::departments::yield_engine::evaluate_yield(self.orchestrator.clone(), event.tenant_id.clone()).await;
+        }
+
         let config = self.get_config(&event.tenant_id);
         let risk = if let Some(cfg) = config {
             if cfg.auto_approve_limits > 0.0 {

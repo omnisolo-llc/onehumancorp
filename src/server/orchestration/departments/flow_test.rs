@@ -83,6 +83,87 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_yield_management_flow() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let ops_agent = Arc::new(RwLock::new(OperationsAgent::new(orchestrator.clone())));
+        let marketing_agent = Arc::new(RwLock::new(crate::orchestration::departments::marketing_agent::MarketingAgent::new(orchestrator.clone())));
+
+        orchestrator.register_department(ops_agent).await;
+        orchestrator.register_department(marketing_agent).await;
+
+        let tenant_id = "test-yield-tenant-999".to_string();
+        let product_id = Uuid::new_v4().to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+
+                // insert a dummy product with excess inventory
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, price, min_price, max_price, auto_pricing_enabled, inventory_count) VALUES ($1, $2, 100.0, 50.0, 150.0, true, 20)")
+                    .bind(&product_id)
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, price, min_price, max_price, auto_pricing_enabled, inventory_count) VALUES (?, ?, 100.0, 50.0, 150.0, true, 20)")
+                    .bind(&product_id)
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        // Trigger yield evaluation event
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.yield.evaluate".to_string(),
+            payload: serde_json::json!({}),
+        };
+
+        let res = orchestrator.dispatch_event(event).await;
+        assert!(res.is_ok());
+
+        // Poll for Operations evaluation task and Marketing draft
+        let mut has_ops_eval = false;
+        let mut has_marketing_draft = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
+            if pending.iter().any(|req| req.description.contains("Evaluate inventory yield")) {
+                has_ops_eval = true;
+            }
+            if pending.iter().any(|req| req.description.contains("Draft flash sale SMS")) {
+                has_marketing_draft = true;
+            }
+            if has_ops_eval && has_marketing_draft {
+                break;
+            }
+        }
+
+        assert!(has_ops_eval, "Yield flow should result in an Operations evaluation task");
+        assert!(has_marketing_draft, "Yield flow should result in a Marketing flash sale draft");
+    }
+
+    #[tokio::test]
     async fn test_customer_success_message_handling() {
         use crate::orchestration::departments::orchestrator::Department;
         if std::env::var("DATABASE_URL").is_err() {
