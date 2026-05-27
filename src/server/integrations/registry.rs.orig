@@ -411,21 +411,6 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
-    pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
-        let client = {
-            if integration_id == "manychat" {
-                let clients = self.manychat_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.fetch_conversations().await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
     pub async fn sync_customer(&self, integration_id: &str, email: &str, tag: &str) -> Result<(), String> {
         let client = {
             if integration_id == "mailchimp" {
@@ -466,17 +451,6 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.send_message(platform, to, body).await;
-        }
-        let client_manychat = {
-            if integration_id == "manychat" {
-                let clients = self.manychat_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client_manychat {
             return c.send_message(platform, to, body).await;
         }
         Err("integration not found or not supported".to_string())
@@ -522,17 +496,6 @@ impl IntegrationsRegistry {
             }
         };
         if let Some(c) = client {
-            return c.handle_webhook(payload).await;
-        }
-        let client_manychat = {
-            if integration_id == "manychat" {
-                let clients = self.manychat_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client_manychat {
             return c.handle_webhook(payload).await;
         }
         Err("integration not found or not supported".to_string())
@@ -771,7 +734,7 @@ async fn send_telegram_message(bot_token: String, chat_id: String, text: String)
         }))
         .send()
         .await;
-    
+
     if let Err(e) = res {
         tracing::error!("Failed to send Telegram message: {}", e);
     }
