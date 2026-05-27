@@ -17,6 +17,7 @@
     "@playwright/test": "1.50.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/ink": "^2.0.3",
     "@types/ink-spinner": "^3.0.5",
     "@types/node": "^25.6.0",
