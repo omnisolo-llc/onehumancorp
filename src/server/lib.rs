@@ -3098,10 +3098,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <p>Ongoing Tasks</p>
                             <p>Needs Your Approval</p>
                             <button onclick="markOrderReady()">Mark Order Ready</button>
+                            <button onclick="receive5StarReview()">Simulate 5-Star Review</button>
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
                                 <button onclick="dismissMilestone()">Dismiss</button>
+                                <a id="whatsapp-share-btn" href="#" target="_blank" style="display: none; background: #25D366; color: white; border: none; padding: 8px 16px; border-radius: 8px; font-weight: 600; text-decoration: none; margin-top: 8px; text-align: center;">Share to WhatsApp</a>
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
@@ -4700,6 +4702,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }, 3000);
                         }
 
+                        function receive5StarReview() {
+                            showMilestone('🎉 5-Star Review!', 'You received a 5-star review! Share your success.');
+                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
+                            const shareUrl = encodeURIComponent(`Just got a 5-star review! 🌟 Launch your business on OHC today: ohc://join?ref=${tenant}`);
+                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
+                            whatsappBtn.href = `https://wa.me/?text=${shareUrl}`;
+                            whatsappBtn.style.display = 'inline-block';
+                        }
+
                         let orderReadyCount = 0;
                         function markOrderReady() {
                             orderReadyCount += 1;
@@ -4722,6 +4733,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function dismissMilestone() {
                             document.getElementById('milestone-card').style.display = 'none';
+                            const whatsappBtn = document.getElementById('whatsapp-share-btn');
+                            if (whatsappBtn) {
+                                whatsappBtn.style.display = 'none';
+                            }
                         }
 
                         function shareMilestoneToX(milestoneId) {

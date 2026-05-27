@@ -129,4 +129,22 @@ test.describe('Success Milestones Notifications', () => {
 
     await expect(page.locator('text=First Sale!')).toBeHidden();
   });
+
+  test('should verify 5-Star Review milestone and share loop', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').filter({ visible: true }).first().click();
+    await page.waitForURL('**/dashboard');
+
+    const simulateReviewBtn = page.locator('button:has-text("Simulate 5-Star Review")');
+    await expect(simulateReviewBtn).toBeVisible();
+    await simulateReviewBtn.click();
+
+    await expect(page.locator('text=🎉 5-Star Review!')).toBeVisible({ timeout: 10000 });
+
+    const whatsappShare = page.locator('a:has-text("Share to WhatsApp")').first();
+    await expect(whatsappShare).toBeVisible();
+    await expect(whatsappShare).toHaveAttribute('href', /wa\.me.*5-star/i);
+  });
 });
