@@ -61,7 +61,7 @@ impl OHCSandboxManager for LocalSandbox {
                 #[cfg(target_os = "linux")]
         let output_res = {
             use crate::harness::sandbox::{SandboxAdapter, SandboxPolicy};
-            use crate::harness::sandbox::LinuxSandbox;
+            use crate::harness::sandbox::linux_sandbox::LinuxSandbox;
             use crate::harness::network_proxy::NetworkProxy;
             use tokio::net::TcpListener;
             use tokio::sync::watch;
