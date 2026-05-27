@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
   const userId = request.headers.get('x-user-id') || 'default';
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   try {
     const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/agents/approvals/${params.id}`, {
+    const res = await fetch(`${backendUrl}/api/agents/approvals/${resolvedParams.id}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body)
