@@ -6,6 +6,7 @@ use opentelemetry::global;
 use serde_json::{Map, Value};
 use sqlx::{PgPool, query};
 use std::sync::OnceLock;
+use tokio::sync::mpsc;
 
 use opentelemetry::metrics::Histogram;
 
@@ -784,6 +785,46 @@ pub async fn record_rag_escalation(
     .await
 }
 
+struct BufferedMetricEvent {
+    pool: PgPool,
+    metric_name: String,
+    metric_type: String,
+    value: f32,
+    labels: Value,
+}
+
+static BUFFER_METRIC_CHAN: OnceLock<mpsc::Sender<BufferedMetricEvent>> = OnceLock::new();
+
+fn get_buffer_metric_chan() -> mpsc::Sender<BufferedMetricEvent> {
+    BUFFER_METRIC_CHAN.get_or_init(|| {
+        let (tx, mut rx) = mpsc::channel::<BufferedMetricEvent>(10000);
+
+        tokio::spawn(async move {
+            while let Some(event) = rx.recv().await {
+                let redacted_labels = redact_interface_pii(event.labels);
+                let labels_json = match serde_json::to_string(&redacted_labels) {
+                    Ok(json) => json,
+                    Err(_) => continue,
+                };
+
+                let _ = query(
+                    "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+                     VALUES ($1, $2, $3, $4, $5, 'pending')"
+                )
+                .bind(event.metric_name)
+                .bind(event.metric_type)
+                .bind(event.value)
+                .bind(labels_json)
+                .bind(Utc::now())
+                .execute(&event.pool)
+                .await;
+            }
+        });
+
+        tx
+    }).clone()
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,
@@ -798,20 +839,16 @@ pub async fn buffer_metric(
         return Ok(());
     }
 
-    let redacted_labels = redact_interface_pii(labels);
-    let labels_json = serde_json::to_string(&redacted_labels)?;
+    let tx = get_buffer_metric_chan();
+    let event = BufferedMetricEvent {
+        pool: pool.clone(),
+        metric_name: metric_name.to_string(),
+        metric_type: metric_type.to_string(),
+        value,
+        labels,
+    };
 
-    query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
-         VALUES ($1, $2, $3, $4, $5, 'pending')"
-    )
-    .bind(metric_name)
-    .bind(metric_type)
-    .bind(value)
-    .bind(labels_json)
-    .bind(Utc::now())
-    .execute(pool)
-    .await?;
+    let _ = tx.try_send(event);
 
     Ok(())
 }

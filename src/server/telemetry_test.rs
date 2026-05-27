@@ -107,6 +107,7 @@ mod tests {
         let labels = json!({"user_id": "123", "secret": "shh"});
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
         assert!(res.is_ok());
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
@@ -255,6 +256,7 @@ mod tests {
         let labels = json!({"user_id": "standalone_test"});
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
         let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
             .fetch_one(&pool)
