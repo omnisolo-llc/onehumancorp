@@ -97,7 +97,7 @@ pub struct ApprovalRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ApprovalStatus {
-    PendingApproval,
+    Pending,
     Approved,
     Rejected,
 }

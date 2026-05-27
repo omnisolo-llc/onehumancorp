@@ -56,7 +56,7 @@ async fn test_builder_db_crud() {
     assert_eq!(pages[0].id, page.id);
 
     // 3. Create Blocks
-    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"headline": "Hello", "subtitle": "World"}), 0).await.expect("Failed to create block 1");
+    let block1 = db::create_block(&pool, tenant_id, page.id, "HeroBlock".to_string(), serde_json::json!({"text": "Hello"}), 0).await.expect("Failed to create block 1");
     let block2 = db::create_block(&pool, tenant_id, page.id, "ProductGridBlock".to_string(), serde_json::json!({"items": []}), 1).await.expect("Failed to create block 2");
 
     let blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
@@ -65,8 +65,8 @@ async fn test_builder_db_crud() {
     assert_eq!(blocks[1].id, block2.id);
 
     // 4. Update Block
-    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"headline": "Updated Hello", "subtitle": "World"})).await.expect("Failed to update block");
-    assert_eq!(updated_block1.content["headline"], "Updated Hello");
+    let updated_block1 = db::update_block(&pool, tenant_id, block1.id, serde_json::json!({"text": "Updated Hello"})).await.expect("Failed to update block");
+    assert_eq!(updated_block1.content["text"], "Updated Hello");
 
     // 5. Reorder Blocks
     db::reorder_blocks(&pool, tenant_id, page.id, vec![block2.id, block1.id]).await.expect("Failed to reorder blocks");
@@ -175,7 +175,7 @@ async fn test_builder_api() {
 
     // Create Block
     let res = client.post(&format!("{}/builder/pages/{}/blocks", base_url, page.id))
-        .json(&serde_json::json!({"block_type": "HeroBlock", "content": {"headline": "Hero", "subtitle": "Sub"}, "sort_order": 0}))
+        .json(&serde_json::json!({"block_type": "HeroBlock", "content": {"text": "Hero"}, "sort_order": 0}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
     let block: super::api::BlockResponse = res.json().await.unwrap();
@@ -183,7 +183,7 @@ async fn test_builder_api() {
 
     // Update Block
     let res = client.put(&format!("{}/builder/blocks/{}", base_url, block.id))
-        .json(&serde_json::json!({"content": {"headline": "Updated Hero", "subtitle": "Sub"}}))
+        .json(&serde_json::json!({"content": {"text": "Updated Hero"}}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
 

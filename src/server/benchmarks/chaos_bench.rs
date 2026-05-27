@@ -125,11 +125,11 @@ mod tests {
         // guarantees the underlying bounded logic without network drift.
         let start = std::time::Instant::now();
         let slow_operation = async {
-            tokio::task::yield_now().await; sleep(Duration::from_millis(3000)).await;
+            tokio::task::yield_now().await; sleep(Duration::from_millis(2050)).await;
             "ok"
         };
 
-        let result = timeout(Duration::from_millis(500), slow_operation).await;
+        let result = timeout(Duration::from_millis(2000), slow_operation).await;
         assert!(result.is_err()); // Timeout triggers
         assert!(start.elapsed() < Duration::from_millis(2500));
     }
