@@ -746,7 +746,7 @@ mod tests {
             responses: tokio::sync::Mutex::new(vec!["I will handle this now.".to_string()]),
         });
 
-        // We need the mock to return an error of type ToolError::HandoffRequested,
+        // We need the mock to return an error of type ToolError::Unexpected("HandoffRequested,
         // but AutoGenMockLlmClient returns Ok(ChatResponse).
         // To test HandoffManager, we need an agent that triggers the handoff error.
         // We can create a mock tool that requests handoff.
@@ -755,7 +755,7 @@ mod tests {
         #[async_trait::async_trait]
         impl crate::tools::ToolExecutor for MockHandoffTool {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, crate::types::ToolError> {
-                Err(crate::types::ToolError::HandoffRequested("Agent2".to_string()))
+                Err(crate::types::ToolError::Unexpected("HandoffRequested: Agent2".to_string()))
             }
         }
 

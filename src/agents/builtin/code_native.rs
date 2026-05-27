@@ -62,7 +62,7 @@ pub struct CodeNativeAdapter {
 impl CodeNativeAdapter {
     pub async fn execute_adapter(&self, args: serde_json::Value) -> Result<String, crate::types::ToolError> {
         let mut env_lock = self.env.write().await;
-        self.tool.execute_native(&mut env_lock, args).await.map_err(|e| crate::types::ToolError::Fatal(e))
+        self.tool.execute_native(&mut env_lock, args).await.map_err(|e| crate::types::ToolError::Unexpected(e))
     }
 }
 

@@ -40,16 +40,11 @@ impl ToolExecutionEngine {
                     // 3) User-fixable: interrupt execution and ask user for input.
                     return Err(ToolError::UserFixable(msg));
                 }
-                Err(ToolError::Fatal(msg)) => {
-                    // 4) Fatal: bubbles up to debug/halt immediately.
-                    return Err(ToolError::Fatal(msg));
-                }
+
                 Err(ToolError::Unexpected(msg)) => {
                     return Err(ToolError::Unexpected(msg));
                 }
-                Err(ToolError::HandoffRequested(msg)) => {
-                    return Err(ToolError::HandoffRequested(msg));
-                }
+
             }
         }
     }

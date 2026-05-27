@@ -654,7 +654,7 @@ impl Agent {
 
             // Workaround to call the generic closure since on_event is a generic F.
             // Wait, we can just return the error directly.
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            return Err(Box::new(crate::types::ToolError::Unexpected(format!("HandoffRequested: {}", err_msg))));
         }
 
         // Add initial message if needed
@@ -908,13 +908,14 @@ impl Agent {
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             return Err(format!("USER_FIXABLE:{}", msg));
                         }
-                        Err(crate::types::ToolError::Fatal(msg)) => {
+                        Err(crate::types::ToolError::Unexpected(msg)) => {
                             return Err(format!("Fatal tool error: {}", msg));
                         }
                         Err(crate::types::ToolError::Unexpected(msg)) => {
                             return Err(format!("Unexpected tool error: {}", msg));
                         }
-                        Err(crate::types::ToolError::HandoffRequested(target)) => {
+                        Err(crate::types::ToolError::Unexpected(msg)) if msg.starts_with("HandoffRequested:") => {
+                            let target = msg.trim_start_matches("HandoffRequested: ").to_string();
                             return Err(format!("Handoff requested to {}", target));
                         }
                     }
@@ -952,9 +953,9 @@ impl Agent {
                             }
                             Err(crate::types::ToolError::Transient(msg)) => return Err(format!("Unexpected tool error: Transient error after retries: {}", msg)),
                             Err(crate::types::ToolError::UserFixable(msg)) => return Err(format!("USER_FIXABLE:{}", msg)),
-                            Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg)),
+                            Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Fatal tool error: {}", msg)),
                             Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg)),
-                            Err(crate::types::ToolError::HandoffRequested(target)) => return Err(format!("Handoff requested to {}", target)),
+                            Err(crate::types::ToolError::Unexpected(msg)) if msg.starts_with("HandoffRequested:") => return Err(format!("Handoff requested to {}", msg.trim_start_matches("HandoffRequested: "))),
                         }
                         continue;
                     }
@@ -1030,13 +1031,14 @@ impl Agent {
                             Err(crate::types::ToolError::UserFixable(msg)) => {
                                 return Err(format!("USER_FIXABLE:{}", msg));
                             }
-                            Err(crate::types::ToolError::Fatal(msg)) => {
+                            Err(crate::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Fatal tool error: {}", msg));
                             }
                             Err(crate::types::ToolError::Unexpected(msg)) => {
                                 return Err(format!("Unexpected tool error: {}", msg));
                             }
-                            Err(crate::types::ToolError::HandoffRequested(target)) => {
+                            Err(crate::types::ToolError::Unexpected(msg)) if msg.starts_with("HandoffRequested:") => {
+                            let target = msg.trim_start_matches("HandoffRequested: ").to_string();
                                 return Err(format!("Handoff requested to {}", target));
                             }
                         }
@@ -1349,7 +1351,7 @@ impl Agent {
                     on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                     return Err(err.into());
                 }
-                Err(crate::types::ToolError::Fatal(msg)) => {
+                Err(crate::types::ToolError::Unexpected(msg)) => {
                     return Err(format!("Fatal tool error: {}", msg).into());
                 }
                 Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -1407,7 +1409,7 @@ impl Agent {
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
+                    Err(crate::types::ToolError::Unexpected(msg)) => {
                         return Err(format!("Fatal tool error: {}", msg).into());
                     }
                     Err(crate::types::ToolError::Unexpected(msg)) => {
@@ -1743,7 +1745,7 @@ impl Agent {
         if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
             let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
             on_event(AgentEvent::TaskError { error: err_msg.clone() });
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            return Err(Box::new(crate::types::ToolError::Unexpected(format!("HandoffRequested: {}", err_msg))));
         }
 
         // OpenAI Mechanic: Input Guardrails
@@ -2347,7 +2349,7 @@ impl Agent {
                         on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                         return Err(err.into());
                     }
-                    Err(ToolError::Fatal(msg)) => {
+                    Err(ToolError::Unexpected(msg)) => {
                         let err = format!("Fatal tool error: {}", msg);
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
@@ -2357,7 +2359,8 @@ impl Agent {
                         on_event(AgentEvent::TaskError { error: err.clone() });
                         return Err(err.into());
                     }
-                    Err(ToolError::HandoffRequested(target)) => {
+                    Err(ToolError::Unexpected(msg)) if msg.starts_with("HandoffRequested:") => {
+                            let target = msg.trim_start_matches("HandoffRequested: ").to_string();
                         on_event(AgentEvent::Handoff { target_agent: target.clone() });
                         return Ok(format!("Handoff requested to {}", target));
                     }
@@ -2392,7 +2395,7 @@ impl Agent {
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
-                        ToolError::Fatal(msg) => {
+                        ToolError::Unexpected(msg) => {
                             let err = format!("Fatal tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
@@ -2402,7 +2405,8 @@ impl Agent {
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
-                        ToolError::HandoffRequested(target) => {
+                        ToolError::Unexpected(msg) if msg.starts_with("HandoffRequested:") => {
+                            let target = msg.trim_start_matches("HandoffRequested: ").to_string();
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
                             return Ok(format!("Handoff requested to {}", target));
                         }
@@ -2534,7 +2538,7 @@ impl Agent {
                             on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
                             return Err(err.into());
                         }
-                        Err(ToolError::Fatal(msg)) => {
+                        Err(ToolError::Unexpected(msg)) => {
                             let err = format!("Fatal tool error: {}", msg);
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
@@ -2544,7 +2548,8 @@ impl Agent {
                             on_event(AgentEvent::TaskError { error: err.clone() });
                             return Err(err.into());
                         }
-                        Err(ToolError::HandoffRequested(target)) => {
+                        Err(ToolError::Unexpected(msg)) if msg.starts_with("HandoffRequested:") => {
+                            let target = msg.trim_start_matches("HandoffRequested: ").to_string();
                             on_event(AgentEvent::Handoff { target_agent: target.clone() });
                             return Ok(format!("Handoff requested to {}", target));
                         }
@@ -3190,7 +3195,7 @@ mod tests {
         let e_transient = crate::types::ToolError::Transient("timeout".to_string());
         let e_recoverable = crate::types::ToolError::LlmRecoverable("missing arg".to_string());
         let e_user = crate::types::ToolError::UserFixable("need input".to_string());
-        let e_fatal = crate::types::ToolError::Fatal("crash".to_string());
+        let e_fatal = crate::types::ToolError::Unexpected("crash".to_string());
         let e_unexpected = crate::types::ToolError::Unexpected("unknown".to_string());
 
         assert_eq!(e_transient.to_string(), "Transient error: timeout");
@@ -3982,7 +3987,7 @@ mod tests {
         #[async_trait::async_trait]
         impl ToolExecutor for HandoffToolExecutor {
             async fn execute(&self, _args: serde_json::Value) -> Result<String, ToolError> {
-                Err(ToolError::HandoffRequested("Finance".to_string()))
+                Err(ToolError::Unexpected("HandoffRequested: Finance".to_string()))
             }
         }
 
@@ -4120,7 +4125,7 @@ mod tests {
                     "transient_tool" => Err(ToolError::Transient("network timeout".to_string())),
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to external service".to_string())),
-                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "fatal_tool" => Err(ToolError::Unexpected("system corrupted".to_string())),
                     "unexpected_tool" => Err(ToolError::Unexpected("random crash".to_string())),
                     _ => Ok("success".to_string()),
                 }
@@ -5368,7 +5373,7 @@ mod tests {
                 match self.name.as_str() {
                     "transient_tool" => Err(ToolError::Transient(format!("network timeout {}", *count))),
                     "llm_recoverable_tool" => Err(ToolError::LlmRecoverable("missing parameter X".to_string())),
-                    "fatal_tool" => Err(ToolError::Fatal("system corrupted".to_string())),
+                    "fatal_tool" => Err(ToolError::Unexpected("system corrupted".to_string())),
                     "user_fixable_tool" => Err(ToolError::UserFixable("please login to proceed".to_string())),
                     _ => Ok("success".to_string()),
                 }

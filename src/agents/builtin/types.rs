@@ -139,12 +139,8 @@ pub enum ToolError {
     LlmRecoverable(String),
     /// Errors requiring human intervention. Pauses execution and asks the user.
     UserFixable(String),
-    /// Fatal errors. Bubbles up to debug/halt immediately.
-    Fatal(String),
     /// Unexpected errors. Bubbles up to debug/halt immediately.
     Unexpected(String),
-    /// Yield execution to another agent.
-    HandoffRequested(String),
 }
 
 impl std::fmt::Display for ToolError {
@@ -153,9 +149,7 @@ impl std::fmt::Display for ToolError {
             Self::Transient(msg) => write!(f, "Transient error: {}", msg),
             Self::LlmRecoverable(msg) => write!(f, "Recoverable error: {}", msg),
             Self::UserFixable(msg) => write!(f, "User intervention required: {}", msg),
-            Self::Fatal(msg) => write!(f, "Fatal error: {}", msg),
             Self::Unexpected(msg) => write!(f, "Unexpected error: {}", msg),
-            Self::HandoffRequested(target) => write!(f, "Handoff requested to: {}", target),
         }
     }
 }
