@@ -21,7 +21,42 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setIsLoaded(true);
+    const loadServerState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Merge server state if it exists
+          if (data && data.step) {
+            useOnboardingStore.setState({
+              step: data.step || step,
+              businessDescription: data.businessDescription || businessDescription,
+              businessName: data.businessName || businessName,
+              businessType: data.businessType || businessType,
+              categories: data.categories || categories,
+              websiteTemplate: data.websiteTemplate || websiteTemplate,
+              firstProductName: data.firstProductName || firstProductName,
+              firstProductPrice: data.firstProductPrice || firstProductPrice,
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load onboarding state from server:', e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    loadServerState();
   }, []);
 
   const handleIntake = async () => {

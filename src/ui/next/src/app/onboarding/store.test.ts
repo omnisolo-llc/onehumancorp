@@ -75,4 +75,28 @@ describe('useOnboardingStore', () => {
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
   });
+
+  it('should sync state to server asynchronously', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    global.fetch = fetchMock;
+
+    // Simulate updating store, which will trigger debounce timeout
+    useOnboardingStore.getState().setBusinessName('Sync Test');
+
+    // Wait for the debounce to execute
+    await new Promise((r) => setTimeout(r, 1100));
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+      method: 'POST',
+      headers: expect.objectContaining({ 'Content-Type': 'application/json' })
+    }));
+
+    // Test the syncStateToServer explicitly
+    const { syncStateToServer } = await import('./store');
+
+    const testState = useOnboardingStore.getState();
+    await syncStateToServer(testState);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

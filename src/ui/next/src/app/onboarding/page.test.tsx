@@ -23,7 +23,11 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false,
+    });
+
+    await act(async () => { render(<OnboardingWizard />); });
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -32,6 +36,11 @@ describe('OnboardingWizard', () => {
 
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock initial state load (no state on server)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false,
+    });
 
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
@@ -50,9 +59,9 @@ describe('OnboardingWizard', () => {
       json: async () => ({ message: "Success!" })
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const input = await screen.findByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
@@ -95,12 +104,17 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
+    // Mock initial state load (no state on server)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false
+    });
+
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
@@ -124,14 +138,19 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
+    // Mock initial state load (no state on server)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false
+    });
+
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const launchButton = await screen.findByRole('button', { name: /Launch Store/i });
 
     await act(async () => {
       launchButton.click();
@@ -150,13 +169,37 @@ describe('OnboardingWizard', () => {
       startResult: { message: "Your business has been successfully launched." }
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    // Mock initial state load (no state on server)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false
+    });
+
+    await act(async () => { render(<OnboardingWizard />); });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+    });
+  });
+
+  it('Loads state from backend successfully', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        step: 3,
+        businessName: "Loaded Business",
+        businessType: "Restored",
+      })
+    });
+
+    await act(async () => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().step).toBe(3);
+      expect(useOnboardingStore.getState().businessName).toBe("Loaded Business");
+      expect(useOnboardingStore.getState().businessType).toBe("Restored");
     });
   });
 });
