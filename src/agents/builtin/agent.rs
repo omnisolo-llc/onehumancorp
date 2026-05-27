@@ -142,6 +142,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub curated_memory_nudge_threshold: i32,
     pub enable_time_travel_rewind: bool,
     pub enable_serverless_hibernation: bool,
+    pub enable_agentic_seek_local_only: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
@@ -198,6 +199,7 @@ enable_llmcompiler_plan_and_execute: false,
             curated_memory_nudge_threshold: 5,
             enable_time_travel_rewind: false,
             enable_serverless_hibernation: false,
+            enable_agentic_seek_local_only: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
@@ -1543,6 +1545,13 @@ impl Agent {
         F: FnMut(AgentEvent) + Send + Sync,
     {
         let mut final_cfg = cfg.clone();
+
+        if final_cfg.enable_agentic_seek_local_only {
+            if let Err(e) = crate::agentic_seek::AgenticSeekEnforcer::enforce_local_only(&mut final_cfg) {
+                on_event(AgentEvent::TaskError { error: e.clone() });
+                return Err(e.into());
+            }
+        }
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
         }
