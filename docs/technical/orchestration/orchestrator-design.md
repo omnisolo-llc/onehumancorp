@@ -88,7 +88,7 @@ Agents lack long-term coherence. AutoDream runs passively to translate ephemeral
 
 ### 4.1 Data Pipeline Architecture
 *   **Data Sources**: Ephemeral context streams into `agent_session_data` and optional runtime memory files under `OHC_MEMORY_DIR`.
-*   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via a Minimax/LLM summarization call (using `src/server/agents/local/llm.go`).
+*   **Background Consolidation**: The `AutoDreamPipeline` orchestrator worker consumes these sources, chunking and compressing the context via the Rust LLM client layer under `src/agents/builtin/llm/`.
 *   **Vector Storage Schema (pgvector)**:
     ```sql
     CREATE TABLE IF NOT EXISTS consolidated_memory (

@@ -227,11 +227,8 @@ export default function Dashboard() {
       return;
     }
 
-    setIsSendingCampaign(true);
-    setTimeout(() => {
-      setIsSendingCampaign(false);
-      setCampaignSuccess(true);
-    }, 1500);
+    setIsSendingCampaign(false);
+    setCampaignSuccess(true);
   };
 
   const claimTrialExtension = () => {
@@ -242,10 +239,8 @@ export default function Dashboard() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTimeout(() => {
-      alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-      handleSendCampaign();
-    }, 500);
+    alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
+    handleSendCampaign();
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -1321,10 +1316,10 @@ export default function Dashboard() {
                                     if (response.ok) {
                                         setCartCampaignSent(true);
                                     } else {
-                                        setCartCampaignSent(true); // Mock success
+                                        console.error('Failed to send abandoned cart campaign');
                                     }
                                 } catch (e) {
-                                    setCartCampaignSent(true); // Mock success
+                                    console.error('Failed to send abandoned cart campaign', e);
                                 }
                             }}
                             className="w-full py-3 bg-red-600 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-red-700 transition-colors"
@@ -1397,17 +1392,13 @@ export default function Dashboard() {
                                     });
                                     if (response.ok) {
                                         setReviewSent(true);
-                                        setTimeout(() => setShowReviewModal(false), 1500);
+                                        setShowReviewModal(false);
                                     } else {
-                                        const originalMessage = reviewMessage;
                                         setReviewMessage('Failed to send campaign. Please try again later.');
-                                        setTimeout(() => setReviewMessage(originalMessage), 3000);
                                     }
                                 } catch (e) {
                                     console.error('Failed to send review campaign', e);
-                                    const originalMessage = reviewMessage;
                                     setReviewMessage('Failed to send campaign. Please try again later.');
-                                    setTimeout(() => setReviewMessage(originalMessage), 3000);
                                 }
                             }}
                             className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-md flex items-center justify-center gap-2"
