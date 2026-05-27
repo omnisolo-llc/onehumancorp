@@ -350,6 +350,9 @@ export default function Dashboard() {
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
+             <Link href="/discount-links" className="px-4 py-2 bg-green-100 text-green-800 rounded-md text-sm font-medium hover:bg-green-200 transition-colors border border-green-200 shadow-sm">
+               Discount Links 💸
+             </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
