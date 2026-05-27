@@ -38,7 +38,7 @@ pub async fn create_task_handler(
 ) -> impl IntoResponse {
     let task = SharedTask {
         id: format!("task-{}", uuid::Uuid::new_v4()),
-        organization_id: user.tenant_id.clone(), // Proper Multi-Tenant Scoping!
+        organization_id: user.organization_id.clone().unwrap_or_else(|| "system".to_string()), // Proper Multi-Tenant Scoping!
         mission_id: payload.mission_id,
         parent_plan_id: "".to_string(),
         dependencies: vec![],
