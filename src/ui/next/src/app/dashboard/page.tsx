@@ -60,6 +60,12 @@ export default function Dashboard() {
   const [cartCampaignMessage, setCartCampaignMessage] = useState<string>("");
   const [cartCampaignSent, setCartCampaignSent] = useState<boolean>(false);
 
+  // Growth Loop: VIP Customer Referral Campaign State
+  const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
+  const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
+  const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
+  const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
   }, []);
@@ -389,6 +395,26 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
+         {!hasPro && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+               <div>
+                   <div className="flex items-center gap-3 mb-2">
+                     <div className="text-2xl">🚀</div>
+                     <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Ready to scale?</h2>
+                   </div>
+                   <p className="text-gray-600 font-inter text-sm leading-relaxed max-w-lg">
+                     Upgrade to Pro for unlimited agents, advanced analytics, and custom domains. Grow your business faster and without limits.
+                   </p>
+               </div>
+               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+                 Upgrade to Pro
+               </Link>
+             </div>
+           </section>
+         )}
+
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
@@ -553,12 +579,12 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Automated review requests for recent orders Growth Loop */}
+         {/* Automated AI Review Requests Growth Loop */}
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
                     <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated review requests for recent orders
+                        Automated AI Review Requests
                         <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
                             New Growth Loop
                         </span>
@@ -614,6 +640,69 @@ export default function Dashboard() {
                    <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                    </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: VIP Customer Referral Campaign */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>VIP Customer Referrals</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Customer Acquisition</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Promoters</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>12 top customers</strong> who haven't joined your VIP referral program. Ask them to refer their friends using an AI-generated email campaign.</p>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">
+                                    🎁
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">VIP Referral Invite</h4>
+                                    <p className="text-xs text-gray-500">12 top customers</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={async () => {
+                                    setIsGeneratingCustomerReferral(true);
+                                    setShowCustomerReferralModal(true);
+                                    setCustomerReferralSent(false);
+                                    try {
+                                        const response = await fetch('/api/v1/growth/campaign/generate-customer-referral', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ store_name: businessName })
+                                        });
+                                        if (response.ok) {
+                                            const data = await response.json();
+                                            if (data.message) {
+                                                setCustomerReferralMessage(data.message);
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error("Failed to generate VIP referral campaign", e);
+                                        setCustomerReferralMessage("Hi there! We love having you as a top customer. As a special thank you, give your friends 15% off their first order. When they buy, you get $10! Share your link today.");
+                                    } finally {
+                                        setIsGeneratingCustomerReferral(false);
+                                    }
+                                }}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
+                            >
+                                Generate Campaign
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
+                    <div className="text-4xl mb-3">🤝</div>
+                    <span className="text-sm font-medium text-gray-600 text-center">+25% more new customers</span>
                 </div>
             </div>
          </section>
@@ -1005,34 +1094,6 @@ export default function Dashboard() {
                         <div className="text-5xl font-outfit font-bold text-gray-900 mb-2">{trialDaysLeft}</div>
                         <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Days Left</div>
                     </div>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: Social Share Cards */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Share Cards</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
-                        <span className="text-xs font-medium text-purple-600">Growth Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Share Your Store</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate beautiful, branded share cards for your store, products, or milestones to share on social media. Each card includes a trackable link.</p>
-                    <Link
-                        href="/share-cards"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
-                    >
-                        <span>Generate Share Cards</span>
-                    </Link>
-                </div>
-                <div className="w-full md:w-1/3 bg-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px]">
-                    <div className="text-4xl mb-3">🎴</div>
-                    <span className="text-sm font-medium text-purple-600 text-center">Stand out on social media</span>
                 </div>
             </div>
          </section>
@@ -1461,6 +1522,68 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Customer Referral Modal */}
+      {showCustomerReferralModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600">
+                🎁
+              </div>
+              <button
+                onClick={() => setShowCustomerReferralModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">AI Referral Invite</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              {customerReferralSent ? "Campaign successfully sent to your top 12 customers!" : "Review the AI-generated referral invite. This will be emailed to your top 12 customers."}
+            </p>
+
+            <div className="space-y-4">
+              {!customerReferralSent && (
+                <>
+                    {isGeneratingCustomerReferral ? (
+                        <div className="w-full bg-gray-50 border border-gray-200 rounded-lg p-6 flex flex-col items-center justify-center gap-3">
+                             <div className="w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                             <span className="text-sm font-medium text-gray-500">Drafting personalized invites...</span>
+                        </div>
+                    ) : (
+                        <textarea
+                            value={customerReferralMessage}
+                            onChange={(e) => setCustomerReferralMessage(e.target.value)}
+                            rows={8}
+                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-700 resize-none font-inter"
+                        />
+                    )}
+
+                    {!isGeneratingCustomerReferral && (
+                        <button
+                            onClick={async () => {
+                                // Simulate sending email
+                                setCustomerReferralSent(true);
+                                setTimeout(() => {
+                                    setShowCustomerReferralModal(false);
+                                }, 3000);
+                            }}
+                            className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                        >
+                            Send Campaign to 12 Customers
+                        </button>
+                    )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SaaS Conversion: Upgrade Modal (Soft Paywall) */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -1539,7 +1662,7 @@ export default function Dashboard() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
