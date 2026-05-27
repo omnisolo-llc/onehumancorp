@@ -47,13 +47,32 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
   });
 
+  it('should update new state keys correctly', () => {
+    useOnboardingStore.getState().setBusinessName('Test Business');
+    useOnboardingStore.getState().setBusinessType('Cafe');
+    useOnboardingStore.getState().setCategories(['food', 'drinks']);
+    useOnboardingStore.getState().setWebsiteTemplate('Classic');
+    useOnboardingStore.getState().setFirstProductName('Coffee');
+    useOnboardingStore.getState().setFirstProductPrice('5.00');
+
+    const state = useOnboardingStore.getState();
+    expect(state.businessName).toBe('Test Business');
+    expect(state.businessType).toBe('Cafe');
+    expect(state.categories).toEqual(['food', 'drinks']);
+    expect(state.websiteTemplate).toBe('Classic');
+    expect(state.firstProductName).toBe('Coffee');
+    expect(state.firstProductPrice).toBe('5.00');
+  });
+
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
+    useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v2'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v2') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v3'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
+    expect(storedState.state.businessName).toBe('Persisted Name');
   });
 });

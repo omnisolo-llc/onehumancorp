@@ -7,6 +7,12 @@ export default function OnboardingWizard() {
   const {
     step, setStep,
     businessDescription, setBusinessDescription,
+    businessName, setBusinessName,
+    businessType, setBusinessType,
+    categories, setCategories,
+    websiteTemplate, setWebsiteTemplate,
+    firstProductName, setFirstProductName,
+    firstProductPrice, setFirstProductPrice,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -18,16 +24,14 @@ export default function OnboardingWizard() {
     setIsLoaded(true);
   }, []);
 
-  const handleStartOnboarding = async () => {
+  const handleIntake = async () => {
     setIsLoading(true);
     setError('');
-    setStep(2); // Go to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      // Step A: Intake
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
         headers: {
@@ -44,15 +48,30 @@ export default function OnboardingWizard() {
 
       const intakeData = await intakeRes.json();
 
-      // We will map intake data to the start request
-      // We need a deterministic but sensible fallback if intakeData doesn't parse well
-      const businessType = intakeData.business_type || 'Online Store';
-      const companyName = intakeData.business_name || 'My Business';
-      const firstProductName = intakeData.initial_products?.[0]?.name || 'First Product';
-      const firstProductPrice = intakeData.initial_products?.[0]?.price || '10.00';
-      const categories = intakeData.categories || ['physical'];
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
 
-      // Step B: Start Onboarding
+      setStep(2); // Go to review step
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'An error occurred processing details');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartOnboarding = async () => {
+    setIsLoading(true);
+    setError('');
+    setStep(4); // Go to loading screen
+
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
       const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
         headers: {
@@ -62,14 +81,14 @@ export default function OnboardingWizard() {
         },
         body: JSON.stringify({
           business_type: businessType,
-          company_name: companyName,
+          company_name: businessName,
           company_description: businessDescription,
           selling_categories: categories,
           payment_pref: 'online',
           admin_email: 'admin@ohc.app',
           admin_name: 'Admin',
           admin_password: 'password123',
-          website_template: 'Modern',
+          website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: 'subdomain',
@@ -83,12 +102,12 @@ export default function OnboardingWizard() {
 
       const result = await startRes.json();
       setStartResult(result);
-      setStep(3); // Go to "You're Live" screen
+      setStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      setStep(1); // Go back on error
+      setStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
@@ -129,17 +148,127 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={handleStartOnboarding}
+                  onClick={handleIntake}
                   disabled={!businessDescription.trim() || isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
                 >
-                  Generate My Business
+                  {isLoading ? 'Analyzing...' : 'Generate My Business'}
                 </button>
               </div>
             </div>
           )}
 
           {step === 2 && (
+            <div className="flex flex-col flex-1 animate-fade-in">
+              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Here's what our AI figured out. Feel free to tweak these.
+              </p>
+
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
+                  <input
+                    type="text"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={categories.join(', ')}
+                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
+                      <input
+                        type="text"
+                        value={firstProductName}
+                        onChange={(e) => setFirstProductName(e.target.value)}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
+                      <input
+                        type="text"
+                        value={firstProductPrice}
+                        onChange={(e) => setFirstProductPrice(e.target.value)}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6">
+                <button
+                  onClick={() => setStep(3)}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="flex flex-col flex-1 animate-fade-in">
+              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
+                      <div
+                        key={template}
+                        onClick={() => setWebsiteTemplate(template)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                      >
+                        <div className="font-semibold">{template}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6">
+                <button
+                  onClick={handleStartOnboarding}
+                  disabled={isLoading}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  Launch Store
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
              <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -150,11 +279,12 @@ export default function OnboardingWizard() {
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
                  <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
                </div>
              </div>
           )}
 
-          {step === 3 && startResult && (
+          {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
