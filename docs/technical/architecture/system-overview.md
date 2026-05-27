@@ -33,9 +33,9 @@ sequenceDiagram
 ```
 
 ## 2. Phase 2: Orchestration (Teammate Mesh Architecture)
-Realtime communication via Centrifuge node integration in `src/server/orchestration/mesh.rs` and transport components like `LocalTeammateMesh`.
+Realtime communication flows through `src/server/orchestration/mesh.rs` and the built-in mesh transport layer in `src/agents/builtin/mesh/transport.rs`.
 - **Cloud-Native Mode:** Uses Redis Pub/Sub (`redis`).
-- **Standalone Mode:** In-memory Go channel broadcast.
+- **Standalone Mode:** Uses local in-process transport without requiring Redis.
 
 ## 3. Phase 3: autoDream (Memory Consolidation Pipeline)
 Background workers consolidate `agent_session_data` and optional `OHC_MEMORY_DIR/*.yml` runtime memory files to embeddings stored in PostgreSQL with pgvector, in the `consolidated_memory` table.
