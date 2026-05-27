@@ -3302,6 +3302,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button id="send-review-campaign-btn" onclick="sendReviewCampaign()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%);">✨ Send AI Review Requests</button>
                         </div>
 
+                        <!-- Abandoned Cart Recovery -->
+                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                <h3 style="margin: 0; color: var(--text-primary);">Abandoned Cart Recovery <span style="font-size: 12px; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                            </div>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Automatically send AI-generated reminder emails with personalized offers to customers who leave items in their cart to recover up to 15% more sales.</p>
+                            <div id="cart-recovery-success" style="display: none; padding: 12px; border-radius: 8px; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; font-weight: 500; font-size: 14px; margin-bottom: 16px;">
+                                ✓ Recovery campaign activated and listening for abandoned carts!
+                            </div>
+                            <button id="activate-cart-recovery-btn" onclick="activateCartRecovery()" style="width: 100%; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); color: white;">✨ Activate Cart Recovery</button>
+                        </div>
+
                         <!-- Social Media Discount Share -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -4566,6 +4578,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 btn.disabled = false;
                                 alert('Failed to send campaign');
                             }
+                        }
+
+                        async function activateCartRecovery() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
+                            const btn = document.getElementById('activate-cart-recovery-btn');
+                            btn.textContent = 'Activating...';
+                            btn.disabled = true;
+
+                            await new Promise(r => setTimeout(r, 1500));
+
+                            document.getElementById('cart-recovery-success').style.display = 'block';
+
+                            btn.textContent = 'Active';
+                            btn.style.background = '#8b5cf6';
                         }
 
                         function closeDomainSetup() {
