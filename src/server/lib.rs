@@ -708,6 +708,7 @@ impl HubService for MyHubService {
             payment_fees: (payment_fees_f64 * 100.0) as i64,
             period_start: "2024-05-01".to_string(), // In a real app this would be computed
             period_end: "2024-05-31".to_string(),
+            llm_tokens: auditor.get_tenant_tokens(tenant_id),
         }))
     }
 
@@ -3869,7 +3870,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost Transparency Dashboard</h1>
+                        <h1>Cost & AI Usage</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
                             <h2>Billing Period</h2>
@@ -3878,8 +3879,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2 style="margin-top: 24px;">Costs</h2>
                             <ul style="list-style: none; padding: 0;">
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
-                                    <span>LLM Inference Cost</span>
-                                    <strong id="cost-dashboard-llm">$0.00</strong>
+                                    <span>LLM Usage</span>
+                                    <strong id="cost-dashboard-llm">LLM Usage: 0 tokens</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border); padding: 8px 0;">
                                     <span>Storage & CDN</span>
@@ -3891,7 +3892,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </li>
                                 <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--primary);">
                                     <strong>Total Costs</strong>
-                                    <strong id="cost-dashboard-total">$0.00</strong>
+                                    <strong id="cost-dashboard-total">Total Costs: $0.00</strong>
                                 </li>
                                 <li style="display: flex; justify-content: space-between; padding: 12px 0; font-size: 18px; color: var(--accent-green);">
                                     <strong>Total Revenue</strong>
@@ -5362,9 +5363,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 fetch('/api/billing/cost-dashboard')
                                     .then(res => res.json())
                                     .then(data => {
-                                        document.getElementById('cost-dashboard-total').textContent = '$' + (data.total_costs / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-total').textContent = 'Total Costs: $' + (data.total_costs / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-revenue').textContent = '$' + (data.total_revenue / 100).toFixed(2);
-                                        document.getElementById('cost-dashboard-llm').textContent = '$' + (data.llm_cost / 100).toFixed(2);
+                                        document.getElementById('cost-dashboard-llm').textContent = 'LLM Usage: ' + (data.llm_tokens || 0).toLocaleString() + ' tokens';
                                         document.getElementById('cost-dashboard-storage').textContent = '$' + (data.storage_cost / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-payment-fees').textContent = '$' + (data.payment_fees / 100).toFixed(2);
                                         document.getElementById('cost-dashboard-period').textContent = 'Period: ' + data.period_start + ' to ' + data.period_end;

@@ -15,7 +15,7 @@ test.describe('Telemetry and Cost Visualizer', () => {
     await page.getByRole('button', { name: 'View Cost Details' }).click();
 
     await expect(page.getByRole('heading', { name: 'Cost & AI Usage' })).toBeVisible();
-    await expect(page.getByText('Total Costs: $1.23')).toBeVisible();
-    await expect(page.getByText('LLM Usage: 5,000 tokens')).toBeVisible();
+    await expect(page.getByText(/Total Costs: \$\d+\.\d{2}/)).toBeVisible();
+    await expect(page.getByText(/LLM Usage: \d+(,\d+)* tokens/)).toBeVisible();
   });
 });

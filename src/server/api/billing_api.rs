@@ -22,6 +22,7 @@ pub struct CostDashboardResponse {
     pub payment_fees: i64,
     pub period_start: String,
     pub period_end: String,
+    pub llm_tokens: i64,
 }
 
 pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -98,7 +99,7 @@ pub async fn cost_dashboard_handler(
                 auth.org_id.clone()
             }
         },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string(), llm_tokens: 0 })
     };
 
     let now = chrono::Utc::now();
@@ -109,6 +110,7 @@ pub async fn cost_dashboard_handler(
     let auditor = hub.get_cost_auditor();
 
     let llm_cost_f64 = auditor.get_total_cost();
+    let llm_tokens = auditor.get_tenant_tokens(&tenant_id);
     let total_revenue_f64 = auditor.get_total_revenue();
 
     let storage_bytes = hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
@@ -126,5 +128,6 @@ pub async fn cost_dashboard_handler(
         payment_fees: (payment_fees_f64 * 100.0) as i64,
         period_start,
         period_end,
+        llm_tokens,
     })
 }

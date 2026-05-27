@@ -1648,6 +1648,7 @@ message CostDashboardResponse {
   int64 payment_fees = 5;
   string period_start = 6;
   string period_end = 7;
+  int64 llm_tokens = 8;
 }
 
 message SelectPlanRequest {
