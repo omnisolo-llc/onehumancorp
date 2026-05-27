@@ -705,21 +705,6 @@ pub async fn record_api_call_cost(
     .await
 }
 
-pub async fn record_mcp_proxy_connections_active(
-    pool: &PgPool,
-    spiffe_id: &str,
-    delta: f32,
-) -> Result<(), Box<dyn std::error::Error>> {
-    buffer_metric(
-        pool,
-        "ohc_mcp_proxy_connections_active",
-        "gauge",
-        delta,
-        serde_json::json!({ "spiffe_id": spiffe_id }),
-    )
-    .await
-}
-
 pub async fn record_swarm_job_latency_by_entity(
     pool: &PgPool,
     mode: &str,
@@ -1101,7 +1086,7 @@ mod additional_tests {
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
-        let mode = crate::get_deployment_mode();
+        let mode = ::server_telemetry::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }

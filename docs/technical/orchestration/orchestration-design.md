@@ -12,7 +12,7 @@ A durable distributed state machine for swarm tasks (`swarm_tasks` and `shared_t
 ## Phase 2: Teammate Mesh (The Nerves)
 A high-throughput realtime event bus for intent broadcast and memory coordination.
 - **Cloud Mode:** Agents publish to production Redis Pub/Sub channels (`mesh:tasks`, `mesh:coordination`). Centrifuge Node handles downstream WebSockets.
-- **Standalone Mode:** Falls back to local in-process transport for offline functionality.
+- **Standalone Mode:** Fallbacks to in-memory Go channels for offline functionality.
 - **Security:** Zero Secrets architecture relying entirely on SPIFFE/SPIRE mTLS identities.
 
 ## Phase 3: AutoDream (The Memory)
