@@ -105,7 +105,7 @@ common:buildbuddy --bes_results_url=https://buildbuddy.phslc.com/invocation/
 common:buildbuddy --bes_backend=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_cache=grpcs://buildbuddy-grpc.phslc.com
 # common:buildbuddy --remote_downloader=grpcs://buildbuddy-grpc.phslc.com
-common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
+# common:buildbuddy --remote_executor=grpcs://buildbuddy-grpc.phslc.com
 common:buildbuddy --remote_local_fallback
 common:buildbuddy --remote_upload_local_results
 common:buildbuddy --remote_cache_compression

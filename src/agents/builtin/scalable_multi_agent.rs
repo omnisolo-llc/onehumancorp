@@ -43,12 +43,12 @@ impl CloudDeploymentManager {
         let mut futures = Vec::with_capacity(tasks.len());
 
         for (task_id, task_prompt) in tasks {
-            let permit = semaphore.clone().acquire_owned().await.unwrap();
             let agent = self.agent_blueprint.clone();
             let config = self.config.clone();
+            let sem = semaphore.clone();
 
             let fut = tokio::spawn(async move {
-                let _permit = permit; // holds the permit until the task is complete
+                let _permit = sem.acquire_owned().await.unwrap(); // acquire inside task to prevent deadlock on single-threaded runtimes
                 let mut on_event = |_| {};
 
                 let output = match agent.run(&config, &task_prompt, &mut on_event).await {

@@ -30,7 +30,7 @@ describe('OnboardingWizard', () => {
     expect(button).toBeDisabled();
   });
 
-  it('Handles multi-step successful onboarding flow', async () => {
+  it('Step 1: Enables button when text is entered and handles successful onboarding', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
@@ -58,34 +58,12 @@ describe('OnboardingWizard', () => {
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
+    // Use act to click the button and trigger the async flow
     await act(async () => {
       button.click();
     });
 
-    // Verify it transitions to Step 2: Review Details
-    await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
-
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await act(async () => {
-      continueButton.click();
-    });
-
-    // Verify it transitions to Step 3: Style & Team
-    await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify it transitions to Step 5 (Live Screen) on success
+    // Verify it transitions to step 3 on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
@@ -118,11 +96,14 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
+  it('Step 1: Handles start API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
+    // Mock intake success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
 
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
@@ -131,22 +112,25 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(input, 'I am a baker in NY');
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
 
     await act(async () => {
-      launchButton.click();
+      button.click();
     });
 
-    // Verify error appears and step goes back to 3
+    // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     });
   });
 
-  it('Step 5: Shows Live Screen with correct links', async () => {
+  it('Step 3: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
-      step: 5,
+      step: 3,
       startResult: { message: "Your business has been successfully launched." }
     });
 
