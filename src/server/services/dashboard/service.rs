@@ -81,7 +81,7 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                Ok::<_, String>(hub2.get_meetings().await.to_vec())
             }),
             tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
@@ -463,9 +463,10 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
-
-            final_meetings = out_meetings;
         }
+
+        // Mobile clients still need the meeting IDs and participants, just not transcripts.
+        final_meetings = out_meetings;
 
         let org = if req.mobile_optimized {
             org.map(|mut o| {

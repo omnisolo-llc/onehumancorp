@@ -35,7 +35,10 @@ where
     async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
         if let Some(client) = &self.redis_client {
             let conn = self.redis_conn.get_or_try_init(|| async {
-                client.get_multiplexed_tokio_connection().await
+                match tokio::time::timeout(std::time::Duration::from_millis(5), client.get_multiplexed_tokio_connection()).await {
+                    Ok(Ok(c)) => Ok(c),
+                    _ => Err(redis::RedisError::from((redis::ErrorKind::IoError, "Connection timeout"))),
+                }
             }).await.ok()?;
             Some(conn.clone())
         } else {

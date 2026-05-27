@@ -105,7 +105,7 @@ pub async fn bench_api_response_time() {
 
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
-        standalone_times.push(start.elapsed().as_micros());
+        standalone_times.push(start.elapsed().as_millis());
     }
     standalone_times.sort();
     println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
