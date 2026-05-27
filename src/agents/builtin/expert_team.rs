@@ -1,25 +1,23 @@
+use crate::types::{ChatRequest, Message};
 use std::sync::Arc;
-use crate::types::{ChatRequest, Message, Role, ToolCall};
 use futures::future::join_all;
 
-#[async_trait::async_trait]
-#[async_trait::async_trait]
+/// Expert Team Pattern
+/// Orchestrates an expert team with parallel execution,
+/// code-enforced quality gates, and skill-trace tracking.
+
 #[async_trait::async_trait]
 pub trait ExpertTeamLlmClient: Send + Sync {
     async fn chat(&self, req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
 }
 
-/// Skill-trace tracking to prevent hard-coded bypasses.
-#[derive(Debug, Clone, Default)]
 pub struct SkillTrace {
     pub skills_used: Vec<String>,
 }
 
 impl SkillTrace {
     pub fn new() -> Self {
-        Self {
-            skills_used: Vec::new(),
-        }
+        Self { skills_used: Vec::new() }
     }
 
     pub fn record_skill(&mut self, skill: &str) {
@@ -27,38 +25,35 @@ impl SkillTrace {
     }
 
     pub fn has_required_skills(&self) -> bool {
-        // As part of the pre-deliver gate, we require at least some minimum trace of skill usage.
+        // Enforce that actual execution happened, not a hardcoded bypass
         !self.skills_used.is_empty()
     }
 }
 
 pub struct DomainExpert<T: ExpertTeamLlmClient + ?Sized> {
     pub role: String,
-    pub llm: std::sync::Arc<T>,
+    pub llm: Arc<T>,
 }
 
 impl<T: ExpertTeamLlmClient + ?Sized> DomainExpert<T> {
     pub async fn execute(&self, task: &str, trace: &mut SkillTrace) -> Result<String, String> {
-        // Track the skill usage
-        trace.record_skill(&format!("{}_analysis", self.role.to_lowercase().replace(" ", "_")));
-
-        let system_prompt = format!("You are an expert in {}. Provide a detailed analysis based on the user's task.", self.role);
-
+        // Simulate execution using the specific expert's role
         let req = ChatRequest {
-            model: "default".to_string(),
-            system: system_prompt,
-            messages: vec![Message::user(task)],
+            model: "expert-model".to_string(),
+            system: format!("You are acting as the {}.", self.role),
+            messages: vec![Message::user(task.to_string())],
             tools: vec![],
-            max_tokens: 4000,
-            temperature: 0.2,
+            max_tokens: 2000,
+            temperature: 0.0,
         };
 
         match self.llm.chat(req).await {
             Ok(resp) => {
-                let text = resp.message.content;
-                Ok(text)
+                // Record skill usage dynamically based on role
+                trace.record_skill(&format!("{}_analysis", self.role.to_lowercase().replace(" ", "_")));
+                Ok(resp.message.content)
             }
-            Err(e) => Err(format!("LLM Error: {}", e)),
+            Err(e) => Err(format!("{} failed: {}", self.role, e)),
         }
     }
 }
@@ -81,10 +76,6 @@ impl<T: ExpertTeamLlmClient + ?Sized> ExpertTeamManager<T> {
     pub async fn execute_parallel_tasks(&self, task: &str, trace: &mut SkillTrace) -> Result<Vec<String>, String> {
         // Prepare futures for parallel execution
         let mut futures = Vec::new();
-
-        // Note: we'll simulate parallel execution with futures::future::join_all,
-        // but since `execute` mutates `trace`, we'll need to handle it carefully in Rust.
-        // For the sake of this pattern, we will return the skills from each expert and merge them back.
 
         for expert in &self.domain_experts {
             let role_name = expert.role.clone();
@@ -156,12 +147,12 @@ impl QualityGates {
             return Err("Pre-merge Gate Failed: No summaries to merge.".to_string());
         }
 
-        // Check for similarity (dummy implementation to represent the logic)
-        // If the outputs are too similar, we reject them.
+        // Real similarity check using bigram Jaccard similarity to represent >=75% threshold
         for i in 0..summaries.len() {
             for j in (i + 1)..summaries.len() {
-                if summaries[i] == summaries[j] {
-                    return Err("Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs. Deduplication required.".to_string());
+                let similarity = Self::calculate_jaccard_similarity(&summaries[i], &summaries[j]);
+                if similarity >= 0.75 {
+                    return Err(format!("Pre-merge Gate Failed: High similarity detected ({:.0}%) between expert outputs. Deduplication required.", similarity * 100.0));
                 }
             }
         }
@@ -174,6 +165,20 @@ impl QualityGates {
         }
 
         Ok(())
+    }
+
+    fn calculate_jaccard_similarity(s1: &str, s2: &str) -> f64 {
+        let bigrams1: std::collections::HashSet<_> = s1.as_bytes().windows(2).collect();
+        let bigrams2: std::collections::HashSet<_> = s2.as_bytes().windows(2).collect();
+
+        if bigrams1.is_empty() && bigrams2.is_empty() {
+            return 1.0;
+        }
+
+        let intersection = bigrams1.intersection(&bigrams2).count();
+        let union = bigrams1.union(&bigrams2).count();
+
+        intersection as f64 / union as f64
     }
 
     /// Pre-deliver (e.g., >=20,000 words, chart verification, skill-trace completeness).
@@ -201,8 +206,7 @@ impl QualityGates {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use ohc_builtin_agent_core::types::{ChatResponse, Usage};
+    use crate::types::Usage;
 
     struct MockExpertLlm {
         role_resp: String,
@@ -210,8 +214,8 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ExpertTeamLlmClient for MockExpertLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(ChatResponse {
+        async fn chat(&self, _req: ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(crate::types::ChatResponse {
                 message: Message::assistant(self.role_resp.clone()),
                 usage: Usage::default(),
                 stop_reason: "stop".to_string(),
@@ -223,11 +227,11 @@ mod tests {
     #[tokio::test]
     async fn test_expert_team_successful_execution() {
         let experts = vec![
-            DomainExpert { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary...".to_string() }) },
-            DomainExpert { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial summary...".to_string() }) },
-            DomainExpert { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic summary...".to_string() }) },
-            DomainExpert { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process summary...".to_string() }) },
-            DomainExpert { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality summary...".to_string() }) },
+            DomainExpert { role: "Industry Researcher".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Research summary is very different from financial...".to_string() }) },
+            DomainExpert { role: "Financial Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Financial metrics are detailed here with numbers...".to_string() }) },
+            DomainExpert { role: "Strategic Analyst".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Strategic overview indicating growth potential...".to_string() }) },
+            DomainExpert { role: "Process Supervisor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Process checks passed successfully...".to_string() }) },
+            DomainExpert { role: "Quality Auditor".to_string(), llm: Arc::new(MockExpertLlm { role_resp: "Quality meets the standard requirements...".to_string() }) },
         ];
         let manager = ExpertTeamManager::new("Project Director", experts);
 
@@ -268,8 +272,19 @@ mod tests {
     #[test]
     fn test_pre_merge_failure_high_similarity() {
         let summaries = vec![
-            "Identical output about market analysis".to_string(),
-            "Identical output about market analysis".to_string(),
+            "This output is highly detailed regarding the current market analysis.".to_string(),
+            "This output is highly detailed regarding the current market analysis.".to_string(),
+        ];
+        let res = QualityGates::pre_merge(&summaries);
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("High similarity detected"));
+    }
+
+    #[test]
+    fn test_pre_merge_failure_75_percent_similarity() {
+        let summaries = vec![
+            "The market analysis shows a 15% increase in demand for AI agents globally this quarter.".to_string(),
+            "The market analysis shows a 15% increase in demand for AI agents globally this period.".to_string(),
         ];
         let res = QualityGates::pre_merge(&summaries);
         assert!(res.is_err());
