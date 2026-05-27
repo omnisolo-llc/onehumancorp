@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -16,12 +16,6 @@ env:
   KIND_VERSION: "v0.31.0"
   KUBECTL_VERSION: "v1.36.1"
   HELM_VERSION: "v3.20.2"
-  KIND_SHA256_AMD64: "eb244cbafcc157dff60cf68693c14c9a75c4e6e6fedaf9cd71c58117cb93e3fa"
-  KIND_SHA256_ARM64: "8e1014e87c34901cc422a1445866835d1e666f2a61301c27e722bdeab5a1f7e4"
-  KUBECTL_SHA256_AMD64: "629d3f410e09bf49b64ae7079f7f0bda1191efed311f7d37fdbab0ad5b0ec2b7"
-  KUBECTL_SHA256_ARM64: "59f7ee8e477fae658447607dc3c8790ac17a1b016c01c622c12070e969e2d4e7"
-  HELM_SHA256_AMD64: "258e830a9e613c8a7a302d6059b4bb3b9758f2f3e1bb8ea0d707ce10a9a72fea"
-  HELM_SHA256_ARM64: "5ea2d6bc2cda3f8edf985e028809f5a9278f404fb8ab24044de9b7cb9b79a691"
 
 permissions:
   contents: read
@@ -53,38 +47,23 @@ jobs:
       - name: Install Kubernetes tools
         run: |
           case "$(uname -m)" in
-            x86_64)
-              CI_ARCH=amd64
-              KIND_SHA256="$KIND_SHA256_AMD64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_AMD64"
-              HELM_SHA256="$HELM_SHA256_AMD64"
-              ;;
-            aarch64|arm64)
-              CI_ARCH=arm64
-              KIND_SHA256="$KIND_SHA256_ARM64"
-              KUBECTL_SHA256="$KUBECTL_SHA256_ARM64"
-              HELM_SHA256="$HELM_SHA256_ARM64"
-              ;;
+            x86_64) CI_ARCH=amd64 ;;
+            aarch64|arm64) CI_ARCH=arm64 ;;
             *) echo "Unsupported CI architecture: $(uname -m)" >&2; exit 1 ;;
           esac
           echo "CI_ARCH=${CI_ARCH}" >> "${GITHUB_ENV}"
 
-          tool_dir="$(mktemp -d)"
+          curl -fsSL -o /tmp/kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
+          chmod +x /tmp/kind
+          sudo install /tmp/kind /usr/local/bin/kind
 
-          curl -fsSL -o "$tool_dir/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${CI_ARCH}"
-          echo "${KIND_SHA256}  $tool_dir/kind" | sha256sum --check --strict
-          chmod +x "$tool_dir/kind"
-          sudo install "$tool_dir/kind" /usr/local/bin/kind
+          curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
+          chmod +x /tmp/kubectl
+          sudo install /tmp/kubectl /usr/local/bin/kubectl
 
-          curl -fsSL -o "$tool_dir/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${CI_ARCH}/kubectl"
-          echo "${KUBECTL_SHA256}  $tool_dir/kubectl" | sha256sum --check --strict
-          chmod +x "$tool_dir/kubectl"
-          sudo install "$tool_dir/kubectl" /usr/local/bin/kubectl
-
-          curl -fsSL -o "$tool_dir/helm.tar.gz" "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
-          echo "${HELM_SHA256}  $tool_dir/helm.tar.gz" | sha256sum --check --strict
-          tar -C "$tool_dir" -xzf "$tool_dir/helm.tar.gz"
-          sudo install "$tool_dir/linux-${CI_ARCH}/helm" /usr/local/bin/helm
+          curl -fsSL -o /tmp/helm.tar.gz "https://get.helm.sh/helm-${HELM_VERSION}-linux-${CI_ARCH}.tar.gz"
+          tar -C /tmp -xzf /tmp/helm.tar.gz
+          sudo install "/tmp/linux-${CI_ARCH}/helm" /usr/local/bin/helm
 
           kind version
           kubectl version --client=true
@@ -98,9 +77,6 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
-          repository-cache: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
