@@ -21,15 +21,15 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Autonomous Booking Agent' })).toBeVisible();
-    await expect(page.getByText('Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Customer Booking' })).toBeVisible();
+    await expect(page.getByText('Let customers book appointments directly on your personal calendar.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Shipping Labels' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Local Payments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Payment Processing' })).toBeVisible();
     await expect(page.getByText('Print shipping labels and automatically track packages for your orders.')).toBeVisible();
-    await expect(page.getByText('Get paid easily using local payment methods in Latin America.')).toBeVisible();
+    await expect(page.getByText('Accept credit cards and digital wallets securely from anywhere in the world.')).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
@@ -53,10 +53,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await connectButton.click();
   });
 
-  test('can enable Autonomous Booking Agent', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
+  test('can connect Customer Booking', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Customer Booking' }).getByRole('button', { name: 'Set up my booking link' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Enabling Autonomous Booking...');
+      expect(dialog.message()).toContain('Connecting to Cal.com...');
       dialog.accept();
     });
     await connectButton.click();
@@ -67,7 +67,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     page.once('dialog', dialog => dialog.accept());
     await emailBtn.click();
 
-    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
+    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Payment Processing' }).getByRole('button', { name: 'Set up payments' });
     page.once('dialog', dialog => dialog.accept());
     await paymentBtn.click();
   });
