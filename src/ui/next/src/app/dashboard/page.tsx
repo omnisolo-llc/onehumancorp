@@ -4,6 +4,23 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
+type CapitalOffer = {
+  id: string;
+  advance_amount_cents: number;
+  flat_fee_cents: number;
+  total_repayment_cents: number;
+  plain_language_terms: string;
+};
+
+type CapitalContract = {
+  id: string;
+  advance_amount_cents: number;
+  total_repayment_cents: number;
+  repaid_cents: number;
+  wallet_credit_cents: number;
+  status: "ACTIVE" | "REPAID";
+};
+
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
@@ -22,6 +39,10 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [capitalOffer, setCapitalOffer] = useState<CapitalOffer | null>(null);
+  const [capitalContract, setCapitalContract] = useState<CapitalContract | null>(null);
+  const [isCapitalLoading, setIsCapitalLoading] = useState<boolean>(true);
+  const [isApprovingCapital, setIsApprovingCapital] = useState<boolean>(false);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
@@ -222,6 +243,45 @@ export default function Dashboard() {
 
     fetchMetrics();
 
+    const fetchCapitalBoost = async () => {
+        const tenant = localStorage.getItem('tenant') || 'e2e-tenant';
+        setIsCapitalLoading(true);
+        try {
+            const statusRes = await fetch(`/api/v1/growth/capital/status?tenant_id=${encodeURIComponent(tenant)}`);
+            if (statusRes.ok) {
+                const statusData = await statusRes.json();
+                if (statusData.active_contract) {
+                    setCapitalContract(statusData.active_contract);
+                    setCapitalOffer(null);
+                    return;
+                }
+            }
+
+            const triggerRes = await fetch('/api/v1/growth/capital/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    tenant_id: tenant,
+                    event_id: 'booking-wedding-cake-demo',
+                    event_type: 'booking.created',
+                    amount_cents: 120000,
+                    trailing_revenue_cents: 480000,
+                    trailing_refunds_cents: 12000
+                })
+            });
+            if (triggerRes.ok) {
+                const triggerData = await triggerRes.json();
+                setCapitalOffer(triggerData.offer || null);
+            }
+        } catch (e) {
+            console.error("Failed to load capital boost", e);
+        } finally {
+            setIsCapitalLoading(false);
+        }
+    };
+
+    fetchCapitalBoost();
+
     return () => {
         if (ws) ws.close();
     };
@@ -333,6 +393,33 @@ export default function Dashboard() {
       console.error("Failed to submit decision", e);
     }
   };
+
+  const approveCapitalOffer = async () => {
+    if (!capitalOffer) return;
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'e2e-tenant' : 'e2e-tenant';
+    setIsApprovingCapital(true);
+    try {
+        const response = await fetch('/api/v1/growth/capital/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tenant_id: tenant, offer_id: capitalOffer.id })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setCapitalContract(data.contract);
+            setCapitalOffer(null);
+        }
+    } catch (e) {
+        console.error("Failed to approve capital offer", e);
+    } finally {
+        setIsApprovingCapital(false);
+    }
+  };
+
+  const formatMoney = (cents: number) => `$${(cents / 100).toFixed(0)}`;
+  const capitalProgress = capitalContract
+    ? Math.min(100, Math.round((capitalContract.repaid_cents / Math.max(capitalContract.total_repayment_cents, 1)) * 100))
+    : 0;
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -534,6 +621,62 @@ export default function Dashboard() {
                      </button>
                  </WithTooltip>
              </div>
+         </section>
+
+         {/* Autonomous Capital Boost */}
+         <section className="mb-6" id="capital-boost-panel">
+            <div className="p-5 sm:p-6 shadow-md border overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.72)', backdropFilter: 'blur(24px) saturate(180%)', border: '1px solid rgba(120, 144, 156, 0.22)', borderRadius: '16px' }}>
+                {isCapitalLoading ? (
+                    <div className="animate-pulse flex flex-col gap-4">
+                        <div className="h-5 w-36 bg-gray-200 rounded"></div>
+                        <div className="h-4 w-full bg-gray-100 rounded"></div>
+                        <div className="h-12 w-full bg-gray-200 rounded-xl"></div>
+                    </div>
+                ) : capitalContract ? (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-5 justify-between">
+                        <div className="flex items-center gap-4 min-w-0">
+                            <div className="relative w-20 h-20 shrink-0 rounded-full grid place-items-center" style={{ background: `conic-gradient(#10b981 ${capitalProgress * 3.6}deg, #e5e7eb 0deg)` }}>
+                                <div className="w-14 h-14 rounded-full bg-white grid place-items-center shadow-inner">
+                                    <span className="text-sm font-bold text-gray-900">{capitalProgress}%</span>
+                                </div>
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-lg font-bold font-outfit text-gray-900">Capital Boost Active</h2>
+                                <p className="text-sm text-gray-600 leading-relaxed">
+                                    {formatMoney(capitalContract.wallet_credit_cents)} was added to your OHC Wallet. Future sales automatically repay the remaining {formatMoney(capitalContract.total_repayment_cents - capitalContract.repaid_cents)}.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 text-center sm:text-right">
+                            {capitalContract.status === 'REPAID' ? 'Repaid' : '10% sales split'}
+                        </div>
+                    </div>
+                ) : capitalOffer ? (
+                    <div className="flex flex-col gap-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 mb-2">Finance Agent</p>
+                                <h2 className="text-2xl font-bold font-outfit text-gray-950">Growth Boost: {formatMoney(capitalOffer.advance_amount_cents)}</h2>
+                            </div>
+                            <div className="hidden sm:block rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Pre-approved</div>
+                        </div>
+                        <p className="text-sm leading-relaxed text-gray-700 max-w-2xl">{capitalOffer.plain_language_terms}</p>
+                        <button
+                            onClick={approveCapitalOffer}
+                            disabled={isApprovingCapital}
+                            className="min-h-[48px] w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white shadow-md transition-all hover:opacity-90 disabled:opacity-70"
+                            style={{ background: 'linear-gradient(135deg, #0f766e 0%, #10b981 100%)' }}
+                        >
+                            {isApprovingCapital ? 'Adding to wallet...' : `Get ${formatMoney(capitalOffer.advance_amount_cents)} Now`}
+                        </button>
+                    </div>
+                ) : (
+                    <div>
+                        <h2 className="text-lg font-bold font-outfit text-gray-900">Capital Boost</h2>
+                        <p className="text-sm text-gray-600 mt-1">No boost is needed right now. The Finance Agent watches bookings and sales in the background.</p>
+                    </div>
+                )}
+            </div>
          </section>
 
          {/* Plain-Language Weekly Financial Brief */}

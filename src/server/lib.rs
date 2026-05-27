@@ -88,6 +88,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod capital;
 }
 
 use tonic::{transport::Server, Request, Response, Status};

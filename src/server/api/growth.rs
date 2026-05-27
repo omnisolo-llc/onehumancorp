@@ -93,6 +93,10 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/capital/status", get(handle_capital_status))
+        .route("/capital/trigger", post(handle_capital_trigger))
+        .route("/capital/approve", post(handle_capital_approve))
+        .route("/capital/sales/route", post(handle_capital_route_sale))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -117,6 +121,50 @@ pub struct GenerateReviewResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct InviteIdRequest {
     pub id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalStatusQuery {
+    pub tenant_id: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalStatusResponse {
+    pub active_contract: Option<crate::services::capital::CapitalContract>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalTriggerRequest {
+    pub tenant_id: String,
+    pub event_id: Option<String>,
+    pub event_type: String,
+    pub amount_cents: i64,
+    pub trailing_revenue_cents: Option<i64>,
+    pub trailing_refunds_cents: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalTriggerResponse {
+    pub offer: Option<crate::services::capital::CapitalOffer>,
+    pub notification: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalApproveRequest {
+    pub tenant_id: String,
+    pub offer_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalApproveResponse {
+    pub contract: crate::services::capital::CapitalContract,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CapitalRouteSaleRequest {
+    pub tenant_id: String,
+    pub sale_id: Option<String>,
+    pub amount_cents: i64,
 }
 
 
@@ -222,6 +270,107 @@ async fn handle_track_visitor(
     Json(_req): Json<TrackVisitorRequest>,
 ) -> impl IntoResponse {
     Json(TrackVisitorResponse { tracked: true })
+}
+
+async fn handle_capital_status(
+    axum::extract::Query(query): axum::extract::Query<CapitalStatusQuery>,
+) -> Json<CapitalStatusResponse> {
+    let tenant_id = query.tenant_id.as_deref().unwrap_or("e2e-tenant");
+    Json(CapitalStatusResponse {
+        active_contract: crate::services::capital::active_contract(tenant_id),
+    })
+}
+
+async fn handle_capital_trigger(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<CapitalTriggerRequest>,
+) -> Json<CapitalTriggerResponse> {
+    let event_id = req
+        .event_id
+        .clone()
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let now = chrono::Utc::now();
+    let historical_revenue = req.trailing_revenue_cents.unwrap_or(req.amount_cents * 4).max(0);
+    let historical_refunds = req.trailing_refunds_cents.unwrap_or(0).abs();
+    let events = vec![
+        crate::services::capital::LedgerEvent {
+            tenant_id: req.tenant_id.clone(),
+            amount_cents: historical_revenue,
+            occurred_at: now - chrono::Duration::days(7),
+            kind: crate::services::capital::LedgerEventKind::Sale,
+        },
+        crate::services::capital::LedgerEvent {
+            tenant_id: req.tenant_id.clone(),
+            amount_cents: historical_refunds,
+            occurred_at: now - chrono::Duration::days(6),
+            kind: crate::services::capital::LedgerEventKind::Refund,
+        },
+        crate::services::capital::LedgerEvent {
+            tenant_id: req.tenant_id.clone(),
+            amount_cents: req.amount_cents,
+            occurred_at: now,
+            kind: crate::services::capital::LedgerEventKind::Booking,
+        },
+    ];
+
+    let offer = crate::services::capital::trigger_contextual_offer(
+        &req.tenant_id,
+        &event_id,
+        &req.event_type,
+        req.amount_cents,
+        &events,
+    );
+
+    if let Some(offer) = &offer {
+        if let Ok(payload) = serde_json::to_string(&serde_json::json!({
+            "tenant_id": offer.tenant_id,
+            "offer_id": offer.id,
+            "advance_amount_cents": offer.advance_amount_cents,
+            "trigger_event_type": offer.trigger_event_type,
+        })) {
+            state.hub.append_recent_event(crate::hub::HubEvent {
+                r#type: "finance.capital_offer_triggered".to_string(),
+                payload,
+                occurred_at: chrono::Utc::now(),
+            });
+        }
+    }
+
+    let notification = offer.as_ref().map(|offer| {
+        format!(
+            "You just booked ${:.2}. Need extra cash for supplies? Tap for a ${:.2} instant boost.",
+            req.amount_cents as f64 / 100.0,
+            offer.advance_amount_cents as f64 / 100.0
+        )
+    });
+
+    Json(CapitalTriggerResponse {
+        offer,
+        notification,
+    })
+}
+
+async fn handle_capital_approve(
+    Json(req): Json<CapitalApproveRequest>,
+) -> Result<Json<CapitalApproveResponse>, StatusCode> {
+    match crate::services::capital::approve_offer(&req.tenant_id, &req.offer_id) {
+        Some(contract) => Ok(Json(CapitalApproveResponse { contract })),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
+
+async fn handle_capital_route_sale(
+    Json(req): Json<CapitalRouteSaleRequest>,
+) -> Json<crate::services::capital::SplitPaymentRoute> {
+    let sale_id = req
+        .sale_id
+        .as_deref()
+        .unwrap_or("sale-generated-by-capital-engine");
+    Json(crate::services::capital::route_sale_repayment(
+        &req.tenant_id,
+        sale_id,
+        req.amount_cents,
+    ))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

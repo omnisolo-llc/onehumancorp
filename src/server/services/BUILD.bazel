@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "booking.rs",
+        "capital.rs",
         "mod.rs",
         "wizard.rs",
     ],
@@ -14,6 +15,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "booking.rs",
+        "capital.rs",
         "mod.rs",
         "wizard.rs",
         "//src/server/services/agent:department/mod.rs",
