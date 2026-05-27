@@ -212,6 +212,146 @@ impl OperationsWorker {
                             999.0
                         };
 
+
+                        let is_perishable: bool = match &db.store {
+                            crate::db::DbStore::Postgres => {
+                                sqlx::query_scalar("SELECT COALESCE(is_perishable, false) FROM products WHERE id = $1")
+                                    .bind(product_id)
+                                    .fetch_one(&db.pool)
+                                    .await
+                                    .unwrap_or(false)
+                            },
+                            crate::db::DbStore::Sqlite(pool) => {
+                                sqlx::query_scalar("SELECT COALESCE(is_perishable, false) FROM products WHERE id = ?")
+                                    .bind(product_id)
+                                    .fetch_one(pool)
+                                    .await
+                                    .unwrap_or(false)
+                            }
+                        };
+
+                        if is_perishable && inventory_count <= 0 {
+                            match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query("UPDATE products SET is_sold_out = true WHERE id = $1 AND tenant_id = $2")
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .execute(&db.pool)
+                                        .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                     let _ = sqlx::query("UPDATE products SET is_sold_out = true WHERE id = ? AND (organization_id = ? OR tenant_id = ?)")
+                                        .bind(product_id)
+                                        .bind(&tenant_id)
+                                        .bind(&tenant_id)
+                                        .execute(pool)
+                                        .await;
+                                }
+                            }
+                        }
+
+                        if is_perishable && inventory_count > 0 && days_until_empty < 1.0 {
+                            // High risk of perishable surplus, trigger flash sale
+                            let event_id = Uuid::new_v4().to_string();
+                            let target_audience = "local_followers";
+                            let discount_amount = 0.50; // 50% off
+
+                            // Check if a flash sale is already pending for this product today
+                            let has_flash_sale: bool = match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query_scalar(
+                                        "SELECT EXISTS(SELECT 1 FROM flash_sale_events f JOIN capacity_ledger c ON f.ledger_entry_id = c.entry_id WHERE c.item_id = $1 AND c.tenant_id = $2 AND f.status = 'PENDING' AND f.created_at >= CURRENT_DATE)"
+                                    )
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_one(&db.pool)
+                                    .await
+                                    .unwrap_or(false)
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query_scalar(
+                                        "SELECT EXISTS(SELECT 1 FROM flash_sale_events f JOIN capacity_ledger c ON f.ledger_entry_id = c.entry_id WHERE c.item_id = ? AND c.tenant_id = ? AND f.status = 'PENDING' AND date(f.created_at) = date('now'))"
+                                    )
+                                    .bind(product_id)
+                                    .bind(&tenant_id)
+                                    .fetch_one(pool)
+                                    .await
+                                    .unwrap_or(false)
+                                }
+                            };
+
+                            if !has_flash_sale {
+                                let ledger_id = Uuid::new_v4().to_string();
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query("INSERT INTO capacity_ledger (entry_id, item_id, tenant_id, available_quantity, status) VALUES ($1, $2, $3, $4, 'LOW')")
+                                            .bind(&ledger_id)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .bind(inventory_count)
+                                            .execute(&db.pool)
+                                            .await;
+
+                                        let _ = sqlx::query("INSERT INTO flash_sale_events (event_id, ledger_entry_id, tenant_id, target_audience, discount_amount, status) VALUES ($1, $2, $3, $4, $5, 'PENDING')")
+                                            .bind(&event_id)
+                                            .bind(&ledger_id)
+                                            .bind(&tenant_id)
+                                            .bind(target_audience)
+                                            .bind(discount_amount)
+                                            .execute(&db.pool)
+                                            .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query("INSERT INTO capacity_ledger (entry_id, item_id, tenant_id, available_quantity, status) VALUES (?, ?, ?, ?, 'LOW')")
+                                            .bind(&ledger_id)
+                                            .bind(product_id)
+                                            .bind(&tenant_id)
+                                            .bind(inventory_count)
+                                            .execute(pool)
+                                            .await;
+
+                                        let _ = sqlx::query("INSERT INTO flash_sale_events (event_id, ledger_entry_id, tenant_id, target_audience, discount_amount, status) VALUES (?, ?, ?, ?, ?, 'PENDING')")
+                                            .bind(&event_id)
+                                            .bind(&ledger_id)
+                                            .bind(&tenant_id)
+                                            .bind(target_audience)
+                                            .bind(discount_amount)
+                                            .execute(pool)
+                                            .await;
+                                    }
+                                }
+
+                                // Send event to marketing department
+                                let marketing_event = serde_json::json!({
+                                    "action": "FlashSaleRequested",
+                                    "product_id": product_id,
+                                    "product_name": product_name,
+                                    "inventory_count": inventory_count,
+                                    "discount_amount": discount_amount,
+                                    "target_audience": target_audience
+                                });
+
+                                match &db.store {
+                                    crate::db::DbStore::Postgres => {
+                                        let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'marketing', 'FlashSaleRequested', $3, 'PENDING')")
+                                            .bind(Uuid::new_v4().to_string())
+                                            .bind(&tenant_id)
+                                            .bind(marketing_event.to_string())
+                                            .execute(&db.pool)
+                                            .await;
+                                    },
+                                    crate::db::DbStore::Sqlite(pool) => {
+                                        let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES (?, ?, 'marketing', 'FlashSaleRequested', ?, 'PENDING')")
+                                            .bind(Uuid::new_v4().to_string())
+                                            .bind(&tenant_id)
+                                            .bind(marketing_event.to_string())
+                                            .execute(pool)
+                                            .await;
+                                    }
+                                }
+                            }
+                        }
+
                         if inventory_count < 5 || days_until_empty < 7.0 {
                             // Deduplicate: check if a PENDING restock task already exists for this product
                             let title = format!("Restock Item: {}", product_name);

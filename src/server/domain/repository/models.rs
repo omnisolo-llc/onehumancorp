@@ -81,6 +81,8 @@ pub struct Product {
     pub in_stock: Option<bool>,
     pub inventory_count: Option<i32>,
     pub is_sold_out: Option<bool>,
+    pub is_perishable: Option<bool>,
+    pub default_ttl_minutes: Option<i32>,
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,

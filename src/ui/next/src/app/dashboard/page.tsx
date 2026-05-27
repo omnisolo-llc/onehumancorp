@@ -972,6 +972,12 @@ export default function Dashboard() {
                     <div className="text-4xl mb-3">💻</div>
                     <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
                 </div>
+
+                <Link href="/daily-prep" className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px] hover:border-gray-300 transition-colors">
+                    <div className="text-4xl mb-3">⏱️</div>
+                    <span className="text-sm font-medium text-gray-600 text-center">Daily Prep</span>
+                </Link>
+
             </div>
          </section>
 
