@@ -34,6 +34,7 @@ export default function OnboardingWizard() {
   useEffect(() => {
     if (isLoaded) return;
 
+
     // Zustand's persist middleware automatically loads the state from local storage before this.
     const loadState = async () => {
       try {
@@ -297,6 +298,7 @@ export default function OnboardingWizard() {
 
         {/* Content Area */}
         <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
+
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
               {error}
