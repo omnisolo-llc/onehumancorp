@@ -131,23 +131,9 @@ export default function Dashboard() {
         const data = await res.json();
         if (data && data.pending_approvals && data.pending_approvals.length > 0) {
           setApprovals(data.pending_approvals);
-        } else {
-          // Fallback to show the growth loop nudge if the API doesn't return anything
-          setApprovals([{
-            id: 'mock-review-nudge',
-            department: 'CustomerSuccess',
-            description: "3 customers haven't reviewed their orders. Request reviews?",
-            payload: { feature_type: 'automated_review_request' }
-          }]);
-        }
+
       } catch (e) {
         console.error("Failed to fetch approvals", e);
-        setApprovals([{
-          id: 'mock-review-nudge',
-          department: 'CustomerSuccess',
-          description: "3 customers haven't reviewed their orders. Request reviews?",
-          payload: { feature_type: 'automated_review_request' }
-        }]);
       }
     }
     fetchApprovals();
@@ -316,6 +302,12 @@ export default function Dashboard() {
         setShowReviewModal(true);
         setIsGeneratingReview(true);
         try {
+            // First hit our new backend endpoint to trigger the loop formally
+            await fetch('/api/v1/growth/automated-review-request', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenant_id: 'my-store', feature_type: 'automated_review_request' })
+            });
             const response = await fetch('/api/v1/growth/campaign/generate-review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -630,7 +622,13 @@ export default function Dashboard() {
                                     setShowReviewModal(true);
                                     setIsGeneratingReview(true);
                                     try {
-                                        const response = await fetch('/api/v1/growth/campaign/generate-review', {
+                                        // First hit our new backend endpoint to trigger the loop formally
+            await fetch('/api/v1/growth/automated-review-request', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tenant_id: 'my-store', feature_type: 'automated_review_request' })
+            });
+            const response = await fetch('/api/v1/growth/campaign/generate-review', {
                                             method: 'POST',
                                             headers: { 'Content-Type': 'application/json' },
                                             body: JSON.stringify({

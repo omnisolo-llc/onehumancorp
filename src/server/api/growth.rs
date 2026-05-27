@@ -76,6 +76,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/automated-review-request", post(automated_review_request))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -795,9 +796,4 @@ pub async fn automated_review_request(
         success: true,
         initiated_count: 3, // Matches the mock expectation
     }))
-}
-
-pub fn growth_router() -> Router {
-    Router::new()
-        .route("/automated-review-request", post(automated_review_request))
 }
