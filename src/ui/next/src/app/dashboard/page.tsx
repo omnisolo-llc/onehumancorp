@@ -550,9 +550,7 @@ export default function Dashboard() {
                         </span>
                     </h3>
                 </div>
-                <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
-                </p>
+
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>

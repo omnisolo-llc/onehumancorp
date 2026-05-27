@@ -14,7 +14,7 @@ export default function CheckoutPage() {
     setIsProcessing(true);
 
     // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 800));
+
 
     // Fetch dynamic referral link
     try {
