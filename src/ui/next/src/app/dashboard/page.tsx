@@ -6,6 +6,10 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
+  const [editingApprovalId, setEditingApprovalId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState<string>("");
+  const [briefing, setBriefing] = useState<string | null>(null);
+  const [isLoadingBriefing, setIsLoadingBriefing] = useState<boolean>(true);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
@@ -15,6 +19,29 @@ export default function Dashboard() {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
     }
+
+    // Fetch advisory insights for Daily Briefing
+    async function fetchBriefing() {
+      setIsLoadingBriefing(true);
+      try {
+        const token = localStorage.getItem('token') || 'test-token';
+        const res = await fetch('/api/v1/advisory/insights', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBriefing(data.summary);
+        } else {
+          setBriefing("Your storefront is live and looking great. Your next step to success is to review your products and connect with customers.");
+        }
+      } catch (e) {
+        console.error("Failed to fetch briefing", e);
+        setBriefing("Your storefront is live and looking great. Your next step to success is to review your products and connect with customers.");
+      } finally {
+        setIsLoadingBriefing(false);
+      }
+    }
+    fetchBriefing();
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -243,7 +270,7 @@ export default function Dashboard() {
     handleSendCampaign();
   };
 
-  const handleApprove = async (id: string, approved: boolean) => {
+  const handleApprove = async (id: string, approved: boolean, editedPayload?: string) => {
     // Check if this is the automated review request approval
     const approval = approvals.find(a => a.id === id);
 
@@ -269,6 +296,7 @@ export default function Dashboard() {
 
     if (approved && isReviewRequest) {
         setApprovals(approvals.filter(a => a.id !== id));
+      setEditingApprovalId(null);
 
         // Ensure it's removed from backend as well
         try {
@@ -320,7 +348,7 @@ export default function Dashboard() {
       await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approved })
+        body: JSON.stringify({ approved, edited_payload: editedPayload })
       });
       setApprovals(approvals.filter(a => a.id !== id));
     } catch (e) {
@@ -377,7 +405,12 @@ export default function Dashboard() {
                  <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
                </div>
                <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
-                 Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
+                 Good morning {businessName}!
+                 {isLoadingBriefing ? (
+                   <span className="animate-pulse bg-gray-200 text-gray-200 rounded block w-full mt-2 h-4">Loading insights...</span>
+                 ) : (
+                   <span className="block mt-2 font-medium text-gray-800">{briefing}</span>
+                 )}
                </p>
                <div className="flex gap-4">
                  <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
@@ -393,7 +426,7 @@ export default function Dashboard() {
          {(approvals.length > 0) && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Agent Activity Feed</h2>
                     <div className="flex items-center gap-2">
                         <span className="text-sm font-medium" style={{ color: '#86868B' }}>Advanced Settings</span>
                         <button
@@ -417,7 +450,7 @@ export default function Dashboard() {
 
                         return (
                             <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
-                                <div className="flex items-center justify-between">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
                                             {approval.department === 'customer_success' || approval.department === 'CustomerSuccess' ? '🤝' : approval.department === 'operations' || approval.department === 'Operations' ? '⚙️' : '🤖'}
@@ -429,29 +462,56 @@ export default function Dashboard() {
                                             <p className="text-gray-600 font-inter text-sm">{plainMessage}</p>
                                         </div>
                                     </div>
-                                    <div className="flex gap-2">
+
+                                    <div className="flex gap-2 w-full sm:w-auto">
+                                        {editingApprovalId === approval.id ? (
+                                            <button
+                                                onClick={() => setEditingApprovalId(null)}
+                                                className="px-4 py-2 font-medium transition-colors hover:opacity-80 w-full sm:w-auto text-gray-600 bg-gray-100"
+                                                style={{ borderRadius: '8px' }}
+                                            >
+                                                Cancel
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingApprovalId(approval.id);
+                                                    setEditingText(payload || plainMessage);
+                                                }}
+                                                className="px-4 py-2 font-medium transition-colors hover:opacity-80 w-full sm:w-auto"
+                                                style={{ borderRadius: '8px', color: '#0066FF', background: 'rgba(0, 102, 255, 0.1)' }}
+                                            >
+                                                Edit
+                                            </button>
+                                        )}
                                         <button
-                                            onClick={() => handleApprove(approval.id, false)}
-                                            className="px-4 py-2 font-medium transition-colors hover:opacity-80"
-                                            style={{ borderRadius: '8px', color: '#FF3B30', background: 'rgba(255, 59, 48, 0.1)' }}
-                                        >
-                                            Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(approval.id, true)}
-                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
+                                            onClick={() => handleApprove(approval.id, true, editingApprovalId === approval.id ? editingText : undefined)}
+                                            className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90 w-full sm:w-auto"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
-                                            Approve
+                                            Approve & Send
                                         </button>
                                     </div>
+
                                 </div>
-                                {showAdvanced && payload && (
+
+                                {editingApprovalId === approval.id && (
+                                    <div className="mt-2 flex flex-col gap-2">
+                                        <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Edit Draft</label>
+                                        <textarea
+                                            value={editingText}
+                                            onChange={(e) => setEditingText(e.target.value)}
+                                            className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                        />
+                                    </div>
+                                )}
+                                {showAdvanced && payload && editingApprovalId !== approval.id && (
                                     <div className="mt-2 p-3 bg-gray-900 text-gray-100 rounded-lg text-xs font-mono overflow-x-auto">
                                         <div className="text-gray-400 mb-1">Technical Payload:</div>
                                         <pre>{payload}</pre>
                                     </div>
                                 )}
+
                             </div>
                         );
                     })}
