@@ -66,8 +66,8 @@ impl AutoDreamPipeline {
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Find tasks that are COMPLETED but not yet in autodream_memories
         let query = "
-            SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
-            FROM shared_tasks t
+            SELECT t.id, t.organization_id, t.agent_id as assigned_agent_id, t.payload, t.description as deliberation_log
+            FROM shared_tasks_v4 t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
@@ -209,19 +209,19 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM shared_tasks_v4").execute(&pool).await.unwrap();
 
         let task_id_1 = "test-task-cache-1";
         let task_id_2 = "test-task-cache-2";
 
         // Insert two tasks with identical payload/log so their chunk text is exactly the same.
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+        sqlx::query("INSERT INTO shared_tasks_v4 (id, organization_id, title, status, priority, payload, description) VALUES ($1, 'org1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
             .bind(task_id_1)
             .execute(&pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+        sqlx::query("INSERT INTO shared_tasks_v4 (id, organization_id, title, status, priority, payload, description) VALUES ($1, 'org1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
             .bind(task_id_2)
             .execute(&pool)
             .await
@@ -264,10 +264,10 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
-        sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM shared_tasks_v4").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        sqlx::query("INSERT INTO shared_tasks_v4 (id, organization_id, title, status, priority, payload) VALUES ($1, 'org1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
             .bind(task_id)
             .execute(&pool)
             .await

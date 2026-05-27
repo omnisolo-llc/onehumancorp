@@ -3,6 +3,22 @@ use crate::db::DB;
 use std::sync::Arc;
 use chrono::Utc;
 
+struct DummyMesh;
+#[async_trait::async_trait]
+impl crate::orchestration::mesh::TeammateMesh for DummyMesh {
+    async fn publish(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+    async fn publish_with_ack(&self, _topic: &str, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+    async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
+    async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
+    async fn register_presence(&self, _agent_id: &str, _status: &str, _ttl_seconds: u64) -> Result<(), String> { Ok(()) }
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> { Ok(vec![]) }
+    async fn ping(&self) -> Result<(), String> { Ok(()) }
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+    async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
+    async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
+}
+
 #[tokio::test]
 async fn test_shared_task_orchestrator() {
     if std::env::var("DATABASE_URL").is_err() {
@@ -23,7 +39,7 @@ async fn test_shared_task_orchestrator() {
 
     let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
     let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+    let orchestrator = SharedTaskOrchestrator::new(db.clone(), Arc::new(DummyMesh));
 
     let task = SharedTaskV4 {
         id: "".to_string(),
@@ -106,7 +122,7 @@ async fn test_shared_task_orchestrator_sqlite() {
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+    let orchestrator = SharedTaskOrchestrator::new(db.clone(), Arc::new(DummyMesh));
 
     let task = SharedTaskV4 {
         id: "task_1".to_string(),
@@ -176,7 +192,7 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
 
     let db = DB { pool: dummy_pg_pool, store: crate::db::DbStore::Sqlite(pool) };
     let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+    let orchestrator = SharedTaskOrchestrator::new(db.clone(), Arc::new(DummyMesh));
 
     // Task 1: pending, no dependencies
     let task1 = SharedTaskV4 {
@@ -242,7 +258,7 @@ async fn test_shared_task_orchestrator_dependencies() {
 
     let db = DB { pool: pool.clone(), store: crate::db::DbStore::Postgres };
     let db = Arc::new(db);
-    let orchestrator = SharedTaskOrchestrator::new(db.clone());
+    let orchestrator = SharedTaskOrchestrator::new(db.clone(), Arc::new(DummyMesh));
 
     // Task 1: pending, no dependencies
     let task1 = SharedTaskV4 {

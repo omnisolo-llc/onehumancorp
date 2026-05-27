@@ -25,11 +25,12 @@ pub struct SharedTaskV4 {
 pub struct SharedTaskOrchestrator {
     db: Arc<DB>,
     sqlite_mutex: Mutex<()>,
+    mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>,
 }
 
 impl SharedTaskOrchestrator {
-    pub fn new(db: Arc<DB>) -> Self {
-        Self { db, sqlite_mutex: Mutex::new(()) }
+    pub fn new(db: Arc<DB>, mesh: Arc<dyn crate::orchestration::mesh::TeammateMesh>) -> Self {
+        Self { db, sqlite_mutex: Mutex::new(()), mesh }
     }
 
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
@@ -38,6 +39,12 @@ impl SharedTaskOrchestrator {
         } else {
             task.id.clone()
         };
+
+        let event_payload = serde_json::json!({
+            "event": "TASK_CREATED",
+            "task_id": &task_id,
+            "organization_id": &task.organization_id,
+        });
 
         match &self.db.store {
             DbStore::Postgres => {
@@ -90,6 +97,10 @@ impl SharedTaskOrchestrator {
                 .await
                 .map_err(|e| e.to_string())?;
             }
+        }
+
+        if let Ok(bytes) = serde_json::to_vec(&event_payload) {
+            let _ = self.mesh.publish("mesh:tasks", bytes).await;
         }
 
         let mut res = task;
@@ -153,6 +164,16 @@ impl SharedTaskOrchestrator {
                     .map_err(|e| e.to_string())?;
 
                     tx.commit().await.map_err(|e| e.to_string())?;
+
+                    let event_payload = serde_json::json!({
+                        "event": "TASK_CLAIMED",
+                        "task_id": &task_id,
+                        "agent_id": agent_id,
+                        "organization_id": organization_id,
+                    });
+                    if let Ok(bytes) = serde_json::to_vec(&event_payload) {
+                        let _ = self.mesh.publish("mesh:tasks", bytes).await;
+                    }
 
                     Ok(Some(SharedTaskV4 {
                         id: task_id,
@@ -227,6 +248,16 @@ impl SharedTaskOrchestrator {
                     .map_err(|e| e.to_string())?;
 
                     tx.commit().await.map_err(|e| e.to_string())?;
+
+                    let event_payload = serde_json::json!({
+                        "event": "TASK_CLAIMED",
+                        "task_id": &task_id,
+                        "agent_id": agent_id,
+                        "organization_id": organization_id,
+                    });
+                    if let Ok(bytes) = serde_json::to_vec(&event_payload) {
+                        let _ = self.mesh.publish("mesh:tasks", bytes).await;
+                    }
 
                     let created_str: String = row.get("created_at");
                     let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
