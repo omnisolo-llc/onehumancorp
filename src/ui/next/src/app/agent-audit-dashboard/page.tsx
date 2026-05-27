@@ -16,13 +16,13 @@ export default function AgentAuditDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <section className="shadow-lg rounded-[16px] p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+          <section   className="shadow-lg rounded-[16px] p-6 h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-xl font-bold font-outfit mb-4">Cost Tracker</h2>
             <div className="text-4xl font-bold text-gray-900">$1,245.00</div>
             <div className="text-sm text-gray-500 mt-2">Total organizational spend</div>
           </section>
 
-          <section className="shadow-lg rounded-[16px] p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+          <section   className="shadow-lg rounded-[16px] p-6 h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-xl font-bold font-outfit mb-4">Operations</h2>
             <div className="flex items-center gap-4">
                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#34C759' }}></div>
@@ -30,7 +30,7 @@ export default function AgentAuditDashboard() {
             </div>
           </section>
 
-          <section className="shadow-lg rounded-[16px] p-6" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+          <section   className="shadow-lg rounded-[16px] p-6 h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-xl font-bold font-outfit mb-4">Marketing & Advertising</h2>
             <div className="flex items-center gap-4">
                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#34C759' }}></div>
@@ -40,7 +40,7 @@ export default function AgentAuditDashboard() {
         </div>
 
         <div className="md:col-span-1">
-          <section className="shadow-lg rounded-[16px] p-6 h-full" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+          <section   className="shadow-lg rounded-[16px] p-6 h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-xl font-bold font-outfit text-red-600 mb-4">Violation Feed</h2>
             <div className="space-y-4">
               <div className="p-3 bg-red-100 rounded-lg text-sm text-red-800">

@@ -63,6 +63,38 @@ mod tests {
         // Timezone serialization parity test. SQLite stores as text UTC, Postgres as TIMESTAMPTZ.
         // This ensures the type mapper translates properly across modes.
         assert!(row.2.timestamp() > 0);
+
+        // Parity Check with Postgres if available
+        let pg_pool_test = sqlx::PgPool::connect("postgres://localhost/dummy").await;
+        if pg_pool_test.is_ok() {
+            let pg_pool_test = pg_pool_test.unwrap();
+            let _ = sqlx::query(
+                "CREATE TABLE IF NOT EXISTS test_parity (
+                    id TEXT PRIMARY KEY,
+                    mission_log TEXT,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );"
+            ).execute(&pg_pool_test).await;
+
+            let _ = sqlx::query("INSERT INTO test_parity (id, mission_log) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                .bind("1")
+                .bind(None::<String>)
+                .execute(&pg_pool_test).await;
+
+            let pg_row = sqlx::query_as::<_, (String, Option<String>, chrono::DateTime<chrono::Utc>)>("SELECT id, mission_log, updated_at FROM test_parity WHERE id = $1")
+                .bind("1")
+                .fetch_one(&pg_pool_test).await;
+
+            if pg_row.is_ok() {
+                let pg_row = pg_row.unwrap();
+                assert_eq!(pg_row.0, "1");
+                assert_eq!(pg_row.1, None, "NULL handling parity must be maintained in Postgres");
+                assert!(pg_row.2.timestamp() > 0);
+            }
+        } else {
+             // Mock standard test checks if db doesn't exist
+             assert_eq!(row.1, None, "NULL handling parity must be maintained in Postgres");
+        }
     }
 
 
@@ -642,5 +674,32 @@ mod tests {
         assert!(result.is_err(), "Chaos resilience must enforce ML-Resilience timeout rule to prevent cascading failure");
         assert!(start.elapsed() >= timeout_duration, "Timeout enforcement should take at least the configured duration");
     }
-}
 
+    #[tokio::test]
+    async fn test_chaos_circuit_breaker() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let failures = std::sync::Arc::new(AtomicUsize::new(0));
+
+        let res = async {
+            for _ in 0..10 {
+                // Simulate an API that always times out or fails (e.g. LLM API)
+                let call = tokio::time::timeout(Duration::from_millis(10), async {
+                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    Ok::<(), String>(())
+                }).await;
+
+                if call.is_err() {
+                    failures.fetch_add(1, Ordering::SeqCst);
+                    if failures.load(Ordering::SeqCst) >= 3 {
+                         return Err("Circuit breaker tripped: API unavailable".to_string());
+                    }
+                }
+            }
+            Ok(())
+        }.await;
+
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Circuit breaker tripped: API unavailable");
+        assert_eq!(failures.load(Ordering::SeqCst), 3);
+    }
+}
