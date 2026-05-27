@@ -515,6 +515,30 @@ export default function Dashboard() {
              </div>
          </section>
 
+        {/* Interactive Business Health Score */}
+        <div className="card glass" style={{ marginTop: '24px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.3)', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontFamily: '"Outfit", sans-serif' }}>Business Health Score</h3>
+                <div style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '4px 12px', borderRadius: '99px', fontWeight: 'bold', fontSize: '18px' }}>85 / 100</div>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '16px' }}>Your store is performing well, but you are leaving money on the table. Here are 3 AI-recommended actions to improve your score to 100.</p>
+
+            <div style={{ filter: 'blur(4px)', opacity: 0.6, userSelect: 'none', background: 'rgba(0,0,0,0.02)', padding: '16px', borderRadius: '8px' }}>
+                <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>1. Enable Abandoned Cart Recovery (+5 pts)</p>
+                <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>2. Launch a Seasonal Promo (+5 pts)</p>
+                <p style={{ margin: 0, fontWeight: 600 }}>3. Connect Custom Domain (+5 pts)</p>
+            </div>
+
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(2px)' }}>
+                <div style={{ background: 'white', padding: '24px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', maxWidth: '300px' }}>
+                    <div style={{ width: '48px', height: '48px', background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', margin: '0 auto 12px auto' }}>🔒</div>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', color: 'var(--text-primary)' }}>Unlock AI Action Plan</h3>
+                    <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>Get personalized, step-by-step instructions from your AI agents to maximize revenue.</p>
+                    <button className="ohc-btn-primary w-full font-bold py-3 rounded-lg mt-4" onClick={() => window.location.href = '/pricing'}>Upgrade to Pro</button>
+                </div>
+            </div>
+        </div>
+
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>

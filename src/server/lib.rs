@@ -3310,6 +3310,30 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff;">🐦 Share 10% Off on X (Twitter)</button>
                         </div>
 
+                        <!-- Interactive Business Health Score -->
+                        <div class="card glass" style="margin-top: 24px; position: relative; overflow: hidden; border: 1px solid rgba(16, 185, 129, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif;">Business Health Score</h3>
+                                <div style="background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 12px; border-radius: 99px; font-weight: bold; font-size: 18px;">85 / 100</div>
+                            </div>
+                            <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">Your store is performing well, but you are leaving money on the table. Here are 3 AI-recommended actions to improve your score to 100.</p>
+
+                            <div style="filter: blur(4px); opacity: 0.6; user-select: none; background: rgba(0,0,0,0.02); padding: 16px; border-radius: 8px;">
+                                <p style="margin: 0 0 8px 0; font-weight: 600;">1. Enable Abandoned Cart Recovery (+5 pts)</p>
+                                <p style="margin: 0 0 8px 0; font-weight: 600;">2. Launch a Seasonal Promo (+5 pts)</p>
+                                <p style="margin: 0; font-weight: 600;">3. Connect Custom Domain (+5 pts)</p>
+                            </div>
+
+                            <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(2px);">
+                                <div style="background: white; padding: 24px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid rgba(16, 185, 129, 0.2); text-align: center; max-width: 300px;">
+                                    <div style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 12px auto;">🔒</div>
+                                    <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--text-primary);">Unlock AI Action Plan</h3>
+                                    <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">Get personalized, step-by-step instructions from your AI agents to maximize revenue.</p>
+                                    <button class="primary" onclick="showScreen('pricing-screen')" style="width: 100%; font-weight: bold; padding: 12px; border-radius: 8px;">Upgrade to Pro</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Growth Loop: Interactive Analytics Soft Paywall -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(255, 165, 0, 0.3); position: relative; overflow: hidden;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
