@@ -534,12 +534,12 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Automated AI Review Requests Growth Loop */}
+         {/* Automated review requests for recent orders Growth Loop */}
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
                     <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated AI Review Requests
+                        Automated review requests for recent orders
                         <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
                             New Growth Loop
                         </span>
@@ -1492,7 +1492,7 @@ export default function Dashboard() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
