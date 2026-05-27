@@ -221,17 +221,32 @@ export default function Dashboard() {
     };
   }, []);
 
-  const handleSendCampaign = () => {
+  const handleSendCampaign = async () => {
     if (!hasPro) {
       setShowSoftPaywall(true);
       return;
     }
 
-    setIsSendingCampaign(false);
-    setCampaignSuccess(true);
+    setIsSendingCampaign(true);
+    try {
+        const response = await fetch('/api/v1/growth/campaign/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'automated_review' })
+        });
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('review-emails-sent')!.innerText = data.emails_sent;
+            setCampaignSuccess(true);
+        }
+    } catch (e) {
+        console.error("Failed to send campaign", e);
+    } finally {
+        setIsSendingCampaign(false);
+    }
   };
 
-  const claimTrialExtension = () => {
+  const claimTrialExtension = async () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
@@ -239,8 +254,7 @@ export default function Dashboard() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-    handleSendCampaign();
+    await handleSendCampaign();
   };
 
   const handleApprove = async (id: string, approved: boolean) => {
@@ -546,12 +560,12 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have some recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                        ✓ Campaign sent to <span id="review-emails-sent"></span> customers!
                     </div>
                 ) : (
                     <button

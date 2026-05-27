@@ -32,13 +32,11 @@ function KairosContent() {
 
   useEffect(() => {
     if (searchParams.get('walkthrough') === 'true') {
-      setTimeout(() => {
-        startWalkthrough([
+      startWalkthrough([
           { targetId: "kairos-brain", message: "The Shared Task List is the 'Brain' of your business, where KAIROS manages and prioritizes all agent activities." },
           { targetId: "kairos-nerves", message: "The Teammate Mesh acts as the 'Nerves', providing lightning-fast communication between your AI workforce." },
           { targetId: "kairos-memory", message: "AutoDream is the 'Memory', storing every interaction so your agents never forget a detail about your business." }
         ]);
-      }, 1000);
     }
   }, [searchParams, startWalkthrough]);
 

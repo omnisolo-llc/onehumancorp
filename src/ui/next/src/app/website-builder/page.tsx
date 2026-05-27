@@ -49,15 +49,11 @@ export default function WebsiteBuilderPage() {
         builderState: { bio, blocks, status }
       };
 
-      const timer = setTimeout(() => {
-        fetch('/api/onboarding/state', {
+      fetch('/api/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
           body: JSON.stringify(payload)
         }).catch(err => console.error('Failed to sync builder state', err));
-      }, 1000); // debounce 1s
-
-      return () => clearTimeout(timer);
     }
   }, [bio, blocks, status]);
 

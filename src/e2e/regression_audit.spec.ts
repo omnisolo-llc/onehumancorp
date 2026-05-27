@@ -94,7 +94,7 @@ test.describe('Regression Audit: No Mock Delays', () => {
       });
 
       // Claim trial extension
-      const claimButton = page.getByRole('button', { name: 'Claim 7-Day Pro Trial' });
+      const claimButton = page.getByRole('button', { name: 'Share on X to get 7 Days Free' });
 
       if (await claimButton.isVisible()) {
           // If old alert() existed, it would trigger Unhandled alert error.
