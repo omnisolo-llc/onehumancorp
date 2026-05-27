@@ -190,7 +190,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -236,7 +236,8 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleIntake}
                   disabled={!businessDescription.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all disabled:opacity-50"
+
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isLoading ? 'Analyzing...' : 'Generate My Business'}
                 </button>
@@ -315,7 +316,9 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all"
+
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -354,7 +357,8 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all disabled:opacity-50"
+
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Launch Store
                 </button>
@@ -400,13 +404,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full text-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[12px] font-bold shadow-lg hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
+                  className="block w-full text-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[12px] font-bold shadow-lg hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full text-center bg-white/70 dark:bg-white/10 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/60 dark:border-white/20 p-4 rounded-[12px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full text-center bg-white/70 dark:bg-white/10 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/60 dark:border-white/20 p-4 rounded-[12px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront
                 </a>
