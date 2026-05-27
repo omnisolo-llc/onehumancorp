@@ -148,7 +148,7 @@ export default function ShareCardsPage() {
                  </div>
 
                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-center opacity-80">
-                     <span className="text-sm font-semibold tracking-wider uppercase">Powered by OHC</span>
+                     <span className="text-sm font-semibold tracking-wider uppercase">⚡ Powered by OHC</span>
                      <span className="text-sm font-medium">{shareLink.replace('https://', '')}</span>
                  </div>
              </div>
