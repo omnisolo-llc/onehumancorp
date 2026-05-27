@@ -7,7 +7,7 @@ use axum::{
     Json,
 };
 use std::sync::Arc;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::DepartmentConfig;
 use ::server_common::Claims;
