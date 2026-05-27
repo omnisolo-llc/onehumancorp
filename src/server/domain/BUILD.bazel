@@ -31,6 +31,7 @@ rust_library(
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",
         "//src/server/domain/repository:task_repo.rs",
+        "//src/server/domain/repository:memory_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

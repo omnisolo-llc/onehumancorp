@@ -75,6 +75,7 @@ SERVER_RS_SRCS = [
     "//src/server/domain/repository:mod.rs",
     "//src/server/domain/repository:models.rs",
     "//src/server/domain/repository:task_repo.rs",
+    "//src/server/domain/repository:memory_repo.rs",
     "//src/server/integrations:catalog.rs",
     "//src/server/integrations:chat.rs",
     "//src/server/integrations:chatwoot.rs",

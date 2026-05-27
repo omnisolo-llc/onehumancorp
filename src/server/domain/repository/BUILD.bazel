@@ -5,8 +5,16 @@ exports_files(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "memory_repo.rs",
     ],
     visibility = ["//visibility:public"],
+)
+
+load("@rules_rust//rust:defs.bzl", "rust_test")
+
+rust_test(
+    name = "server_domain_repository_test",
+    crate = ":server_domain_repository",
 )
 
 rust_library(
@@ -16,6 +24,7 @@ rust_library(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "memory_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
