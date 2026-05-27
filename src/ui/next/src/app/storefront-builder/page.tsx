@@ -18,6 +18,13 @@ export default function StorefrontBuilderPage() {
         <div className="h-64 flex items-center justify-center border-dashed border-2 border-gray-300">
            Content...
         </div>
+
+        <div className="builder-block mt-4 p-4 bg-indigo-50 border border-indigo-100 rounded text-center">
+            <h3 className="font-bold text-indigo-900 mb-1">Refer a Friend</h3>
+            <p className="text-sm text-indigo-800 mb-2">Get 10% off your next order!</p>
+            <a href="ohc://join?ref=storefront-referral" className="inline-block bg-indigo-600 text-white text-sm px-4 py-2 rounded-full">Share now</a>
+        </div>
+
         <div className="powered-by-footer mt-4 text-center py-2 text-sm text-gray-500">
           ⚡ Powered by OHC
           <br/>
