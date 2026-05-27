@@ -395,6 +395,26 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
+         {!hasPro && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+               <div>
+                   <div className="flex items-center gap-3 mb-2">
+                     <div className="text-2xl">🚀</div>
+                     <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Ready to scale?</h2>
+                   </div>
+                   <p className="text-gray-600 font-inter text-sm leading-relaxed max-w-lg">
+                     Upgrade to Pro for unlimited agents, advanced analytics, and custom domains. Grow your business faster and without limits.
+                   </p>
+               </div>
+               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+                 Upgrade to Pro
+               </Link>
+             </div>
+           </section>
+         )}
+
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
