@@ -82,7 +82,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (agent_id, violation_type) (rate(ohc_agent_sandbox_violations_total[5m])) > 0",
+          "expr": "sum by (agent_id, violation_type) (rate(ohc_sandbox_violations_total[5m])) > 0",
           "refId": "A"
         }
       ],

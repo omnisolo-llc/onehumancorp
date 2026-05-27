@@ -21,8 +21,8 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Customer Booking' })).toBeVisible();
-    await expect(page.getByText('Let customers book appointments directly on your personal calendar.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Autonomous Booking Agent' })).toBeVisible();
+    await expect(page.getByText('Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
@@ -53,10 +53,10 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
     await connectButton.click();
   });
 
-  test('can connect Customer Booking', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Customer Booking' }).getByRole('button', { name: 'Set up my booking link' });
+  test('can enable Autonomous Booking Agent', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Cal.com...');
+      expect(dialog.message()).toContain('Enabling Autonomous Booking...');
       dialog.accept();
     });
     await connectButton.click();
