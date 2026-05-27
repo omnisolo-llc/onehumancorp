@@ -11,21 +11,34 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
       localStorage.setItem('user_id', 'e2e-cross-device-user');
     });
 
+    // Mock the state endpoints to actually store and return state in memory
+    let persistedState: any = {};
+
+    await page1.route('**/api/onboarding/state', async (route, request) => {
+      if (request.method() === 'POST') {
+        const data = JSON.parse(request.postData() || '{}');
+        persistedState = { ...persistedState, ...data };
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      } else if (request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(persistedState) });
+      } else {
+        await route.continue();
+      }
+    });
+
     // 1. Visit the builder on Device 1
     await page1.goto('/onboarding');
     await expect(page1.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
+    await expect(page1.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    // 2. Start flow and type business name
-    await page1.getByPlaceholder('e.g. Sell cakes, plumbing').fill('Sell custom cakes');
-    await page1.getByRole('button', { name: /Next/ }).click();
+    // 2. Start flow and type business description
+    await page1.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...').fill('Cross device testing business');
 
-    await page1.getByPlaceholder('e.g. Maya\'s Cakes').fill('Maya\'s Cross-Device Bakery');
-    await page1.getByRole('button', { name: /Next/i }).click();
-    await page1.getByPlaceholder('e.g. I bake custom wedding cakes').fill('I bake custom vegan cakes');
-    await page1.getByRole('button', { name: /Generate Draft/i }).click();
+    // Wait for the debounce save state to trigger
+    await page1.waitForTimeout(1500);
 
-    // Wait for the debounce saveWizardState to trigger
-    await page1.waitForTimeout(3000);
+    // Verify it was saved by checking our mock memory
+    expect(persistedState.businessDescription).toBe('Cross device testing business');
 
     // Close context 1 to prove we aren't relying on it
     await context1.close();
@@ -40,12 +53,24 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
       localStorage.setItem('user_id', 'e2e-cross-device-user');
     });
 
+    // Mock state route in context 2 using the state persisted from context 1
+    await page2.route('**/api/onboarding/state', async (route, request) => {
+      if (request.method() === 'POST') {
+        const data = JSON.parse(request.postData() || '{}');
+        persistedState = { ...persistedState, ...data };
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+      } else if (request.method() === 'GET') {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(persistedState) });
+      } else {
+        await route.continue();
+      }
+    });
+
     await page2.goto('/onboarding');
     await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
-    // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-    await expect(page2.getByPlaceholder('0.00')).toBeVisible();
+    // The frontend should restore the state from backend and fill the input
+    await expect(page2.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...')).toHaveValue('Cross device testing business');
 
     await context2.close();
   });

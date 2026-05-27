@@ -10,16 +10,89 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({
       step: 1,
       businessDescription: '',
+      businessName: '',
+      businessType: 'Online Store',
+      categories: [],
+      websiteTemplate: 'Modern',
+      firstProductName: '',
+      firstProductPrice: '',
       isLoading: false,
       error: '',
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url, options) => {
+      if (url.includes('/api/onboarding/state')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({})
+        });
+      }
+      if (url.includes('/api/onboarding/intake')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url.includes('/api/onboarding/start')) {
+         return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({})
+      });
+    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('Fetches and restores state on mount', async () => {
+    (global.fetch as any).mockImplementationOnce((url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            step: 2,
+            businessName: "Restored Name",
+            businessDescription: "Restored Description"
+          })
+        });
+      }
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("Restored Name")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(2);
+      expect(useOnboardingStore.getState().businessDescription).toBe("Restored Description");
+    });
+  });
+
+  it('Saves state when input changes', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(input, 'New business');
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+        method: 'POST',
+        body: expect.stringContaining('New business')
+      }));
+    }, { timeout: 2000 });
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
@@ -33,22 +106,7 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
 
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -96,8 +154,14 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      if (url.includes('/api/onboarding/intake')) {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -125,8 +189,14 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+      }
+      if (url.includes('/api/onboarding/start')) {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });

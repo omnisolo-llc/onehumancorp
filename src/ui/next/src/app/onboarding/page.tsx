@@ -22,7 +22,78 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Fetch state on mount
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch onboarding state', err);
+      }
+    };
+
+    fetchState();
   }, []);
+
+  // Persist state when it changes
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error('Failed to persist onboarding state', err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    isLoaded, step, businessDescription, businessName, businessType,
+    categories, websiteTemplate, firstProductName, firstProductPrice
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -117,7 +188,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto bg-white/40 dark:bg-black/40 backdrop-blur-xl saturate-[210%] border border-white/20 rounded-[16px] shadow-[0_8px_32px_0_rgba(31,38,135,0.3)] overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
