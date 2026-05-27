@@ -8,15 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "ayrshare", name: "Social Media Accounts", category: "marketing", status: "disconnected", icon: "📱", description: "Manage all your social media messages and posts in one place.", btn: "Connect my Instagram and Facebook", provider: "Ayrshare" },
+    { id: "cal_com", name: "Customer Booking", category: "operations", status: "disconnected", icon: "📅", description: "Let customers book appointments directly on your personal calendar.", btn: "Set up my booking link", provider: "Cal.com" },
+    { id: "easypost", name: "Shipping Labels", category: "operations", status: "disconnected", icon: "📦", description: "Print shipping labels and automatically track packages for your orders.", btn: "Set up shipping" },
+    { id: "mercadopago", name: "Local Payments", category: "finance", status: "disconnected", icon: "🌎", description: "Get paid easily using local payment methods in Latin America.", btn: "Accept local payments" },
+    { id: "listmonk", name: "Customer Emails", category: "marketing", status: "disconnected", icon: "📨", description: "Send email updates and promotions to your customers.", btn: "Start sending emails" },
+    { id: "whereby", name: "Online Meetings", category: "operations", status: "disconnected", icon: "📹", description: "Host online video meetings with your customers easily without extra downloads.", btn: "Create my meeting room" },
+    { id: "twilio", name: "Text Notifications", category: "operations", status: "disconnected", icon: "🔔", description: "Send automatic text message updates to your customers about their orders.", btn: "Enable text messages" }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
@@ -48,8 +46,8 @@ export default function Integrations() {
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
-            <h1 className="text-3xl font-bold font-outfit mb-1">Tool Integrations</h1>
-            <p className="text-gray-400 text-sm">Supercharge your workflow by connecting your favorite tools.</p>
+            <h1 className="text-3xl font-bold font-outfit mb-1">Connect Tools</h1>
+            <p className="text-gray-400 text-sm">Seamlessly connect your favorite apps to streamline your business operations.</p>
           </div>
           <div className="hidden md:block w-16 h-16 bg-white/10 rounded-2xl border border-white/20 flex items-center justify-center text-3xl">
             🧩
@@ -80,7 +78,7 @@ export default function Integrations() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredIntegrations.map(integration => (
             <div key={integration.id}
-                 className="rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md"
+                 className="card glass rounded-[16px] p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md"
                  style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}
             >
               <div className="flex justify-between items-start mb-4">
@@ -103,7 +101,7 @@ export default function Integrations() {
                     ? "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                     : "text-[#F5F5F7] shadow-sm hover:bg-[#005bd3]"
                 }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
-                {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                {integration.status === 'connected' ? 'Manage' : integration.btn}
               </button>
             </div>
           ))}
