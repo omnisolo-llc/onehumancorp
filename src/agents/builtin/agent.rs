@@ -503,7 +503,7 @@ impl Agent {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
                     let res = match gating_res {
-                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await,
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
                         Err(e) => Err(e),
                     };
                     (tc_clone, res)
@@ -564,7 +564,7 @@ impl Agent {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
                 let res = match gating_res {
-                    Ok(_) => self.execute_tool(tc, session_tools, &messages).await,
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
                     Err(e) => Err(e),
                 };
 
@@ -1310,7 +1310,7 @@ impl Agent {
             read_only_futures.push(async move {
                 let mut retry_count = 0;
                 loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[]).await {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1387,7 +1387,7 @@ impl Agent {
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&tc, session_tools, &[]).await {
+                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -2210,19 +2210,12 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
-                                if retry_count < max_retries {
-                                    retry_count += 1;
-                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                    tokio::time::sleep(backoff).await;
-                                    continue;
-                                } else {
-                                    return (tc_clone, Err(ToolError::Transient(msg)));
-                                }
+                                return (tc_clone, Err(ToolError::Transient(msg)));
                             }
                             Err(e) => {
                                 return (tc_clone, Err(e));
@@ -2425,7 +2418,7 @@ impl Agent {
                         agent_id = %final_cfg.agent_id,
                         tool_name = %tc.name,
                     );
-                    match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
+                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2853,6 +2846,7 @@ impl Agent {
         tc: &ToolCall,
         session_tools: &[Tool],
         current_messages: &[Message],
+        max_retries: usize,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
@@ -2877,7 +2871,9 @@ impl Agent {
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
-        tool.execute.execute(args).await
+        let mut modified_tc = tc.clone();
+        modified_tc.arguments = args;
+        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
     }
 }
 
@@ -3251,7 +3247,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[]).await;
+        let res = agent.execute_tool(&valid_call, &tools, &[], 2).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -3260,7 +3256,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[]).await;
+        let res = agent.execute_tool(&missing_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -3275,7 +3271,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[]).await;
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
