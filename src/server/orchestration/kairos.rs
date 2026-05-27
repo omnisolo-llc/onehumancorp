@@ -321,6 +321,95 @@ impl KairosOrchestrator {
         }
     }
 
+
+    pub async fn submit_for_approval(&self, task_id: &str, tenant_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), KairosError> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = 'PENDING', proposed_content = $1, action_risk = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5"
+                )
+                .bind(proposed_content)
+                .bind(action_risk)
+                .bind(now)
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = 'PENDING', proposed_content = ?, action_risk = ?, updated_at = ? WHERE id = ? AND tenant_id = ?"
+                )
+                .bind(proposed_content)
+                .bind(action_risk)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn approve_task(&self, task_id: &str, tenant_id: &str, approved: bool) -> Result<(), KairosError> {
+        let now = Utc::now();
+        let new_approval_status = if approved { "APPROVED" } else { "REJECTED" };
+        let new_status = if approved { "IN_PROGRESS" } else { "FAILED" };
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = $1, status = $2, updated_at = $3 WHERE id = $4 AND tenant_id = $5"
+                )
+                .bind(new_approval_status)
+                .bind(new_status)
+                .bind(now)
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let _lock = self.sqlite_mutex.lock().await;
+                let mut tx = sqlite_pool.begin().await.map_err(KairosError::Database)?;
+
+                sqlx::query(
+                    "UPDATE shared_tasks SET approval_status = ?, status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?"
+                )
+                .bind(new_approval_status)
+                .bind(new_status)
+                .bind(now.to_rfc3339())
+                .bind(task_id)
+                .bind(tenant_id)
+                .execute(&mut *tx)
+                .await
+                .map_err(KairosError::Database)?;
+
+                tx.commit().await.map_err(KairosError::Database)?;
+                Ok(())
+            }
+        }
+    }
+
     pub async fn create_shared_task(&self, task: SharedTask) -> Result<SharedTask, KairosError> {
         let now = Utc::now();
         match &self.db.store {
