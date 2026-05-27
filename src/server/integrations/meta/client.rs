@@ -25,7 +25,9 @@ impl MetaClientWrapper for RealMetaClient {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         let url = match platform {
             "whatsapp" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
-            _ => "https://graph.facebook.com/v19.0/me/messages".to_string(), // Simplified URL mapping
+            "instagram" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
+            "facebook" => "https://graph.facebook.com/v19.0/me/messages".to_string(),
+            _ => "https://graph.facebook.com/v19.0/me/messages".to_string(),
         };
 
         let payload = serde_json::json!({
