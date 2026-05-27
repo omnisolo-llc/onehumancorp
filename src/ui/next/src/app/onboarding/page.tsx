@@ -19,10 +19,93 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [localCategoriesInput, setLocalCategoriesInput] = useState('');
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Hydrate draft state
+    const fetchDraft = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/draft', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          // Hydrate if there is data.
+          if (data && data.step && (data.step > step || step === 1)) {
+             if (data.step) setStep(data.step);
+             if (data.businessDescription) setBusinessDescription(data.businessDescription);
+             if (data.businessName) setBusinessName(data.businessName);
+             if (data.businessType) setBusinessType(data.businessType);
+             if (data.categories) {
+                 setCategories(data.categories);
+                 setLocalCategoriesInput(data.categories.join(', '));
+             }
+             if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+             if (data.firstProductName) setFirstProductName(data.firstProductName);
+             if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to hydrate draft:", err);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+    fetchDraft();
   }, []);
+
+  // Sync draft state on changes
+  useEffect(() => {
+    if (!isLoaded || !isHydrated || step >= 4) return;
+
+    const abortController = new AbortController();
+    const syncDraft = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/draft', {
+          method: 'POST',
+          signal: abortController.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice
+          })
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error("Failed to sync draft:", err);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(syncDraft, 1000); // debounce 1s
+    return () => {
+       clearTimeout(timeoutId);
+       abortController.abort();
+    };
+  }, [step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded, isHydrated]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -52,7 +135,9 @@ export default function OnboardingWizard() {
       setBusinessName(intakeData.business_name || 'My Business');
       setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
-      setCategories(intakeData.categories || ['physical']);
+      const cats = intakeData.categories || ['physical'];
+      setCategories(cats);
+      setLocalCategoriesInput(cats.join(', '));
 
       setStep(2); // Go to review step
     } catch (err: any) {
@@ -60,6 +145,12 @@ export default function OnboardingWizard() {
       setError(err.message || 'An error occurred processing details');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleStep2Submit = () => {
+    if (businessName.trim() && businessType.trim() && categories.length > 0 && firstProductName.trim() && firstProductPrice.trim()) {
+      setStep(3);
     }
   };
 
@@ -117,7 +208,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-2xl overflow-hidden flex flex-col h-[650px] relative backdrop-blur-xl bg-white/30 dark:bg-black/30 border border-white/20">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -139,6 +230,14 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1">
                 <textarea
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (businessDescription.trim() && !isLoading) {
+                        handleIntake();
+                      }
+                    }
+                  }}
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
@@ -175,7 +274,10 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    enterKeyHint="next"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
@@ -184,16 +286,25 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    enterKeyHint="next"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
                     type="text"
-                    value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    value={localCategoriesInput}
+                    onChange={(e) => {
+                       setLocalCategoriesInput(e.target.value);
+                       setCategories(e.target.value ? e.target.value.split(',').map(c => c.trim()).filter(Boolean) : []);
+                    }}
+                    enterKeyHint="next"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -203,16 +314,29 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        enterKeyHint="next"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleStep2Submit();
+                          }
+                        }}
+                        enterKeyHint="done"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                 </div>

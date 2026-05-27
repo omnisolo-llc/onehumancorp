@@ -42,15 +42,10 @@ async fn get_draft(
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
     match agent.get_onboarding_state(tenant_id).await {
         Ok(state) => {
-            // For now, extract the bio field if we store it as a general state document
-            // If there's no state or bio, returning an empty json is fine
-            if let Some(bio) = state.get("bio") {
-                Ok(Json(serde_json::json!({ "bio": bio })))
-            } else {
-                Ok(Json(serde_json::json!({ "bio": "" })))
-            }
+            // Return full state for hydration
+            Ok(Json(state))
         },
-        Err(_) => Ok(Json(serde_json::json!({ "bio": "" }))), // fallback
+        Err(_) => Ok(Json(serde_json::json!({}))), // fallback
     }
 }
 

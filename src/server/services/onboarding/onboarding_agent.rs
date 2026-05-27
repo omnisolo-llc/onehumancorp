@@ -2616,3 +2616,38 @@ mod tests {
         assert_eq!(state_json_food.get("enable_menu").and_then(|v| v.as_bool()), Some(true));
     }
 }
+
+
+#[cfg(test)]
+mod onboarding_draft_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_save_and_get_onboarding_state() {
+        let db = match crate::db::setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let tenant_id = "test-draft-tenant";
+        let user_id = "test-user-1";
+
+        let draft_json = serde_json::json!({
+            "step": 2,
+            "businessDescription": "Testing draft persistence",
+            "businessName": "Draft Business"
+        });
+
+        // Test saving
+        let res = agent.save_onboarding_state(tenant_id, user_id, 2, &draft_json).await;
+        assert!(res.is_ok());
+
+        // Test getting
+        let retrieved = agent.get_onboarding_state(tenant_id).await.unwrap();
+        assert_eq!(retrieved.get("step").and_then(|v| v.as_i64()), Some(2));
+        assert_eq!(retrieved.get("businessName").and_then(|v| v.as_str()), Some("Draft Business"));
+    }
+}
