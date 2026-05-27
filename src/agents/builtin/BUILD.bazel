@@ -79,6 +79,7 @@ rust_library(
         "ruflo.rs",
         "service.rs",
         "sona_patterns.rs",
+        "scalable_multi_agent.rs",
         "sqlite_memory.rs",
         "swarm_topology.rs",
         "tools_gating.rs",
@@ -216,6 +217,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "gpt_researcher",
     "local_provider",
     "sona_patterns",
+    "scalable_multi_agent",
 ]
 
 rust_test(
