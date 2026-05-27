@@ -34,7 +34,7 @@ cd mono
 
 ### 2. Configure Environment
 
-We provide a specialized setup script that automatically checks prerequisites, writes a default `.env` file, and validates both **Cloud** and **Standalone** build targets before appending to the local runtime memory log (`OHC_MEMORY_DIR`, typically `.ohc/runtime/memory/`).
+We provide a setup script that checks prerequisites, writes a default `.env` file, and prepares the local workspace.
 
 ```bash
 ./deploy/scripts/ohc-setup.sh
@@ -225,27 +225,28 @@ docker compose -f deploy/docker-compose.yml down -v
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8080` | HTTP listen port |
-| `DATABASE_URL` | *(empty)* | PostgreSQL DSN; falls back to in-memory store when unset |
-| `REDIS_URL` | *(empty)* | Redis address e.g. `redis://redis:6379`; pub-sub disabled when unset |
+| `OHC_PORT` | `18789` | HTTP/Axum listen port for the Rust server; Docker Compose exposes the packaged server on `8080` |
+| `OHC_GRPC_PORT` | `8081` | gRPC/tonic listen port |
+| `DATABASE_URL` | `postgres://postgres:postgres@localhost:5432/ohc` | PostgreSQL DSN by default; use a `sqlite://...` URL in standalone mode |
+| `REDIS_URL` | `redis://127.0.0.1/` | Redis address used by rate limiting and cloud mesh paths |
+| `OHC_STANDALONE` | `false` | Enables standalone-mode config enforcement |
+| `OHC_SQLITE_KEY` | *(required for SQLite)* | Required encryption key when using SQLite-backed standalone state |
 | `OHC_MULTITENANT` | `false` | Enables org-aware multi-tenant routing for shared-service deployments |
-| `OHC_HEADLESS` | `false` | Disables static UI serving so the backend runs as an API-only service |
-| `OHC_SERVE_UI` | `true` | Optional override for static UI serving |
+| `OHC_HEADLESS` | `false` | Selects API-only/headless integration behavior |
 | `GEMINI_API_KEY` | *(empty)* | Google Gemini API key for AI model calls |
-| `LOG_LEVEL` | `info` | Structured log level (`debug`/`info`/`warn`/`error`) |
+| `LOG_FORMAT` | *(empty)* | Set to `json` for JSON logs |
+| `RUST_LOG` | `info` through tracing defaults | Optional tracing filter (`debug`, `info`, `warn`, `error`) |
 
 ### Frontend assets
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FRONTEND_STATIC_DIR` | `src/ui/tauri/next_out` | Path to packaged static UI artifacts |
+The Tauri shell packages static assets from `src/ui/tauri/next_out` through `src/ui/tauri/tauri.conf.json`. The runtime AI provider settings are read from `OHC_LLM_CONFIG_PATH` when set, otherwise `.ohc/ai-provider.json`.
 
 ---
 
 ## Adding a New API Endpoint
 
 1. Add the handler function in `src/server/api/` or the relevant handler file in `src/server/`
-2. Register the route in `src/server/http.rs`
+2. Register the route in `src/server/lib.rs` or in the relevant router under `src/server/api/`
 3. Add a unit test in the same module
 4. Update the proto if a new message type is needed (`src/proto/`)
 5. Run `bazel test //src/server/...`
