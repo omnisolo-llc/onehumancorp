@@ -25,6 +25,7 @@ sh_binary(
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
 define_playwright_tests(
     ci_specs = [
+        "ambassador_reply.spec.ts",
         "grandmother_test.spec.ts",
         "help.spec.ts",
         "kairos_orchestration.spec.ts",

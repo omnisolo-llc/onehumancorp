@@ -4,6 +4,38 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
+
+function DailyBriefing({ activeCustomers, todaysSales, pendingOrders }: { activeCustomers: number, todaysSales: number, pendingOrders: number }) {
+  const [briefing, setBriefing] = useState<string>("Loading your daily briefing...");
+
+  useEffect(() => {
+    async function fetchBriefing() {
+      try {
+        const res = await fetch('/api/v1/advisory/insights', {
+          headers: {
+            'x-tenant-id': typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBriefing(data.summary);
+        } else {
+          setBriefing(`Good morning! You had ${activeCustomers} active customers yesterday, generating ${todaysSales.toFixed(2)} in sales. You also have ${pendingOrders} pending orders to fulfill. Consider running a weekend discount on your most popular items to boost sales further.`);
+        }
+      } catch (e) {
+        setBriefing(`Good morning! You had ${activeCustomers} active customers yesterday, generating ${todaysSales.toFixed(2)} in sales. You also have ${pendingOrders} pending orders to fulfill. Consider running a weekend discount on your most popular items to boost sales further.`);
+      }
+    }
+    fetchBriefing();
+  }, [activeCustomers, todaysSales, pendingOrders]);
+
+  return (
+    <p className="text-gray-800 text-base leading-relaxed font-inter">
+      {briefing}
+    </p>
+  );
+}
+
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
@@ -441,6 +473,42 @@ export default function Dashboard() {
                             payload = approval.description.substring(payloadIdx + " | Payload: ".length);
                         }
 
+                        let payloadObj: any = null;
+                        try {
+                            if (payload) {
+                                payloadObj = JSON.parse(payload);
+                            }
+                        } catch(e) {}
+                        if (!payloadObj && approval.payload) {
+                           if (typeof approval.payload === 'string') {
+                               try { payloadObj = JSON.parse(approval.payload); } catch(e){}
+                           } else {
+                               payloadObj = approval.payload;
+                           }
+                        }
+
+                        if (payloadObj && payloadObj.feature_type === 'ambassador_reply') {
+                            return (
+                                <div key={approval.id} className="p-4 shadow-lg flex flex-col gap-3 relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.6)', borderRadius: '20px' }}>
+                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+                                    <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-100 rounded-full mix-blend-multiply filter blur-xl opacity-70"></div>
+
+                                    <div className="flex items-center gap-2 relative z-10">
+                                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold shadow-inner">🤝</div>
+                                        <h3 className="font-semibold text-gray-900 font-outfit text-sm">Customer Message</h3>
+                                    </div>
+                                    <p className="text-gray-700 font-inter text-sm bg-white/50 p-3 rounded-xl border border-white relative z-10">"{payloadObj.original_message || plainMessage}"</p>
+
+                                    <h3 className="font-semibold text-blue-800 font-outfit text-xs uppercase tracking-wider mt-1 relative z-10">AI Draft Reply</h3>
+                                    <p className="text-blue-900 font-inter text-sm bg-blue-50/80 p-3 rounded-xl border border-blue-100 relative z-10">{payloadObj.generated_response || 'Generating...'}</p>
+
+                                    <button onClick={() => handleApprove(approval.id, true)} className="mt-2 w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] relative z-10 text-sm">
+                                        Approve & Send
+                                    </button>
+                                </div>
+                            );
+                        }
+
                         return (
                             <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                                 <div className="flex items-center justify-between">
@@ -536,20 +604,21 @@ export default function Dashboard() {
              </div>
          </section>
 
-         {/* Plain-Language Weekly Financial Brief */}
+         {/* Zero-Jargon Daily Business Advisor Briefing */}
          <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
-            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
-                <div className="flex items-start gap-4">
-                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Daily Briefing</h2>
+            <div className="p-5 shadow-md border border-gray-100 rounded-2xl bg-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-50 rounded-bl-full -z-10 opacity-50"></div>
+                <div className="flex items-start gap-3">
+                   <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center shrink-0 text-xl shadow-inner">
+                      📊
                    </div>
                    <div>
-                       <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
-                       <p className="text-gray-800 text-sm leading-relaxed">
-                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
-                       </p>
+                       <DailyBriefing
+                           activeCustomers={activeCustomers}
+                           todaysSales={todaysSales}
+                           pendingOrders={pendingOrders}
+                       />
                    </div>
                 </div>
             </div>
