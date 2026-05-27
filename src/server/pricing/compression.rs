@@ -95,6 +95,15 @@ pub fn optimize_image(data: &[u8], max_dim: u32) -> Result<(Vec<u8>, String), St
     let encoder = image::codecs::webp::WebPEncoder::new_lossless(&mut cursor);
     resized.write_with_encoder(encoder).map_err(|e| e.to_string())?;
 
+    let original_size = data.len();
+    let optimized_size = webp_data.len();
+    tracing::info!(
+        "💰 Miser cost optimization: WebP compression saved {} bytes ({} -> {})",
+        original_size.saturating_sub(optimized_size),
+        original_size,
+        optimized_size
+    );
+
     Ok((webp_data, "image/webp".to_string()))
 }
 
