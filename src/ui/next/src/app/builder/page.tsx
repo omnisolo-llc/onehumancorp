@@ -4,28 +4,24 @@ import { useState, useEffect } from "react";
 import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock, QRCode } from "./components";
 import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { useBuilderStore } from "./store";
 
 export default function BuilderPage() {
-  const {
-    bio, setBio,
-    businessName, setBusinessName,
-    businessCategory, setBusinessCategory,
-    vibe, setVibe,
-    wizardStep, setWizardStep,
-    blocks, setBlocks,
-    drafts, setDrafts,
-    status, setStatus,
-    businessGoal, setBusinessGoal,
-    liveUrl, setLiveUrl
-  } = useBuilderStore();
-
+  const [bio, setBio] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [businessCategory, setBusinessCategory] = useState("");
+  const [vibe, setVibe] = useState("");
   const [isLoaded, setIsLoaded] = useState(false);
+  const [wizardStep, setWizardStep] = useState(1);
+  const [blocks, setBlocks] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<any[][]>([]);
   const [selectedDraftIndex, setSelectedDraftIndex] = useState(0);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [startY, setStartY] = useState(0);
+  const [status, setStatus] = useState<"onboarding" | "idle" | "generating" | "draft" | "selection" | "live">("onboarding");
+  const [businessGoal, setBusinessGoal] = useState<"products" | "services" | "work" | null>(null);
+  const [liveUrl, setLiveUrl] = useState("");
   const { startWalkthrough } = useWalkthrough();
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
@@ -56,8 +52,58 @@ export default function BuilderPage() {
   useEffect(() => {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
+
+    const savedStatus = localStorage.getItem("builder_status") as any;
+    if (savedStatus) setStatus(savedStatus);
+
+    const savedGoal = localStorage.getItem("builder_businessGoal") as any;
+    if (savedGoal) setBusinessGoal(savedGoal);
+
+    const savedStep = localStorage.getItem("builder_wizardStep");
+    if (savedStep) setWizardStep(parseInt(savedStep));
+
+    const savedName = localStorage.getItem("builder_businessName");
+    if (savedName) setBusinessName(savedName);
+
+    const savedCat = localStorage.getItem("builder_businessCategory");
+    if (savedCat) setBusinessCategory(savedCat);
+
+    const savedVibe = localStorage.getItem("builder_vibe");
+    if (savedVibe) setVibe(savedVibe);
+
+    const savedBio = localStorage.getItem("builder_bio");
+    if (savedBio) setBio(savedBio);
+
+    const savedBlocks = localStorage.getItem("builder_blocks");
+    if (savedBlocks) {
+      try { setBlocks(JSON.parse(savedBlocks)); } catch(e) {}
+    }
+
+    const savedDrafts = localStorage.getItem("builder_drafts");
+    if (savedDrafts) {
+      try { setDrafts(JSON.parse(savedDrafts)); } catch(e) {}
+    }
+
+    const savedLiveUrl = localStorage.getItem("builder_liveUrl");
+    if (savedLiveUrl) setLiveUrl(savedLiveUrl);
+
     setIsLoaded(true);
   }, []);
+
+  // Sync state to local storage when it changes
+  useEffect(() => {
+    if (!isLoaded) return;
+    localStorage.setItem("builder_status", status);
+    if (businessGoal) localStorage.setItem("builder_businessGoal", businessGoal);
+    localStorage.setItem("builder_wizardStep", wizardStep.toString());
+    localStorage.setItem("builder_businessName", businessName);
+    localStorage.setItem("builder_businessCategory", businessCategory);
+    localStorage.setItem("builder_vibe", vibe);
+    localStorage.setItem("builder_bio", bio);
+    localStorage.setItem("builder_blocks", JSON.stringify(blocks));
+    localStorage.setItem("builder_drafts", JSON.stringify(drafts));
+    localStorage.setItem("builder_liveUrl", liveUrl);
+  }, [isLoaded, status, businessGoal, wizardStep, businessName, businessCategory, vibe, bio, blocks, drafts, liveUrl]);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -182,8 +228,8 @@ export default function BuilderPage() {
 
   if (status === "selection") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
               <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
@@ -197,28 +243,28 @@ export default function BuilderPage() {
                     setBlocks(d);
                     setSelectedDraftIndex(idx);
                   }}
-                  className={`w-full text-left bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-lg' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
+                  className={`w-full text-left glassmorphism border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-blue-500 ring-2 ring-blue-500/20' : 'border-white/40 opacity-70'}`}
                 >
-                   <div className="h-32 bg-white/50 dark:bg-black/30 flex items-center justify-center relative backdrop-blur-sm border-b border-white/40 dark:border-white/10">
-                      <span className="font-outfit font-bold text-gray-400 dark:text-gray-500">Draft {idx + 1}</span>
+                   <div className="h-32 bg-gray-100 flex items-center justify-center relative">
+                      <span className="font-outfit font-bold text-gray-400">Draft {idx + 1}</span>
                       {selectedDraftIndex === idx && (
-                        <div className="absolute top-2 right-2 bg-[#0066FF] text-white rounded-full p-1">
+                        <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
                    </div>
-                   <div className="p-4 bg-white/60 dark:bg-black/40 backdrop-blur-md">
-                      <p className="text-xs font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider mb-1">Preview</p>
-                      <p className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1 font-inter">{d[0]?.props?.headline || "Storefront Preview"}</p>
+                   <div className="p-4 bg-white/80">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Preview</p>
+                      <p className="text-sm text-gray-800 line-clamp-1">{d[0]?.props?.headline || "Storefront Preview"}</p>
                    </div>
                 </button>
               ))}
            </div>
 
-           <div className="absolute bottom-0 w-full p-6 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+           <div className="absolute bottom-0 w-full p-6 bg-white/90 backdrop-blur-md border-t border-gray-200">
               <button
                 onClick={() => setStatus("draft")}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+                className="w-full bg-[#0071E3] text-white p-4 rounded-xl font-bold font-outfit shadow-lg active:scale-[0.98] transition-all"
               >
                 Customize Selected Draft
               </button>
@@ -230,16 +276,16 @@ export default function BuilderPage() {
 
   if (status === "onboarding") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col border-x border-gray-200">
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-              <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-6 leading-tight">
+            <div className="glassmorphism p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+              <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6 leading-tight">
                 What are you building today?
               </h1>
 
@@ -255,10 +301,10 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setTimeout(() => setStatus("idle"), 300);
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full p-6 glassmorphism border border-white/40 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
-                    <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>
+                    <span className="text-lg font-bold font-outfit text-gray-800">{option.label}</span>
                   </button>
                 ))}
               </div>
@@ -271,8 +317,9 @@ export default function BuilderPage() {
 
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] bg-white shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 glassmorphism"
+             style={{ borderRadius: '16px' }}>
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -285,25 +332,25 @@ export default function BuilderPage() {
           <div className="px-8 pb-8 flex flex-col flex-1 justify-start overflow-y-auto">
             {wizardStep === 1 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Let's build your store</h1>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Start with the basics. What's your business called, and what do you do?
                 </p>
 
-                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Business Name</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="e.g. Acme Corp"
                 />
 
-                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Category</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
@@ -311,16 +358,16 @@ export default function BuilderPage() {
                 />
 
                 {wizardStep1Error && (
-                   <p className="text-[#FF3B30] text-sm mb-4 text-left">{wizardStep1Error}</p>
+                   <p className="text-[#FF3B30] text-sm mb-4">{wizardStep1Error}</p>
                 )}
 
                 <button
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
                     businessName.trim().length >= 3 && businessCategory.trim().length >= 5
-                      ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                      : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
+                      ? "text-white shadow-md active:scale-[0.98]"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   }`}
-                  style={{ borderRadius: '8px' }}
+                  style={{ borderRadius: '8px', background: (businessName.trim().length >= 3 && businessCategory.trim().length >= 5) ? '#0071E3' : '' }}
                   onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
@@ -330,7 +377,7 @@ export default function BuilderPage() {
 
             {wizardStep === 2 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Select Your Vibe</h1>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Select Your Vibe</h1>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   How should your store feel? Our AI agents will match this tone.
                 </p>
@@ -340,8 +387,8 @@ export default function BuilderPage() {
                     <button
                       key={v}
                       onClick={() => setVibe(v)}
-                      className={`p-4 border text-left transition-all font-semibold backdrop-blur-md ${
-                        vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 bg-white/40 dark:bg-black/20"
+                      className={`p-4 border text-left transition-all font-semibold ${
+                        vibe === v ? "border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]" : "border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-white/20 bg-white/50 dark:bg-[#1d1d1f]/50 backdrop-blur-sm"
                       }`}
                       style={{ borderRadius: '8px' }}
                     >
@@ -352,7 +399,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(1)}
                   >
@@ -361,10 +408,10 @@ export default function BuilderPage() {
                   <button
                     className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
                       vibe
-                        ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                        : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
+                        ? "text-white shadow-md active:scale-[0.98]"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '8px' }}
+                    style={{ borderRadius: '8px', background: vibe ? '#0071E3' : '' }}
                     onClick={() => {
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
@@ -381,16 +428,16 @@ export default function BuilderPage() {
 
             {wizardStep === 3 && (
               <div className="animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
-                <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#f5f5f7] mb-2">Final Details</h1>
+                <h1 className="text-2xl font-bold font-outfit text-gray-900 dark:text-[#f5f5f7] mb-2">Final Details</h1>
                 <p className="text-gray-500 dark:text-[#a1a1a6] text-sm mb-8 leading-relaxed">
                   Review and add any extra details to help our AI generate the perfect store.
                 </p>
 
-                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Your Business Details</label>
+                <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                    className="w-full border border-gray-200 dark:border-white/10 bg-white/70 dark:bg-[#1d1d1f]/70 backdrop-blur-sm p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all resize-none text-gray-800 dark:text-[#f5f5f7] shadow-inner"
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -401,7 +448,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
+                    className="flex-1 p-4 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-gray-200 dark:hover:bg-gray-700 active:scale-[0.98] border border-transparent dark:border-white/10"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(2)}
                   >
@@ -412,10 +459,10 @@ export default function BuilderPage() {
                       id="generate-btn"
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                         bio.trim().length > 5
-                          ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
-                          : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
+                          ? "text-white shadow-md active:scale-[0.98]"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                       }`}
-                      style={{ borderRadius: '8px' }}
+                      style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                       onClick={handleGenerate}
                       disabled={bio.trim().length <= 5}
                     >
@@ -433,8 +480,8 @@ export default function BuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col border-x border-gray-200 overflow-hidden relative">
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
               <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
@@ -453,8 +500,8 @@ export default function BuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl px-6 pt-12 pb-8">
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+        <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col items-center border-x border-gray-200 text-center px-6 relative overflow-y-auto hide-scrollbar pt-12 pb-8">
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
@@ -470,11 +517,11 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
-            <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
-            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
-                <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
+          <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
+            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-1">Sell Anywhere 💻</h2>
+            <p className="text-xs text-gray-500 mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
+                <pre className="text-[10px] text-gray-600 overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
 <div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 11px;">
@@ -487,7 +534,7 @@ export default function BuilderPage() {
                         navigator.clipboard.writeText(code);
                         alert("Copied embed code to clipboard!");
                     }}
-                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    className="absolute top-2 right-2 bg-white text-gray-700 border border-gray-200 px-2 py-1 rounded text-[10px] font-semibold hover:bg-gray-50 transition-colors"
                 >
                     Copy
                 </button>
@@ -500,9 +547,9 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
-          <div className="w-full bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
-            <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Get your first customer 🚀</h2>
-            <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Share your new store with friends and family to get early sales.</p>
+          <div className="w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-4 text-left">
+            <h2 className="text-lg font-bold font-outfit text-gray-900 mb-1">Get your first customer 🚀</h2>
+            <p className="text-xs text-gray-500 mb-4">Share your new store with friends and family to get early sales.</p>
 
             <div className="flex gap-3">
               <a
@@ -528,9 +575,9 @@ export default function BuilderPage() {
 
 
           {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-md border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
-            <h2 className="text-lg font-bold font-outfit text-[#0066FF] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
-            <p className="text-xs text-blue-700 dark:text-blue-200 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
+          <div className="w-full bg-blue-50 border border-blue-200 shadow-sm p-5 mb-6 text-left rounded-2xl">
+            <h2 className="text-lg font-bold font-outfit text-blue-900 mb-1">Generative Visibility Score (GEO)</h2>
+            <p className="text-xs text-blue-700 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
 
             {geoScore === null ? (
               <button
@@ -566,7 +613,7 @@ export default function BuilderPage() {
           </div>
 
           <button
-            className="w-full bg-white/40 dark:bg-black/20 text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
+            className="w-full bg-gray-100 text-gray-800 font-bold p-4 rounded-xl active:scale-[0.98] transition-all hover:bg-gray-200"
             onClick={() => setStatus("idle")}
           >
             Go to Dashboard
@@ -577,8 +624,8 @@ export default function BuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 font-inter">
+      <div className="w-[375px] h-[812px] bg-white shadow-2xl flex flex-col relative border-x border-gray-200 overflow-hidden">
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
@@ -650,7 +697,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
+                  className="w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-500 transition-all"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -659,11 +706,11 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 glassmorphism text-sm font-bold flex flex-col items-center gap-2">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
                   </button>
-                  <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 glassmorphism text-sm font-bold flex flex-col items-center gap-2">
                     <span>✨</span>
                     <span>AI Generate</span>
                   </button>
@@ -675,7 +722,7 @@ export default function BuilderPage() {
             )}
             <button
               onClick={() => setIsActionSheetOpen(false)}
-              className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+              className="w-full bg-gray-900 text-white p-4 rounded-xl font-bold mt-4"
             >
               Save Changes
             </button>
@@ -683,12 +730,12 @@ export default function BuilderPage() {
         </ActionSheet>
 
         {/* Bottom Action Bar */}
-        <div className="absolute bottom-0 w-full p-4 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+        <div className="absolute bottom-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-200 z-50">
           <div className="flex gap-3 mb-2">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
+            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg">Change Vibe</button>
             {!isPremium && (
               <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px]"
+                className="flex-1 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg border border-blue-100"
                 onClick={() => setShowUpgradeModal(true)}
               >
                 Remove Branding ✨
@@ -698,7 +745,7 @@ export default function BuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -709,36 +756,36 @@ export default function BuilderPage() {
 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[60] flex flex-col justify-end">
-            <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
+          <div className="absolute inset-0 bg-black/60 z-[60] flex flex-col justify-end">
+            <div className="bg-white w-full rounded-t-3xl p-6 shadow-2xl animate-slide-up pb-10">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[12px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center text-2xl shadow-inner">
                   👑
                 </div>
                 <button
                   onClick={() => setShowUpgradeModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-black/40 transition-colors"
+                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Upgrade to Premium</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] mb-6 font-inter text-sm leading-relaxed">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Upgrade to Premium</h2>
+              <p className="text-gray-500 mb-6 font-inter text-sm leading-relaxed">
                 Unlock white-labeling, custom domains, and advanced analytics to grow your business faster.
               </p>
 
               <div className="space-y-3 mb-6 font-inter text-sm">
                 <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Remove "Powered by OHC" footer</span>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Remove "Powered by OHC" footer</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Connect a custom domain</span>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Connect a custom domain</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <svg className="w-5 h-5 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                  <span className="text-gray-700 dark:text-gray-300">Priority AI scheduling</span>
+                  <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  <span className="text-gray-700">Priority AI scheduling</span>
                 </div>
               </div>
 
@@ -747,7 +794,7 @@ export default function BuilderPage() {
                   setIsPremium(true);
                   setShowUpgradeModal(false);
                 }}
-                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 rounded-[8px] shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
+                className="w-full bg-gradient-to-r from-gray-900 to-black text-white font-bold p-4 rounded-xl shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
               >
                 <span>Upgrade Now</span>
                 <span className="font-normal opacity-80">$15 / mo</span>
