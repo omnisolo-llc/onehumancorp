@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { WithTooltip } from '../../components/TooltipRegistry';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -48,35 +47,29 @@ export default function CheckoutPage() {
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
-          <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
-            <button
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-            >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
-            </button>
-          </WithTooltip>
+          <button
+            onClick={handlePayment}
+            disabled={isProcessing}
+            className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          >
+            {isProcessing ? 'Processing...' : 'Pay Now'}
+          </button>
 
-          <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
-            <button
-              onClick={() => {
-                router.push('/dashboard');
-              }}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
-            >
-              Tap to Pay (Stripe Terminal)
-            </button>
-          </WithTooltip>
+          <button
+            onClick={() => {
+              router.push('/dashboard');
+            }}
+            className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
+          >
+            Tap to Pay (Stripe Terminal)
+          </button>
 
-          <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
-            <button
-              onClick={() => router.push('/pricing')}
-              className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
-            >
-              Cancel
-            </button>
-          </WithTooltip>
+          <button
+            onClick={() => router.push('/pricing')}
+            className="w-full px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </main>
 
