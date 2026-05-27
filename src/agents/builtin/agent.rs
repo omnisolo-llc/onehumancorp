@@ -1598,6 +1598,36 @@ impl Agent {
         Ok(parsed)
     }
 
+    pub async fn resume_from_checkpoint<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        checkpoint_id: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let thread_id = cfg.thread_id.as_deref().unwrap_or("default");
+        if let Some(checkpointer) = &self.checkpointer {
+            let cp = checkpointer.get_checkpoint(thread_id, checkpoint_id).await
+                .map_err(|e| format!("Failed to get checkpoint: {}", e))?
+                .ok_or_else(|| format!("Checkpoint {} not found", checkpoint_id))?;
+
+            checkpointer.restore_checkpoint(checkpoint_id).await
+                .map_err(|e| format!("Failed to restore workspace: {}", e))?;
+
+            let restored_msgs: Vec<crate::types::Message> = serde_json::from_value(cp.data)
+                .map_err(|e| format!("Failed to deserialize messages: {}", e))?;
+
+            let mut new_cfg = cfg.clone();
+            new_cfg.injected_context = Some(restored_msgs);
+
+            self.run(&new_cfg, "", on_event).await
+        } else {
+            Err("Checkpointer not configured".into())
+        }
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -5722,8 +5752,76 @@ mod stream_tests {
     }
 
     #[tokio::test]
+    async fn test_resume_from_checkpoint() {
+        use crate::checkpointer::{CheckpointSaver, Checkpoint};
+        struct MockCheckpointerResume {
+            checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Checkpoint>>,
+        }
+
+        #[async_trait::async_trait]
+        impl CheckpointSaver for MockCheckpointerResume {
+            async fn get_checkpoint(&self, _tid: &str, cid: &str) -> Result<Option<Checkpoint>, String> {
+                Ok(self.checkpoints.lock().await.get(cid).cloned())
+            }
+            async fn put_checkpoint(&self, cp: Checkpoint) -> Result<(), String> {
+                self.checkpoints.lock().await.insert(cp.checkpoint_id.clone(), cp);
+                Ok(())
+            }
+            async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> { Ok(vec![]) }
+            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> { Ok(()) }
+        }
+
+        struct ResumeMockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for ResumeMockLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                Ok(ChatResponse {
+                    message: Message::assistant("Rewound response"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            }
+        }
+
+        let cp_saver = Arc::new(MockCheckpointerResume {
+            checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()),
+        });
+        let llm = Arc::new(ResumeMockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let mut agent = Agent::new(llm, vec![]);
+        agent.checkpointer = Some(cp_saver.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.thread_id = Some("test-thread".to_string());
+
+        let mut messages = vec![Message::user("Hello")];
+        messages.push(Message::assistant("World"));
+        let cp = Checkpoint {
+            thread_id: "test-thread".to_string(),
+            checkpoint_id: "test-cp-1".to_string(),
+            parent_id: None,
+            data: serde_json::to_value(&messages).unwrap(),
+            metadata: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        };
+
+        cp_saver.put_checkpoint(cp).await.unwrap();
+
+        let mut on_event = |_| {};
+        let result = agent.resume_from_checkpoint(&cfg, "test-cp-1", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Rewound response");
+    }
+
+    #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use crate::tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
