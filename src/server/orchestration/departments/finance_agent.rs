@@ -19,7 +19,11 @@ impl Department for FinanceAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.payment.received".to_string()]
+        vec![
+            "tenant.payment.received".to_string(),
+            "escrow.milestone.ready".to_string(),
+            "escrow.milestone.approved".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -34,13 +38,36 @@ impl Department for FinanceAgent {
             ActionRisk::DraftForReview
         };
 
-        self.orchestrator.execute_action(
-            DepartmentType::Finance,
-            "Record deposit and track payment".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        match event.event_type.as_str() {
+            "tenant.payment.received" => {
+                self.orchestrator.execute_action(
+                    DepartmentType::Finance,
+                    "Record deposit and track payment".to_string(),
+                    event.tenant_id.clone(),
+                    risk,
+                    event.payload.clone(),
+                ).await.map(|_| ())
+            }
+            "escrow.milestone.ready" => {
+                self.orchestrator.execute_action(
+                    DepartmentType::Finance,
+                    "Request customer approval for escrow milestone release".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::DraftForReview, // Always ask customer/owner for review to release funds
+                    event.payload.clone(),
+                ).await.map(|_| ())
+            }
+            "escrow.milestone.approved" => {
+                self.orchestrator.execute_action(
+                    DepartmentType::Finance,
+                    "Execute escrow fund release to owner treasury wallet".to_string(),
+                    event.tenant_id.clone(),
+                    ActionRisk::AutoExecute, // Once approved, the agent auto-executes
+                    event.payload.clone(),
+                ).await.map(|_| ())
+            }
+            _ => Ok(())
+        }
     }
 
     fn get_config(&self, _tenant_id: &str) -> Option<DepartmentConfig> {
