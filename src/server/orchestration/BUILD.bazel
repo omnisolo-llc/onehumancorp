@@ -22,6 +22,7 @@ exports_files(
         "statemachine_v2.rs",
         "tasks.rs",
         "ultraplan.rs",
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -50,6 +51,7 @@ rust_library(
         "statemachine_v2.rs",
         "tasks.rs",
         "ultraplan.rs",
+
         "//src/server/orchestration/departments:approvals_test.rs",
         "//src/server/orchestration/departments:business_advisory_agent.rs",
         "//src/server/orchestration/departments:customer_success_agent.rs",

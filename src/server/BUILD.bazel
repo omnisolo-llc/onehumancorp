@@ -457,6 +457,7 @@ SERVER_LIB_TEST_FILTERS = [
     "tasks",
     "tools::config_sync",
     "tools::hybridfsmcp",
+
     "workers",
 ]
 
@@ -530,6 +531,7 @@ rust_test(
         "scheduler",
         "settings",
         "tasks",
+
         "orchestration",
         "interop",
         "domain",
