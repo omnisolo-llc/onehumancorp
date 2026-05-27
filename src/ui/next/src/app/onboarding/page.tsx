@@ -22,7 +22,80 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Fetch initial state from backend
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.step && typeof data.step === 'number') {
+            // Populate state
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch initial state", err);
+      }
+    };
+
+    fetchState();
   }, []);
+
+  // Sync state changes to backend
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const saveState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error("Failed to save state", err);
+      }
+    };
+
+    const debounceTimer = setTimeout(saveState, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [
+    isLoaded, step, businessDescription, businessName, businessType,
+    categories, websiteTemplate, firstProductName, firstProductPrice
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -141,8 +214,21 @@ export default function OnboardingWizard() {
                 <textarea
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      if (businessDescription.trim() && !isLoading) {
+                        handleIntake();
+                      }
+                    }
+                  }}
+                  autoFocus
+                  inputMode="text"
+                  autoCapitalize="sentences"
+                  autoCorrect="on"
+                  spellCheck="true"
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                  className="w-full p-4 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] focus:ring-4 focus:ring-[#0066FF]/20 outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-sm"
                 />
               </div>
 
@@ -150,7 +236,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleIntake}
                   disabled={!businessDescription.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   {isLoading ? 'Analyzing...' : 'Generate My Business'}
                 </button>
@@ -175,7 +261,10 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    autoCapitalize="words"
+                    autoCorrect="off"
+                    spellCheck="false"
+                    className="w-full p-3 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
@@ -184,7 +273,8 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    autoCapitalize="words"
+                    className="w-full p-3 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
@@ -193,7 +283,9 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className="w-full p-3 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -203,16 +295,18 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        autoCapitalize="words"
+                        className="w-full p-3 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[12px] border border-white/60 dark:border-white/20 focus:border-[#0066FF] outline-none bg-white/70 dark:bg-black/40 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                 </div>
@@ -221,7 +315,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all"
                 >
                   Continue
                 </button>
@@ -247,9 +341,9 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-4 rounded-[12px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm shadow-[#0066FF]/20' : 'border-white/60 dark:border-white/20 bg-white/70 dark:bg-black/40 backdrop-blur-xl hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white hover:shadow-md'}`}
                       >
-                        <div className="font-semibold">{template}</div>
+                        <div className="font-semibold text-center">{template}</div>
                       </div>
                     ))}
                   </div>
@@ -260,7 +354,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[12px] font-bold shadow-lg shadow-[#0066FF]/20 hover:bg-[#0052cc] hover:shadow-[#0066FF]/40 active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   Launch Store
                 </button>
@@ -306,13 +400,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
+                  className="block w-full text-center bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[12px] font-bold shadow-lg hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full text-center bg-white/70 dark:bg-white/10 backdrop-blur-xl text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/60 dark:border-white/20 p-4 rounded-[12px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
