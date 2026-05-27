@@ -329,44 +329,43 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+    <div className="flex flex-col min-h-screen font-inter bg-[#F5F5F7] max-w-[375px] mx-auto overflow-x-hidden pb-20 relative">
 
-      {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-         <nav className="flex items-center gap-3">
-             <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
-               Calendar 📅
-             </Link>
-             <Link href="/inbox" className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium hover:bg-blue-200 transition-colors border border-blue-200 shadow-sm">
-               Inbox
-             </Link>
-             <Link href="/review-campaigns" className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-md text-sm font-medium hover:bg-yellow-200 transition-colors border border-yellow-200 shadow-sm">
-               Review Campaigns ⭐️
-             </Link>
-             <Link href="/share-cards" className="px-4 py-2 bg-pink-100 text-pink-700 rounded-md text-sm font-medium hover:bg-pink-200 transition-colors border border-pink-200 shadow-sm">
-               Social Cards 🎴
-             </Link>
-             <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
-               Seasonal Promos ✨
-             </Link>
-             <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
-             <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
-               <span>🤖</span> AI Departments
-             </Link>
-             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
-               <span>⚡️</span> KAIROS
-             </Link>
-             <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
-               My Plan
-             </Link>
-             <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
-                 AC
-             </div>
-         </nav>
+      {/* Top Header - Mobile Focused */}
+      <header className="px-4 py-3 flex items-center justify-between border-b bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 sticky top-0 z-50">
+         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Dashboard</h1>
+         <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600 shadow-sm">
+             AC
+         </div>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main className="p-4 flex-1 w-full flex flex-col gap-6">
+
+         {/* Top Level Overview */}
+         <section className="mb-2">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Today's Revenue</span>
+                    <span className="text-2xl font-bold font-outfit text-[#1D1D1F]">${todaysSales.toFixed(2)}</span>
+                </div>
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Active Orders</span>
+                    <span className="text-2xl font-bold font-outfit text-[#1D1D1F]">{pendingOrders}</span>
+                </div>
+            </div>
+            <div className="mt-4 flex justify-center">
+                <button
+                    onClick={() => {
+                        navigator.clipboard.writeText(`https://ohc.store/shop/${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className={`w-full py-3 rounded-xl text-sm font-bold shadow-md transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-[#0066FF] text-white hover:bg-blue-700'}`}
+                >
+                    {copied ? 'Link Copied!' : 'Share Store Link'}
+                </button>
+            </div>
+         </section>
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
@@ -1122,6 +1121,26 @@ export default function Dashboard() {
          </section>
 
       </main>
+
+      {/* Bottom Navigation */}
+      <nav className="fixed bottom-0 w-full max-w-[375px] bg-white/80 backdrop-blur-[20px] border-t border-gray-200 px-6 py-3 flex justify-between items-center z-50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+         <Link href="/dashboard" className="flex flex-col items-center gap-1 text-[#0066FF]">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span className="text-[10px] font-medium font-inter">Home</span>
+         </Link>
+         <Link href="/orders" className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            <span className="text-[10px] font-medium font-inter">Orders</span>
+         </Link>
+         <Link href="/agents" className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            <span className="text-[10px] font-medium font-inter">AI Agents</span>
+         </Link>
+         <Link href="/settings" className="flex flex-col items-center gap-1 text-gray-500 hover:text-gray-900 transition-colors">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span className="text-[10px] font-medium font-inter">Settings</span>
+         </Link>
+      </nav>
 
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (

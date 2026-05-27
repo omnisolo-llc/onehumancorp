@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { routeIntent } from './route';
+import { routeIntent } from './routeUtils';
 
 describe('routeIntent', () => {
   it('should route sales messages to sales department', () => {

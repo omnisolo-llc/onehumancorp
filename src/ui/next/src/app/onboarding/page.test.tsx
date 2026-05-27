@@ -144,9 +144,9 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Step 5: Shows Live Screen with correct links', async () => {
+  it('Step 3: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
-      step: 5,
+      step: 3,
       startResult: { message: "Your business has been successfully launched." }
     });
 
