@@ -108,7 +108,7 @@ mod tests {
         let res = buffer_metric(&pool, "test_metric", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json FROM telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json FROM local_telemetry_buffer WHERE metric_name = 'test_metric' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -147,7 +147,7 @@ mod tests {
         let res = ::server_telemetry::record_token_burn_rate_predicted_24h(&pool, "org_test", 15000.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -172,7 +172,7 @@ mod tests {
         let res = ::server_telemetry::record_agent_cost(&pool, "agent-123", "org-1", "test-role", "test-model", "test-entity", 1.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM local_telemetry_buffer WHERE metric_name = 'ohc_agent_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -199,7 +199,7 @@ mod tests {
         let res = ::server_telemetry::record_api_call_cost(&pool, "org-2", "test-entity-2", 0.5).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM local_telemetry_buffer WHERE metric_name = 'ohc_api_call_cost' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -225,7 +225,7 @@ mod tests {
         let res = ::server_telemetry::record_swarm_job_latency_by_entity(&pool, "cloud", "test-entity-3", 125.0).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
+        let row = sqlx::query("SELECT labels_json, value FROM local_telemetry_buffer WHERE metric_name = 'ohc_swarm_job_latency_by_entity_seconds' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -256,7 +256,7 @@ mod tests {
         let res = buffer_metric(&pool, "test_standalone", "counter", 1.0, labels).await;
         assert!(res.is_ok());
 
-        let row = sqlx::query("SELECT COUNT(*) FROM telemetry_buffer WHERE metric_name = 'test_standalone'")
+        let row = sqlx::query("SELECT COUNT(*) FROM local_telemetry_buffer WHERE metric_name = 'test_standalone'")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -495,7 +495,7 @@ async fn test_record_queue_length_with_deployment_mode() {
     let res = ::server_telemetry::record_queue_length(&pool, 5).await;
     assert!(res.is_ok());
 
-    let row = sqlx::query("SELECT labels_json, value FROM telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
+    let row = sqlx::query("SELECT labels_json, value FROM local_telemetry_buffer WHERE metric_name = 'ohc_sub_agent_queue_length' ORDER BY timestamp DESC LIMIT 1")
         .fetch_one(&pool)
         .await
         .unwrap();
@@ -623,4 +623,31 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_init_latency(1.23);
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
+}
+
+#[test]
+fn test_additional_pii_redaction() {
+    let mut props = std::collections::HashMap::new();
+    props.insert("dob".to_string(), "01/01/1990".to_string());
+    props.insert("birth_date".to_string(), "01/01/1990".to_string());
+    props.insert("passport_number".to_string(), "A1234567".to_string());
+    props.insert("driver_license".to_string(), "D1234567".to_string());
+    props.insert("ip".to_string(), "192.168.1.1".to_string());
+    props.insert("location_city".to_string(), "New York".to_string());
+
+    let mut sanitized_props = props;
+    for (k, v) in sanitized_props.iter_mut() {
+        if ::server_telemetry::is_sensitive_key(k) {
+            *v = "[REDACTED]".to_string();
+        } else if ::server_telemetry::is_email(v) {
+            *v = "[EMAIL_REDACTED]".to_string();
+        }
+    }
+
+    assert_eq!(sanitized_props.get("dob").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("birth_date").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("passport_number").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("driver_license").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("ip").unwrap(), "[REDACTED]");
+    assert_eq!(sanitized_props.get("location_city").unwrap(), "[REDACTED]");
 }

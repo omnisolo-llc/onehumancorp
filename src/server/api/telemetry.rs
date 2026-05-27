@@ -117,3 +117,24 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
 
     StatusCode::OK
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    #[tokio::test]
+    async fn test_sync_telemetry_handler() {
+        let batch = vec![MetricBatchItem {
+            metric_name: "test_metric".to_string(),
+            metric_type: "counter".to_string(),
+            value: 1.0,
+            labels: serde_json::json!({"test": "label"}),
+            timestamp: chrono::Utc::now(),
+        }];
+
+        let response = sync_telemetry_handler(axum::Json(batch)).await.into_response();
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}

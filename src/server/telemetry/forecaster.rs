@@ -36,8 +36,8 @@ impl Forecaster {
         // Look back only at the most recent samples since the last cycle
         let lookback = now - chrono::Duration::minutes(6);
 
-        // 1. Fetch recent token usage from telemetry_buffer
-        let rows = sqlx::query("SELECT value, labels_json FROM telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1")
+        // 1. Fetch recent token usage from local_telemetry_buffer
+        let rows = sqlx::query("SELECT value, labels_json FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_usage_total' AND timestamp >= $1")
             .bind(lookback)
             .fetch_all(&self.pool)
             .await?;
@@ -114,7 +114,7 @@ mod tests {
 
         // Ensure table exists
         let _ = sqlx::query(
-            "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+            "CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
                 id SERIAL PRIMARY KEY,
                 metric_name TEXT NOT NULL,
                 metric_type TEXT NOT NULL,
@@ -130,7 +130,7 @@ mod tests {
         let now = Utc::now();
 
         // Insert some recent usage
-        let _ = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+        let _ = sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
             .bind("ohc_token_usage_total")
             .bind("counter")
             .bind(100.0)
@@ -144,7 +144,7 @@ mod tests {
         forecaster.run_forecast_cycle().await.unwrap();
 
         // Check if predicted_24h is recorded
-        let row: (f32,) = sqlx::query_as("SELECT value FROM telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
+        let row: (f32,) = sqlx::query_as("SELECT value FROM local_telemetry_buffer WHERE metric_name = 'ohc_token_burn_rate_predicted_24h' ORDER BY timestamp DESC LIMIT 1")
             .fetch_one(&pool).await.unwrap();
 
         // 100 tokens per 5 mins * 288 (5-min intervals in 24h) = 28800

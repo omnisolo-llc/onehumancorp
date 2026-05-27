@@ -129,7 +129,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     };
 
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+        "CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             metric_name TEXT NOT NULL,
             metric_type TEXT NOT NULL,
@@ -140,7 +140,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         )"
     ).execute(&sqlite_pool).await.unwrap();
 
-    sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES (?, ?, ?, ?, ?, 'pending')")
+    sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES (?, ?, ?, ?, ?, 'pending')")
         .bind("test_metric")
         .bind("counter")
         .bind(1.0)
@@ -165,7 +165,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
     daemon.sync_telemetry_step().await.unwrap();
 
     // Check that it's still pending
-    let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
+    let row = sqlx::query("SELECT sync_status FROM local_telemetry_buffer")
         .fetch_one(&sqlite_pool)
         .await
         .unwrap();

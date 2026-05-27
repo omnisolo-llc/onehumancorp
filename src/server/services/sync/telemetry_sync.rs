@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Row, query};
+use crate::db::{DB, DbStore};
 use chrono::{DateTime, Utc};
 use tracing::error;
 use serde_json::Value;
@@ -11,28 +11,37 @@ pub mod perf {
     }
 }
 
-pub struct TelemetrySyncDaemon {
-    pool: PgPool,
+pub struct TelemetrySyncWorker {
+    db: DB,
     cloud_url: String,
     mode: perf::CoordinatorMode,
 }
 
-impl TelemetrySyncDaemon {
-    pub fn new(pool: PgPool, cloud_url: String) -> Self {
-        Self { pool, cloud_url, mode: perf::CoordinatorMode::Sequential }
+impl TelemetrySyncWorker {
+    pub fn new(db: DB, cloud_url: String) -> Self {
+        Self { db, cloud_url, mode: perf::CoordinatorMode::Sequential }
     }
 
-    pub fn with_mode(pool: PgPool, cloud_url: String, mode: perf::CoordinatorMode) -> Self {
-        Self { pool, cloud_url, mode }
+    pub fn with_mode(db: DB, cloud_url: String, mode: perf::CoordinatorMode) -> Self {
+        Self { db, cloud_url, mode }
     }
 
     pub fn start(self) {
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
+            let mut backoff = 1;
             loop {
                 interval.tick().await;
-                if let Err(e) = self.sync_metrics().await {
-                    error!("Failed to sync metrics: {}", e);
+                match self.sync_metrics().await {
+                    Ok(_) => {
+                        backoff = 1; // reset on success
+                    }
+                    Err(e) => {
+                        error!("Failed to sync metrics: {}", e);
+                        // Exponential backoff, up to 10 minutes
+                        backoff = std::cmp::min(backoff * 2, 10);
+                        tokio::time::sleep(std::time::Duration::from_secs(60 * backoff)).await;
+                    }
                 }
             }
         });
@@ -42,17 +51,43 @@ impl TelemetrySyncDaemon {
         if self.cloud_url.is_empty() {
             return Ok(());
         }
-        if self.cloud_url.is_empty() {
-            return Ok(());
-        }
-        let rows = query(
-            "SELECT id, metric_name, metric_type, value, labels_json, timestamp
-             FROM telemetry_buffer WHERE sync_status = 'pending' LIMIT 100"
-        )
-        .fetch_all(&self.pool)
-        .await?;
 
-        if rows.is_empty() {
+        let query_str = "SELECT id, metric_name, metric_type, value, labels_json, timestamp \
+                         FROM local_telemetry_buffer WHERE sync_status = 'pending' LIMIT 100";
+
+        let mut extracted_data = Vec::new();
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                let rows = sqlx::query(query_str).fetch_all(&self.db.pool).await?;
+                for row in rows {
+                    use sqlx::Row;
+                    let id: i32 = row.get("id");
+                    let metric_name: String = row.get("metric_name");
+                    let metric_type: String = row.get("metric_type");
+                    let value: f32 = row.get("value");
+                    let labels_json: String = row.get("labels_json");
+                    let timestamp: DateTime<Utc> = row.get("timestamp");
+                    extracted_data.push((id, metric_name, metric_type, value, labels_json, timestamp));
+                }
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query(query_str).fetch_all(sqlite_pool).await?;
+                for row in rows {
+                    use sqlx::Row;
+                    let id: i32 = row.get("id");
+                    let metric_name: String = row.get("metric_name");
+                    let metric_type: String = row.get("metric_type");
+                    let value: f32 = row.get::<f32, _>("value");
+                    let labels_json: String = row.get("labels_json");
+                    let timestamp: chrono::NaiveDateTime = row.get("timestamp");
+                    let timestamp = chrono::DateTime::from_naive_utc_and_offset(timestamp, chrono::Utc);
+                    extracted_data.push((id, metric_name, metric_type, value, labels_json, timestamp));
+                }
+            }
+        }
+
+        if extracted_data.is_empty() {
             return Ok(());
         }
 
@@ -61,21 +96,6 @@ impl TelemetrySyncDaemon {
 
         if self.mode == perf::CoordinatorMode::Parallel {
             // Parallel execution using futures
-
-            // Extract the data from rows since `Row` might not be Send/Sync
-            // or easily parallelizable directly. We consume it into an iterator.
-            let extracted_data: Vec<(i32, String, String, f32, String, DateTime<Utc>)> = rows.into_iter().map(|row| {
-                let id: i32 = row.get("id");
-                let metric_name: String = row.get("metric_name");
-                let metric_type: String = row.get("metric_type");
-                let value: f32 = row.get("value");
-                let labels_json: String = row.get("labels_json");
-                let timestamp: DateTime<Utc> = row.get("timestamp");
-                (id, metric_name, metric_type, value, labels_json, timestamp)
-            }).collect();
-
-            // To limit the number of blocking threads, chunk the execution instead of spawning one per row.
-            // We use iterators without cloning.
             let num_cpus = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
             let chunk_size = std::cmp::max(1, (extracted_data.len() + num_cpus - 1) / num_cpus);
 
@@ -115,14 +135,7 @@ impl TelemetrySyncDaemon {
             }
         } else {
             // Sequential execution
-            for row in rows {
-                let id: i32 = row.get("id");
-                let metric_name: String = row.get("metric_name");
-                let metric_type: String = row.get("metric_type");
-                let value: f32 = row.get("value");
-                let labels_json: String = row.get("labels_json");
-                let timestamp: DateTime<Utc> = row.get("timestamp");
-
+            for (id, metric_name, metric_type, value, labels_json, timestamp) in extracted_data {
                 batch.push(serde_json::json!({
                     "metric_name": metric_name,
                     "metric_type": metric_type,
@@ -147,18 +160,37 @@ impl TelemetrySyncDaemon {
         match res {
             Ok(response) => {
                 if response.status().is_success() {
-                    for id in ids {
-                        query("DELETE FROM telemetry_buffer WHERE id = $1")
-                            .bind(id)
-                            .execute(&self.pool)
-                            .await?;
+                    if !ids.is_empty() {
+                        match &self.db.store {
+                            DbStore::Postgres => {
+                                let query_str = "DELETE FROM local_telemetry_buffer WHERE id = ANY($1)";
+                                sqlx::query(query_str)
+                                    .bind(&ids)
+                                    .execute(&self.db.pool)
+                                    .await?;
+                            }
+                            DbStore::Sqlite(sqlite_pool) => {
+                                // SQLite does not support ANY, so we use a transaction with sequential deletes
+                                let mut tx = sqlite_pool.begin().await?;
+                                for id in ids {
+                                    sqlx::query("DELETE FROM local_telemetry_buffer WHERE id = ?")
+                                        .bind(id)
+                                        .execute(&mut *tx)
+                                        .await?;
+                                }
+                                tx.commit().await?;
+                            }
+                        }
                     }
                 } else {
-                    error!("Cloud API returned error: {}", response.status());
+                    let status = response.status();
+                    error!("Cloud API returned error: {}", status);
+                    return Err(format!("Cloud API returned error: {}", status).into());
                 }
             },
             Err(e) => {
                 error!("Cloud API error: {}", e);
+                return Err(Box::new(e));
             }
         }
 
@@ -173,15 +205,11 @@ mod tests {
 
     #[tokio::test]
     async fn bench_telemetry_sync_parallel() {
-        // If we are in the Bazel sandbox without an active HTTP mock or DB, just exit cleanly to avoid timeouts
         let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-
-        // Fast fail for tests
         if db_url.contains("dummy") || db_url == "postgres://localhost/dummy" {
             return;
         }
 
-        // Fast DB connection test with very short timeout
         let pool_res = tokio::time::timeout(
             std::time::Duration::from_millis(100),
             sqlx::PgPool::connect(&db_url)
@@ -189,15 +217,13 @@ mod tests {
 
         let pool = match pool_res {
             Ok(Ok(p)) => p,
-            _ => return, // DB unreachable or timeout
+            _ => return,
         };
 
-        // Ensure connection works
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(100), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) {
             return;
         }
 
-        // Start a dummy mock server to accept telemetry and return 200 OK
         let mock_server = axum::Router::new()
             .route("/api/telemetry/sync", axum::routing::post(|| async { axum::http::StatusCode::OK }));
 
@@ -209,9 +235,8 @@ mod tests {
             axum::serve(listener, mock_server).await.unwrap();
         });
 
-        // Ensure table exists
-        query(
-            "CREATE TABLE IF NOT EXISTS telemetry_buffer (
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS local_telemetry_buffer (
                 id SERIAL PRIMARY KEY,
                 metric_name TEXT NOT NULL,
                 metric_type TEXT NOT NULL,
@@ -222,12 +247,10 @@ mod tests {
             )"
         ).execute(&pool).await.unwrap();
 
-        // Ensure cleanup before test
-        query("DELETE FROM telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM local_telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
 
-        // Insert some dummy data
         for i in 0..100 {
-            query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+            sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
                 .bind(format!("bench_metric_seq_{}", i))
                 .bind("counter")
                 .bind(1.0f32)
@@ -236,14 +259,14 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Sequential);
+        let db = DB { pool: pool.clone(), store: DbStore::Postgres };
+        let worker = TelemetrySyncWorker::with_mode(db.clone(), mock_url.clone(), perf::CoordinatorMode::Sequential);
         let start = Instant::now();
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), daemon.sync_metrics()).await;
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), worker.sync_metrics()).await;
         let seq_duration = start.elapsed();
 
-        // Insert more dummy data for the parallel test
         for i in 0..100 {
-            query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
+            sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'pending')")
                 .bind(format!("bench_metric_par_{}", i))
                 .bind("counter")
                 .bind(1.0f32)
@@ -252,19 +275,17 @@ mod tests {
                 .execute(&pool).await.unwrap();
         }
 
-        let par_daemon = TelemetrySyncDaemon::with_mode(pool.clone(), mock_url.clone(), perf::CoordinatorMode::Parallel);
+        let par_worker = TelemetrySyncWorker::with_mode(db.clone(), mock_url.clone(), perf::CoordinatorMode::Parallel);
         let start_par = Instant::now();
-        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_daemon.sync_metrics()).await;
+        let _ = tokio::time::timeout(std::time::Duration::from_secs(5), par_worker.sync_metrics()).await;
         let par_duration = start_par.elapsed();
 
         tracing::info!("Sequential Sync Duration: {:?}", seq_duration);
         tracing::info!("Parallel Sync Duration: {:?}", par_duration);
 
-        // Assert that sync_metrics returned Ok and both durations are measured
         assert!(seq_duration > std::time::Duration::from_nanos(0));
         assert!(par_duration > std::time::Duration::from_nanos(0));
 
-        // Cleanup
-        query("DELETE FROM telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM local_telemetry_buffer WHERE metric_name LIKE 'bench_metric_%'").execute(&pool).await.unwrap();
     }
 }

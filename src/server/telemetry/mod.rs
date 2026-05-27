@@ -802,7 +802,7 @@ pub async fn buffer_metric(
     let labels_json = serde_json::to_string(&redacted_labels)?;
 
     query(
-        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
+        "INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status)
          VALUES ($1, $2, $3, $4, $5, 'pending')"
     )
     .bind(metric_name)
@@ -876,6 +876,12 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("ip_address")
         || k.contains("mac_address")
         || k.contains("geolocation")
+        || k.contains("dob")
+        || k.contains("birth")
+        || k.contains("passport")
+        || k.contains("license")
+        || k.contains("ip")
+        || k.contains("location")
 }
 
 pub fn is_email(s: &str) -> bool {

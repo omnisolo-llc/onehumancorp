@@ -32,7 +32,7 @@ impl HybridSyncDaemon {
             return Ok(());
         }
 
-        let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM telemetry_buffer WHERE sync_status = 'pending'")
+        let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM local_telemetry_buffer WHERE sync_status = 'pending'")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -55,7 +55,7 @@ impl HybridSyncDaemon {
             let labels_json: String = row.get("labels_json");
             let timestamp: chrono::NaiveDateTime = row.get("timestamp");
 
-            let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
+            let res = sqlx::query("INSERT INTO local_telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
                 .bind(metric_name)
                 .bind(metric_type)
                 .bind(value)
@@ -78,7 +78,7 @@ impl HybridSyncDaemon {
 
         for row in rows {
             let id: i32 = row.get("id");
-            let _ = sqlx::query("UPDATE telemetry_buffer SET sync_status = 'SYNCED' WHERE id = ?")
+            let _ = sqlx::query("UPDATE local_telemetry_buffer SET sync_status = 'SYNCED' WHERE id = ?")
                 .bind(id)
                 .execute(&self.sqlite_pool)
                 .await;
