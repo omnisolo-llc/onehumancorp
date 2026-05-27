@@ -15,28 +15,28 @@ impl HybridFSMcpServer {
     pub fn get_tools(&self) -> Vec<McpToolProto> {
         vec![
             McpToolProto {
-                id: "fs_hybrid_read".to_string(),
+                id: "read_file".to_string(),
                 name: "Read File".to_string(),
                 description: "Read a file from the file system. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}}".to_string(),
                 category: "filesystem".to_string(),
                 status: "active".to_string(),
             },
             McpToolProto {
-                id: "fs_hybrid_write".to_string(),
+                id: "write_file".to_string(),
                 name: "Write File".to_string(),
                 description: "Write content to a file. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"content\":{\"type\":\"string\"}}}".to_string(),
                 category: "filesystem".to_string(),
                 status: "active".to_string(),
             },
             McpToolProto {
-                id: "fs_list_dir".to_string(),
+                id: "list_directory".to_string(),
                 name: "List Directory".to_string(),
                 description: "List contents of a directory. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"}}}".to_string(),
                 category: "filesystem".to_string(),
                 status: "active".to_string(),
             },
             McpToolProto {
-                id: "fs_search_files".to_string(),
+                id: "search_files".to_string(),
                 name: "Search Files".to_string(),
                 description: "Search for files in a directory. Input schema: {\"type\":\"object\",\"properties\":{\"path\":{\"type\":\"string\"},\"query\":{\"type\":\"string\"}}}".to_string(),
                 category: "filesystem".to_string(),
@@ -57,7 +57,7 @@ impl HybridFSMcpServer {
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
 
         match req.tool_id.as_str() {
-            "fs_hybrid_read" => {
+            "read_file" => {
                 let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
                 async {
                     match self.provider.read_file(path).await {
@@ -69,10 +69,10 @@ impl HybridFSMcpServer {
                         Err(e) => Err(tonic::Status::internal(format!("failed to read file: {}", e))),
                     }
                 }
-                .instrument(tracing::info_span!("fs_hybrid_read"))
+                .instrument(tracing::info_span!("read_file"))
                 .await
             }
-            "fs_hybrid_write" => {
+            "write_file" => {
                 let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
                 let content = params["content"].as_str().ok_or_else(|| tonic::Status::invalid_argument("content is required"))?;
 
@@ -85,10 +85,10 @@ impl HybridFSMcpServer {
                         Err(e) => Err(tonic::Status::internal(format!("failed to write file: {}", e))),
                     }
                 }
-                .instrument(tracing::info_span!("fs_hybrid_write"))
+                .instrument(tracing::info_span!("write_file"))
                 .await
             }
-            "fs_list_dir" => {
+            "list_directory" => {
                 let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
 
                 match self.provider.list_dir(path).await {
@@ -99,7 +99,7 @@ impl HybridFSMcpServer {
                     Err(e) => Err(tonic::Status::internal(format!("failed to list dir: {}", e))),
                 }
             }
-            "fs_search_files" => {
+            "search_files" => {
                 let path = params["path"].as_str().ok_or_else(|| tonic::Status::invalid_argument("path is required"))?;
                 let query = params["query"].as_str().ok_or_else(|| tonic::Status::invalid_argument("query is required"))?;
 

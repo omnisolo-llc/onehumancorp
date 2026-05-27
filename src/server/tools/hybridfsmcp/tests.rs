@@ -55,7 +55,7 @@ async fn test_hybrid_fs_mcp_server() {
 
     // Test fs_write_file tool
     let req = McpInvokeRequest {
-        tool_id: "fs_hybrid_write".to_string(),
+        tool_id: "write_file".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":"server_test.txt","content":"from server"}"#.to_string(),
         agent_id: "agent-1".to_string(),
@@ -67,7 +67,7 @@ async fn test_hybrid_fs_mcp_server() {
 
     // Test fs_read_file tool
     let req = McpInvokeRequest {
-        tool_id: "fs_hybrid_read".to_string(),
+        tool_id: "read_file".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":"server_test.txt"}"#.to_string(),
         agent_id: "agent-1".to_string(),
@@ -85,7 +85,7 @@ async fn test_server_search() {
     let server = HybridFSMcpServer::new(provider);
 
     let req = McpInvokeRequest {
-        tool_id: "fs_hybrid_write".to_string(),
+        tool_id: "write_file".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":"server_test.txt","content":"from server"}"#.to_string(),
         agent_id: "agent-1".to_string(),
@@ -94,7 +94,7 @@ async fn test_server_search() {
     server.invoke_tool(&req, None).await.unwrap();
 
     let req2 = McpInvokeRequest {
-        tool_id: "fs_search_files".to_string(),
+        tool_id: "search_files".to_string(),
         action: "invoke".to_string(),
         params: r#"{"path":".","query":".txt"}"#.to_string(),
         agent_id: "agent-1".to_string(),
