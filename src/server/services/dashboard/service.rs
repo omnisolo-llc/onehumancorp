@@ -629,6 +629,10 @@ mod tests {
     use uuid::Uuid;
 
     async fn setup_test_dashboard_service() -> MyDashboardService {
+        unsafe {
+            std::env::set_var("STANDALONE_MODE", "true");
+            std::env::set_var("OHC_SQLITE_KEY", "dummy_key_for_tests");
+        }
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
