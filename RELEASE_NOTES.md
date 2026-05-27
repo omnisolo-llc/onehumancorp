@@ -1,3 +1,11 @@
+## v0.4.47 (Cloud) / v0.4.47+1 (Standalone)
+
+### Cloud Scaling Improvements
+- Coordinate promotions across Cloud staging to streamline multi-environment scaling.
+
+### Privacy/Offline Improvements
+- Coordinate promotions across Local desktop beta builds to ensure standalone privacy and offline functionality.
+
 ## v0.4.46 (Cloud) / v0.4.46+1 (Standalone)
 
 ### Cloud Scaling Improvements
