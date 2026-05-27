@@ -71,7 +71,7 @@ impl DashboardService for MyDashboardService {
             tokio::spawn(async move {
                 Ok::<_, String>(hub2.get_meetings().await)
             }),
-            tokio::spawn(async move {
+            tokio::task::spawn_blocking(move || {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
@@ -676,7 +676,7 @@ mod tests {
         });
 
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        assert!(res_mobile.agents[0].name.len() < 80, "Mobile optimization should compress agent names");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");

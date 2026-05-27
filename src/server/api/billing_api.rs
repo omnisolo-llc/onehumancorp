@@ -106,12 +106,23 @@ pub async fn cost_dashboard_handler(
     let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
     let period_start = start_of_month.format("%Y-%m-%d").to_string();
     let period_end = now.format("%Y-%m-%d").to_string();
-    let auditor = hub.get_cost_auditor();
+    let tracker = hub.tracker();
 
-    let llm_cost_f64 = auditor.get_total_cost();
-    let total_revenue_f64 = auditor.get_total_revenue();
+    let (llm_cost_f64, total_revenue_f64, storage_bytes_res) = tokio::join!(
+        tokio::task::spawn_blocking({
+            let hub_c = hub.clone();
+            move || hub_c.get_cost_auditor().get_total_cost()
+        }),
+        tokio::task::spawn_blocking({
+            let hub_c = hub.clone();
+            move || hub_c.get_cost_auditor().get_total_revenue()
+        }),
+        tracker.get_tenant_storage_used(&tenant_id)
+    );
 
-    let storage_bytes = hub.tracker().get_tenant_storage_used(&tenant_id).await.unwrap_or(0);
+    let llm_cost_f64 = llm_cost_f64.unwrap_or(0.0);
+    let total_revenue_f64 = total_revenue_f64.unwrap_or(0.0);
+    let storage_bytes = storage_bytes_res.unwrap_or(0);
     let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
     let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
