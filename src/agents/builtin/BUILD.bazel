@@ -52,6 +52,7 @@ rust_library(
         "codex_runner.rs",
         "consolidation_worker.rs",
         "deerflow_subagents.rs",
+        "scalable_multi_agent.rs",
         "departments.rs",
         "gpt_researcher.rs",
         "guardrails.rs",
