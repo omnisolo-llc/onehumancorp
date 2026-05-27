@@ -102,6 +102,7 @@ rust_library(
         "//src/proto:interop_prost",
         "//src/server/pricing:server_pricing",
         "//src/server/telemetry:server_telemetry",
+        "//src/server/harness:server_harness",
         "@crates//:temp-env",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
