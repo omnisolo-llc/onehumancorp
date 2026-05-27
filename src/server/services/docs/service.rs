@@ -54,6 +54,12 @@ fn get_articles() -> &'static Vec<HelpArticle> {
                 title: "Understanding your invoice".to_string(),
                 content_markdown: "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees.".to_string(),
             },
+            HelpArticle {
+                id: "dashboard-1".to_string(),
+                topic: "Getting Started".to_string(),
+                title: "Understanding your dashboard".to_string(),
+                content_markdown: "Your dashboard gives you a quick overview of your store's performance. You can see your sales, traffic, and recent orders all in one place.".to_string(),
+            },
         ]
     })
 }
@@ -102,6 +108,11 @@ fn get_tooltips() -> &'static Vec<Tooltip> {
                 element_id: "setting-standalone".to_string(),
                 title: "Standalone Mode".to_string(),
                 plain_language_description: "Runs entirely on your computer. Great if you don't have internet.".to_string(),
+            },
+            Tooltip {
+                element_id: "nav-dashboard".to_string(),
+                title: "Your Dashboard".to_string(),
+                plain_language_description: "View your sales and traffic metrics here. Click to see detailed reports.".to_string(),
             },
         ]
     })

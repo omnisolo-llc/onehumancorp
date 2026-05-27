@@ -5628,7 +5628,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const walkthroughs = {
                             'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
                             'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ],
+                            'Understand your Analytics': [ { target: 'nav-dashboard', title: 'Analytics', text: 'View your sales, traffic, and other important metrics here.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -5683,6 +5684,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <button class="secondary" onclick="startWalkthrough('Set up your store')">🗺️ Tour: Set up your store</button>
                                     <button class="secondary" onclick="startWalkthrough('Activate your AI Support Agent')">🗺️ Tour: Activate your AI Support Agent</button>
                                     <button class="secondary" onclick="startWalkthrough('Accept your first payment')">🗺️ Tour: Accept your first payment</button>
+                                    <button class="secondary" onclick="startWalkthrough('Understand your Analytics')">🗺️ Tour: Understand your Analytics</button>
                                 </div>
                             `;
                             container.appendChild(toursDiv);
