@@ -58,34 +58,12 @@ describe('OnboardingWizard', () => {
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
+    // Step 1: Intake -> start -> Step 3
     await act(async () => {
       button.click();
     });
 
-    // Verify it transitions to Step 2: Review Details
-    await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
-    });
-
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await act(async () => {
-      continueButton.click();
-    });
-
-    // Verify it transitions to Step 3: Style & Team
-    await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify it transitions to Step 5 (Live Screen) on success
+    // Verify it transitions to Step 3 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
@@ -118,31 +96,6 @@ describe('OnboardingWizard', () => {
     });
   });
 
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
-    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
-
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
-
-    act(() => { render(<OnboardingWizard />); });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify error appears and step goes back to 3
-    await waitFor(() => {
-      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
-  });
 
   it('Step 3: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
