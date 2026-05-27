@@ -130,7 +130,7 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
-    return () => clearTimeout(timer);
+  return () => clearTimeout(timer);
   }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
   const handleNext = () => {
@@ -240,6 +240,8 @@ export default function OnboardingWizard() {
       setIsLoading(false);
     }
   };
+
+  if (!isLoaded) { return <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter"><div className="w-8 h-8 border-4 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin"></div></div>; }
 
   return (
     <div id="setup-screen" className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
