@@ -5,12 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -39,6 +37,9 @@ jobs:
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
+          - name: android
+            runner: ubuntu-latest
+            bazel_config: linux_x86_64
          # - name: windows-arm64
           #  runner: windows-11-arm
          #   bazel_config: windows_arm64
@@ -50,6 +51,20 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        if: startsWith(matrix.runner, 'ubuntu')
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -67,10 +82,12 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
+        if: matrix.name != 'android'
         run: |
           bazelisk query '
             kind(".* rule", //...)
             except kind(".*_test rule", //...)
+            except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
             except //src/ui/tauri:all
             except //deploy:all
@@ -108,7 +125,7 @@ jobs:
         run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
 
       - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'linux-x86_64'
+        if: matrix.name == 'android'
         run: |
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
