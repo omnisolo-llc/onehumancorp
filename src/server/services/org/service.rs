@@ -6,8 +6,8 @@ use std::collections::HashMap;
 
 pub struct MyOrgService {
     hub: Arc<crate::hub::Hub>,
-    settings: RwLock<SettingsResponse>,
-    analytics_cache: ::server_utils::cache::HybridCache<AnalyticsSummaryResponse>,
+    settings: RwLock<::server_ohc::orchestration::SettingsResponse>,
+    analytics_cache: ::server_utils::cache::HybridCache<::server_ohc::orchestration::AnalyticsSummaryResponse>,
 }
 
 impl MyOrgService {
@@ -15,7 +15,7 @@ impl MyOrgService {
         let redis_client = hub.redis_client.clone();
         MyOrgService {
             hub,
-            settings: RwLock::new(SettingsResponse {
+            settings: RwLock::new(::server_ohc::orchestration::SettingsResponse {
                 minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default(),
                 extras: HashMap::new(),
             }),
@@ -29,27 +29,27 @@ impl OrgService for MyOrgService {
     async fn get_domains(
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<Response<DomainsResponse>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::DomainsResponse>, Status> {
         let domains = vec![
-            DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
-            DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
-            DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
+            ::server_ohc::orchestration::DomainInfoProto { id: "software_company".to_string(), name: "Software Company".to_string(), description: "Full-stack engineering org...".to_string() },
+            ::server_ohc::orchestration::DomainInfoProto { id: "digital_marketing_agency".to_string(), name: "Digital Marketing Agency".to_string(), description: "Full-service agency...".to_string() },
+            ::server_ohc::orchestration::DomainInfoProto { id: "accounting_firm".to_string(), name: "Accounting Firm".to_string(), description: "Financial services firm...".to_string() },
         ];
-        Ok(Response::new(DomainsResponse { domains }))
+        Ok(Response::new(::server_ohc::orchestration::DomainsResponse { domains }))
     }
 
     async fn get_settings(
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<Response<SettingsResponse>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::SettingsResponse>, Status> {
         let settings = self.settings.read().unwrap();
         Ok(Response::new(settings.clone()))
     }
 
     async fn update_settings(
         &self,
-        request: Request<UpdateSettingsRequest>,
-    ) -> Result<Response<SettingsResponse>, Status> {
+        request: Request<::server_ohc::orchestration::UpdateSettingsRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::SettingsResponse>, Status> {
         let req = request.into_inner();
         let mut settings = self.settings.write().unwrap();
         settings.minimax_api_key = req.minimax_api_key;
@@ -60,17 +60,17 @@ impl OrgService for MyOrgService {
     async fn get_marketplace_items(
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<Response<MarketplaceItemsResponse>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::MarketplaceItemsResponse>, Status> {
         let items = vec![
-            MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
+            ::server_ohc::orchestration::MarketplaceItemProto { id: "git-mcp".to_string(), name: "Git".to_string(), r#type: "tool".to_string(), author: "system".to_string(), description: "Git operations".to_string(), downloads: 100, rating: 4.5, tags: vec!["code".to_string()] },
         ];
-        Ok(Response::new(MarketplaceItemsResponse { items }))
+        Ok(Response::new(::server_ohc::orchestration::MarketplaceItemsResponse { items }))
     }
 
     async fn get_analytics(
         &self,
         _request: Request<::server_ohc::orchestration::EmptyRequest>,
-    ) -> Result<Response<AnalyticsSummaryResponse>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::AnalyticsSummaryResponse>, Status> {
         let org_id = _request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).and_then(|v| ::server_auth::parse_spiffe_id(v).ok()).map(|(id, _)| id).unwrap_or_else(|| "default".to_string());
         let cache_key = format!("org_analytics_{}", org_id);
 
@@ -127,7 +127,7 @@ impl OrgService for MyOrgService {
             user_message: None,
         });
 
-        let response = AnalyticsSummaryResponse {
+        let response = ::server_ohc::orchestration::AnalyticsSummaryResponse {
             human_agent_ratio,
             total_agents,
             total_humans,

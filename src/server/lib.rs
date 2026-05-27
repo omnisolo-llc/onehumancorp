@@ -268,7 +268,7 @@ struct HttpMetricsResponse {
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
+    store: std::sync::Arc<::server_auth::Store>,
     headers: axum::http::HeaderMap,
     axum::Json(payload): axum::Json<HttpMetricsRequest>,
 ) -> axum::response::Response {
@@ -295,7 +295,7 @@ async fn http_metrics_handler(
     if tenant_id == "system" {
         return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
     }
-    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+    if claims.organization_id.as_deref() != Some(&tenant_id) && !claims.roles.contains(&::server_auth::ROLE_ADMIN.to_string()) {
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
@@ -481,7 +481,7 @@ async fn http_login_handler(
 
 async fn advisory_insights_handler(
     db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
+    store: std::sync::Arc<::server_auth::Store>,
     headers: axum::http::HeaderMap,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -554,7 +554,7 @@ async fn advisory_insights_handler(
 
 async fn draft_reply_handler(
     db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
+    store: std::sync::Arc<::server_auth::Store>,
     headers: axum::http::HeaderMap,
     payload: DraftReplyRequest,
 ) -> axum::response::Response {
@@ -788,12 +788,12 @@ impl HubService for MyHubService {
 
     async fn register_agent(
         &self,
-        request: Request<RegisterAgentRequest>,
-    ) -> Result<Response<RegisterAgentResponse>, Status> {
+        request: Request<::server_ohc::orchestration::RegisterAgentRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::RegisterAgentResponse>, Status> {
         let req = request.into_inner();
         if let Some(agent) = req.agent {
             self.hub.register_agent(agent);
-            Ok(Response::new(RegisterAgentResponse { success: true }))
+            Ok(Response::new(::server_ohc::orchestration::RegisterAgentResponse { success: true }))
         } else {
             Err(Status::invalid_argument("agent is required"))
         }
@@ -804,7 +804,7 @@ impl HubService for MyHubService {
         _request: tonic::Request<::server_ohc::orchestration::AgentConfig>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received ConfigWizard request in wizard service");
-        Ok(tonic::Response::new(WizardResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::WizardResponse {
             success: true,
             message: "success".to_string(),
         }))
@@ -815,7 +815,7 @@ impl HubService for MyHubService {
         _request: tonic::Request<::server_ohc::orchestration::PromptTuningConfig>,
     ) -> Result<tonic::Response<::server_ohc::orchestration::WizardResponse>, tonic::Status> {
         tracing::debug!("Received PromptTuning request in wizard service");
-        Ok(tonic::Response::new(WizardResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::WizardResponse {
             success: true,
             message: "success".to_string(),
         }))
@@ -823,8 +823,8 @@ impl HubService for MyHubService {
 
     async fn open_meeting(
         &self,
-        request: Request<OpenMeetingRequest>,
-    ) -> Result<Response<MeetingRoom>, Status> {
+        request: Request<::server_ohc::orchestration::OpenMeetingRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::MeetingRoom>, Status> {
         let req = request.into_inner();
         let meeting = self.hub.open_meeting(req.meeting_id, req.participants, req.agenda);
         Ok(Response::new(meeting))
@@ -832,12 +832,12 @@ impl HubService for MyHubService {
 
     async fn publish(
         &self,
-        request: Request<PublishMessageRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::PublishMessageRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(msg) = req.message {
             match self.hub.clone().publish(msg) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -847,12 +847,12 @@ impl HubService for MyHubService {
 
     async fn delegate_task(
         &self,
-        request: Request<DelegateTaskRequest>,
-    ) -> Result<Response<DelegateTaskResponse>, Status> {
+        request: Request<::server_ohc::orchestration::DelegateTaskRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         if let Some(task) = req.task {
             match self.hub.clone().delegate_task(req.from_agent_id, req.to_agent_id, task) {
-                Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::DelegateTaskResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -862,16 +862,16 @@ impl HubService for MyHubService {
 
     async fn verify_environment(
         &self,
-        request: tonic::Request<VerifyEnvironmentRequest>,
-    ) -> Result<tonic::Response<VerifyEnvironmentResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::VerifyEnvironmentRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::VerifyEnvironmentResponse>, tonic::Status> {
         let req = request.into_inner();
         let env_vars = req.env_vars;
         
         match services::onboarding::env_verifier::verify_environment(&env_vars) {
             Ok(config) => {
-                Ok(tonic::Response::new(VerifyEnvironmentResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::VerifyEnvironmentResponse {
                     status: "success".to_string(),
-                    config: Some(EnvConfig {
+                    config: Some(::server_ohc::orchestration::EnvConfig {
                         mode: config.mode,
                         multi_tenant: config.multi_tenant,
                         headless: config.headless,
@@ -883,7 +883,7 @@ impl HubService for MyHubService {
                 }))
             }
             Err(e) => {
-                Ok(tonic::Response::new(VerifyEnvironmentResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::VerifyEnvironmentResponse {
                     status: "error".to_string(),
                     config: None,
                     error: e,
@@ -894,8 +894,8 @@ impl HubService for MyHubService {
 
     async fn generate_config(
         &self,
-        request: tonic::Request<GenerateConfigRequest>,
-    ) -> Result<tonic::Response<GenerateConfigResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::GenerateConfigRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GenerateConfigResponse>, tonic::Status> {
         let req = request.into_inner();
         let mode = req.mode;
 
@@ -913,13 +913,13 @@ impl HubService for MyHubService {
             config.insert("database".to_string(), "remote".to_string());
             config.insert("cache".to_string(), "none".to_string());
         } else {
-            return Ok(tonic::Response::new(GenerateConfigResponse {
+            return Ok(tonic::Response::new(::server_ohc::orchestration::GenerateConfigResponse {
                 status: "error".to_string(),
                 config: std::collections::HashMap::new(),
             }));
         }
 
-        Ok(tonic::Response::new(GenerateConfigResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::GenerateConfigResponse {
             status: "success".to_string(),
             config,
         }))
@@ -969,15 +969,15 @@ impl HubService for MyHubService {
 
         tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
-        Ok(tonic::Response::new(SaveWizardStateResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::SaveWizardStateResponse {
             status: "saved".to_string(),
         }))
     }
 
     async fn get_wizard_state(
         &self,
-        request: tonic::Request<GetWizardStateRequest>,
-    ) -> Result<tonic::Response<GetWizardStateResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::GetWizardStateRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetWizardStateResponse>, tonic::Status> {
         let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
@@ -1016,15 +1016,15 @@ impl HubService for MyHubService {
             }
         }
 
-        Ok(tonic::Response::new(GetWizardStateResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetWizardStateResponse {
             state,
         }))
     }
 
     async fn reset_wizard_state(
         &self,
-        request: tonic::Request<ResetWizardStateRequest>,
-    ) -> Result<tonic::Response<ResetWizardStateResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::ResetWizardStateRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::ResetWizardStateResponse>, tonic::Status> {
         let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>()
             .ok_or_else(|| tonic::Status::unauthenticated("Missing AuthInfo"))?;
 
@@ -1048,18 +1048,18 @@ impl HubService for MyHubService {
 
         tx.commit().await.map_err(|e| tonic::Status::internal(e.to_string()))?;
 
-        Ok(tonic::Response::new(ResetWizardStateResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::ResetWizardStateResponse {
             status: "reset".to_string(),
         }))
     }
 
     async fn provision(
         &self,
-        request: tonic::Request<ProvisionRequest>,
-    ) -> Result<tonic::Response<ProvisionResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::ProvisionRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::ProvisionResponse>, tonic::Status> {
         let _req = request.into_inner();
         
-        Ok(tonic::Response::new(ProvisionResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::ProvisionResponse {
             status: "provisioned".to_string(),
             message: "State persisted successfully".to_string(),
         }))
@@ -1067,8 +1067,8 @@ impl HubService for MyHubService {
 
     async fn publish_site(
         &self,
-        request: tonic::Request<PublishSiteRequest>,
-    ) -> Result<tonic::Response<PublishSiteResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::PublishSiteRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::PublishSiteResponse>, tonic::Status> {
         let req = request.into_inner();
 
         // Simulating the actual backend write/deployment operations
@@ -1078,7 +1078,7 @@ impl HubService for MyHubService {
             "https://mybusiness.ohc.app".to_string()
         };
 
-        Ok(tonic::Response::new(PublishSiteResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::PublishSiteResponse {
             status: "published".to_string(),
             url,
         }))
@@ -1086,16 +1086,16 @@ impl HubService for MyHubService {
 
     async fn audit_setup(
         &self,
-        request: tonic::Request<AuditSetupRequest>,
-    ) -> Result<tonic::Response<AuditSetupResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::AuditSetupRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::AuditSetupResponse>, tonic::Status> {
         let req = request.into_inner();
         let env = req.env;
 
         match services::onboarding::env_verifier::verify_environment(&env) {
             Ok(config) => {
-                Ok(tonic::Response::new(AuditSetupResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::AuditSetupResponse {
                     status: "success".to_string(),
-                    config: Some(EnvConfig {
+                    config: Some(::server_ohc::orchestration::EnvConfig {
                         mode: config.mode,
                         multi_tenant: config.multi_tenant,
                         headless: config.headless,
@@ -1107,7 +1107,7 @@ impl HubService for MyHubService {
                 }))
             }
             Err(e) => {
-                Ok(tonic::Response::new(AuditSetupResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::AuditSetupResponse {
                     status: "error".to_string(),
                     config: None,
                     error: e,
@@ -1118,8 +1118,8 @@ impl HubService for MyHubService {
 
     async fn diagnostics(
         &self,
-        _request: tonic::Request<DiagnosticsRequest>,
-    ) -> Result<tonic::Response<DiagnosticsResponse>, tonic::Status> {
+        _request: tonic::Request<::server_ohc::orchestration::DiagnosticsRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::DiagnosticsResponse>, tonic::Status> {
         let env_vars = std::env::vars().collect::<std::collections::HashMap<String, String>>();
         
         let config_res = services::onboarding::env_verifier::verify_environment(&env_vars);
@@ -1128,9 +1128,9 @@ impl HubService for MyHubService {
 
         match config_res {
             Ok(config) => {
-                Ok(tonic::Response::new(DiagnosticsResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::DiagnosticsResponse {
                     status: "success".to_string(),
-                    config: Some(EnvConfig {
+                    config: Some(::server_ohc::orchestration::EnvConfig {
                         mode: config.mode,
                         multi_tenant: config.multi_tenant,
                         headless: config.headless,
@@ -1143,7 +1143,7 @@ impl HubService for MyHubService {
                 }))
             }
             Err(e) => {
-                Ok(tonic::Response::new(DiagnosticsResponse {
+                Ok(tonic::Response::new(::server_ohc::orchestration::DiagnosticsResponse {
                     status: "error".to_string(),
                     config: None,
                     wizard_state: state,
@@ -1155,13 +1155,13 @@ impl HubService for MyHubService {
 
     async fn get_wizard_profile(
         &self,
-        request: tonic::Request<GetWizardProfileRequest>,
-    ) -> Result<tonic::Response<GetWizardProfileResponse>, tonic::Status> {
+        request: tonic::Request<::server_ohc::orchestration::GetWizardProfileRequest>,
+    ) -> Result<tonic::Response<::server_ohc::orchestration::GetWizardProfileResponse>, tonic::Status> {
         let req = request.into_inner();
         let mode = req.mode;
 
         let profile = if mode == "cloud" {
-            Some(EnvConfig {
+            Some(::server_ohc::orchestration::EnvConfig {
                 mode: "cloud".to_string(),
                 multi_tenant: true,
                 headless: false,
@@ -1170,7 +1170,7 @@ impl HubService for MyHubService {
                 database_url: "postgresql://user:pass@localhost:5432/ohc".to_string(),
             })
         } else if mode == "standalone" {
-            Some(EnvConfig {
+            Some(::server_ohc::orchestration::EnvConfig {
                 mode: "standalone".to_string(),
                 multi_tenant: false,
                 headless: false,
@@ -1179,14 +1179,14 @@ impl HubService for MyHubService {
                 database_url: "sqlite://local.db".to_string(),
             })
         } else {
-            return Ok(tonic::Response::new(GetWizardProfileResponse {
+            return Ok(tonic::Response::new(::server_ohc::orchestration::GetWizardProfileResponse {
                 status: "error".to_string(),
                 profile: None,
                 error: "Invalid mode requested".to_string(),
             }));
         };
 
-        Ok(tonic::Response::new(GetWizardProfileResponse {
+        Ok(tonic::Response::new(::server_ohc::orchestration::GetWizardProfileResponse {
             status: "success".to_string(),
             profile,
             error: String::new(),
@@ -1195,7 +1195,7 @@ impl HubService for MyHubService {
 
     async fn create_task(
         &self,
-        request: Request<CreateTaskRequest>,
+        request: Request<::server_ohc::orchestration::CreateTaskRequest>,
     ) -> Result<Response<::server_ohc::orchestration::SharedTask>, Status> {
         let req = request.into_inner();
         let task = self.hub.task_manager().create_task(
@@ -1234,7 +1234,7 @@ impl HubService for MyHubService {
     
     async fn poll_tasks(
         &self,
-        request: Request<PollTasksRequest>,
+        request: Request<::server_ohc::orchestration::PollTasksRequest>,
     ) -> Result<Response<Self::PollTasksStream>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().poll_tasks(&req.agent_id, req.limit as usize);
@@ -1270,8 +1270,8 @@ impl HubService for MyHubService {
 
     async fn update_task_status(
         &self,
-        request: Request<UpdateTaskStatusRequest>,
-    ) -> Result<Response<UpdateTaskStatusResponse>, Status> {
+        request: Request<::server_ohc::orchestration::UpdateTaskStatusRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::UpdateTaskStatusResponse>, Status> {
         let req = request.into_inner();
         
         match req.status.as_str() {
@@ -1289,14 +1289,14 @@ impl HubService for MyHubService {
             }
         }
         
-        Ok(Response::new(UpdateTaskStatusResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::UpdateTaskStatusResponse { success: true }))
     }
 
 
     async fn approve_task(
         &self,
-        request: Request<ApproveTaskRequest>,
-    ) -> Result<Response<ApproveTaskResponse>, Status> {
+        request: Request<::server_ohc::orchestration::ApproveTaskRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::ApproveTaskResponse>, Status> {
         let org_id = request.extensions().get::<::server_common::Claims>()
             .ok_or_else(|| Status::unauthenticated("Missing claims"))?
             .organization_id.as_ref()
@@ -1307,15 +1307,15 @@ impl HubService for MyHubService {
         self.hub.task_manager().approve_task(&req.task_id, req.is_approved, &org_id).await
             .map_err(|e| Status::internal(e))?;
 
-        Ok(Response::new(ApproveTaskResponse {
+        Ok(Response::new(::server_ohc::orchestration::ApproveTaskResponse {
             success: true,
         }))
     }
 
     async fn get_pending_approvals(
         &self,
-        request: Request<GetPendingApprovalsRequest>,
-    ) -> Result<Response<GetPendingApprovalsResponse>, Status> {
+        request: Request<::server_ohc::orchestration::GetPendingApprovalsRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::GetPendingApprovalsResponse>, Status> {
         let req = request.into_inner();
         let tasks = self.hub.task_manager().get_pending_approvals(&req.organization_id);
 
@@ -1344,15 +1344,15 @@ impl HubService for MyHubService {
             }
         }).collect();
 
-        Ok(Response::new(GetPendingApprovalsResponse {
+        Ok(Response::new(::server_ohc::orchestration::GetPendingApprovalsResponse {
             tasks: mapped_tasks,
         }))
     }
 
     async fn trigger_custom_order(
         &self,
-        request: Request<TriggerCustomOrderRequest>,
-    ) -> Result<Response<TriggerCustomOrderResponse>, Status> {
+        request: Request<::server_ohc::orchestration::TriggerCustomOrderRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::TriggerCustomOrderResponse>, Status> {
         let req = request.into_inner();
 
         let mut ops_task = self.hub.task_manager().create_task(
@@ -1377,15 +1377,15 @@ impl HubService for MyHubService {
         cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
         self.hub.task_manager().insert_task(cs_task);
 
-        Ok(Response::new(TriggerCustomOrderResponse {
+        Ok(Response::new(::server_ohc::orchestration::TriggerCustomOrderResponse {
             success: true,
         }))
     }
 
     async fn decompose_task(
         &self,
-        request: Request<DecomposeTaskRequest>,
-    ) -> Result<Response<DecomposeTaskResponse>, Status> {
+        request: Request<::server_ohc::orchestration::DecomposeTaskRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::DecomposeTaskResponse>, Status> {
         let req = request.into_inner();
         
         for st in req.sub_tasks {
@@ -1407,14 +1407,14 @@ impl HubService for MyHubService {
             ).map_err(|e| Status::internal(e))?;
         }
         
-        Ok(Response::new(DecomposeTaskResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::DecomposeTaskResponse { success: true }))
     }
 
-    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<Message, Status>> + Send>>;
+    type StreamMessagesStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::Message, Status>> + Send>>;
 
     async fn stream_messages(
         &self,
-        request: Request<StreamMessagesRequest>,
+        request: Request<::server_ohc::orchestration::StreamMessagesRequest>,
     ) -> Result<Response<Self::StreamMessagesStream>, Status> {
         let req = request.into_inner();
         let agent_id = req.agent_id.clone();
@@ -1437,8 +1437,8 @@ impl HubService for MyHubService {
 
     async fn reason(
         &self,
-        request: Request<ReasonRequest>,
-    ) -> Result<Response<ReasonResponse>, Status> {
+        request: Request<::server_ohc::orchestration::ReasonRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::ReasonResponse>, Status> {
         let req = request.into_inner();
         let api_key = self.hub.minimax_api_key().to_string();
         if api_key.is_empty() {
@@ -1447,15 +1447,15 @@ impl HubService for MyHubService {
         
         let client = minimax::MinimaxClient::new(api_key);
         match client.reason(&req.prompt).await {
-            Ok(content) => Ok(Response::new(ReasonResponse { content })),
+            Ok(content) => Ok(Response::new(::server_ohc::orchestration::ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
     }
 
     async fn delegate_sub_task(
         &self,
-        request: Request<SubTask>,
-    ) -> Result<Response<DelegateTaskResponse>, Status> {
+        request: Request<::server_ohc::orchestration::SubTask>,
+    ) -> Result<Response<::server_ohc::orchestration::DelegateTaskResponse>, Status> {
         let req = request.into_inner();
         
         if req.task_id.is_empty() || req.target_role.is_empty() {
@@ -1474,7 +1474,7 @@ impl HubService for MyHubService {
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
         let sub_agent_id = format!("sub-agent-{}-{}", req.target_role, now_nano);
         
-        let sub_agent = Agent {
+        let sub_agent = ::server_ohc::orchestration::Agent {
             id: sub_agent_id.clone(),
             name: format!("Specialized {} Agent", req.target_role),
             role: req.target_role.clone(),
@@ -1502,7 +1502,7 @@ impl HubService for MyHubService {
         tracing::debug!("Spawned K8s Pod {} for Hierarchical Task Delegation", pod_id);
 
         let msg_id = format!("msg-{}-{}", req.task_id, now_nano);
-        let msg = Message {
+        let msg = ::server_ohc::orchestration::Message {
             id: msg_id,
             from_agent: req.from_agent_id,
             to_agent: sub_agent_id,
@@ -1513,31 +1513,31 @@ impl HubService for MyHubService {
         };
         
         match self.hub.clone().publish(msg) {
-            Ok(_) => Ok(Response::new(DelegateTaskResponse { success: true })),
+            Ok(_) => Ok(Response::new(::server_ohc::orchestration::DelegateTaskResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
     }
 
     async fn advertise_capabilities(
         &self,
-        request: Request<AgentCapabilities>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::AgentCapabilities>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.agent_id.is_empty() {
             return Err(Status::invalid_argument("agent_id is required"));
         }
         
         match self.hub.advertise_capabilities(req) {
-            Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+            Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
             Err(e) => Err(Status::internal(e)),
         }
     }
 
-    type DiscoverAgentsStream = Pin<Box<dyn Stream<Item = Result<AgentCapabilities, Status>> + Send>>;
+    type DiscoverAgentsStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::AgentCapabilities, Status>> + Send>>;
 
     async fn discover_agents(
         &self,
-        _request: Request<Query>,
+        _request: Request<::server_ohc::orchestration::Query>,
     ) -> Result<Response<Self::DiscoverAgentsStream>, Status> {
         let rx = self.hub.subscribe_capabilities();
         
@@ -1550,18 +1550,18 @@ impl HubService for MyHubService {
         Ok(Response::new(Box::pin(rx_stream) as Self::DiscoverAgentsStream))
     }
 
-    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<MeshEvent, Status>> + Send>>;
+    type StreamMeshEventsStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::MeshEvent, Status>> + Send>>;
 
     async fn publish_mesh_event(
         &self,
         request: Request<::server_ohc::orchestration::PublishMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if let Some(event) = req.event {
             self.publish_counter.add(1, &[opentelemetry::KeyValue::new("topic", event.topic.clone())]);
 
             match self.hub.publish_mesh_event(event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1571,7 +1571,7 @@ impl HubService for MyHubService {
 
     async fn stream_mesh_events(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<::server_ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamMeshEventsStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1591,19 +1591,19 @@ impl HubService for MyHubService {
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
-    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<TeammateMeshEvent, Status>> + Send>>;
+    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::TeammateMeshEvent, Status>> + Send>>;
 
     async fn publish_teammate_mesh_event(
         &self,
-        request: Request<PublishTeammateMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::PublishTeammateMeshEventRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
             match self.hub.publish_teammate_event(req.channel, event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1613,7 +1613,7 @@ impl HubService for MyHubService {
 
     async fn stream_teammate_mesh(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<::server_ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamTeammateMeshStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1633,8 +1633,8 @@ impl HubService for MyHubService {
 
     async fn invite(
         &self,
-        request: Request<InviteRequest>,
-    ) -> Result<Response<InviteResponse>, Status> {
+        request: Request<::server_ohc::orchestration::InviteRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::InviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
@@ -1646,13 +1646,13 @@ impl HubService for MyHubService {
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
 
-        Ok(Response::new(InviteResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::InviteResponse { success: true }))
     }
 
     async fn accept_invite(
         &self,
-        request: Request<AcceptInviteRequest>,
-    ) -> Result<Response<AcceptInviteResponse>, Status> {
+        request: Request<::server_ohc::orchestration::AcceptInviteRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::AcceptInviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.invitee_id.is_empty() {
@@ -1661,21 +1661,21 @@ impl HubService for MyHubService {
 
         self.viral_loop_tracker.record_invite_accepted(&req.invitee_id);
 
-        Ok(Response::new(AcceptInviteResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::AcceptInviteResponse { success: true }))
     }
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<GetMeetingsResponse>, Status> {
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::GetMeetingsResponse>, Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
         &self,
-        request: Request<StartOnboardingRequest>,
-    ) -> Result<Response<StartOnboardingResponse>, Status> {
+        request: Request<::server_ohc::orchestration::StartOnboardingRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::StartOnboardingResponse>, Status> {
         let req = request.into_inner();
         match self.onboarding_agent.start_onboarding(req).await {
             Ok(resp) => Ok(Response::new(resp)),
@@ -1768,7 +1768,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     maintenance_worker.start();
 
     // Start Token Forecast Engine
-    let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
+    let forecaster = Arc::new(::server_telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
 
     // Start Agent Memory Pipeline
@@ -1823,7 +1823,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             .await;
         }
 
-        let cfg = crate::config::get();
+        let cfg = ::server_config::get();
         let _db_path = cfg.database_url.as_ref()
             .and_then(|url| url.strip_prefix("sqlite://"))
             .map(|s| s.split('?').next().unwrap_or("ohc-standalone.db"))
@@ -1989,7 +1989,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     };
 
     let org_id = user.organization_id.unwrap_or_default();
-    if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx, &org_id).await {
+    if let Err(e) = ::server_common::auth_utils::set_org_context(&mut *tx, &org_id).await {
         tracing::error!("Failed to set org context: {}", e);
         return (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::Json(serde_json::json!([]))).into_response();
     }
@@ -2115,7 +2115,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
                     use axum::response::IntoResponse;
-                    let store = std::sync::Arc::new(crate::auth::Store::new());
+                    let store = std::sync::Arc::new(::server_auth::Store::new());
                     let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
                     let token = match auth_header {
                         Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
@@ -2200,7 +2200,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             "/api/v1/ai/draft-reply",
             axum::routing::post({
                 let db = db.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let store = std::sync::Arc::new(::server_auth::Store::new());
                 move |headers: axum::http::HeaderMap, axum::Json(payload): axum::Json<DraftReplyRequest>| async move {
                     draft_reply_handler(db, store, headers, payload).await
                 }
@@ -2211,7 +2211,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             "/api/v1/dashboard/metrics",
             axum::routing::post({
                 let db = db_for_sales.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let store = std::sync::Arc::new(::server_auth::Store::new());
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
@@ -2225,7 +2225,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             "/api/v1/advisory/insights",
             axum::routing::get({
                 let db = db.clone();
-                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let store = std::sync::Arc::new(::server_auth::Store::new());
                 move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
             }),
         )
@@ -2338,7 +2338,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let hub_service = MyHubService::new(hub.clone(), db.pool.clone(), db.clone());
     let growth_service = crate::services::growth::service::MyGrowthService::new(db.pool.clone(), hub.clone());
-    let store = std::sync::Arc::new(crate::auth::Store::new());
+    let store = std::sync::Arc::new(::server_auth::Store::new());
     
     // Start Telemetry Sync Daemon (if telemetry is enabled)
     if ::server_config::get().telemetry_enabled {
