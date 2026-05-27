@@ -6,7 +6,7 @@ import { useWalkthrough } from "../../components/help";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import { useBuilderStore } from "./store";
 
-function BuilderPageInner() {
+export default function BuilderPage() {
   const {
     bio, setBio,
     businessName, setBusinessName,
@@ -57,52 +57,7 @@ function BuilderPageInner() {
     const savedTenantId = localStorage.getItem("tenant_id") || localStorage.getItem("tenant") || "storefront";
     setTenantId(savedTenantId);
     setIsLoaded(true);
-
-    const userId = localStorage.getItem('user_id') || 'test-user';
-
-    fetch('/api/v1/builder/state', {
-      method: 'GET',
-      headers: {
-        'x-tenant-id': savedTenantId,
-        'x-user-id': userId
-      }
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.builderState) {
-          if (data.builderState.bio) setBio(data.builderState.bio);
-          if (data.builderState.blocks) setBlocks(data.builderState.blocks);
-          if (data.builderState.status) setStatus(data.builderState.status);
-        }
-      })
-      .catch(err => console.error('Failed to fetch builder state', err));
-  }, [setBio, setBlocks, setStatus]);
-
-  useEffect(() => {
-    // Debounce state synchronization
-    const timeoutId = setTimeout(() => {
-      if (status !== 'idle' || bio !== '' || blocks.length > 0) {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-
-        const payload = {
-          builderState: { bio, blocks, status }
-        };
-
-        fetch('/api/v1/builder/state', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-tenant-id': tenantId,
-            'x-user-id': userId
-          },
-          body: JSON.stringify(payload)
-        }).catch(err => console.error('Failed to sync builder state', err));
-      }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [bio, blocks, status]);
+  }, []);
 
   const handleGeoAnalysis = async () => {
     try {
@@ -801,14 +756,7 @@ function BuilderPageInner() {
           </div>
         )}
       </div>
-    </div>
-  );
-}
 
-export default function BuilderPage() {
-  return (
-    <>
-      <BuilderPageInner />
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes slideUp {
           from { transform: translateY(100%); opacity: 0; }
@@ -825,6 +773,6 @@ export default function BuilderPage() {
           .glassmorphism { background: rgba(22, 22, 26, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); }
         }
       `}} />
-    </>
+    </div>
   );
 }

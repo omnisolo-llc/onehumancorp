@@ -13,7 +13,7 @@ vi.mock('../../components/help', () => ({
 
 describe('BuilderPage V2', () => {
   beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({ json: () => Promise.resolve({ data: {} }) });
+    global.fetch = vi.fn();
     localStorage.clear();
     useBuilderStore.setState({
       bio: "",

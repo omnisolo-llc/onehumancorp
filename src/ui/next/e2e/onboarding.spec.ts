@@ -6,10 +6,10 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1)
-    await expect(page.getByText(/Tell us about your business/i)).toBeVisible();
+    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
     // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder*="vegan cakes"]');
+    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
     await descriptionInput.fill('I am a freelance handyman in Miami');
 
     // Intercept API calls
@@ -24,37 +24,37 @@ test.describe('Onboarding Wizard Flow', () => {
     }));
 
     // Click Generate
-    await page.getByRole('button', { name: /Generate My Business/i }).click();
+    await page.locator('button:has-text("Generate My Business")').click();
 
     // 2. Wait for Review Details Step
-    await expect(page.getByText(/Review Details/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
 
     // Continue to next step
-    await page.getByRole('button', { name: /Continue/i }).click();
+    await page.locator('button:has-text("Continue")').click();
 
     // 3. Wait for Style & Team Step
-    await expect(page.getByText(/Style & Team/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Style & Team"')).toBeVisible({ timeout: 5000 });
 
     // Select Template and Launch
-    await page.getByText('Classic').click();
-    await page.getByRole('button', { name: /Launch Store/i }).click();
+    await page.locator('text="Classic"').click();
+    await page.locator('button:has-text("Launch Store")').click();
 
     // 4. Loading screen
-    await expect(page.getByText(/Building Your Business/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('text="Building Your Business..."')).toBeVisible({ timeout: 5000 });
 
     // 5. Live Screen
-    await expect(page.getByText(/You're Live!/i)).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/Your business has been successfully launched./i)).toBeVisible();
-    await expect(page.getByText(/my-business.ohc.store/i)).toBeVisible();
+    await expect(page.locator('text="You\'re Live!"')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text="Your business has been successfully launched."')).toBeVisible();
+    await expect(page.locator('text="my-business.ohc.store"')).toBeVisible();
 
-    const dashboardLink = page.getByRole('link', { name: /Go to Dashboard/i });
+    const dashboardLink = page.locator('a:has-text("Go to Dashboard")');
     await expect(dashboardLink).toBeVisible();
     await expect(dashboardLink).toHaveAttribute('href', '/dashboard');
 
     await dashboardLink.click();
     await page.waitForURL('**/dashboard');
 
-    await expect(page.getByText(/Morning Briefing/i)).toBeVisible();
-    await expect(page.getByRole('link', { name: /Add your first product/i })).toBeVisible();
+    await expect(page.locator('text="Morning Briefing"')).toBeVisible();
+    await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
   });
 });
