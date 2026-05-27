@@ -2726,9 +2726,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             margin-bottom: 16px;
                         }
 
+        #setup-screen button {
+            background: #0071E3;
+        }
+        #setup-screen button:hover {
+            background: #005bd3;
+            transform: scale(0.98);
+        }
+
+        #setup-screen button.secondary {
+            background: rgba(255, 255, 255, 0.65);
+            color: #1D1D1F;
+        }
+        body.dark-theme #setup-screen button.secondary {
+            background: rgba(30, 30, 34, 0.65);
+            color: #F5F5F7;
+        }
+
                         #setup-screen button.secondary:hover {
-                            color: #0066FF;
-                            border-color: rgba(0, 102, 255, 0.3);
+            color: #0071E3;
+            border-color: rgba(0, 113, 227, 0.3);
+            background: rgba(255, 255, 255, 0.9);
                         }
 
                         #setup-screen > div {
@@ -2949,6 +2967,27 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         #setup-screen button, #setup-screen input {
             border-radius: 8px;
             transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #setup-screen input {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            outline: none;
+            width: 100%;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        body.dark-theme #setup-screen input {
+            background: rgba(30, 30, 34, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text);
+        }
+
+        #setup-screen input:focus {
+            border-color: #0071E3;
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.3);
         }
 
         @media (max-width: 375px) {
@@ -4983,17 +5022,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 // Enhanced Input Validation - only validate when moving forward
                                 let hasError = false;
                                 if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
+                                    // Custom validation logic handles this. We shouldn't globally block inputs that might be optional.
+                                    // Let validateInputs handle the specific requirements for each step.
                                 }
-                                if (hasError) return;
+
+                                if (!validateInputs(parseInt(stepId) || stepId)) return;
 
                                 try {
                                     const stateData = { step: stepId };
@@ -5022,7 +5055,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }).catch(console.error);
                                 } catch (e) {}
                             }
-                            if (!validateInputs(parseInt(stepId) || stepId)) return;
                             if (prevStep === 3 && parseInt(stepId) === 4) {
                                 const companyInputs = document.querySelectorAll('#step-3 input[type="text"]');
                                 const hasCompanyName = Array.from(companyInputs).some(input => input.value.trim().length > 0);
