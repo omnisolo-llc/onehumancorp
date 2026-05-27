@@ -78,7 +78,9 @@ where
     Router::new()
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
-        .route("/campaign/generate-review", post(handle_generate_review))
+                .route("/campaign/generate-cart", post(handle_generate_cart))
+        .route("/promotions/generate", post(handle_generate_promotion))
+.route("/campaign/generate-review", post(handle_generate_review))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -101,6 +103,27 @@ pub struct ReferralIdRequest {
     pub id: String,
 }
 
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartRequest {
+    pub customer_name: Option<String>,
+    pub cart_value: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionRequest {
+    pub tenant: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GeneratePromotionResponse {
+    pub message: String,
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateReviewRequest {
     pub order_id: String,
@@ -165,6 +188,42 @@ async fn handle_social_post(
         posted: true,
         post_id: uuid::Uuid::new_v4().to_string(),
     })
+}
+
+
+async fn handle_generate_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCartRequest>,
+) -> impl IntoResponse {
+    let name = req.customer_name.as_deref().unwrap_or("there");
+    let value = req.cart_value.as_deref().unwrap_or("$0.00");
+
+    let message = format!(
+        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        name, value
+    );
+
+    Json(GenerateCartResponse { message })
+}
+
+async fn handle_generate_promotion(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GeneratePromotionRequest>,
+) -> impl IntoResponse {
+    let tenant_name = req.tenant.as_deref().unwrap_or("my-store");
+
+    let promotions = [
+        "Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/{tenant}",
+        "🚀 Just dropped! Check out our latest arrivals and get a special 15% discount on your first order. Use code NEW15 at checkout! https://ohc.store/shop/{tenant}",
+        "✨ Special offer just for you! Buy one, get one 50% off on all accessories this week. Don't miss out! Shop now: https://ohc.store/shop/{tenant}",
+        "🔥 Limited time offer: Free shipping on all orders over $50! Stock up on your essentials today. https://ohc.store/shop/{tenant}",
+        "🎁 Treat yourself! Use code TREAT20 for 20% off your entire purchase today. Shop the collection: https://ohc.store/shop/{tenant}",
+    ];
+
+    let random_index = (std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos() % promotions.len() as u128) as usize;
+    let message = promotions[random_index].replace("{tenant}", tenant_name);
+
+    Json(GeneratePromotionResponse { message })
 }
 
 async fn handle_generate_review(
