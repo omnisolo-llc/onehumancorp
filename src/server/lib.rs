@@ -3292,7 +3292,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Automated AI Review Requests -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                                <h3 style="margin: 0; color: var(--text-primary);">Automated review requests for recent orders <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
 
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
@@ -4168,7 +4168,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
