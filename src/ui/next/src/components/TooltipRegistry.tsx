@@ -71,6 +71,13 @@ export function WithTooltip({ children, id, defaultText }: { children: ReactNode
     }
   };
 
+
+  useEffect(() => {
+    return () => {
+      setActiveTooltip((prev) => (prev === id ? null : prev));
+    };
+  }, [id, setActiveTooltip]);
+
   const handleMouseLeave = () => {
     setActiveTooltip(null);
   };
