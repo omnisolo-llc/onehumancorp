@@ -11,6 +11,7 @@ export async function GET() {
     { id: 7, title: "Seeing how much you sold", duration: "0:50" },
     { id: 8, title: "What to do when you get an order", duration: "1:00" },
     { id: 9, title: "Changing colors and logos", duration: "1:25" },
-    { id: 10, title: "Adding staff to your account", duration: "0:40" }
+    { id: 10, title: "Adding staff to your account", duration: "0:40" },
+    { id: 11, title: "Understanding your sales numbers", duration: "1:30" }
   ]);
 }

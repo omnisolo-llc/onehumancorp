@@ -95,6 +95,28 @@ const swaggerSpec = {
         }
       }
     },
+    "/api/analytics": {
+      get: {
+        summary: "Get Dashboard Analytics",
+        description: "Retrieves the daily sales and performance metrics.",
+        tags: ["Analytics"],
+        responses: {
+          "200": {
+            description: "Success",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    sales: { type: "number" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/videos": {
       get: {
         summary: "Get video tutorials",
