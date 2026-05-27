@@ -1,5 +1,5 @@
-use ::docs_proto::ohc::docs::v1::docs_service_server::DocsService;
-use ::docs_proto::ohc::docs::v1::*;
+use ::docs::ohc::docs::v1::docs_service_server::DocsService;
+use ::docs::ohc::docs::v1::*;
 use std::sync::OnceLock;
 use tonic::{Request, Response, Status};
 

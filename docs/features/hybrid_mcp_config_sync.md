@@ -11,15 +11,14 @@ The Hybrid Config Sync MCP Tool operates as an interface for configuration propa
 4. **Security/Resolution:** Configurations synced to the cloud MUST be verified with SPIFFE/SPIRE identity to prevent privilege escalation or cross-tenant contamination.
 
 ### API Contracts
-```rust
-// Planned shape for src/server/tools/config_sync/
-#[derive(serde::Serialize, serde::Deserialize)]
-struct ConfigSyncPayload {
-    tenant_id: String,
-    agent_id: String,
-    key: String,
-    value: String,
-    metadata: std::collections::HashMap<String, String>,
+```go
+// src/server/integrations/mcp_config_sync/tool.go
+type ConfigSyncPayload struct {
+    TenantID string            `json:"tenant_id"`
+    AgentID  string            `json:"agent_id"`
+    Key      string            `json:"key"`
+    Value    string            `json:"value"`
+    Metadata map[string]string `json:"metadata"`
 }
 ```
 
