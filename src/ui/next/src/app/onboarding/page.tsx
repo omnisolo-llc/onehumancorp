@@ -116,7 +116,7 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-black/30 font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
