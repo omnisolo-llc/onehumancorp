@@ -144,6 +144,29 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Step 2: Prevents continuing if fields are empty', async () => {
+    useOnboardingStore.setState({
+      step: 2,
+      businessName: '',
+      businessType: 'Bakery',
+      categories: ['food'],
+      firstProductName: 'Cake',
+      firstProductPrice: '20'
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    await act(async () => {
+      continueButton.click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Please fill in all details before continuing.")).toBeInTheDocument();
+      expect(useOnboardingStore.getState().step).toBe(2);
+    });
+  });
+
   it('Step 5: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
       step: 5,
