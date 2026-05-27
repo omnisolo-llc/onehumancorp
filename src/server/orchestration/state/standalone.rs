@@ -194,17 +194,17 @@ impl StateManager for StandaloneStateManager {
             Ok::<_, String>((lock_guard, tx, rows))
         };
 
-        let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
+                let (_lock_guard, mut tx, rows) = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_and_fetch).await {
             Ok(Ok(result)) => result,
             Ok(Err(e)) => {
-                if e.contains("Timeout acquiring lock") {
-                    tracing::warn!("Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                if e.contains("Timeout acquiring lock") || e.contains("is currently locked") {
+                    tracing::warn!("Lock timeout or unavailable in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
                     return Ok(vec![]);
                 }
                 return Err(e);
             },
             Err(_) => {
-                tracing::warn!("Database/Lock timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
+                tracing::warn!("Database timeout in StandaloneStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
             }
         };

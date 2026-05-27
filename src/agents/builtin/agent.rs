@@ -1609,7 +1609,6 @@ impl Agent {
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
-
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
