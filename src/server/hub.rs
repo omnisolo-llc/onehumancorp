@@ -428,9 +428,6 @@ impl Hub {
             return Err("sender agent is not registered".to_string());
         }
 
-        if agents.len() >= 10 {
-            return Err("VRAM quota limit exceeded".to_string());
-        }
 
         let sub_agent_id = format!("sub-agent-{}-{}", target_role, chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0));
         let sub_agent = Agent {

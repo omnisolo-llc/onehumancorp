@@ -1467,8 +1467,38 @@ impl HubService for MyHubService {
         }
 
         // Quota Enforcement
-        if self.hub.get_agents_count() >= 10 {
-            return Err(Status::resource_exhausted("VRAM quota limit exceeded, cannot spawn sub-agent"));
+        if self.hub.get_agents_count() >= 100 {
+            return Err(Status::resource_exhausted("VRAM absolute hard limit exceeded, cannot spawn sub-agent"));
+        }
+
+        if let Some(agent) = self.hub.get_agent(&req.from_agent_id) {
+            let status = self.hub.tracker().check_agent_quota(&agent.organization_id).await.unwrap_or(::server_pricing::rate_limit::RateLimitStatus {
+                is_allowed: true,
+                soft_limit_reached: false,
+                user_message: None,
+            });
+
+            if status.soft_limit_reached {
+                if let Some(msg) = status.user_message {
+                    tracing::warn!("Agent quota soft limit reached: {}", msg);
+                    // Also notify the caller with a nice message (but don't block)
+                    self.hub.publish(crate::msgbus::Message {
+                        topic: format!("ui.notifications.{}", agent.organization_id),
+                        payload: serde_json::to_vec(&serde_json::json!({
+                            "type": "quota_warning",
+                            "message": msg
+                        })).unwrap_or_default(),
+                        reply_to: None,
+                    }).unwrap_or_default();
+                }
+            }
+
+            // Record the agent addition to properly track limits
+            let tracker = self.hub.tracker().clone();
+            let org_id = agent.organization_id.clone();
+            tokio::task::spawn(async move {
+                let _ = tracker.record_agent_added(&org_id).await;
+            });
         }
         
         let now_nano = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
@@ -3871,7 +3901,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <!-- Cost Dashboard -->
                     <div id="cost-dashboard-screen" class="screen">
-                        <h1>Cost Transparency Dashboard</h1>
+                        <h1>Cost & AI Usage</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
                             <h2>Billing Period</h2>
