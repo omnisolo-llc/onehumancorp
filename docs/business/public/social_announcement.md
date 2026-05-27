@@ -8,7 +8,7 @@ One Human Corp (OHC) just unleashed the biggest evolution of our Agentic OS. Say
 
 **Here's what just shipped to the Swarm:**
 
-✨ **Modular Agent Architectures:** We decoupled the core `src/server/orchestration` into a dedicated Bazel package (`src/server/agents`)—unlocking true Model Context Protocol (MCP) scale.
+✨ **Modular Agent Architectures:** We decoupled the core `src/server/orchestration` from built-in agent runtime code under `src/agents/` and MCP service modules under `src/server/services/mcp/`.
 💸 **Massive Cloud ROI:** Intelligent downscaling dropped our K8s CPU/memory limits by 20%, generating an instant 15% infrastructure cost reduction! Plus, our default straightforward seeded agents shifted from `gpt-4o` to `gpt-4o-mini` for hyper-efficient token spend.
 🛡️ **Resilient Microservices:** Introducing an atomic, per-client Circuit Breaker within our HTTP clients for flawless internal API RPC requests. No more cascading timeouts.
 ⚡️ **Bazel-Native Nirvana:** 100% of our cross-platform app workflows and tests are now purely Bazel-native (`bazelisk test //...`). Flaky tests are dead.

@@ -434,7 +434,7 @@ The AutoDream Pipeline consolidates ephemeral agent memories from `agent_session
           "results": [
             {
               "memory_id": "987e6543-e21b-12d3-a456-426614174000",
-              "content": "The Teammate Mesh degrades gracefully to in-memory Go channels in Standalone Mode, ensuring the OS functions entirely offline.",
+              "content": "The Teammate Mesh degrades gracefully to local in-process transport in Standalone Mode, ensuring the OS functions offline.",
               "distance": 0.124
             }
           ]
