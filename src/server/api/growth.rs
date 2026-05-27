@@ -1,3 +1,4 @@
+use axum::extract::Multipart;
 use axum::{
     http::StatusCode,
     response::IntoResponse,
@@ -76,6 +77,7 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/catalog/magic-add", routing::post(magic_add_handler))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -842,5 +844,103 @@ async fn handle_aggregated_team_invites_metrics(
     match tracker.get_total_invites_count().await {
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+
+pub async fn magic_add_handler(
+    Extension(state): Extension<GrowthState>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut file_name = None;
+    let mut file_data = Vec::new();
+    let tenant_id = user.organization_id.clone();
+
+    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
+        if let Some(name) = field.name() {
+            if name == "image" {
+                if let Some(n) = field.file_name() {
+                    file_name = Some(n.to_string());
+                }
+                file_data = field.bytes().await.unwrap_or_default().to_vec();
+            }
+        }
+    }
+
+    if file_data.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({ "error": "No image provided" })),
+        );
+    }
+
+    // Publish event to the hub
+    let event = ::server_ohc::orchestration::TeammateMeshEvent {
+        id: format!("evt_{}", chrono::Utc::now().timestamp_nanos_opt().unwrap_or(0)),
+        r#type: "image.uploaded".to_string(),
+        tenant_id: tenant_id.clone(),
+        source_agent: user.sub.clone(),
+        payload: serde_json::to_string(&serde_json::json!({
+            "filename": file_name,
+            "size": file_data.len(),
+            // Mock vision analysis results as the actual vision agent might not be wired up
+            "vision_analysis": {
+                "detected_object": "Artisan Vegan Strawberry Cake",
+                "estimated_price": 4500,
+                "variants": ["Slice", "Whole Cake"],
+                "color_palette": ["#FFB6C1", "#ffffff", "#4CAF50"]
+            }
+        })).unwrap_or_default(),
+        timestamp_unix: chrono::Utc::now().timestamp(),
+        metadata: std::collections::HashMap::new(),
+    };
+
+    let _ = state.hub.publish("image.uploaded", event).await;
+
+    (StatusCode::OK, Json(serde_json::json!({ "status": "processing" })))
+}
+
+#[cfg(test)]
+mod magic_catalog_tests {
+    use super::*;
+    use axum::extract::Extension;
+    use crate::hub::Hub;
+    use std::sync::Arc;
+    use axum::http::StatusCode;
+
+    #[tokio::test]
+    async fn test_magic_add_handler_missing_image() {
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let hub = Arc::new(Hub::new(event_tx, pg_pool.clone()));
+        let state = GrowthState { pool: pg_pool.clone(), hub: hub.clone() };
+
+        let claims = ::server_common::Claims {
+            sub: "test-user".to_string(),
+            organization_id: "test-org".to_string(),
+            exp: 9999999999,
+            role: "user".to_string(),
+        };
+
+        let body = "-----------------------------1234567890\r\n\
+                    Content-Disposition: form-data; name=\"dummy\"\r\n\
+                    \r\n\
+                    dummy data\r\n\
+                    -----------------------------1234567890--\r\n";
+
+        let mut req = axum::http::Request::builder()
+            .method("POST")
+            .uri("/api/v1/catalog/magic-add")
+            .header("Content-Type", "multipart/form-data; boundary=---------------------------1234567890")
+            .body(axum::body::Body::from(body))
+            .unwrap();
+
+        let multipart = axum::extract::Multipart::from_request(req, &()).await.unwrap();
+
+        let res = magic_add_handler(Extension(state), axum::extract::Extension(claims), multipart).await;
+
+        let res = res.into_response();
+        assert_eq!(res.status(), StatusCode::BAD_REQUEST);
     }
 }

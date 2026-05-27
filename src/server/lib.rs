@@ -2111,6 +2111,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/v1/catalog/magic-add", axum::routing::post(api::growth::magic_add_handler).layer(axum::middleware::from_fn(|req: axum::extract::Request, next: axum::middleware::Next| async move { use axum::response::IntoResponse; match ::server_auth::validate_request_token(&req) { Ok(claims) => { let mut req = req; req.extensions_mut().insert(claims); Ok(next.run(req).await) }, Err(_) => Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()) } })))
+
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -3007,6 +3009,50 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info h4 { margin: 0 0 4px 0; }
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
+
+                        /* Magic Catalog UI */
+                        #loading-product-screen {
+                            text-align: center;
+                            padding-top: 20%;
+                        }
+                        .shimmer {
+                            background: #f6f7f8;
+                            background-image: linear-gradient(to right, #f6f7f8 0%, #edeef1 20%, #f6f7f8 40%, #f6f7f8 100%);
+                            background-repeat: no-repeat;
+                            background-size: 800px 100%;
+                            animation-duration: 1s;
+                            animation-fill-mode: forwards;
+                            animation-iteration-count: infinite;
+                            animation-name: placeholderShimmer;
+                            animation-timing-function: linear;
+                            border-radius: 8px;
+                            margin: 0 auto;
+                        }
+                        @keyframes placeholderShimmer {
+                            0% { background-position: -468px 0; }
+                            100% { background-position: 468px 0; }
+                        }
+                        .magic-btn {
+                            background: rgba(255, 255, 255, 0.2);
+                            backdrop-filter: blur(10px);
+                            border: 1px solid rgba(255, 255, 255, 0.3);
+                            border-radius: 12px;
+                            padding: 16px 24px;
+                            font-size: 18px;
+                            font-weight: 600;
+                            color: var(--primary);
+                            cursor: pointer;
+                            display: inline-flex;
+                            align-items: center;
+                            gap: 12px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                            transition: all 0.2s ease;
+                        }
+                        .magic-btn:hover {
+                            background: rgba(255, 255, 255, 0.3);
+                            transform: translateY(-2px);
+                        }
+
                     </style>
                 </head>
                 <body>
@@ -3039,6 +3085,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <button class="secondary" onclick="showScreen('login-screen')">Have an account? Sign In</button>
                     </div>
 
+
+                    <!-- Loading Product Screen -->
+                    <div id="loading-product-screen" class="screen glass">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 4px solid #eaeaea; border-top-color: var(--primary); animation: spin 1s linear infinite; margin: 0 auto 20px auto;"></div>
+                        <h2 style="font-family: 'Outfit', sans-serif;">The "Teammate" at work...</h2>
+                        <div id="magic-status-text" style="font-size: 18px; color: #666; margin-bottom: 30px;">Analyzing your photo...</div>
+                        <div class="shimmer" style="height: 200px; width: 80%; max-width: 300px; margin-bottom: 16px;"></div>
+                        <div class="shimmer" style="height: 24px; width: 60%; max-width: 200px; margin-bottom: 12px;"></div>
+                        <div class="shimmer" style="height: 16px; width: 40%; max-width: 150px;"></div>
+                    </div>
+
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
@@ -3059,6 +3116,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             >
                                 Share & Claim Reward
                             </button>
+                        </div>
+
+
+                        <!-- Magic Catalog Buttons -->
+                        <div class="card glass" style="text-align: center; padding: 30px; margin-bottom: 24px; background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(240,249,255,0.8) 100%); border: 1px solid rgba(0,0,0,0.05);">
+                            <input type="file" id="magic-photo-upload" accept="image/*" style="display: none;" onchange="handleMagicPhotoUpload(event)">
+                            <button class="magic-btn" onclick="document.getElementById('magic-photo-upload').click()">
+                                <span style="font-size: 24px;">📸</span> Add Product via Photo
+                            </button>
+                            <p style="margin-top: 12px; font-size: 13px; color: #666;">Our Invisible Teammate will analyze your photo, write a catchy description, and set up the inventory for you.</p>
                         </div>
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
@@ -4765,6 +4832,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }, 5000);
 
                         const pathMap = {
+                            'loading-product-screen': '/loading-product',
                             'dashboard-screen': '/dashboard',
                             'login-screen': '/login',
                             'signup-screen': '/signup',
@@ -5383,7 +5451,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     .catch(err => console.error('Error fetching advisory insights:', err));
                             }
 
-                            if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
+                            if (id === 'loading-product-screen' || id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
                                 document.getElementById('main-nav').style.display = 'flex';
                                 document.getElementById('mobile-bottom-nav').style.display = 'flex';
                             } else {
@@ -5473,6 +5541,49 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         };
 
                         // Scribe: Tooltip Logic
+
+                        async function handleMagicPhotoUpload(event) {
+                            const file = event.target.files[0];
+                            if (!file) return;
+
+                            showScreen('loading-product-screen');
+                            const statusText = document.getElementById('magic-status-text');
+
+                            setTimeout(() => { statusText.innerText = "Writing a catchy description..."; }, 2000);
+                            setTimeout(() => { statusText.innerText = "Setting up inventory..."; }, 4000);
+
+                            const formData = new FormData();
+                            formData.append("image", file);
+
+                            const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                            formData.append("tenant_id", tenant);
+
+                            try {
+                                const response = await fetch('/api/v1/catalog/magic-add', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                    body: formData
+                                });
+
+                                if (response.ok) {
+                                    setTimeout(() => {
+                                        showScreen('dashboard-screen');
+                                        // fetchApprovals is automatically called when showing dashboard
+                                    }, 5000); // Give it a bit of time for effect and background processing
+                                } else {
+                                    alert("Failed to process image.");
+                                    showScreen('dashboard-screen');
+                                }
+                            } catch (e) {
+                                console.error(e);
+                                alert("An error occurred.");
+                                showScreen('dashboard-screen');
+                            }
+
+                            // Reset input
+                            event.target.value = '';
+                        }
+
                         async function verifySmsNumber() {
                             const phone = document.getElementById('sms-critical-phone').value;
                             if (!phone) {

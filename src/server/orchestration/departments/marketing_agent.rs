@@ -19,11 +19,36 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec!["tenant.insight.trending".to_string(), "image.uploaded".to_string()]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "image.uploaded" {
+            let mut description = "Approve New Product Listing".to_string();
+            let mut payload = event.payload.clone();
+
+            if let Some(vision) = event.payload.get("vision_analysis") {
+                if let Some(obj) = vision.get("detected_object") {
+                    description = format!("Approve New {} Listing", obj.as_str().unwrap_or("Product"));
+                    payload = serde_json::json!({
+                        "title": obj.as_str().unwrap_or("Product"),
+                        "description": "Handcrafted with the finest ingredients. Perfect for any occasion.",
+                        "price": vision.get("estimated_price").unwrap_or(&serde_json::json!(0)),
+                        "variants": vision.get("variants").unwrap_or(&serde_json::json!([])),
+                    });
+                }
+            }
+
+            return self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                description,
+                event.tenant_id.clone(),
+                risk,
+                payload,
+            ).await.map(|_| ());
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,
