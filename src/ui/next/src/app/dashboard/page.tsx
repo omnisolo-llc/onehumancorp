@@ -852,10 +852,29 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Viral Post Generator */}
+                <div className="p-6 shadow-sm border rounded-2xl flex flex-col" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div className="flex-1 mb-4">
+                        <div className="flex items-center gap-2 mb-2">
+                            <h3 className="text-lg font-bold font-outfit text-gray-900">Viral Post Generator</h3>
+                            <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">New</span>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed">Turn your products into viral social media posts optimized for X and WhatsApp. Get your first customer today!</p>
+                    </div>
+                    <Link href="/viral-post-generator" className="mt-auto px-4 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-black transition-colors shadow-sm text-center flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                        Generate Posts
+                    </Link>
+                </div>
+
+                {/* Existing Promotions Generator */}
+                <div className="p-6 shadow-sm border rounded-2xl flex flex-col" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div className="flex-1 mb-4">
+                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale.</p>
+                    </div>
                     <button
                         onClick={async () => {
                             setShowPromoModal(true);
@@ -879,21 +898,13 @@ export default function Dashboard() {
                                 setIsGeneratingPromo(false);
                             }
                         }}
-                        disabled={isGeneratingPromo}
-                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
+                        className="mt-auto px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap w-full"
                     >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
+                        Create Campaign
                     </button>
                 </div>
-                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
-                   {/* Decorative AI visual */}
-                   <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
-                   <div className="relative w-20 h-20 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
-                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-                   </div>
-                </div>
             </div>
+
          </section>
 
          {/* Growth Loop: Interactive Analytics Soft Paywall */}
