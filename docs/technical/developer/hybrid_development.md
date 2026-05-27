@@ -47,13 +47,13 @@ source deploy/scripts/ohc-mode.sh headless
 
 ### Validating Your Workspace
 
-Verify your setup with the Bazel-managed test suite.
+OHC mandates **Zero WIP** and a **Gold Standard State**. You can verify your setup by running the full test suite with our customized build engine.
 
 ```bash
 # To test all targets out-of-the-box:
-bazelisk test //...
+bazelisk test //... --jobs=200
 ```
 
-Use narrower targets such as `//src/server/...` or `//src/e2e:playwright` when you only need to validate a backend or browser-facing change.
+*Note: Mobile app targets have `allow_empty = True` configured in their Bazel globs so mobile SDKs are not strictly required for backend developers running tests out-of-box.*
 
 </div>
