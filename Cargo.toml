@@ -68,7 +68,7 @@ tree-sitter-bash = "0.25.1"
 tonic-build = "0.12"
 
 [workspace]
-members = ["src/ui/tauri", "test_runner2"]
+members = ["src/ui/tauri"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
