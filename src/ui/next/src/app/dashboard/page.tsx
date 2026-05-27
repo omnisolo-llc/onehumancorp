@@ -366,7 +366,30 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8 pb-24 md:pb-8">
+
+         {/* Share Link Banner */}
+         <section className="mb-6 animate-fade-in">
+             <div className="p-4 rounded-xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #0066FF 0%, #3b82f6 100%)', color: '#fff' }}>
+                 <div className="flex items-center gap-4">
+                     <span className="text-3xl">🔗</span>
+                     <div>
+                         <h3 className="font-bold text-lg font-outfit" style={{ color: '#fff' }}>Share your store</h3>
+                         <p className="text-sm opacity-90 font-inter" style={{ color: '#fff' }}>Get your first customers by sharing your link.</p>
+                     </div>
+                 </div>
+                 <button
+                     onClick={() => {
+                         navigator.clipboard.writeText(`https://ohc.store/${businessName.toLowerCase().replace(/\s+/g, '-')}`);
+                         alert('Link copied to clipboard!');
+                     }}
+                     className="px-6 py-3 bg-white text-[#0066FF] font-bold rounded-xl shadow-md hover:bg-gray-50 transition-colors whitespace-nowrap min-h-[44px]"
+                 >
+                     Share Link
+                 </button>
+             </div>
+         </section>
+
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
@@ -1122,6 +1145,27 @@ export default function Dashboard() {
          </section>
 
       </main>
+
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-gray-200 z-50 px-6 py-3 flex justify-between items-center pb-safe">
+        <Link href="/dashboard" className="flex flex-col items-center gap-1 text-[#0066FF]">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
+          <span className="text-[10px] font-semibold">Home</span>
+        </Link>
+        <Link href="/orders" className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 transition-colors">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+          <span className="text-[10px] font-semibold">Orders</span>
+        </Link>
+        <Link href="/agents" className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 transition-colors">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+          <span className="text-[10px] font-semibold">AI Agents</span>
+        </Link>
+        <Link href="/settings" className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-900 transition-colors">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          <span className="text-[10px] font-semibold">Settings</span>
+        </Link>
+      </nav>
 
       {/* Milestone Modal */}
       {showMilestoneModal && currentMilestone && (

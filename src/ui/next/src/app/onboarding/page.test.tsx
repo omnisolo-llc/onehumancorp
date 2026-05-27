@@ -3,8 +3,15 @@ import '@testing-library/jest-dom';
 import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
+import { useRouter } from 'next/navigation';
+
+vi.mock('next/navigation', () => ({
+  useRouter: vi.fn()
+}));
 
 describe('OnboardingWizard', () => {
+  const mockPush = vi.fn();
+
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
@@ -15,6 +22,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
+    (useRouter as any).mockReturnValue({ push: mockPush });
     global.fetch = vi.fn();
   });
 
@@ -25,9 +33,9 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-    expect(button).toBeDisabled();
+    expect(screen.getByText("Let's build your business.")).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /Start Now/i });
+    expect(button).not.toBeDisabled();
   });
 
   it('Handles multi-step successful onboarding flow', async () => {
@@ -42,15 +50,22 @@ describe('OnboardingWizard', () => {
         categories: ['food'],
         initial_products: [{ name: 'Cake', price: '20' }]
       })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
+    }).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ message: "Success!" })
     });
 
     act(() => { render(<OnboardingWizard />); });
+
+    // Go to step 2
+    const startButton = screen.getByRole('button', { name: /Start Now/i });
+    await act(async () => {
+      startButton.click();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Tell me what you sell in one sentence.")).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
@@ -58,41 +73,22 @@ describe('OnboardingWizard', () => {
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
     await act(async () => {
       button.click();
     });
 
-    // Verify it transitions to Step 2: Review Details
+    // Verify it shows loading screen (step 3)
     await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
-      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
+      expect(screen.getByText("Building Your Business...")).toBeInTheDocument();
     });
 
-    const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await act(async () => {
-      continueButton.click();
-    });
-
-    // Verify it transitions to Step 3: Style & Team
+    // Verify redirect
     await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
-    });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify it transitions to Step 5 (Live Screen) on success
-    await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(mockPush).toHaveBeenCalledWith('/dashboard');
     });
   });
 
-  it('Step 1: Handles intake API failure', async () => {
+  it('Handles API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
@@ -102,6 +98,12 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
+    // Go to step 2
+    const startButton = screen.getByRole('button', { name: /Start Now/i });
+    await act(async () => {
+      startButton.click();
+    });
+
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
@@ -111,52 +113,10 @@ describe('OnboardingWizard', () => {
       button.click();
     });
 
-    // Verify error appears and step goes back to 1
+    // Verify error appears and step goes back to 2
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
-    });
-  });
-
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
-    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
-
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
-
-    act(() => { render(<OnboardingWizard />); });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify error appears and step goes back to 3
-    await waitFor(() => {
-      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
-  });
-
-  it('Step 5: Shows Live Screen with correct links', async () => {
-    useOnboardingStore.setState({
-      step: 5,
-      startResult: { message: "Your business has been successfully launched." }
-    });
-
-    act(() => { render(<OnboardingWizard />); });
-
-    await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
+      expect(screen.getByText("Tell me what you sell in one sentence.")).toBeInTheDocument();
     });
   });
 });
