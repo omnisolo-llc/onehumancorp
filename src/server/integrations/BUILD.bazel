@@ -94,6 +94,8 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
+        "//src/server/integrations/whereby:server_integrations_whereby",
+        "//src/server/integrations/mailerlite:server_integrations_mailerlite",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",

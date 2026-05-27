@@ -25,6 +25,8 @@ pub use ::server_integrations_ayrshare as ayrshare;
 pub use ::server_integrations_listmonk as listmonk;
 pub use ::server_integrations_easypost as easypost;
 pub use ::server_integrations_jitsi as jitsi;
+pub use ::server_integrations_whereby as whereby;
+pub use ::server_integrations_mailerlite as mailerlite;
 pub mod alipay;
 
 pub use ::server_integrations_razorpay as razorpay;

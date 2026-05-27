@@ -8,10 +8,10 @@ test.describe('Manychat Integration', () => {
 
   test('can connect Manychat and redirects to inbox', async ({ page }) => {
     // Check that Manychat is visible
-    await expect(page.getByText('Manychat')).toBeVisible();
+    await expect(page.getByText('Manychat').first()).toBeVisible();
 
     // Click the connect button for Manychat
-    const connectButton = page.locator('div').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
+    const connectButton = page.locator('div').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' }).first();
 
     // Stub alert
     page.on('dialog', dialog => dialog.accept());

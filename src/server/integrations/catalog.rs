@@ -78,5 +78,11 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 
+    let whereby_provider = crate::integrations::whereby::provider::WherebyProvider::new("dummy_token".to_string());
+    catalog.push(whereby_provider.to_integration_provider());
+
+    let mailerlite_provider = crate::integrations::mailerlite::provider::MailerLiteProvider::new("dummy_token".to_string());
+    catalog.push(mailerlite_provider.to_integration_provider());
+
     catalog
 }

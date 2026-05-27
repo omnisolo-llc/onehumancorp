@@ -35,3 +35,14 @@ impl CalComClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cal_com_client_new() {
+        let client = CalComClient::new("dummy_token".to_string());
+        assert_eq!(client.access_token, "dummy_token");
+    }
+}

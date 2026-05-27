@@ -30,6 +30,8 @@ pub struct IntegrationsRegistry {
     shippo_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::shippo::provider::ShippoProvider>>>,
     zoom_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::zoom::provider::ZoomProvider>>>,
     jitsi_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::jitsi::provider::JitsiProvider>>>,
+    whereby_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::whereby::provider::WherebyProvider>>>,
+    mailerlite_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailerlite::provider::MailerLiteProvider>>>,
     ayrshare_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::ayrshare::provider::AyrshareProvider>>>,
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
@@ -70,6 +72,8 @@ impl IntegrationsRegistry {
             shippo_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             zoom_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             jitsi_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            whereby_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            mailerlite_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             ayrshare_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -253,6 +257,14 @@ impl IntegrationsRegistry {
         if integration_id == "jitsi" {
             let mut clients = self.jitsi_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::jitsi::provider::JitsiProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "whereby" {
+            let mut clients = self.whereby_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::whereby::provider::WherebyProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "mailerlite" {
+            let mut clients = self.mailerlite_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::mailerlite::provider::MailerLiteProvider::new(creds.api_token.clone())));
         }
         if integration_id == "ayrshare" {
             let mut clients = self.ayrshare_clients.write().unwrap();
@@ -659,6 +671,18 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
+        let client_whereby = {
+            if integration_id == "whereby" {
+                let clients = self.whereby_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_whereby {
+            return c.create_meeting(topic).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -688,6 +712,21 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_booking_link(event_type).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn mailerlite_sync_customer(&self, integration_id: &str, email: &str, name: &str) -> Result<(), String> {
+        let client = {
+            if integration_id == "mailerlite" {
+                let clients = self.mailerlite_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.sync_customer(email, name).await;
         }
         Err("integration not found or not supported".to_string())
     }

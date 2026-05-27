@@ -39,3 +39,21 @@ impl CalComProvider {
         self._client.get_booking_link(event_type).await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cal_com_provider_new() {
+        let provider = CalComProvider::new("dummy_token".to_string());
+        assert_eq!(provider.metadata.id, "cal_com");
+    }
+
+    #[test]
+    fn test_cal_com_provider_into() {
+        let provider = CalComProvider::new("dummy_token".to_string());
+        let integration = provider.to_integration_provider();
+        assert_eq!(integration.metadata.id, "cal_com");
+    }
+}
