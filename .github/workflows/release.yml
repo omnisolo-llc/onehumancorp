@@ -58,6 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install Linux build dependencies
         if: matrix.install_linux_deps
         run: |
@@ -145,6 +151,12 @@ jobs:
             install_linux_deps: true
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
 
       - name: Install Linux desktop packaging dependencies
         if: matrix.install_linux_deps
@@ -458,6 +470,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Free Disk Space (Ubuntu)
+        if: startsWith(matrix.runner, 'ubuntu')
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+
       - name: Install iOS build dependencies
         if: matrix.name == 'ios'
         run: |
@@ -550,6 +568,11 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
 
       - name: Install Linux build dependencies
         run: |
