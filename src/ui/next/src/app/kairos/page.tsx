@@ -18,6 +18,8 @@ export default function KairosDashboard() {
 function KairosContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
+  const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
+
   const [activeTasks, setActiveTasks] = useState([
     { id: "task-1", name: "Inventory Reorder Strategy", status: "In Progress", priority: "High" },
     { id: "task-2", name: "Customer Sentiment Analysis", status: "Queued", priority: "Medium" },
@@ -36,11 +38,61 @@ function KairosContent() {
         startWalkthrough([
           { targetId: "kairos-brain", message: "The Shared Task List is the 'Brain' of your business, where KAIROS manages and prioritizes all agent activities." },
           { targetId: "kairos-nerves", message: "The Teammate Mesh acts as the 'Nerves', providing lightning-fast communication between your AI workforce." },
-          { targetId: "kairos-memory", message: "AutoDream is the 'Memory', storing every interaction so your agents never forget a detail about your business." }
+          { targetId: "kairos-memory", message: "AutoDream is the 'Memory', storing every interaction so your agents never forget a detail about your business." },
+          { targetId: "kairos-swarm", message: "Swarm Observability shows real-time actions from your autonomous agents." }
         ]);
       }, 1000);
     }
   }, [searchParams, startWalkthrough]);
+
+  useEffect(() => {
+    const connectSwarmMesh = () => {
+        try {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const ws = new WebSocket(`${wsProtocol}//${window.location.host}/api/v1/mesh/connect?channel=system`);
+
+            ws.onmessage = (event) => {
+                try {
+                    const binaryString = atob(event.data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    let payload: any = {};
+                    try {
+                       payload = JSON.parse(new TextDecoder().decode(bytes));
+                    } catch(e) {
+                       const str = new TextDecoder("utf-8").decode(bytes);
+                       const stringMatches = str.match(/[a-zA-Z0-9\s_\-\.\:\,]{8,}/g);
+                       if (stringMatches && stringMatches.length > 0) {
+                           payload = { action: stringMatches.filter(s => s.indexOf('spiffe') === -1 && s.trim().length > 5).join(' ') || "Processing mesh task..." };
+                       } else {
+                           return;
+                       }
+                    }
+                    setSwarmActivity(prev => [{
+                        id: Math.random().toString(),
+                        agent: payload.agent_id || "Swarm Agent",
+                        action: payload.action || "Working on task...",
+                        time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'})
+                    }, ...prev].slice(0, 5));
+                } catch(e) {
+                   // Ignore parsing errors
+                }
+            };
+
+            return ws;
+        } catch(e) {
+            console.error("Mesh websocket failed", e);
+            return null;
+        }
+    };
+
+    const ws = connectSwarmMesh();
+    return () => {
+        if (ws) ws.close();
+    };
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#16161A' }}>
@@ -116,9 +168,34 @@ function KairosContent() {
                     ))}
                 </div>
             </div>
+            {/* 3. Swarm Observability Dashboard */}
+            <div id="kairos-swarm" className="ohc-hybrid-panel shadow-lg flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold font-outfit text-[#F5F5F7]">Swarm Observability</h2>
+                    <span className="text-xs font-bold px-2 py-1 bg-blue-100 text-blue-700 rounded-md">LIVE TELEMETRY</span>
+                </div>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                    Real-time feed of autonomous agent actions across the mesh.
+                </p>
+                <div className="space-y-3 bg-black/40 rounded-xl p-4 border border-gray-800 font-mono text-xs overflow-hidden h-48 relative">
+                    {swarmActivity.length === 0 ? (
+                        <div className="flex items-center justify-center h-full text-gray-500">Waiting for mesh telemetry...</div>
+                    ) : (
+                        <div className="flex flex-col gap-2 absolute bottom-4 w-full pr-8">
+                            {swarmActivity.slice().reverse().map(act => (
+                                <div key={act.id} className="flex items-start gap-3 animate-fade-in-up">
+                                    <span className="text-gray-500 whitespace-nowrap">[{act.time}]</span>
+                                    <span className="text-blue-400 font-bold whitespace-nowrap">{act.agent}:</span>
+                                    <span className="text-gray-300 break-words">{act.action}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
         </section>
 
-        {/* 3. AutoDream (The Memory) */}
+        {/* 4. AutoDream (The Memory) */}
         <section id="kairos-memory" className="lg:col-span-1 space-y-6">
             <div className="ohc-hybrid-panel shadow-lg h-full flex flex-col gap-6">
                 <div className="flex items-center justify-between">
@@ -159,9 +236,9 @@ function KairosContent() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .ohc-hybrid-panel {
-            backdrop-filter: blur(20px) saturate(200%);
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px) saturate(210%);
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             padding: 24px;
         }
