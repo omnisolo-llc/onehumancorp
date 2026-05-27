@@ -19,13 +19,13 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is currently active and processing tasks in the background.".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
     m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
     m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
     m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
     m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
@@ -59,13 +59,14 @@ pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
+pub mod sync;
 pub mod interop;
 
 pub mod benchmarks;
 
 pub use ::server_config as config;
 pub use ::server_common as common;
-pub use ::server_ohc as ohc;
+pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -186,10 +187,10 @@ pub mod proto {
     }
 }
 
-use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
-use ::server_ohc::billing::billing_service_server::BillingServiceServer;
-use ::server_ohc::orchestration::*;
+use crate::proto::orchestration::hub_service_server::{HubService, HubServiceServer};
+use crate::proto::orchestration::growth_service_server::GrowthServiceServer;
+use crate::proto::billing::billing_service_server::BillingServiceServer;
+use crate::proto::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -333,6 +334,7 @@ async fn http_metrics_handler(
 
 async fn http_login_handler(
     db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
     payload: HttpLoginRequest,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -433,8 +435,31 @@ async fn http_login_handler(
     let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
     let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let issued_at = chrono::Utc::now().timestamp();
-    let secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "e2e-local-jwt-secret-change-me-32-bytes".to_string());
+    let user = ::server_auth::User {
+        id: id.clone(),
+        username: username.clone(),
+        email: email.clone(),
+        password_hash: "".to_string(),
+        roles: roles.clone(),
+        active: true,
+        organization_id: Some(tenant_id.clone()),
+        created_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
+        updated_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
+        oidc_subject: None,
+    };
+
+    let token = match store.issue_token(&user) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("failed to issue login token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
+
     let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
@@ -446,21 +471,7 @@ async fn http_login_handler(
         session_id: None,
         jti: uuid::Uuid::new_v4().to_string(),
     };
-    let token = match jsonwebtoken::encode(
-        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
-        &claims,
-        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
-    ) {
-        Ok(token) => token,
-        Err(e) => {
-            tracing::error!("failed to issue login token: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
+    // token issued above via store
 
     (
         StatusCode::OK,
@@ -655,7 +666,10 @@ impl HubService for MyHubService {
 
         let plan_name = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => "Free",
+            ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
             ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
+            ::server_pricing::rate_limit::PlanTier::Standard => "Standard",
+            ::server_pricing::rate_limit::PlanTier::Advanced => "Advanced",
             ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
             ::server_pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
@@ -665,7 +679,10 @@ impl HubService for MyHubService {
 
         let next_bill_estimated = match tier {
             ::server_pricing::rate_limit::PlanTier::Free => 0,
+            ::server_pricing::rate_limit::PlanTier::Entry => 5,
             ::server_pricing::rate_limit::PlanTier::Starter => 9,
+            ::server_pricing::rate_limit::PlanTier::Standard => 19,
+            ::server_pricing::rate_limit::PlanTier::Advanced => 24,
             ::server_pricing::rate_limit::PlanTier::Pro => 29,
             ::server_pricing::rate_limit::PlanTier::Business => 79,
         };
@@ -2192,9 +2209,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .route(
             "/api/v1/auth/login",
-            axum::routing::post(move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
-                let db = db_for_login.clone();
-                async move { http_login_handler(db, payload).await }
+            axum::routing::post({
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
+                    let db = db_for_login.clone();
+                    let store = store.clone();
+                    async move { http_login_handler(db, store, payload).await }
+                }
             }),
         )
         .route(
@@ -2440,8 +2461,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
+    let tooltips_json = serde_json::to_string(&*get_tooltips_registry().read().unwrap()).unwrap_or_else(|_| "{}".to_string());
     let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}",
+        "/api/v1/health" => "{\"status\":\"ok\"}".to_string(),
         _ => r##"
             <!DOCTYPE html>
             <html>
@@ -2945,6 +2967,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             opacity: 1;
             transform: translateY(0);
             position: relative;
+            border-radius: 16px;
         }
 
         #setup-screen button, #setup-screen input {
@@ -3009,7 +3032,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
+
+
+                    <script>
+                        window.OHC_TOOLTIPS = {tooltips_json};
+
+                        // Scribe: Tooltips Implementation
+                        document.addEventListener("DOMContentLoaded", () => {
+                            const tooltipEl = document.createElement("div");
+                            tooltipEl.id = "global-tooltip-bubble";
+                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
+                            document.body.appendChild(tooltipEl);
+
+                            let tooltipTimeout = null;
+
+                            function showTooltip(el, text) {
+                                tooltipEl.textContent = text;
+                                tooltipEl.style.display = "block";
+                                const rect = el.getBoundingClientRect();
+                                const tooltipRect = tooltipEl.getBoundingClientRect();
+                                let top = rect.top - tooltipRect.height - 8;
+                                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+
+                                if (top < 0) top = rect.bottom + 8;
+                                if (left < 0) left = 8;
+                                if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 8;
+
+                                tooltipEl.style.top = top + "px";
+                                tooltipEl.style.left = left + "px";
+                            }
+
+                            function hideTooltip() {
+                                tooltipEl.style.display = "none";
+                            }
+
+
+                            document.querySelectorAll("[placeholder], [id]").forEach(el => {
+                                const placeholderKey = el.getAttribute("placeholder");
+                                const idKey = el.getAttribute("id") + "-tooltip";
+
+                                let key = null;
+                                if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
+                                    key = placeholderKey;
+                                } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
+                                    key = idKey;
+                                }
+
+                                if (key) {
+                                    const text = window.OHC_TOOLTIPS[key];
+
+                                    // Desktop Hover
+                                    el.addEventListener("mouseenter", () => showTooltip(el, text));
+                                    el.addEventListener("mouseleave", hideTooltip);
+
+                                    // Mobile Long Press
+                                    el.addEventListener("touchstart", (e) => {
+                                        tooltipTimeout = setTimeout(() => {
+                                            showTooltip(el, text);
+                                        }, 500); // 500ms for long press
+                                    }, {passive: true});
+
+                                    el.addEventListener("touchend", () => {
+                                        clearTimeout(tooltipTimeout);
+                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
+                                    });
+
+                                    el.addEventListener("touchmove", () => {
+                                        clearTimeout(tooltipTimeout);
+                                        hideTooltip();
+                                    }, {passive: true});
+                                }
+                            });
+                        });
+                    </script>
                 </head>
+
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
@@ -4016,8 +4113,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
-                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; position: relative;">
+                        <div id="setup-error" class="error" style="display: none; margin: 16px; border-radius: 8px; padding: 12px; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); color: #FF3B30;"></div>
+                        <h1 style="margin-bottom: 24px; padding: 0 16px; margin-top: 16px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
@@ -4995,6 +5093,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
+                        let errorTimeout = null;
+                        function showError(message) {
+                            const errDiv = document.getElementById('setup-error');
+                            if (errDiv) {
+                                errDiv.innerText = message;
+                                errDiv.style.display = 'block';
+                                if (errorTimeout) clearTimeout(errorTimeout);
+                                errorTimeout = setTimeout(() => { errDiv.style.display = 'none'; }, 4000);
+                            }
+                        }
 
                         function validateInputs(stepId) {
                             if (stepId === 3 && currentStep === 2) {
@@ -5003,7 +5111,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
                                 if (!valid) {
-                                    alert('Please select a business type');
+                                    showError('Please select a business type');
                                     return false;
                                 }
                             }
@@ -5012,7 +5120,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let valid = false;
                                 inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
+                                    showError('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -5020,11 +5128,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
                                 const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
+                                    showError('Please enter a product or service name');
                                     return false;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
+                                    showError('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
@@ -5032,7 +5140,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
+                                    showError('Please enter a valid email address');
                                     return false;
                                 }
                             }
@@ -5634,42 +5742,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        let tooltipRegistry = {};
-                        let activeTooltipTimeout = null;
 
-                        async function initTooltips() {
-                            try {
-                                const res = await fetch('/api/tooltips');
-                                tooltipRegistry = await res.json();
-                                const tbox = document.createElement('div');
-                                tbox.className = 'tooltip-box';
-                                tbox.id = 'dynamic-tooltip';
-                                document.body.appendChild(tbox);
-                                attachTooltipListeners();
-                            } catch(e) { console.error(e); }
-                        }
 
-                        function attachTooltipListeners() {
-                            const elements = document.querySelectorAll('[placeholder$="-tooltip"]');
-                            const tbox = document.getElementById('dynamic-tooltip');
-                            elements.forEach(el => {
-                                const key = el.getAttribute('placeholder');
-                                if(!tooltipRegistry[key]) return;
-                                const showTooltip = (e) => {
-                                    clearTimeout(activeTooltipTimeout);
-                                    tbox.textContent = tooltipRegistry[key];
-                                    tbox.classList.add('show');
-                                    const rect = el.getBoundingClientRect();
-                                    tbox.style.left = Math.max(8, rect.left + (rect.width/2) - (tbox.offsetWidth/2)) + 'px';
-                                    tbox.style.top = Math.max(8, rect.top - tbox.offsetHeight - 8) + 'px';
-                                };
-                                const hideTooltip = () => { activeTooltipTimeout = setTimeout(() => { tbox.classList.remove('show'); }, 100); };
-                                el.addEventListener('mouseenter', showTooltip);
-                                el.addEventListener('mouseleave', hideTooltip);
-                                el.addEventListener('touchstart', (e) => { activeTooltipTimeout = setTimeout(() => showTooltip(e), 500); });
-                                el.addEventListener('touchend', () => { clearTimeout(activeTooltipTimeout); hideTooltip(); });
-                            });
-                        }
+
+
 
                         // Scribe: Help Chat Logic
                         async function submitHelpQuery() {
@@ -5694,6 +5770,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
                         }
+
 
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
@@ -5788,7 +5865,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         document.addEventListener('DOMContentLoaded', () => {
-                            initTooltips();
+
                             renderHelpCenter();
                             renderVideos();
                         });
@@ -5865,7 +5942,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
                 </body>
             </html>
-        "##,
+        "##.replace("{tooltips_json}", &tooltips_json),
     };
     axum::response::Html(content)
 }
