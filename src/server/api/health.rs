@@ -5,21 +5,31 @@ use crate::hub::Hub;
 pub async fn health_handler(
     State(hub): State<Arc<Hub>>,
 ) -> Json<serde_json::Value> {
-    let health = hub.check_health().await.unwrap_or(serde_json::json!({
-        "mode": "standalone",
-        "status": "degraded",
-        "db_ping_ms": 0,
-        "mesh_active": false,
-        "cloud_connected": false,
-        "hybrid_mode_ready": false,
-        "local_to_cloud_sync_queue": 0,
-        "sync_error_count": 0,
-    }));
+    let hub_clone = hub.clone();
 
-    let stuck_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
-        .fetch_one(&hub.pool)
-        .await
-        .unwrap_or(0);
+    let (health_res, stuck_missions_res) = tokio::join!(
+        async {
+            hub_clone.check_health().await.unwrap_or(serde_json::json!({
+                "mode": "standalone",
+                "status": "degraded",
+                "db_ping_ms": 0,
+                "mesh_active": false,
+                "cloud_connected": false,
+                "hybrid_mode_ready": false,
+                "local_to_cloud_sync_queue": 0,
+                "sync_error_count": 0,
+            }))
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM agent_missions WHERE status = 'STUCK'")
+                .fetch_one(&hub.pool)
+                .await
+                .unwrap_or(0)
+        }
+    );
+
+    let health = health_res;
+    let stuck_missions = stuck_missions_res;
 
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),
