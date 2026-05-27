@@ -130,6 +130,14 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
+    if (!isLoaded) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
+        <div className="w-8 h-8 border-4 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return () => clearTimeout(timer);
   }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
 
@@ -209,16 +217,17 @@ export default function OnboardingWizard() {
       const startRequest = {
         business_type: intakeData.business_type || businessType || "Retail",
         company_name: intakeData.business_name || businessName,
-        company_description: "", // Removed preferredStyle
-        selling_categories: intakeData.categories || [],
+        company_description: "Proactively generated AI setup",
+        selling_categories: intakeData.categories || ["physical"],
         payment_pref: "stripe",
         admin_email: "admin@example.com",
         admin_name: "Admin",
         admin_password: "password123",
-        website_template: template,
-        domain: domain,
+        website_template: template || "Modern",
         first_product_name: firstProductName || intakeData.initial_products?.[0]?.name || "Sample Product",
         first_product_price: firstProductPrice || intakeData.initial_products?.[0]?.price || "10.00",
+        domain_choice: domain === "custom" ? "custom" : "subdomain",
+        price_type: "fixed"
       };
 
       const response = await fetch('/api/onboarding/start', {
@@ -240,8 +249,6 @@ export default function OnboardingWizard() {
       setIsLoading(false);
     }
   };
-
-  if (!isLoaded) { return <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter"><div className="w-8 h-8 border-4 border-[#0066FF]/30 border-t-[#0066FF] rounded-full animate-spin"></div></div>; }
 
   return (
     <div id="setup-screen" className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
