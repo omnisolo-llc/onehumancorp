@@ -103,7 +103,6 @@ pub struct Booking {
     pub tenant_id: String,
     pub customer_id: String,
     pub product_id: Option<String>,
-    pub service_id: Option<String>,
     pub start_time: DateTime<Utc>,
     pub end_time: Option<DateTime<Utc>>,
     pub status: Option<String>,

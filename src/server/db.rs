@@ -433,7 +433,7 @@ impl DB {
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         customer_id TEXT,
-                        service_id TEXT,
+                        product_id TEXT,
                         start_time TEXT,
                         end_time TEXT,
                         status TEXT,

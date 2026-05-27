@@ -179,6 +179,11 @@ PG_PORT="$(docker port "$POSTGRES_NAME" 5432/tcp | sed -E 's/.*:([0-9]+)$/\1/' |
 VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | head -n 1)"
 echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
 
+if [[ "$PG_PORT" == "5432" ]]; then
+  echo "[playwright] Error: Postgres started on port 5432 instead of a random port"
+  exit 1
+fi
+
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
 for i in $(seq 1 120); do
   if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
@@ -221,7 +226,8 @@ export BASE_URL="http://localhost:$OHC_SERVER_PORT"
 
 if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
   echo "[playwright] Starting server on ports (API:$OHC_SERVER_PORT gRPC:$OHC_GRPC_SERVER_PORT) from $SERVER_BIN..."
-  DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc" \
+  export DATABASE_URL="postgres://ohc:ohc@127.0.0.1:$PG_PORT/ohc"
+  DATABASE_URL="$DATABASE_URL" \
   REDIS_URL="redis://127.0.0.1:$VK_PORT" \
   JWT_SECRET="test_jwt_secret_must_be_at_least_32_bytes_long" \
   OHC_SQLITE_KEY="test_sqlite_key" \
@@ -249,6 +255,12 @@ if [[ -n "${SERVER_BIN:-}" && -x "${SERVER_BIN:-}" ]]; then
     fi
     sleep 1
   done
+
+  echo "[playwright] Seeding test database..."
+  if [[ -f "$WORK_DIR/src/e2e/e2e-seed.sql" ]]; then
+    docker cp "$WORK_DIR/src/e2e/e2e-seed.sql" "$POSTGRES_NAME:/tmp/e2e-seed.sql"
+    docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -f /tmp/e2e-seed.sql
+  fi
 else
   echo "[playwright] Error: server binary not found"
   exit 1

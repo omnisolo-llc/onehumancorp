@@ -181,7 +181,6 @@ mod tests {
             tenant_id: "t1".to_string(),
             customer_id: "c1".to_string(),
             product_id: None,
-            service_id: None,
             start_time: chrono::Utc::now(),
             end_time: None,
             status: None,

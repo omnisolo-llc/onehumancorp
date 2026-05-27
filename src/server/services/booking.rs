@@ -23,15 +23,6 @@ pub struct BookingTimeSlot {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Service {
-    pub id: String,
-    pub tenant_id: String,
-    pub title: String,
-    pub description: Option<String>,
-    pub price_cents: i64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BookingRecord {
     pub id: String,
     pub tenant_id: String,
@@ -103,56 +94,6 @@ impl BookingService {
                 return Err("Time slot overlaps with an existing booking".to_string());
             }
         }
-        Ok(())
-    }
-
-    pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-        let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
-            .fetch_all(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
-
-        let services = rows.into_iter().map(|row| Service {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            price_cents: row.get("price_cents"),
-        }).collect();
-
-        Ok(services)
-    }
-
-    pub async fn upsert_service(service: Service) -> Result<(), String> {
-        let pool = get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
-
-        sqlx::query(
-            "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
-             VALUES ($1, $2, $3, $4, $5, 'booking') \
-             ON CONFLICT (id) DO UPDATE SET \
-             title = EXCLUDED.title, \
-             description = EXCLUDED.description, \
-             price_cents = EXCLUDED.price_cents, \
-             updated_at = CURRENT_TIMESTAMP"
-        )
-        .bind(&service.id)
-        .bind(&service.tenant_id)
-        .bind(&service.title)
-        .bind(&service.description)
-        .bind(service.price_cents)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 

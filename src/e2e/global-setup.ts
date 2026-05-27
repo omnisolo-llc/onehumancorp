@@ -6,6 +6,10 @@ export default async function globalSetup(config: FullConfig) {
     throw new Error('Playwright baseURL is required for e2e global setup.');
   }
 
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL is required for e2e global setup. Playwright tests should use the Bazel-provided test database URL.');
+  }
+
   // wait for app to be ready
   for (let attempt = 0; attempt < 60; attempt += 1) {
     try {

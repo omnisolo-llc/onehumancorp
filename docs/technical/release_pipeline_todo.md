@@ -291,7 +291,6 @@ Build verification jobs:
 - Linux:
   - `bazelisk build //... --config=linux`
   - `bazelisk test //... --config=linux`
-  - include Playwright smoke/e2e once the database URL issue is fully fixed
 - Windows:
   - `bazelisk build //... --config=windows`
   - release build target for Windows artifacts
@@ -322,33 +321,7 @@ Release jobs:
   - Android AAB
   - iOS IPA when signing is configured
 
-## Playwright Follow-Up
 
-Recent CI failure showed Playwright global setup attempted to seed:
-
-```text
-localhost:5432/ohc
-```
-
-while the Bazel E2E harness had started Postgres on a random test port.
-
-Goal:
-
-- Playwright tests should use the Bazel-provided test database URL/port.
-- No hard-coded `localhost:5432` remains in test setup.
-
-Suggested direction:
-
-1. Inspect `src/e2e/global-setup.ts` and the Bazel Playwright wrapper.
-2. Ensure `DATABASE_URL` is exported into the Playwright environment.
-3. Make the seed step skip or fail clearly if `DATABASE_URL` is missing.
-4. Add a regression test or wrapper assertion for the random Postgres port.
-
-Acceptance checks:
-
-- `bazelisk test //src/e2e:playwright_business_manager_spec_ts`
-  passes locally and in CI.
-- Logs show the seed command uses the random Bazel Postgres port, not `5432`.
 
 ## Useful Commands
 

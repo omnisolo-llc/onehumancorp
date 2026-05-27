@@ -201,7 +201,7 @@ test.describe('Dashboard Approvals', () => {
 
     // 6. Assert the database state correctly matches the processed UI action
     const client = new Client({
-      connectionString: process.env.DATABASE_URL || 'postgres://ohc:ohc@localhost:5432/ohc',
+      connectionString: process.env.DATABASE_URL,
     });
     await client.connect();
     // We approved the first item. The seeded approvals are: e2e-approval-1, e2e-approval-social, e2e-approval-cart.

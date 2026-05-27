@@ -98,8 +98,8 @@ issue_title: "[research] Build Mobile-First, AI-Assisted Unified Onboarding Flow
 issue_priority: "P0"
 issue_description: "Implement a mobile-first (375px) onboarding flow where an AI agent interviews the user to generate a unified storefront supporting both products and bookings in under 10 minutes."
 issue_todo_list:
-  - [ ] Design 375px mobile UI wireframes for conversational onboarding
-  - [ ] Implement AI Assistant backend integration to generate store config from prompt
-  - [ ] Unify product and booking data models in PostgreSQL
+  - [x] Design 375px mobile UI wireframes for conversational onboarding
+  - [x] Implement AI Assistant backend integration to generate store config from prompt
+  - [x] Unify product and booking data models in PostgreSQL
 issue_label: ["research", "high-impact", "mobile-first"]
 ```
