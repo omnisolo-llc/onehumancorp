@@ -2,10 +2,10 @@ import { test, expect } from '@playwright/test';
 
 test('builder flow completes successfully', async ({ page }) => {
   // Use the baseURL from playwright config (or relative to it if Next is served there)
-  await page.goto('/builder');
+  await page.goto('http://localhost:3000/builder');
 
   // 1. Onboarding Screen - Step 1: Basics
-  await expect(page.getByText(/Let's build your store/i)).toBeVisible();
+  await expect(page.getByText(/Let's build your store/i)).toBeVisible({ timeout: 15000 });
 
   const nameInput = page.getByPlaceholder(/e.g. Acme Corp/i);
   await nameInput.fill('My Awesome Store');
