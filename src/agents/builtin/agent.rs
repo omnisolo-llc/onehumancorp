@@ -125,6 +125,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
+    pub enable_sona_patterns: bool,
     pub state_scratchpad_path: Option<String>,
     pub workspace_path: Option<String>,
     pub project_trusted: bool,
@@ -181,6 +182,7 @@ enable_llmcompiler_plan_and_execute: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
+            enable_sona_patterns: false,
             state_scratchpad_path: None,
             workspace_path: None,
             project_trusted: true,
@@ -385,6 +387,7 @@ pub struct Agent {
     pub checkpointer: Option<Arc<dyn crate::checkpointer::CheckpointSaver>>,
     pub observation_store: Arc<dashmap::DashMap<String, String>>,
     pub native_env: Arc<tokio::sync::RwLock<ohc_builtin_agent_core::code_native::RichExecutionEnvironment>>,
+    pub pattern_matcher: Arc<tokio::sync::Mutex<crate::sona_patterns::PatternMatcher>>,
 }
 
 impl Agent {
@@ -400,6 +403,7 @@ impl Agent {
             checkpointer: None,
             observation_store: Arc::new(dashmap::DashMap::new()),
             native_env: Arc::new(tokio::sync::RwLock::new(ohc_builtin_agent_core::code_native::RichExecutionEnvironment::new())),
+            pattern_matcher: Arc::new(tokio::sync::Mutex::new(crate::sona_patterns::PatternMatcher::new())),
         }
     }
 
@@ -1580,6 +1584,7 @@ impl Agent {
             checkpointer: self.checkpointer.clone(),
             observation_store: self.observation_store.clone(),
             native_env: self.native_env.clone(),
+            pattern_matcher: self.pattern_matcher.clone(),
         };
 
         // Run the agent. The run loop will intercept `return_structured_output` and return `tc.arguments` as JSON string.
@@ -1661,6 +1666,7 @@ impl Agent {
                 checkpointer: self.checkpointer.clone(),
                 observation_store: self.observation_store.clone(),
                 native_env: self.native_env.clone(),
+                pattern_matcher: self.pattern_matcher.clone(),
             };
             self_with_memory = &owned_agent;
         }
@@ -1687,6 +1693,17 @@ impl Agent {
                         tracing::warn!("Failed to load progressive skills from {}: {}", dir, e);
                     }
                 }
+            }
+        }
+
+        if final_cfg.enable_sona_patterns {
+            let matcher = self_with_memory.pattern_matcher.lock().await;
+            if let Some(pattern) = matcher.find_best_match(initial_message) {
+                let hint = format!(
+                    "\n[Neural Pattern Hint: Based on past successful executions, the following tools were helpful: {}]\n",
+                    pattern.successful_tools.join(", ")
+                );
+                final_cfg.developer_instructions.push_str(&hint);
             }
         }
 
@@ -1765,6 +1782,8 @@ impl Agent {
         let mut tool_error_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
         let mut malformed_retries = 0;
         let max_malformed_retries = 3;
+
+        let mut used_tools_tracker: std::collections::HashSet<String> = std::collections::HashSet::new();
 
         let mut messages: Vec<Message> = final_cfg.injected_context.clone().unwrap_or_default();
         let mut last_checkpoint_id: Option<String> = None;
@@ -2136,6 +2155,20 @@ impl Agent {
                     }
                 }
 
+                if final_cfg.enable_sona_patterns && !used_tools_tracker.is_empty() {
+                    let mut matcher = self_with_memory.pattern_matcher.lock().await;
+                    matcher.record_pattern(crate::sona_patterns::TrajectoryPattern {
+                        id: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_nanos()
+                            .to_string(),
+                        initial_context: initial_message.to_string(),
+                        successful_tools: used_tools_tracker.into_iter().collect(),
+                        outcome_score: 1.0,
+                    });
+                }
+
                 on_event(AgentEvent::TaskComplete {
                     content: last_assistant_content.clone(),
                 });
@@ -2242,6 +2275,7 @@ impl Agent {
                         tool_error_counts.remove(&tc.name);
                         self.progress.record_tool_use();
                         self.observation_store.insert(tc.id.clone(), r.clone());
+                            used_tools_tracker.insert(tc.name.clone());
                         on_event(AgentEvent::ToolCall {
                             name: tc.name.clone(),
                             args_json: tc.arguments.to_string(),
@@ -2430,6 +2464,7 @@ impl Agent {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
                             self.observation_store.insert(tc.id.clone(), r.clone());
+                            used_tools_tracker.insert(tc.name.clone());
                             on_event(AgentEvent::ToolCall {
                                 name: tc.name.clone(),
                                 args_json: tc.arguments.to_string(),
@@ -2883,6 +2918,61 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+#[tokio::test]
+async fn test_sona_patterns() {
+    let client = Arc::new(MockLlmClient {
+        responses: tokio::sync::Mutex::new(vec![
+            ChatResponse {
+                message: Message {
+                    role: Role::Assistant,
+                    content: "".to_string(),
+                    tool_calls: vec![crate::types::ToolCall {
+                        id: "call_1".to_string(),
+                        name: "test_tool".to_string(),
+                        arguments: serde_json::json!({}),
+                    }],
+                    tool_results: vec![],
+                    response_id: Some("mock-id".to_string()),
+                    previous_response_id: None,
+                },
+                usage: Usage::default(),
+                stop_reason: "tool_calls".to_string(),
+                response_id: Some("mock-id".to_string()),
+            },
+            ChatResponse {
+                message: Message::assistant("success"),
+                usage: Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("mock-id".to_string()),
+            }
+        ]),
+    });
+
+    let tool = Tool {
+        name: "test_tool".to_string(),
+        description: "A test tool".to_string(),
+        is_read_only: false,
+        parameters: serde_json::json!({}),
+        execute: Arc::new(crate::agent::tests::MockToolExecutor),
+    };
+
+    let agent = Agent::new(client, vec![tool]);
+    let mut cfg = AgentRunConfig::default();
+    cfg.enable_sona_patterns = true;
+
+    let mut events = vec![];
+    let mut on_event = |e| { events.push(e); };
+
+    let res = agent.run(&cfg, "fix the null pointer", &mut on_event).await;
+    assert!(res.is_ok());
+
+    let matcher = agent.pattern_matcher.lock().await;
+    let patterns = matcher.get_patterns();
+    assert_eq!(patterns.len(), 1);
+    assert_eq!(patterns[0].initial_context, "fix the null pointer");
+    assert!(patterns[0].successful_tools.contains(&"test_tool".to_string()));
+}
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,

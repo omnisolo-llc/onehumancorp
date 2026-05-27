@@ -552,6 +552,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            enable_sona_patterns: false,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             max_retries: 2,
@@ -966,6 +967,7 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                enable_sona_patterns: false,
                 enable_progressive_skills: false,
                 progressive_skills_dir: None,
                 max_retries: 2,
