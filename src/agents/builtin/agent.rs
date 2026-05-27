@@ -260,32 +260,22 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
     }
 
     // Order: more deeply-nested files take precedence
-    // We must respect the 32 KiB cap while preserving the deepest files.
     let mut combined = String::new();
-    let max_bytes: usize = 32 * 1024;
-    let separator = "\n\n---\n\n";
-
     for (i, content) in contents.iter().enumerate() {
-        let prefix = if i > 0 { separator } else { "" };
-
-        let remaining_space = max_bytes.saturating_sub(combined.len());
-        if remaining_space == 0 {
-            break;
+        if i > 0 {
+            combined.push_str("\n\n---\n\n");
         }
+        combined.push_str(content);
+    }
 
-        let mut to_add = format!("{}{}", prefix, content);
-        if combined.len() + to_add.len() > max_bytes {
-            let mut end_idx = remaining_space;
-            while end_idx > 0 && !to_add.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-            to_add.truncate(end_idx);
-            combined.push_str(&to_add);
-            combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
-            break;
-        } else {
-            combined.push_str(&to_add);
+    let max_bytes = 32 * 1024;
+    if combined.len() > max_bytes {
+        let mut end_idx = max_bytes;
+        while end_idx > 0 && !combined.is_char_boundary(end_idx) {
+            end_idx -= 1;
         }
+        combined.truncate(end_idx);
+        combined.push_str("\n\n[System: AGENTS.md content truncated to 32KiB limit.]");
     }
 
     combined
