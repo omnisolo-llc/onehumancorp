@@ -18,6 +18,7 @@ export async function GET() {
     "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid.",
     "checkout-pay-now-tooltip": "Click here to securely finish your purchase and process your payment.",
     "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
-    "checkout-cancel-tooltip": "Go back to the previous screen without buying anything."
+    "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
+    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan."
   });
 }
