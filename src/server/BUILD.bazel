@@ -22,7 +22,6 @@ SERVER_RS_SRCS = [
     "sip.rs",
     "store.rs",
     "tasks.rs",
-    "ultraplan.rs",
     "//src/server/agents:mod.rs",
     "//src/server/agents:sandbox.rs",
     "//src/server/agents/mcp:mod.rs",
