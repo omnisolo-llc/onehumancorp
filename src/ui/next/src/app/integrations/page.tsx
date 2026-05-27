@@ -10,31 +10,52 @@ export default function Integrations() {
   const [integrations, setIntegrations] = useState([
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
     { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
+    { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📱", description: "Developer-friendly email marketing and transactional emails." },
+    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking \& Calendar Sync." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels \& Tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Seamless Video Call Link Generation." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
+    if (id === 'calendly' || id === 'cal_com') {
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
+      router.push("/calendar");
+    } else if (id === 'manychat') {
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push('/inbox');
+    } else if (id === 'resend' || id === 'listmonk') {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push('/email-marketing');
+    } else if (id === 'shippo') {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push('/shipping');
+    } else if (id === 'zoom' || id === 'twilio') {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push('/calendar');
+    } else if (id === 'mercadopago') {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push('/checkout');
+    } else {
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
     }
   };
 
