@@ -28,6 +28,11 @@ export default function Dashboard() {
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
+  const businessType = typeof localStorage !== 'undefined' ? localStorage.getItem('business_type') || 'ecommerce' : 'ecommerce';
+  const transactionLabel = businessType === 'service' ? 'Pending Bookings' : 'Pending Orders';
+  const transactionMetricLabel = businessType === 'service' ? 'Bookings' : 'Orders';
+
+
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
@@ -533,7 +538,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>{transactionLabel}</div>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
@@ -552,7 +557,7 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have 12 recent {transactionMetricLabel.toLowerCase()} without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
@@ -747,7 +752,7 @@ export default function Dashboard() {
             <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Advocates</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>3 recent orders</strong> delivered that haven't left a review. Ask for a review with one tap and build your store's credibility automatically.</p>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>3 recent {transactionMetricLabel.toLowerCase()}</strong> completed that haven't left a review. Ask for a review with one tap and build your store's credibility automatically.</p>
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div className="flex items-center gap-3">

@@ -30,6 +30,16 @@ export default function BuilderPage() {
 
   const [wizardStep1Error, setWizardStep1Error] = useState("");
 
+  const [offeringLabel, setOfferingLabel] = useState('Selling Products');
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      const bType = localStorage.getItem('business_type') || 'ecommerce';
+      setOfferingLabel(bType === 'service' ? 'Services' : 'Selling Products');
+    }
+  }, []);
+
+
   const handleStep1Next = () => {
     if (businessName.trim().length < 3) {
       setWizardStep1Error("Business name must be at least 3 characters.");
@@ -245,7 +255,7 @@ export default function BuilderPage() {
 
               <div className="space-y-4">
                 {[
-                  { id: 'products', label: 'Selling Products', icon: '🛍️' },
+                  { id: 'products', label: offeringLabel, icon: '🛍️' },
                   { id: 'services', label: 'Offering Services', icon: '🛠️' },
                   { id: 'work', label: 'Showcasing Work', icon: '✨' },
                 ].map((option) => (
