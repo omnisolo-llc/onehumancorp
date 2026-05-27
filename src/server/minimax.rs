@@ -103,7 +103,9 @@ impl MinimaxClient {
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        let mut optimized_prompt = if prompt.starts_with('{') { minify_json_prompt(prompt) } else { prompt.to_string() };
+        optimized_prompt = crate::pricing::prompt_caching::truncate_context(&optimized_prompt, 8000);
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -113,12 +115,6 @@ impl MinimaxClient {
             return Err("circuit breaker open".to_string());
         }
 
-        // 2. Optimize Prompt
-        let optimized_prompt = if prompt.starts_with('{') {
-            minify_json_prompt(prompt)
-        } else {
-            truncate_by_word_count(prompt, 2000) // Safety truncation
-        };
 
         let client = reqwest::Client::new();
 
@@ -126,7 +122,7 @@ impl MinimaxClient {
             model: "MiniMax-M2.7".to_string(),
             messages: vec![MinimaxMessage {
                 role: "user".to_string(),
-                content: optimized_prompt,
+                content: optimized_prompt.clone(),
             }],
             stream: Some(false),
         };
@@ -149,7 +145,7 @@ impl MinimaxClient {
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
                             // 3. Update Cache
-                            self.cache.set(prompt, &content, prompt.len() / 4); // rough token estimate
+                            self.cache.set(&optimized_prompt, &content, optimized_prompt.len() / 4); // rough token estimate
                             return Ok(content);
                         } else {
                             last_err = "empty response from minimax".to_string();
@@ -186,12 +182,13 @@ impl MinimaxClient {
     pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
-        let optimized_prompt = truncate_by_word_count(prompt, 2000);
 
         let (tx, rx) = tokio::sync::mpsc::channel(100);
 
         // 1. Check Cache
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        let mut optimized_prompt = if prompt.starts_with('{') { minify_json_prompt(prompt) } else { prompt.to_string() };
+        optimized_prompt = crate::pricing::prompt_caching::truncate_context(&optimized_prompt, 8000);
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
@@ -206,7 +203,7 @@ impl MinimaxClient {
                 model: "MiniMax-M2.7".to_string(),
                 messages: vec![MinimaxMessage {
                     role: "user".to_string(),
-                    content: optimized_prompt,
+                    content: optimized_prompt.clone(),
                 }],
                 stream: Some(true),
             };
@@ -355,7 +352,9 @@ impl LocalLLMClient {
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
-        if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
+        let mut optimized_prompt = if prompt.starts_with('{') { minify_json_prompt(prompt) } else { prompt.to_string() };
+        optimized_prompt = crate::pricing::prompt_caching::truncate_context(&optimized_prompt, 8000);
+        if let (Some(cached), _) = self.cache.get_with_cost_cents(&optimized_prompt) {
             tracing::info!("Prompt cache hit (saved ~{} tokens)", cached.token_count);
             return Ok(cached.text);
         }
@@ -363,7 +362,7 @@ impl LocalLLMClient {
         let client = reqwest::Client::new();
         let req_body = serde_json::json!({
             "model": self.model,
-            "prompt": prompt,
+            "prompt": optimized_prompt.clone(),
             "stream": false,
         });
 
@@ -379,7 +378,7 @@ impl LocalLLMClient {
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
         let response = result["response"].as_str().ok_or("missing response field")?;
-        self.cache.set(prompt, response, prompt.len() / 4);
+        self.cache.set(&optimized_prompt, response, optimized_prompt.len() / 4);
         Ok(response.to_string())
     }
 

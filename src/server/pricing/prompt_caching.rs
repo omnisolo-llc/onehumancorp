@@ -96,3 +96,66 @@ mod tests {
         assert!(cache.cache.is_empty());
     }
 }
+
+pub fn truncate_context(context: &str, max_tokens: usize) -> String {
+    // Note: Do not truncate JSON payloads as it corrupts them.
+    if context.trim_start().starts_with('{') || context.trim_start().starts_with('[') {
+        return context.to_string();
+    }
+
+    // Rough estimation: 1 char is approx 0.25 tokens (4 chars per token).
+    let max_chars = max_tokens * 4;
+
+    // Using chars().count() safely counts Unicode characters
+    let total_chars = context.chars().count();
+    if total_chars <= max_chars {
+        return context.to_string();
+    }
+
+    // Intelligently truncate by keeping the beginning and the end of the context
+    // preserving the most important instructions (start) and immediate context (end).
+    let keep_start = max_chars / 2;
+    let keep_end = max_chars - keep_start;
+
+    let start_idx = context.char_indices().nth(keep_start).map(|(i, _)| i).unwrap_or(context.len());
+    let end_idx = context.char_indices().rev().nth(keep_end.saturating_sub(1)).map(|(i, _)| i).unwrap_or(0);
+
+    if start_idx >= end_idx {
+        return context.to_string();
+    }
+
+    let start_portion = &context[..start_idx];
+    let end_portion = &context[end_idx..];
+
+    format!("{}...\n[TRUNCATED FOR TOKEN EFFICIENCY]\n...{}", start_portion, end_portion)
+}
+
+#[cfg(test)]
+mod extra_tests {
+    use super::*;
+
+    #[test]
+    fn test_truncate_context() {
+        let context = "This is a very long context string that needs to be truncated intelligently by the new prompt caching cost efficiency feature implemented in OHC. We want to save tokens without losing the core message.\n\nHere is a new line.";
+        let truncated = truncate_context(context, 10);
+        assert!(truncated.contains("This is a"));
+        assert!(truncated.contains("a new line."));
+        assert!(truncated.contains("[TRUNCATED FOR TOKEN EFFICIENCY]"));
+        assert!(truncated.contains("..."));
+    }
+
+    #[test]
+    fn test_truncate_context_json() {
+        let context = "{\"key\": \"this is a very long json string that should not be truncated because it would corrupt the json payload and cause downstream errors\"}";
+        let truncated = truncate_context(context, 10);
+        assert_eq!(truncated, context); // Should not be truncated
+    }
+
+    #[test]
+    fn test_truncate_context_multibyte() {
+        let context = "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀";
+        let truncated = truncate_context(context, 10);
+        assert!(truncated.contains("🚀"));
+        assert!(truncated.contains("[TRUNCATED FOR TOKEN EFFICIENCY]"));
+    }
+}
