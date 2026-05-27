@@ -85,13 +85,13 @@ impl GitCheckpointer {
             tracing::warn!("git config user.name failed: {}", String::from_utf8_lossy(&name_out.stderr));
         }
 
-        let err_out = Command::new("git")
+        let email_out = Command::new("git")
             .args(&["config", "user.email", "agent@ohc.local"])
             .current_dir(&repo_path)
             .output()
             .expect("Failed to execute git config user.email");
-        if !err_out.status.success() {
-            tracing::warn!("git cmd failed (err): {}", String::from_utf8_lossy(&err_out.stderr));
+        if !email_out.status.success() {
+            tracing::warn!("git config user.email failed: {}", String::from_utf8_lossy(&email_out.stderr));
         }
 
         GitCheckpointer { repo_path }

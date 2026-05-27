@@ -23,7 +23,4 @@ sh_binary(
 # run_playwright_e2e target owns building and starting the local server.
 # Run all:   bazel test //src/e2e:playwright
 # Run one:   bazel test //src/e2e:playwright_app_spec_ts
-define_playwright_tests(
-    specs = glob(["*.spec.ts"]),
-    server = "//src/server:server",
-)
+define_playwright_tests(glob(["*.spec.ts"]))
