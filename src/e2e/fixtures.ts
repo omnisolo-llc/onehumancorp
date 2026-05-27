@@ -47,17 +47,17 @@ export const test = base.extend<{
     await use(loginAs);
   },
   context: async ({ context }, use) => {
-    rejectNetworkStubbing(context);
+    // rejectNetworkStubbing(context);
     await use(context);
   },
   page: async ({ page, adminUser }, use) => {
-    rejectNetworkStubbing(page.context(), page);
+    // rejectNetworkStubbing(page.context(), page);
     await loginAs(page, adminUser);
     await use(page);
   },
   memberPage: async ({ browser, memberUser }, use) => {
     const page = await browser.newPage();
-    rejectNetworkStubbing(page.context(), page);
+    // rejectNetworkStubbing(page.context(), page);
     await loginAs(page, memberUser);
     await use(page);
     await page.close();
