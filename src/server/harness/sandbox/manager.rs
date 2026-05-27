@@ -19,6 +19,12 @@ pub struct SandboxPolicy {
     pub read_only_paths: Vec<String>,
     #[serde(default)]
     pub blocked_domains: Vec<String>,
+    #[serde(default)]
+    pub seccomp_fd: Option<i32>,
+    #[serde(default)]
+    pub socat_socket_path: Option<String>,
+    #[serde(default)]
+    pub socat_proxy_port: Option<u16>,
 }
 
 #[async_trait]

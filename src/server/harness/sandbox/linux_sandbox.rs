@@ -62,6 +62,11 @@ impl LinuxSandbox {
         args.push("--cap-drop".to_string());
         args.push("ALL".to_string());
 
+        if let Some(fd) = self.policy.seccomp_fd {
+            args.push("--seccomp".to_string());
+            args.push(fd.to_string());
+        }
+
         args
     }
 }
@@ -106,7 +111,21 @@ impl SandboxAdapter for LinuxSandbox {
             prefix.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.policy.blocked_domains.join(",")));
         }
 
-        Ok(format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd))
+        let bwrap_cmd = format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd);
+        if let (Some(path), Some(port)) = (&self.policy.socat_socket_path, self.policy.socat_proxy_port) {
+            let escaped_path = path.replace("'", "'\\''");
+            let proxy_script = format!(
+                "socat UNIX-LISTEN:'{}',fork TCP:127.0.0.1:{} & \n\
+                 SOCAT_PID=$!\n\
+                 trap 'kill $SOCAT_PID 2>/dev/null || true' EXIT\n\
+                 while [ ! -S '{}' ]; do sleep 0.05; done\n\
+                 {}",
+                escaped_path, port, escaped_path, bwrap_cmd
+            );
+            Ok(format!("bash -c \"{}\"", proxy_script.replace("\"", "\\\"")))
+        } else {
+            Ok(bwrap_cmd)
+        }
     }
 
     async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
@@ -145,7 +164,10 @@ mod tests {
         let mut sandbox = LinuxSandbox::new(None);
         let policy_json = r#"{
             "read_only_paths": ["/etc", "/var/log"],
-            "blocked_domains": ["evil.com"]
+            "blocked_domains": ["evil.com"],
+            "seccomp_fd": 11,
+            "socat_socket_path": "/tmp/test.sock",
+            "socat_proxy_port": 8080
         }"#;
 
         sandbox.update_config(policy_json).await.unwrap();
@@ -156,6 +178,26 @@ mod tests {
         assert!(args.contains(&"--ro-bind".to_string()));
         assert!(args.contains(&"/etc".to_string()));
         assert!(args.contains(&"/var/log".to_string()));
+        assert!(args.contains(&"--seccomp".to_string()));
+        assert!(args.contains(&"11".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_wrap_command_with_proxy() {
+        let mut sandbox = LinuxSandbox::new(None);
+        let policy_json = r#"{
+            "socat_socket_path": "/tmp/test.sock",
+            "socat_proxy_port": 8080
+        }"#;
+
+        sandbox.update_config(policy_json).await.unwrap();
+        let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
+
+        assert!(wrapped.contains("socat UNIX-LISTEN:\\'/tmp/test.sock\\',fork TCP:127.0.0.1:8080 & "));
+        assert!(wrapped.contains("SOCAT_PID=$!"));
+        assert!(wrapped.contains("trap \\'kill $SOCAT_PID"));
+        assert!(wrapped.contains("while [ ! -S \\'/tmp/test.sock\\' ]; do sleep 0.05; done"));
+        assert!(wrapped.contains("bwrap --unshare-all"));
     }
 
     #[tokio::test]
