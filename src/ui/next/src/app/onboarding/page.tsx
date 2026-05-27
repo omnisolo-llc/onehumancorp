@@ -24,6 +24,11 @@ export default function OnboardingWizard() {
     setIsLoaded(true);
   }, []);
 
+  const handleIntakeClick = () => {
+    if (!businessDescription || businessDescription.trim().length === 0) return;
+    handleIntake();
+  };
+
   const handleIntake = async () => {
     setIsLoading(true);
     setError('');
@@ -142,13 +147,13 @@ export default function OnboardingWizard() {
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                  className="w-full p-4 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
               </div>
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={handleIntake}
+                  onClick={handleIntakeClick}
                   disabled={!businessDescription.trim() || isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
                 >
@@ -175,7 +180,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -184,7 +189,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -193,7 +198,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -203,7 +208,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -212,7 +217,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                 </div>
@@ -247,7 +252,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-[rgba(255,255,255,0.4)] dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold">{template}</div>
                       </div>
@@ -297,7 +302,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-[rgba(255,255,255,0.4)] dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
@@ -312,7 +317,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-[rgba(255,255,255,0.4)] dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
