@@ -221,7 +221,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim() || isNaN(Number(firstProductPrice)) || Number(firstProductPrice) <= 0}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -271,16 +271,33 @@ export default function OnboardingWizard() {
 
           {step === 4 && (
              <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-               <div className="w-24 h-24 relative mb-8">
-                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
-                 <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+               <div className="w-28 h-28 relative mb-8 drop-shadow-xl">
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF]/20 rounded-full"></div>
+                 <div className="absolute inset-0 border-[6px] border-[#0066FF] rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(0,102,255,0.5)]"></div>
+                 <div className="absolute inset-0 flex items-center justify-center">
+                   <svg className="w-8 h-8 text-[#0066FF] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                   </svg>
+                 </div>
                </div>
                <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
-               <div className="space-y-2">
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
-                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+               <div className="space-y-3 bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-white/60 dark:border-white/10 w-full max-w-[280px]">
+                 <div className="flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-[#34C759] animate-pulse"></div>
+                   <p className="text-gray-600 dark:text-[#A1A1A6] text-sm font-medium">Generating your catalog</p>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-[#0066FF] animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+                   <p className="text-gray-600 dark:text-[#A1A1A6] text-sm font-medium">Configuring payments</p>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-[#AF52DE] animate-pulse" style={{ animationDelay: '1s' }}></div>
+                   <p className="text-gray-600 dark:text-[#A1A1A6] text-sm font-medium">Designing storefront</p>
+                 </div>
+                 <div className="flex items-center gap-3">
+                   <div className="w-2 h-2 rounded-full bg-[#FF9500] animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+                   <p className="text-gray-600 dark:text-[#A1A1A6] text-sm font-medium">Onboarding AI agents</p>
+                 </div>
                </div>
              </div>
           )}

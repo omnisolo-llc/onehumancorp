@@ -92,6 +92,61 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Step 2: Handles input validation for firstProductPrice', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(input, 'I am a baker in NY');
+
+    const button = screen.getByRole('button', { name: /Generate My Business/i });
+    await act(async () => {
+      button.click();
+    });
+
+    // Verify it transitions to Step 2
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+    });
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+    expect(continueButton).not.toBeDisabled();
+
+    // Now change price to an invalid value
+    const inputs = screen.getAllByRole('textbox');
+    // Find the price input by finding the one that has value '20' or the last textbox which is typically price
+    // Since inputs don't have distinct aria-labels, we clear the specific input corresponding to price.
+    // Based on page.tsx, inputs are: Business Name, Type, Categories, First Product, Price (5 text inputs)
+    const priceInput = inputs[4];
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '-5');
+
+    // The button should be disabled
+    expect(continueButton).toBeDisabled();
+
+    // Change to a string
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, 'abc');
+    expect(continueButton).toBeDisabled();
+
+    // Change to a valid price
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '15.50');
+    expect(continueButton).not.toBeDisabled();
+  });
+
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
