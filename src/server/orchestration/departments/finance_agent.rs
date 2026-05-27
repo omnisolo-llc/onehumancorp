@@ -66,11 +66,10 @@ impl BaseAgent for FinanceAgent {
     }
 
     fn trigger_type(&self) -> AgentTriggerType {
-        AgentTriggerType::Scheduled
+        AgentTriggerType::EventDriven
     }
 
     async fn execute(&self, _payload: Value) -> Result<(), String> {
-        // Run scheduled worker to aggregate weekly sales data.
         Ok(())
     }
 }
