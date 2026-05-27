@@ -1672,6 +1672,16 @@ impl Agent {
             final_cfg.max_retries = 2;
         }
 
+        // Anthropic 3-Tier Memory mechanic: lightweight index
+        if let Some(ltm) = &final_cfg.long_term_memory {
+            if let Ok(idx_str) = ltm.get_lightweight_index().await {
+                if !idx_str.is_empty() {
+                    let memory_hint = format!("\n[Anthropic 3-Tier Memory Index]\n{}\n[Crucial Rule: Treat memory as a hint and verify against actual state before acting.]\n", idx_str);
+                    final_cfg.developer_instructions.push_str(&memory_hint);
+                }
+            }
+        }
+
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
             if let Some(ref dir) = final_cfg.progressive_skills_dir {
@@ -2887,6 +2897,51 @@ mod tests {
     struct MyStructuredOutput {
         city: String,
         population: u32,
+    }
+
+    use crate::memory_store::LongTermMemory;
+
+    struct MockAnthropic3TierMemoryStore {
+        index_str: String,
+    }
+
+    #[async_trait::async_trait]
+    impl LongTermMemory for MockAnthropic3TierMemoryStore {
+        async fn retrieve(&self, _query: &str, _limit: usize) -> Result<Vec<String>, String> { Ok(vec![]) }
+        async fn store(&self, _content: &str, _tags: Vec<String>) -> Result<(), String> { Ok(()) }
+        async fn get_lightweight_index(&self) -> Result<String, String> { Ok(self.index_str.clone()) }
+    }
+
+    impl std::fmt::Debug for MockAnthropic3TierMemoryStore {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            f.debug_struct("MockAnthropic3TierMemoryStore").finish()
+        }
+    }
+
+    #[tokio::test]
+    async fn test_anthropic_3tier_memory_injection() {
+        let ltm = std::sync::Arc::new(MockAnthropic3TierMemoryStore {
+            index_str: "- this is a mock index entry\n- another memory".to_string(),
+        });
+
+        let client = std::sync::Arc::new(crate::agent::tests::MockLlmClient {
+            responses: tokio::sync::Mutex::new(vec![crate::types::ChatResponse {
+                message: crate::types::Message::assistant("done"),
+                usage: crate::types::Usage::default(),
+                stop_reason: "stop".to_string(),
+                response_id: Some("1".to_string()),
+            }]),
+        });
+
+        let agent = crate::agent::Agent::new(client.clone() as std::sync::Arc<dyn ohc_builtin_agent_llm::LlmClient>, vec![]);
+        let mut cfg = crate::agent::AgentRunConfig::default();
+        cfg.long_term_memory = Some(ltm);
+        cfg.developer_instructions = "Original dev inst.".to_string();
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let _ = agent.run(&cfg, "start", &mut on_event).await;
     }
 
     #[test]
