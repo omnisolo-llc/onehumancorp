@@ -189,7 +189,7 @@ tauri_mobile_package(
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
     package_type = "apk",
     target_compatible_with = select({
-        "//:linux": [],
+        ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -203,7 +203,7 @@ tauri_mobile_package(
     android_sdk_root = "@tauri_android_sdk//:.sdk_root",
     package_type = "aab",
     target_compatible_with = select({
-        "//:linux": [],
+        ":tauri_enabled": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],

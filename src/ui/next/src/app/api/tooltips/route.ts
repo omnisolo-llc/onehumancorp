@@ -15,10 +15,6 @@ export async function GET() {
     "credit-tooltip": "Get free credits for premium tools by inviting a friend.",
     "help-btn-tooltip": "Need help? Click here for guides, videos, and to ask our AI.",
     "changelog-nav-tooltip": "See the latest updates and new features we just added.",
-    "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid.",
-    "checkout-pay-now-tooltip": "Click here to securely finish your purchase and process your payment.",
-    "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
-    "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
-    "todays-sales-tooltip": "This shows how much money you made today. It updates every time a customer buys something!"
+    "stripe-setup-tooltip": "Connect your bank account securely with Stripe to start getting paid."
   });
 }
