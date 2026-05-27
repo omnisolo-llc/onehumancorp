@@ -1,7 +1,7 @@
 {
   "$schema": "https://v2.tauri.app/schemas/2.0.0/config.schema.json",
   "productName": "OHC",
-  "version": "0.4.47+1",
+  "version": "0.4.46+1",
   "identifier": "com.onehumancorp.ohc",
   "build": {
     "frontendDist": "./next_out",

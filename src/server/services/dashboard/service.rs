@@ -8,6 +8,7 @@ use std::sync::OnceLock;
 static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
+static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -62,11 +63,22 @@ impl DashboardService for MyDashboardService {
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
+        let hub_agents = self.hub.clone();
+        let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
-                Ok::<_, String>(hub1.get_agents().await)
+                let cache_key = format!("hub:agents:{}:{}", org_id_agents, mobile_optimized);
+                let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(hub_agents.redis_client.clone()));
+
+                if let Some(agents) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(agents);
+                }
+
+                let agents = hub1.get_agents().await.to_vec();
+                cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
                 Ok::<_, String>(hub2.get_meetings().await)
@@ -366,9 +378,9 @@ impl DashboardService for MyDashboardService {
                 };
 
                 let name = if req.mobile_optimized {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
+                    String::new()
                 } else {
-                    a.name
+                    ::server_pricing::compression::reduce_tokens(&a.name)
                 };
 
                 ::server_ohc::agent::Agent {
