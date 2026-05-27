@@ -92,7 +92,6 @@ where
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
-        .route("/milestone/card", get(handle_get_milestone_card))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -344,109 +343,29 @@ async fn handle_og_card(
 }
 
 async fn handle_check_milestones(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
+    Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
-    use sqlx::Row;
-    let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
-
-    let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-        .bind(tenant_id)
-        .fetch_all(&state.pool)
-        .await
-        .unwrap_or_default();
-
-    let reached_types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-
     let milestones = vec![
         Milestone {
-            id: "first_sale".to_string(),
-            title: "🎉 Milestone: First Sale!".to_string(),
-            description: "Congratulations on your first sale!".to_string(),
-            reached: reached_types.contains(&"first_sale".to_string()),
+            id: "1".to_string(),
+            title: String::from("First Teammate"),
+            description: String::from("Hire your first AI agent"),
+            reached: true,
         },
         Milestone {
-            id: "10th_order".to_string(),
-            title: "🎉 Milestone: 10th Order!".to_string(),
+            id: "2".to_string(),
+            title: String::from("Global Reach"),
+            description: String::from("Connect to a partner organization"),
+            reached: false,
+        },
+        Milestone {
+            id: "3".to_string(),
+            title: "🎉 10th Order!".to_string(),
             description: "You've successfully processed your 10th order on OHC.".to_string(),
-            reached: reached_types.contains(&"10th_order".to_string()),
-        },
-        Milestone {
-            id: "100_visitors".to_string(),
-            title: "🚀 100 Visitors Today!".to_string(),
-            description: "Your storefront reached 100 visitors today!".to_string(),
-            reached: reached_types.contains(&"100_visitors".to_string()),
+            reached: true,
         },
     ];
     Json(MilestonesResponse { milestones })
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MilestoneCardQuery {
-    pub tenant: Option<String>,
-    pub milestone_id: Option<String>,
-}
-
-async fn handle_get_milestone_card(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<MilestoneCardQuery>,
-) -> impl IntoResponse {
-    let tenant_id = query.tenant.as_deref().unwrap_or("DEFAULT");
-    let milestone_id = query.milestone_id.as_deref().unwrap_or("first_sale");
-
-    // Fetch business name - handle "DEFAULT" and ID vs tenant_id
-    let mut business_name = "My Awesome Store".to_string();
-    if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT business_name FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
-            .bind(tenant_id)
-            .fetch_optional(&state.pool)
-            .await
-            .unwrap_or_default();
-        if let Some(name) = row {
-            business_name = name;
-        }
-    }
-
-    let escape_xml = |s: &str| {
-        s.replace("&", "&amp;")
-         .replace("<", "&lt;")
-         .replace(">", "&gt;")
-         .replace("\"", "&quot;")
-         .replace("'", "&apos;")
-    };
-
-    let safe_business_name = escape_xml(&business_name);
-
-    let (title, sub, icon) = match milestone_id {
-        "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
-        "10th_order" => ("10th Order!", "Business is booming", "📈"),
-        "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
-        _ => ("Success Milestone!", "Built with OHC", "✨"),
-    };
-
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
-    </linearGradient>
-  </defs>
-  <rect width="1200" height="630" fill="url(#grad1)" />
-
-  <text x="600" y="200" font-family="sans-serif" font-size="120" text-anchor="middle" fill="#ffffff">{icon}</text>
-  <text x="600" y="350" font-family="sans-serif" font-size="80" font-weight="bold" text-anchor="middle" fill="#ffffff">{title}</text>
-  <text x="600" y="450" font-family="sans-serif" font-size="40" text-anchor="middle" fill="#ffffff" opacity="0.9">{sub}</text>
-
-  <rect x="400" y="500" width="400" height="2" fill="#ffffff" opacity="0.3" />
-
-  <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
-  <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
-</svg>"##);
-
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
 }
 
 async fn handle_get_team_invites(
@@ -476,7 +395,7 @@ pub struct DiscountShareResponse {
 }
 
 async fn handle_generate_discount_share(
-    Extension(_state): Extension<GrowthState>,
+    Extension(state): Extension<GrowthState>,
 ) -> Result<Json<DiscountShareResponse>, StatusCode> {
     // In a real application we would use the authenticated user's tenant ID
     let tenant_id = "acme-corp";
