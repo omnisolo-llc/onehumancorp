@@ -3086,6 +3086,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <div id="milestone-card" class="card glass" style="display: none;">
                                 <h3 id="milestone-title"></h3>
                                 <p id="milestone-body"></p>
+                                <div id="milestone-share-section" style="display: none; margin-top: 16px;">
+                                    <h4 style="margin: 0 0 8px 0; font-size: 14px; font-weight: 600; text-transform: uppercase; color: var(--text-secondary);">Share Your Success</h4>
+                                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                        <a id="milestone-share-whatsapp" href="#" target="_blank" style="flex: 1; text-align: center; background: #25D366; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">Share to WhatsApp</a>
+                                        <a id="milestone-share-x" href="#" target="_blank" style="flex: 1; text-align: center; background: #000; color: white; padding: 8px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 14px;">Share to X</a>
+                                    </div>
+                                </div>
                                 <button onclick="dismissMilestone()">Dismiss</button>
                             </div>
                         </div>
@@ -4702,6 +4709,18 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             document.getElementById('milestone-body').textContent = body;
+
+                            const shareSection = document.getElementById('milestone-share-section');
+                            if (title.includes('10th Order')) {
+                                const referralLink = 'https://ohc.store/join?ref=' + (localStorage.getItem('tenant_id') || 'DEFAULT');
+                                const encodedText = encodeURIComponent(`Just hit an amazing milestone: ${title} on my new store! 🚀 Built entirely with AI on @OneHumanCorp. Launch yours and get $50 credit: ${referralLink}`);
+                                document.getElementById('milestone-share-whatsapp').href = `https://wa.me/?text=${encodedText}`;
+                                document.getElementById('milestone-share-x').href = `https://twitter.com/intent/tweet?text=${encodedText}`;
+                                shareSection.style.display = 'block';
+                            } else {
+                                shareSection.style.display = 'none';
+                            }
+
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
