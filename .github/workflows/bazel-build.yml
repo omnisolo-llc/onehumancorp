@@ -13,7 +13,6 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  BAZEL_BUILD_FLAGS: "--remote_download_minimal"
 
 permissions:
   contents: read
@@ -73,15 +72,13 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-${{ matrix.name }}
-          repository-cache: true
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
+            test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
         if: matrix.name != 'android'
@@ -89,18 +86,12 @@ jobs:
           bazelisk query '
             kind(".* rule", //...)
             except kind(".*_test rule", //...)
-            except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
-            except filter("^//:(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
             except //src/ui/tauri:all
-            except //deploy:all
-            except //release:all
           ' > build-targets.txt
           xargs -r bazelisk build \
             --config=${{ matrix.bazel_config }} \
             --skip_incompatible_explicit_targets \
-            --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
-            $BAZEL_BUILD_FLAGS \
             < build-targets.txt
 
       - name: Install Linux Tauri desktop dependencies
@@ -122,13 +113,11 @@ jobs:
           bazelisk build \
             //src/ui/tauri:app \
             --config=linux_x86_64 \
-            --//src/ui/tauri:build_tauri=true \
-            $BAZEL_BUILD_FLAGS
+            --//src/ui/tauri:build_tauri=true
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
-        run: |
-          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
+        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
@@ -136,8 +125,7 @@ jobs:
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
             //src/ui/tauri:tauri_android_aab \
-            --config=linux_x86_64 \
-            $BAZEL_BUILD_FLAGS
+            --config=linux_x86_64
 
       - name: Install iOS signing assets
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
@@ -169,8 +157,8 @@ jobs:
 
       - name: Build Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name != 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 $BAZEL_BUILD_FLAGS
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64
 
       - name: Analyze Tauri iOS Bazel target
         if: matrix.name == 'macos-aarch64' && github.event_name == 'pull_request'
-        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild $BAZEL_BUILD_FLAGS
+        run: bazelisk build //src/ui/tauri:tauri_ios_ipa --config=macos_aarch64 --nobuild
