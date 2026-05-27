@@ -2588,7 +2588,7 @@ impl Agent {
                                 session_id: thread_id.clone(),
                                 messages_json: msgs_json,
                                 current_step: iteration as usize,
-                                active_tools: vec![],
+                                active_tools: vec![], memory_size_bytes: Some(messages.len()),
                             };
                             let _ = hm.hibernate(thread_id, &state).await;
                         }
@@ -4631,7 +4631,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("FAIL: The answer is incomplete."),
+                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4643,7 +4643,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("PASS"),
+                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
