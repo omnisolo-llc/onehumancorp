@@ -34,6 +34,7 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    doordash_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::doordash::DoorDashClient>>>,
 }
 
 impl IntegrationsRegistry {
@@ -74,6 +75,7 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            doordash_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -245,6 +247,10 @@ impl IntegrationsRegistry {
         if integration_id == "shippo" {
             let mut clients = self.shippo_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::shippo::provider::ShippoProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "doordash" {
+            let mut clients = self.doordash_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::doordash::DoorDashClient::new(creds.api_token.clone(), if creds.base_url.is_empty() { None } else { Some(creds.base_url.clone()) })));
         }
         if integration_id == "zoom" {
             let mut clients = self.zoom_clients.write().unwrap();
@@ -703,6 +709,36 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.send_email(to, subject, body).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn get_delivery_quote(&self, integration_id: &str, pickup: &str, dropoff: &str, value: i64) -> Result<serde_json::Value, String> {
+        let client = {
+            if integration_id == "doordash" {
+                let clients = self.doordash_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.create_delivery_quote(pickup, dropoff, value).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn dispatch_delivery(&self, integration_id: &str, delivery_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "doordash" {
+                let clients = self.doordash_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.dispatch_delivery(delivery_id).await;
         }
         Err("integration not found or not supported".to_string())
     }

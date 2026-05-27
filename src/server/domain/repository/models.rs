@@ -54,3 +54,28 @@ pub struct AgentMemory {
     pub interaction_data: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DeliveryZone {
+    pub id: String,
+    pub tenant_id: String,
+    pub name: String,
+    pub max_radius_km: f64,
+    pub base_fee_cents: i64,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DeliveryQuotation {
+    pub id: String,
+    pub tenant_id: String,
+    pub customer_id: String,
+    pub provider: String,
+    pub fee_cents: i64,
+    pub distance_km: f64,
+    pub estimated_minutes: i32,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
