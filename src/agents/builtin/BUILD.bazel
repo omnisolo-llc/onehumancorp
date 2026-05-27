@@ -197,6 +197,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "budget",
     "caveman",
     "checkpointer",
+    "expert_team",
     "deerflow",
     "codex_runner",
     "verification_loops",

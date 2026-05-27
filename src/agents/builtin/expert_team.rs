@@ -156,11 +156,14 @@ impl QualityGates {
             return Err("Pre-merge Gate Failed: No summaries to merge.".to_string());
         }
 
-        // Check for similarity (dummy implementation to represent the logic)
-        // If the outputs are too similar, we reject them.
+        // Real implementation of similarity check
         for i in 0..summaries.len() {
+            let tokens_i: std::collections::HashSet<&str> = summaries[i].split_whitespace().collect();
             for j in (i + 1)..summaries.len() {
-                if summaries[i] == summaries[j] {
+                let tokens_j: std::collections::HashSet<&str> = summaries[j].split_whitespace().collect();
+                let intersection = tokens_i.intersection(&tokens_j).count();
+                let union = tokens_i.union(&tokens_j).count();
+                if union > 0 && (intersection as f64 / union as f64) > 0.75 {
                     return Err("Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs. Deduplication required.".to_string());
                 }
             }

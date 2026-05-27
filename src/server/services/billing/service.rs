@@ -92,7 +92,7 @@ mod tests {
         let auditor = Arc::new(CostAuditor::new(config));
         let service = MyBillingService::new(auditor.clone());
 
-        let req = TokenUsage {
+        let req = ::server_ohc::billing::TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
             model: "model_z".to_string(),
@@ -129,7 +129,7 @@ mod tests {
         let service = MyBillingService::new(auditor.clone());
 
         // Track some usage
-        let req = TokenUsage {
+        let req = ::server_ohc::billing::TokenUsage {
             agent_id: "agent_x".to_string(),
             organization_id: "org_y".to_string(),
             model: "model_z".to_string(),
@@ -146,7 +146,7 @@ mod tests {
         });
         let _ = service.track_token_usage(req_req).await;
 
-        let req_summary = TokenUsage {
+        let req_summary = ::server_ohc::billing::TokenUsage {
             agent_id: "".to_string(),
             organization_id: "org_y".to_string(),
             model: "".to_string(),
