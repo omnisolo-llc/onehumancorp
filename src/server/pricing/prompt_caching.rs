@@ -59,6 +59,15 @@ impl PromptCache {
         let now = Instant::now();
         self.cache.retain(|_, entry| now.duration_since(entry.created_at) <= self.ttl);
     }
+
+    pub fn intelligent_context_truncation(prompt: &str, max_tokens: usize) -> String {
+        let words: Vec<&str> = prompt.split_whitespace().collect();
+        if words.len() <= max_tokens {
+            prompt.to_string()
+        } else {
+            words[..max_tokens].join(" ")
+        }
+    }
 }
 
 #[cfg(test)]

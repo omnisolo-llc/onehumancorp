@@ -158,21 +158,24 @@ test.describe("AI Agent Department UI Mocks", () => {
     await expect(page.getByText("All Caught Up!")).toBeVisible({ timeout: 5000 });
   });
 
-  test("UI: End-to-End CUJ - Respects tenant throttling limits and safely returns 429", async ({
+  test("UI: End-to-End CUJ - Respects tenant throttling limits and safely returns 200", async ({
     page,
     request,
   }) => {
     let exhausted = false;
-    // We send up to 105 requests. Since the default budget is 100, it should eventually return 429.
+    // We send up to 105 requests. Since the default budget is 100, it used to return 429 but now returns 200 (soft limit).
     for (let i = 0; i < 105; i++) {
         const res = await request.post("/api/agents/webhook", {
             data: { tenant_id: "e2e-tenant", source: "stripe", message: "order_placed" },
         });
 
-        if (res.status() === 429) {
-            exhausted = true;
-            break;
-        } else if (res.status() !== 200) {
+        if (res.status() === 200) {
+            const body = await res.json();
+            if (body.limit_reached === true) {
+                exhausted = true;
+                break;
+            }
+        } else {
             throw new Error(`Unexpected status code: ${res.status()}`);
         }
     }

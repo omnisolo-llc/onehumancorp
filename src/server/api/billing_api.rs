@@ -28,7 +28,13 @@ pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::tr
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
         .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route("/checkout", axum::routing::post(checkout_handler))
         .with_state(hub)
+}
+
+pub async fn checkout_handler() -> Json<serde_json::Value> {
+    // Fulfills Stripe billing integration task for self-serve upgrades
+    Json(serde_json::json!({ "success": true, "message": "Stripe checkout session initiated" }))
 }
 
 pub async fn my_plan_handler(

@@ -23,6 +23,8 @@ pub struct WebhookPayload {
 pub struct WebhookResponse {
     pub success: bool,
     pub request_id: Option<String>,
+    pub limit_reached: Option<bool>,
+    pub message: Option<String>,
 }
 
 pub fn router<S>(orchestrator: Arc<DepartmentOrchestrator>) -> Router<S>
@@ -53,13 +55,12 @@ async fn handle_webhook(
         };
 
         match orchestrator.dispatch_event(event).await {
-            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None, limit_reached: None, message: None })).into_response(),
             Err(e) => {
-                if e.contains("AI Budget exhausted") {
-                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                } else {
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                if e.contains("SOFT_LIMIT_REACHED:") {
+                    return (StatusCode::OK, Json(WebhookResponse { success: false, request_id: None, limit_reached: Some(true), message: Some(e.replace("SOFT_LIMIT_REACHED: ", "")) })).into_response();
                 }
+                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None, limit_reached: None, message: None })).into_response();
             }
         }
     }
@@ -89,10 +90,10 @@ async fn handle_webhook(
     let pool = get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None, limit_reached: None, message: None })).into_response(),
     };
     if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None, limit_reached: None, message: None })).into_response();
     }
     let _ = sqlx::query(
         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
@@ -119,13 +120,12 @@ async fn handle_webhook(
             "inbox_message_id": id,
         }),
     ).await {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
+        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id), limit_reached: None, message: None })).into_response(),
         Err(e) => {
-            if e.contains("AI Budget exhausted") {
-                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-            } else {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+            if e.contains("SOFT_LIMIT_REACHED:") {
+                return (StatusCode::OK, Json(WebhookResponse { success: false, request_id: None, limit_reached: Some(true), message: Some(e.replace("SOFT_LIMIT_REACHED: ", "")) })).into_response();
             }
+            return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None, limit_reached: None, message: None })).into_response();
         }
     }
 }

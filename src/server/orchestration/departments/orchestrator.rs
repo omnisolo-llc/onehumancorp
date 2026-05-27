@@ -185,6 +185,9 @@ impl DepartmentOrchestrator {
                                 }
                                 Ok(Err(e)) => {
                                     last_err = e.to_string();
+                                    if last_err.contains("SOFT_LIMIT_REACHED:") {
+                                        break;
+                                    }
                                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                                 }
                                 Err(_) => {
@@ -195,7 +198,9 @@ impl DepartmentOrchestrator {
                         }
 
                         if !success {
-                            tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
+                            if !last_err.contains("SOFT_LIMIT_REACHED:") {
+                                tracing::error!("Dead-letter logging for event {} after 3 failed retries. Error: {}", event.id, last_err);
+                            }
                             let dl_id = Uuid::new_v4().to_string();
                             let dl_payload = serde_json::to_string(&event.payload).unwrap_or_default();
 
@@ -261,7 +266,7 @@ impl DepartmentOrchestrator {
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
         if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
-            return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+            return Err("SOFT_LIMIT_REACHED: AI Budget exhausted. Please upgrade your plan.".to_string());
         }
 
         match risk {

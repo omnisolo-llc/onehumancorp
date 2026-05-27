@@ -79,6 +79,11 @@ impl PayoutBatcher {
             Ok(None)
         }
     }
+
+    pub fn route_payment_to_ach(amount_cents: i64) -> bool {
+        // High-value transactions save fees via ACH instead of instant card payouts
+        amount_cents >= 100_000
+    }
 }
 
 #[cfg(test)]

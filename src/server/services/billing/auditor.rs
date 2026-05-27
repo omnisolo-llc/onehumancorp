@@ -227,6 +227,12 @@ impl CostAuditor {
         *current_revenue += amount;
     }
 
+    pub fn record_transaction_fee(&self, agent_id: &str, fee_cents: i64) {
+        let mut costs = self.agent_costs.lock().unwrap();
+        let current_cost = costs.entry(agent_id.to_string()).or_insert(0.0);
+        *current_cost += (fee_cents as f64) / 100.0;
+    }
+
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {
         let compute_cost = calculator::calculate_compute_cost(event.compute_hours, &self.config);
         let network_cost = calculator::calculate_network_cost(event.network_egress_bytes, &self.config);
