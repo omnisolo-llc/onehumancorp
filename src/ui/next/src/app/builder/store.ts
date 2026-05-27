@@ -11,6 +11,7 @@ interface BuilderState {
   drafts: any[][];
   status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "live";
   businessGoal: "products" | "services" | "work" | null;
+  agentTeam: string;
   liveUrl: string;
 
   setBio: (bio: string) => void;
@@ -22,6 +23,7 @@ interface BuilderState {
   setDrafts: (drafts: any[][]) => void;
   setStatus: (status: "onboarding" | "idle" | "generating" | "draft" | "selection" | "live") => void;
   setBusinessGoal: (goal: "products" | "services" | "work" | null) => void;
+  setAgentTeam: (team: string) => void;
   setLiveUrl: (url: string) => void;
 }
 
@@ -37,6 +39,7 @@ export const useBuilderStore = create<BuilderState>()(
       drafts: [],
       status: "onboarding",
       businessGoal: null,
+      agentTeam: "Customer Support",
       liveUrl: "",
 
       setBio: (bio) => set({ bio }),
@@ -48,6 +51,7 @@ export const useBuilderStore = create<BuilderState>()(
       setDrafts: (drafts) => set({ drafts }),
       setStatus: (status) => set({ status }),
       setBusinessGoal: (businessGoal) => set({ businessGoal }),
+      setAgentTeam: (agentTeam) => set({ agentTeam }),
       setLiveUrl: (liveUrl) => set({ liveUrl }),
     }),
     {

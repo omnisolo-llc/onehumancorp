@@ -20,9 +20,72 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+const stateLoaded = useRef(false);
+
   useEffect(() => {
-    setIsLoaded(true);
+    // Load state from server
+    const loadState = async () => {
+      try {
+        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+        const userId = localStorage.getItem('user_id') || 'test-user';
+        const fetchPromise = fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId
+          }
+        });
+        if (fetchPromise && fetchPromise.catch) {
+          fetchPromise.catch(err => console.error('Failed to load onboarding state', err));
+        }
+        const res = await fetchPromise;
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && data.step) {
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load onboarding state', err);
+      } finally {
+        setIsLoaded(true);
+        stateLoaded.current = true;
+      }
+    };
+
+    loadState();
   }, []);
+
+  useEffect(() => {
+    if (!stateLoaded.current) return;
+    if (step >= 4) return; // Don't sync loading or success states
+
+    const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
+    const userId = localStorage.getItem('user_id') || 'test-user';
+
+    const payload = {
+      step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice
+    };
+
+    const timer = setTimeout(() => {
+      const fetchPromise = fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify(payload)
+      });
+      if (fetchPromise && fetchPromise.catch) {
+        fetchPromise.catch(err => console.error('Failed to sync onboarding state', err));
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -117,7 +180,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="relative w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] flex flex-col overflow-hidden sm:rounded-[16px] glass-container shadow-2xl">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -322,6 +385,38 @@ export default function OnboardingWizard() {
           )}
         </div>
       </div>
+
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slide-up { animation: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+        .font-inter { font-family: 'Inter', sans-serif; }
+        .font-outfit { font-family: 'Outfit', sans-serif; }
+
+        .glass-container {
+          background: rgba(255, 255, 255, 0.65) !important;
+          backdrop-filter: blur(30px) saturate(210%) !important;
+          -webkit-backdrop-filter: blur(30px) saturate(210%) !important;
+          border: 1px solid rgba(255, 255, 255, 0.4) !important;
+          border-radius: 16px !important;
+        }
+
+        .btn-glass {
+          border-radius: 8px !important;
+        }
+
+        @media (prefers-color-scheme: dark) {
+          .glass-container {
+            background: rgba(22, 22, 26, 0.7) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+        }
+      `}} />
     </div>
   );
 }

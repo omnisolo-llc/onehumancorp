@@ -17,6 +17,7 @@ export default function BuilderPage() {
     drafts, setDrafts,
     status, setStatus,
     businessGoal, setBusinessGoal,
+    agentTeam, setAgentTeam,
     liveUrl, setLiveUrl
   } = useBuilderStore();
 
@@ -33,6 +34,10 @@ export default function BuilderPage() {
   const handleStep1Next = () => {
     if (businessName.trim().length < 3) {
       setWizardStep1Error("Business name must be at least 3 characters.");
+      return;
+    }
+    if (!/^[a-zA-Z0-9 ]+$/.test(businessName)) {
+      setWizardStep1Error("Business name must only contain letters, numbers, and spaces.");
       return;
     }
     if (businessCategory.trim().length < 5) {
@@ -398,6 +403,29 @@ export default function BuilderPage() {
                     rows={6}
                   />
                 </WithTooltip>
+
+                <div className="mb-8 text-left">
+                  <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">AI Agent Team</label>
+                  <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-3">Select the primary AI agents to manage your store.</p>
+                  <div className="grid grid-cols-1 gap-3">
+                    {['Customer Support', 'Sales', 'Inventory'].map(team => (
+                      <button
+                        key={team}
+                        onClick={() => setAgentTeam(team)}
+                        className={`p-4 rounded-[16px] border text-left transition-all ${agentTeam === team ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-md bg-white/60 dark:bg-black/40 backdrop-blur-md' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80 bg-white/40 dark:bg-black/20 backdrop-blur-sm'}`}
+                      >
+                         <div className="flex items-center justify-between">
+                            <span className="font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{team}</span>
+                            {agentTeam === team && (
+                              <div className="bg-[#0066FF] text-white rounded-full p-1">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                              </div>
+                            )}
+                         </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div className="flex gap-4">
                   <button
