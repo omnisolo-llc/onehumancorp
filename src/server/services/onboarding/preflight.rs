@@ -32,7 +32,7 @@ pub fn generate_preflight_report(res: &PreflightResult) -> String {
     let status = if res.passed { "PASSED" } else { "FAILED" };
 
     format!(
-        "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px;\">\n\
+        "<div style=\"backdrop-filter: blur(30px) saturate(210%); background: rgba(22, 22, 26, 0.7); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px;\">\n\
           <h2>Day One Preflight Checker</h2>\n\
           <p><strong>OS:</strong> {}</p>\n\
           <p><strong>Arch:</strong> {}</p>\n\

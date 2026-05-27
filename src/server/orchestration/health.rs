@@ -49,10 +49,6 @@ pub async fn run_health_monitor(
         let mut to_fire_now: Vec<String> = Vec::new();
         match tokio::time::timeout(std::time::Duration::from_millis(50), monitor_mesh.get_active_agents()).await {
             Ok(Ok(agents)) => {
-                if agents.is_empty() {
-                    tracing::trace!("HEALTH MONITOR: No active agents found."); // Reduced noise
-                }
-
                 let mut active_agent_ids = std::collections::HashSet::new();
                 for (agent_id, _status) in agents {
                     active_agent_ids.insert(agent_id.clone());
@@ -71,8 +67,6 @@ pub async fn run_health_monitor(
                     let threshold = if is_cloud { 3 } else { 1 };
                     if *count >= threshold {
                         to_fire_now.push(agent_id.clone());
-                    } else {
-                        tracing::trace!("HEALTH MONITOR: Agent {} is unresponsive ({} failures). Retrying next tick.", agent_id, count); // Reduced noise
                     }
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);

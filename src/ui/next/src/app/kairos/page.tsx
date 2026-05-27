@@ -159,9 +159,9 @@ function KairosContent() {
         .font-inter { font-family: 'Inter', sans-serif; }
         .font-outfit { font-family: 'Outfit', sans-serif; }
         .ohc-hybrid-panel {
-            backdrop-filter: blur(20px) saturate(200%);
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px) saturate(210%);
+            background: rgba(22, 22, 26, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             padding: 24px;
         }

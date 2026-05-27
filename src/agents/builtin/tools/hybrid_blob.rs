@@ -278,7 +278,7 @@ mod tests {
         let manager = HybridBlobManager::new_for_test(dir.path().to_path_buf()).await;
 
         let key = "../../../etc/passwd";
-        let data = b"hack";
+        let data = b"test_payload";
 
         let res = manager.write_blob(key, data).await;
         assert!(res.is_err());

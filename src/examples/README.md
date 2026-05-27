@@ -1,4 +1,4 @@
-<div align="center" style="font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px) saturate(200%); border: 1px solid rgba(255, 255, 255, 0.08); padding: 40px; border-radius: 16px; margin-bottom: 24px;">
+<div align="center" style="font-family: 'Outfit', 'Inter', sans-serif; background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.1); padding: 40px; border-radius: 16px; margin-bottom: 24px;">
   <h1 style="margin-bottom: 12px; font-weight: 700;">One Human Corp Examples</h1>
   <p style="font-size: 1.1em; color: #888; font-weight: 400;"><strong>Pre-configured, high-quality agent examples for the One Human Corp platform.</strong></p>
 </div>

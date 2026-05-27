@@ -11,7 +11,7 @@ pub fn generate_audit_report(is_cloud: bool) -> String {
     let mode = if is_cloud { "Cloud-native" } else { "Standalone" };
 
     format!(
-        "<div style=\"backdrop-filter: blur(20px) saturate(200%); background: rgba(255, 255, 255, 0.03); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px;\">\n\
+        "<div style=\"backdrop-filter: blur(30px) saturate(210%); background: rgba(22, 22, 26, 0.7); font-family: 'Outfit', 'Inter', sans-serif; padding: 20px; border-radius: 12px;\">\n\
           <h2>Day One Audit Report ({})</h2>\n\
           <p><strong>Status:</strong> {}</p>\n\
           <p><strong>Details:</strong> {}</p>\n\
@@ -33,7 +33,7 @@ mod tests {
 
         let report = generate_audit_report(false);
         assert!(report.contains("PASSED"));
-        assert!(report.contains("backdrop-filter: blur(20px) saturate(200%)"));
+        assert!(report.contains("backdrop-filter: blur(30px) saturate(210%)"));
 
         fs::remove_dir_all(".ohc-local-data").unwrap();
     }
