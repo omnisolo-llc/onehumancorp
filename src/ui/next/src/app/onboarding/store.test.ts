@@ -6,16 +6,9 @@ describe('useOnboardingStore', () => {
     localStorage.clear();
     useOnboardingStore.setState({
       step: 1,
-      businessType: '',
-      businessName: '',
-      businessCategory: '',
-      firstProductName: '',
-      firstProductPrice: '',
-      template: 'Modern',
-      domain: 'free',
+      businessDescription: '',
       isLoading: false,
       error: '',
-      intakeData: null,
       startResult: null,
     });
   });
@@ -23,15 +16,9 @@ describe('useOnboardingStore', () => {
   it('should initialize with default state', () => {
     const state = useOnboardingStore.getState();
     expect(state.step).toBe(1);
-    expect(state.businessName).toBe('');
-    expect(state.businessCategory).toBe('');
-    expect(state.firstProductName).toBe('');
-    expect(state.firstProductPrice).toBe('');
-    expect(state.template).toBe('Modern');
-    expect(state.domain).toBe('free');
+    expect(state.businessDescription).toBe('');
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
-    expect(state.intakeData).toBeNull();
     expect(state.startResult).toBeNull();
   });
 
@@ -40,34 +27,9 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().step).toBe(2);
   });
 
-  it('should update businessName', () => {
-    useOnboardingStore.getState().setBusinessName('Test Name');
-    expect(useOnboardingStore.getState().businessName).toBe('Test Name');
-  });
-
-  it('should update businessCategory', () => {
-    useOnboardingStore.getState().setBusinessCategory('Test Category');
-    expect(useOnboardingStore.getState().businessCategory).toBe('Test Category');
-  });
-
-  it('should update firstProductName', () => {
-    useOnboardingStore.getState().setFirstProductName('Test Product');
-    expect(useOnboardingStore.getState().firstProductName).toBe('Test Product');
-  });
-
-  it('should update firstProductPrice', () => {
-    useOnboardingStore.getState().setFirstProductPrice('100');
-    expect(useOnboardingStore.getState().firstProductPrice).toBe('100');
-  });
-
-  it('should update template', () => {
-    useOnboardingStore.getState().setTemplate('Elegant');
-    expect(useOnboardingStore.getState().template).toBe('Elegant');
-  });
-
-  it('should update domain', () => {
-    useOnboardingStore.getState().setDomain('custom');
-    expect(useOnboardingStore.getState().domain).toBe('custom');
+  it('should update businessDescription', () => {
+    useOnboardingStore.getState().setBusinessDescription('Test Description');
+    expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
   });
 
   it('should update isLoading', () => {
@@ -80,11 +42,6 @@ describe('useOnboardingStore', () => {
     expect(useOnboardingStore.getState().error).toBe('Test Error');
   });
 
-  it('should update intakeData', () => {
-    useOnboardingStore.getState().setIntakeData({ data: 'test' });
-    expect(useOnboardingStore.getState().intakeData).toEqual({ data: 'test' });
-  });
-
   it('should update startResult', () => {
     useOnboardingStore.getState().setStartResult({ result: 'test' });
     expect(useOnboardingStore.getState().startResult).toEqual({ result: 'test' });
@@ -92,11 +49,11 @@ describe('useOnboardingStore', () => {
 
   it('should persist state to localStorage', () => {
     useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
 
-    // The state is persisted in localStorage under 'onboarding-storage'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v2'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v2') || '{}');
     expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessName).toBe('Persisted Name');
+    expect(storedState.state.businessDescription).toBe('Persisted Description');
   });
 });
