@@ -110,8 +110,6 @@ pub struct AgentRunConfig {
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_progressive_skills: bool,
-    pub enable_sona_neural_patterns: bool,
-    pub sona_pattern_matcher: Option<std::sync::Arc<tokio::sync::RwLock<crate::sona_patterns::PatternMatcher>>>,
     pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
@@ -168,8 +166,6 @@ impl Default for AgentRunConfig {
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_progressive_skills: false,
-            enable_sona_neural_patterns: false,
-            sona_pattern_matcher: None,
             progressive_skills_dir: None,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
@@ -1676,16 +1672,6 @@ impl Agent {
             final_cfg.max_retries = 2;
         }
 
-        // Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
-        if final_cfg.enable_sona_neural_patterns {
-            if let Some(matcher) = &final_cfg.sona_pattern_matcher {
-                let matcher_lock = matcher.read().await;
-                if let Some(pattern) = matcher_lock.find_best_match(initial_message) {
-                    let sona_suggestion = format!("\n[SONA Neural Pattern Match] Based on previous successful trajectories for similar tasks, consider prioritizing these tools: {}.", pattern.successful_tools.join(", "));
-                    final_cfg.server_system_message.push_str(&sona_suggestion);
-                }
-            }
-        }
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
             if let Some(ref dir) = final_cfg.progressive_skills_dir {
