@@ -10,6 +10,8 @@ exports_files(
         "mod.rs",
         "settings.rs",
         "webhook.rs",
+        "voice.rs",
+
     ],
     visibility = ["//visibility:public"],
 )
@@ -26,6 +28,8 @@ rust_library(
         "mod.rs",
         "settings.rs",
         "webhook.rs",
+        "voice.rs",
+
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

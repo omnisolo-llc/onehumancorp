@@ -335,24 +335,12 @@ impl OperationsWorker {
 
                     if order_count == 1 || order_count == 10 {
                         let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
                         } else {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         };
                         let milestone_id = Uuid::new_v4().to_string();
-
-                        // Record in business_milestones
-                        let _ = sqlx::query(
-                            "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING"
-                        )
-                        .bind(&milestone_id)
-                        .bind(&tenant_id)
-                        .bind(milestone_type)
-                        .execute(&db.pool)
-                        .await;
-
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)
@@ -396,24 +384,12 @@ impl OperationsWorker {
 
                     if order_count == 1 || order_count == 10 {
                         let milestone_title = if order_count == 1 { "🎉 Milestone: First Sale!" } else { "🎉 Milestone: 10th Order!" };
-                        let milestone_type = if order_count == 1 { "first_sale" } else { "10th_order" };
                         let milestone_msg = if order_count == 1 {
                             "Congratulations on your first sale! This is just the beginning of your journey."
                         } else {
                             "You've reached 10 orders! Your business is gaining serious momentum."
                         };
                         let milestone_id = Uuid::new_v4().to_string();
-
-                        // Record in business_milestones (Sqlite)
-                        let _ = sqlx::query(
-                            "INSERT INTO business_milestones (id, tenant_id, milestone_type) VALUES (?, ?, ?)"
-                        )
-                        .bind(&milestone_id)
-                        .bind(&tenant_id)
-                        .bind(milestone_type)
-                        .execute(sqlite_pool)
-                        .await;
-
                         let _ = sqlx::query(
                             r#"
                             INSERT INTO shared_tasks (id, organization_id, title, description, status, priority, action_risk, approval_status, proposed_content)

@@ -181,6 +181,23 @@ impl BookingService {
         Ok(bookings)
     }
 
+    pub async fn check_availability(tenant_id: &str, start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Result<bool, String> {
+        let pool = get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
+        let rows = sqlx::query("SELECT id FROM bookings WHERE (start_time < $1 AND end_time > $2) OR (start_time >= $2 AND start_time < $1)")
+            .bind(end_time)
+            .bind(start_time)
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(rows.is_empty())
+    }
+
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
