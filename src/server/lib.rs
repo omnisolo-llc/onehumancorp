@@ -266,6 +266,81 @@ struct HttpMetricsResponse {
     total_sales: f64,
 }
 
+async fn http_financial_insights_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<::server_ohc::app::GetFinancialInsightsRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(claims) => claims,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let org_id = payload.organization_id;
+    if org_id == "system" {
+        return (StatusCode::FORBIDDEN, "Querying system tenant is not allowed").into_response();
+    }
+    if claims.organization_id.as_deref() != Some(&org_id) && !claims.roles.contains(&crate::auth::ROLE_ADMIN.to_string()) {
+         return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
+    }
+
+    let q = "SELECT id, plain_text_summary, suggested_action, generated_at FROM financial_insights WHERE tenant_id = $1 ORDER BY generated_at DESC LIMIT 5";
+
+    let mut insights = Vec::new();
+    match &db.store {
+        crate::db::DbStore::Postgres => {
+            let rows = match sqlx::query(q).bind(&org_id).fetch_all(&db.pool).await {
+                Ok(r) => r,
+                Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            };
+            for r in rows {
+                use sqlx::Row;
+                let generated_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("generated_at").ok();
+                insights.push(serde_json::json!({
+                    "id": r.get::<String, _>("id"),
+                    "plain_text_summary": r.get::<String, _>("plain_text_summary"),
+                    "suggested_action": r.get::<Option<String>, _>("suggested_action"),
+                    "generated_at_unix": generated_at.map(|t| t.timestamp()).unwrap_or(0),
+                }));
+            }
+        }
+        crate::db::DbStore::Sqlite(pool) => {
+            let q_sqlite = q.replace("$1", "?");
+            let rows = match sqlx::query(&q_sqlite).bind(&org_id).fetch_all(pool).await {
+                Ok(r) => r,
+                Err(e) => return (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            };
+            for r in rows {
+                use sqlx::Row;
+                let generated_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("generated_at").ok();
+                insights.push(serde_json::json!({
+                    "id": r.get::<String, _>("id"),
+                    "plain_text_summary": r.get::<String, _>("plain_text_summary"),
+                    "suggested_action": r.get::<Option<String>, _>("suggested_action"),
+                    "generated_at_unix": generated_at.map(|t| t.timestamp()).unwrap_or(0),
+                }));
+            }
+        }
+    }
+
+    (StatusCode::OK, axum::Json(serde_json::json!({ "insights": insights }))).into_response()
+}
+
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
@@ -1768,6 +1843,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let maintenance_worker = Arc::new(crate::workers::maintenance::MaintenanceWorker::new(db.clone()));
     maintenance_worker.start();
 
+    // Start Bookkeeping Worker
+    let bookkeeping_worker = Arc::new(crate::workers::bookkeeping_worker::BookkeepingWorker::new(db.clone()));
+    bookkeeping_worker.start();
+
     // Start Token Forecast Engine
     let forecaster = Arc::new(crate::telemetry::forecaster::Forecaster::new(db.pool.clone()));
     forecaster.start();
@@ -2214,6 +2293,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 let db = db_for_sales.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
+            }),
+        )
+        .route(
+            "/api/v1/dashboard/financial-insights",
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload: axum::Json<::server_ohc::app::GetFinancialInsightsRequest>| async move { http_financial_insights_handler(db, store, headers, payload).await }
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -3093,6 +3180,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
                             <h3>Approval Inbox</h3>
                         </div>
+                        <div class="card glass" id="financial-briefing" style="display: none; border-left: 4px solid var(--accent-green);">
+                            <h3>Financial Briefing</h3>
+                            <p id="financial-summary" style="font-size: 15px; font-weight: 500;"></p>
+                            <div id="financial-action-container" style="margin-top: 12px; display: none;">
+                                <button class="secondary" style="width: 100%; border-color: var(--accent-green); color: var(--accent-green);" onclick="alert('Action approved!')">Review Suggested Adjustment</button>
+                            </div>
+                        </div>
                         <div class="card glass" id="activity-feed"></div>
                         <div class="card glass">
                             <h3>Quick Actions <button class="secondary" onclick="const hint = document.getElementById('quick-actions-hint'); hint.style.display = hint.style.display === 'none' ? 'block' : 'none';">?</button></h3>
@@ -3555,6 +3649,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             } catch (e) {
                                 console.error('Error fetching activity feed:', e);
+                            }
+                        }
+
+                        async function fetchFinancialInsights() {
+                            try {
+                                const briefing = document.getElementById('financial-briefing');
+                                const summary = document.getElementById('financial-summary');
+                                const actionContainer = document.getElementById('financial-action-container');
+                                if (!briefing || !summary) return;
+
+                                const tenant = localStorage.getItem('tenant_id') || 'e2e-tenant';
+                                const res = await fetch('/api/v1/dashboard/financial-insights', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token') },
+                                    body: JSON.stringify({ organization_id: tenant })
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    if (data.insights && data.insights.length > 0) {
+                                        const latest = data.insights[0];
+                                        summary.textContent = latest.plain_text_summary;
+                                        briefing.style.display = 'block';
+                                        if (latest.suggested_action) {
+                                            actionContainer.style.display = 'block';
+                                            actionContainer.querySelector('button').textContent = latest.suggested_action;
+                                        } else {
+                                            actionContainer.style.display = 'none';
+                                        }
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error fetching financial insights:', e);
                             }
                         }
 
@@ -5349,6 +5475,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 .catch(err => console.error('Error fetching dashboard data:', err));
                                 fetchApprovals();
                                 fetchActivityFeed();
+                                fetchFinancialInsights();
                             }
 
                             if (id === 'my-plan-screen') {

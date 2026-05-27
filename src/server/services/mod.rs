@@ -15,3 +15,6 @@ pub mod agent;
 pub mod autodream;
 pub mod booking;
 pub mod docs;
+pub mod bookkeeping;
+#[cfg(test)]
+mod bookkeeping_test;

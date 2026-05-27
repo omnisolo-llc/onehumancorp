@@ -693,6 +693,27 @@ impl DB {
                         timestamp TIMESTAMP NOT NULL,
                         sync_status TEXT NOT NULL
                     );
+
+                    CREATE TABLE IF NOT EXISTS ledger_entries (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        type TEXT NOT NULL,
+                        description TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+
+                    CREATE TABLE IF NOT EXISTS financial_insights (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        plain_text_summary TEXT NOT NULL,
+                        suggested_action TEXT,
+                        generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
             }

@@ -567,6 +567,74 @@ impl DashboardService for MyDashboardService {
         Ok(Response::new(GetVideoTutorialsResponse { videos }))
     }
 
+    async fn get_financial_insights(
+        &self,
+        request: Request<GetFinancialInsightsRequest>,
+    ) -> Result<Response<GetFinancialInsightsResponse>, Status> {
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned()
+            .ok_or_else(|| Status::unauthenticated("Missing authentication information"))?;
+
+        let req = request.into_inner();
+        let org_id = req.organization_id;
+
+        if ::server_config::get().multitenant && org_id.is_empty() {
+            return Err(Status::invalid_argument(
+                "organization_id is required in cloud mode to maintain tenant isolation",
+            ));
+        }
+        if auth_info.org_id != "system" && auth_info.org_id != org_id {
+            return Err(Status::permission_denied(
+                "You do not have permission to view this organization's insights.",
+            ));
+        }
+
+        let q = "SELECT id, plain_text_summary, suggested_action, generated_at FROM financial_insights WHERE tenant_id = $1 ORDER BY generated_at DESC LIMIT 5";
+
+        let mut insights = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query(q)
+                    .bind(&org_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                for r in rows {
+                    use sqlx::Row;
+                    let generated_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("generated_at").ok();
+                    insights.push(::server_ohc::app::FinancialInsight {
+                        id: r.try_get("id").unwrap_or_default(),
+                        plain_text_summary: r.try_get("plain_text_summary").unwrap_or_default(),
+                        suggested_action: r.try_get("suggested_action").unwrap_or_default(),
+                        generated_at_unix: generated_at.map(|t| t.timestamp()).unwrap_or(0),
+                    });
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let q_sqlite = q.replace("$1", "?");
+                let rows = sqlx::query(&q_sqlite)
+                    .bind(&org_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| Status::internal(e.to_string()))?;
+                for r in rows {
+                    use sqlx::Row;
+                    let generated_at: Option<chrono::DateTime<chrono::Utc>> = r.try_get("generated_at").ok();
+                    insights.push(::server_ohc::app::FinancialInsight {
+                        id: r.try_get("id").unwrap_or_default(),
+                        plain_text_summary: r.try_get("plain_text_summary").unwrap_or_default(),
+                        suggested_action: r.try_get("suggested_action").unwrap_or_default(),
+                        generated_at_unix: generated_at.map(|t| t.timestamp()).unwrap_or(0),
+                    });
+                }
+            }
+        }
+
+        Ok(Response::new(GetFinancialInsightsResponse { insights }))
+    }
+
     async fn update_onboarding_state(
         &self,
         request: Request<UpdateOnboardingStateRequest>,

@@ -123,3 +123,22 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LedgerEntry {
+    pub id: String,
+    pub tenant_id: String,
+    pub amount: f64,
+    pub type: String,
+    pub description: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FinancialInsight {
+    pub id: String,
+    pub tenant_id: String,
+    pub plain_text_summary: String,
+    pub suggested_action: Option<String>,
+    pub generated_at: Option<DateTime<Utc>>,
+}

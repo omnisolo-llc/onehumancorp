@@ -120,6 +120,7 @@ service DashboardService {
   rpc GetOnboardingState(GetOnboardingStateRequest) returns (GetOnboardingStateResponse);
   rpc UpdateOnboardingState(UpdateOnboardingStateRequest) returns (UpdateOnboardingStateResponse);
   rpc GetVideoTutorials(GetVideoTutorialsRequest) returns (GetVideoTutorialsResponse);
+  rpc GetFinancialInsights(GetFinancialInsightsRequest) returns (GetFinancialInsightsResponse);
 }
 
 // Onboarding State
@@ -160,4 +161,19 @@ message GetVideoTutorialsRequest {
 
 message GetVideoTutorialsResponse {
   repeated VideoMetadata videos = 1;
+}
+
+message FinancialInsight {
+  string id = 1;
+  string plain_text_summary = 2;
+  string suggested_action = 3;
+  int64 generated_at_unix = 4;
+}
+
+message GetFinancialInsightsRequest {
+  string organization_id = 1;
+}
+
+message GetFinancialInsightsResponse {
+  repeated FinancialInsight insights = 1;
 }
