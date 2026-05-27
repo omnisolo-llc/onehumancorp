@@ -327,7 +327,7 @@ mod tests {
         for dir in &search_dirs {
             if dir.exists() {
                 let walker = WalkDir::new(&dir).into_iter().filter_entry(|e| {
-                    e.path().components().all(|c| c.as_os_str() != "external")
+                    e.path().components().all(|c| c.as_os_str() != "external" && c.as_os_str() != "node_modules" && c.as_os_str() != ".npm")
                 });
 
                 for entry in walker
@@ -623,4 +623,16 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_init_latency(1.23);
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
+}
+
+#[test]
+fn test_record_postgres_lock_contention() {
+    // This test verifies that the metric recording logic for postgres lock contention runs without panicking.
+    ::server_telemetry::record_postgres_lock_contention("upsert_mission");
+}
+
+#[test]
+fn test_record_llm_network_latency() {
+    // This test verifies that the metric recording logic for llm network latency runs without panicking.
+    ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
 }

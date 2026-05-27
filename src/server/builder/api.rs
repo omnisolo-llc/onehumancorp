@@ -53,6 +53,27 @@ pub struct PublishDraftRequest {
 use super::db;
 use super::jobs;
 
+fn validate_block(block_type: &str, content: &Value) -> bool {
+    match block_type {
+        "HeroBlock" => {
+            content.get("headline").is_some() && content.get("subtitle").is_some()
+        },
+        "ProductGridBlock" => {
+            content.get("items").and_then(|v| v.as_array()).is_some()
+        },
+        "ServiceBookingBlock" => {
+            content.get("title").is_some() && content.get("availability").is_some()
+        },
+        "TestimonialBlock" => {
+            content.get("quotes").and_then(|v| v.as_array()).is_some()
+        },
+        "ContactFormBlock" | "BookingCalendarBlock" => {
+            content.is_object()
+        },
+        _ => false,
+    }
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     Router::new()
         .route("/sites", get(list_sites).post(create_site))
@@ -278,7 +299,9 @@ async fn create_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceBookingBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
+    if !validate_block(&payload.block_type, &payload.content) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
@@ -310,6 +333,13 @@ async fn update_block(
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    // Fetch block to check its type for validation
+    let existing_block = db::get_block(&pool, tenant_id, block_id).await.map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
+    if !validate_block(&existing_block.block_type, &payload.content) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -369,13 +399,40 @@ async fn generate_storefront(
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
-    let prompt = format!(
+    // Step 1: The Advisor extracts metadata
+    let advisor_prompt = format!(
+        r#"You are The Advisor. Extract business metadata from the following description.
+User Description: "{}"
+Return a JSON object strictly matching this structure:
+{{
+  "name": "...",
+  "business_type": "...",
+  "vibe": "..."
+}}
+Only return the JSON. No markdown formatting, no explanations."#,
+        payload.description
+    );
+
+    let advisor_response = minimax.reason(&advisor_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let cleaned_advisor = advisor_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+    let business_context: BusinessContext = serde_json::from_str(cleaned_advisor).map_err(|e| {
+        tracing::error!("Failed to parse JSON from Advisor AI: {}", e);
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    // Step 2: The Promoter generates the layout and content
+    let promoter_prompt = format!(
         r#"You are The Promoter (Marketing & Advertising & SEO). Your task is to architect a mobile-first storefront that looks premium and reflects the user's business goal.
-First, synthesize the user's business description to select an appropriate template, generate copywriting, and select relevant concepts.
+Use the following business context extracted by The Advisor:
+Name: {}
+Type: {}
+Vibe: {}
+
+Original User Description: "{}"
+
+First, synthesize the context to select an appropriate template, generate copywriting, and select relevant concepts.
 Second, act as The Promoter (SEO) to automatically generate meta tags, descriptions, and sitemaps based on the chosen business type and generated content.
 Then, instantly generate a structural layout draft that optimizes for the 375px viewport.
-
-User Description: "{}"
 
 The JSON must exactly match this structure:
 {{
@@ -416,13 +473,16 @@ The JSON must exactly match this structure:
   ]
 }}
 Only return the JSON. No markdown formatting, no explanations. Make sure the blocks (HeroBlock, ProductGridBlock, ServiceBookingBlock, TestimonialBlock) perfectly reflect the extracted entities."#,
+        business_context.name,
+        business_context.business_type,
+        business_context.vibe,
         payload.description
     );
 
-    let response = minimax.reason(&prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let promoter_response = minimax.reason(&promoter_prompt).await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // Clean up response if it contains markdown formatting
-    let cleaned_response = response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+    let cleaned_response = promoter_response.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
 
     let site_draft: SiteDraft = serde_json::from_str(cleaned_response).map_err(|e| {
         tracing::error!("Failed to parse JSON from AI: {}", e);

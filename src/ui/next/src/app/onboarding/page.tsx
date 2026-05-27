@@ -1,201 +1,131 @@
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
-
-// OHC Premium Design Tokens: Outfit/Inter fonts, Glassmorphism, accessible contrast.
-// We simulate these with tailwind classes for now, ensuring 375px responsiveness.
 
 export default function OnboardingWizard() {
   const {
     step, setStep,
-    businessType, setBusinessType,
+    businessDescription, setBusinessDescription,
     businessName, setBusinessName,
-    businessCategory, setBusinessCategory,
+    businessType, setBusinessType,
+    categories, setCategories,
+    websiteTemplate, setWebsiteTemplate,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
-    template, setTemplate,
-    domain, setDomain,
     isLoading, setIsLoading,
     error, setError,
-    intakeData, setIntakeData,
     startResult, setStartResult
   } = useOnboardingStore();
 
-  const lastSyncState = useRef("");
-
-  const [isLoaded, setIsLoaded] = React.useState(false);
-
-  // Load state from backend on initial mount
-  useEffect(() => {
-    if (isLoaded) return;
-
-    // Zustand's persist middleware automatically loads the state from local storage before this.
-    const loadState = async () => {
-      try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
-        const res = await fetch('/api/onboarding/state', {
-          headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Object.keys(data).length > 0) {
-            // Prefer backend state if it's further along or on the same step but has more data
-            if (data.step !== undefined && data.step >= step) {
-              setStep(data.step);
-              if (data.businessType !== undefined) setBusinessType(data.businessType);
-              if (data.businessName !== undefined) setBusinessName(data.businessName);
-              if (data.businessCategory !== undefined) setBusinessCategory(data.businessCategory);
-              if (data.firstProductName !== undefined) setFirstProductName(data.firstProductName);
-              if (data.firstProductPrice !== undefined) setFirstProductPrice(data.firstProductPrice);
-              if (data.template !== undefined) setTemplate(data.template);
-              if (data.domain !== undefined) setDomain(data.domain);
-              if (data.intakeData !== undefined) setIntakeData(data.intakeData);
-              if (data.startResult !== undefined) setStartResult(data.startResult);
-
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Failed to load onboarding state", err);
-      } finally {
-        // Set the lastSyncState right before marking loaded so the first sync effect evaluates it correctly
-        // We use the current store values which will include what we just set above (as the set functions are batched or applied in the component render cycle,
-        // to be safe we'll use the values directly but technically we rely on the component re-rendering to see `isLoaded = true` and `step` updated.
-        // A better approach is setting it on the next render pass by initializing it empty.
-        // Actually, we just want to ensure we don't immediately sync the initial local state back to the backend.
-        setIsLoaded(true);
-        console.log("Onboarding state loaded");
-      }
-    };
-
-    loadState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded]); // Only run once to load
-
-  // Update lastSyncState after successful load so we don't immediately push local state back
-  useEffect(() => {
-    if (isLoaded && !lastSyncState.current) {
-        lastSyncState.current = JSON.stringify({
-            step,
-            businessType,
-            businessName,
-            businessCategory,
-            firstProductName,
-            firstProductPrice,
-            template,
-            domain,
-            intakeData,
-            startResult
-        });
-    }
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Sync state to backend when it changes
   useEffect(() => {
     if (!isLoaded) return;
 
-    const currentStateStr = JSON.stringify({
-      step,
-      businessType,
-      businessName,
-      businessCategory,
-      firstProductName,
-      firstProductPrice,
-      template,
-      domain,
-      intakeData,
-      startResult
-    });
-
-    // Only sync if state actually changed from last sync
-    if (currentStateStr === lastSyncState.current) {
-      return;
-    }
-
-    const syncState = async () => {
+    const timeoutId = setTimeout(async () => {
       try {
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
-        const userId = localStorage.getItem('user_id') || 'test-user';
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
         await fetch('/api/onboarding/state', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: currentStateStr
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice
+          })
         });
-        lastSyncState.current = currentStateStr;
       } catch (err) {
-        console.error("Failed to sync onboarding state", err);
+        console.error('Failed to sync state', err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded]);
+
+  // Load state from backend on mount
+  useEffect(() => {
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step && data.step > 1) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load state', err);
+      } finally {
+        setIsLoaded(true);
       }
     };
 
-    const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
-    return () => clearTimeout(timer);
-  }, [isLoaded, step, businessType, businessName, businessCategory, firstProductName, firstProductPrice, template, domain, intakeData, startResult]);
+    loadState();
+  }, [setStep, setBusinessDescription, setBusinessName, setBusinessType, setCategories, setWebsiteTemplate, setFirstProductName, setFirstProductPrice]);
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!businessType.trim()) {
-        setError("Please describe what you sell.");
-        return;
-      }
-      if (businessType.trim().length < 3) {
-        setError("Please enter at least 3 characters.");
-        return;
-      }
-    }
-    if (step === 2) {
-      if (!businessName.trim()) {
-        setError("Please enter your business name.");
-        return;
-      }
-      if (businessName.trim().length < 3) {
-        setError("Business name must be at least 3 characters.");
-        return;
-      }
-    }
-    setError("");
-    setStep(step + 1);
-  };
-
-  const handleIntakeSubmit = async (overrideCategory?: string) => {
-    // Determine category to use depending on if it came from click or state
-    const categoryToUse = typeof overrideCategory === 'string' ? overrideCategory : businessCategory;
-
-    if (!categoryToUse.trim()) {
-      setError("Please describe your niche.");
-      return;
-    }
-    if (categoryToUse.trim().length < 5) {
-      setError("Niche description must be at least 5 characters.");
-      return;
-    }
-
-    if (typeof overrideCategory === 'string') {
-      setBusinessCategory(overrideCategory);
-    }
-
-    setError("");
+  const handleIntake = async () => {
     setIsLoading(true);
-
-    const combinedDescription = `Business Type: ${businessType}\nBusiness Name: ${businessName}\nCategory/Products: ${categoryToUse}`;
+    setError('');
 
     try {
-      const response = await fetch('/api/onboarding/intake', {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: combinedDescription }),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ description: businessDescription })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to process intake');
+      if (!intakeRes.ok) {
+        throw new Error('Failed to process business details');
       }
 
-      const data = await response.json();
-      setIntakeData(data);
-      setStep(4); // Go to review step
+      const intakeData = await intakeRes.json();
+
+      setBusinessType(intakeData.business_type || 'Online Store');
+      setBusinessName(intakeData.business_name || 'My Business');
+      setFirstProductName(intakeData.initial_products?.[0]?.name || 'First Product');
+      setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
+      setCategories(intakeData.categories || ['physical']);
+
+      setStep(2); // Go to review step
     } catch (err: any) {
-      setError(err.message || 'An error occurred during intake.');
+      console.error(err);
+      setError(err.message || 'An error occurred processing details');
     } finally {
       setIsLoading(false);
     }
@@ -203,352 +133,255 @@ export default function OnboardingWizard() {
 
   const handleStartOnboarding = async () => {
     setIsLoading(true);
-    setError("");
+    setError('');
+    setStep(4); // Go to loading screen
 
     try {
-      const startRequest = {
-        business_type: intakeData.business_type || businessType || "Retail",
-        company_name: intakeData.business_name || businessName,
-        company_description: "", // Removed preferredStyle
-        selling_categories: intakeData.categories || [],
-        payment_pref: "stripe",
-        admin_email: "admin@example.com",
-        admin_name: "Admin",
-        admin_password: "password123",
-        website_template: template,
-        domain: domain,
-        first_product_name: firstProductName || intakeData.initial_products?.[0]?.name || "Sample Product",
-        first_product_price: firstProductPrice || intakeData.initial_products?.[0]?.price || "10.00",
-      };
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
-      const response = await fetch('/api/onboarding/start', {
+      const startRes = await fetch('/api/onboarding/start', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(startRequest),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({
+          business_type: businessType,
+          company_name: businessName,
+          company_description: businessDescription,
+          selling_categories: categories,
+          payment_pref: 'online',
+          admin_email: 'admin@ohc.app',
+          admin_name: 'Admin',
+          admin_password: 'password123',
+          website_template: websiteTemplate,
+          first_product_name: firstProductName,
+          first_product_price: firstProductPrice,
+          domain_choice: 'subdomain',
+          price_type: 'fixed'
+        })
       });
 
-      if (!response.ok) {
+      if (!startRes.ok) {
         throw new Error('Failed to start onboarding');
       }
 
-      const data = await response.json();
-      setStartResult(data);
-      setStep(5); // Go to live step
+      const result = await startRes.json();
+      setStartResult(result);
+      setStep(5); // Go to "You're Live" screen
+
     } catch (err: any) {
-      setError(err.message || 'An error occurred starting your business.');
+      console.error(err);
+      setError(err.message || 'An error occurred during onboarding');
+      setStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div id="setup-screen" className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <style dangerouslySetInnerHTML={{__html: `
-        .glass-container {
-          background: rgba(255, 255, 255, 0.65);
-          backdrop-filter: blur(30px) saturate(210%);
-          -webkit-backdrop-filter: blur(30px) saturate(210%);
-          border: 1px solid rgba(255, 255, 255, 0.4);
-          box-shadow:
-            0 8px 32px 0 rgba(31, 38, 135, 0.1),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-        }
-        @media (prefers-color-scheme: dark) {
-          .glass-container {
-            background: rgba(22, 22, 26, 0.7);
-            backdrop-filter: blur(30px) saturate(210%);
-            -webkit-backdrop-filter: blur(30px) saturate(210%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow:
-              0 8px 32px 0 rgba(0, 0, 0, 0.4),
-              inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-          }
-          .glass-container h1, .glass-container h2, .glass-container .text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] {
-            color: #F5F5F7;
-          }
-          .glass-container p, .glass-container .text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] {
-            color: #A1A1A6;
-          }
-          .glass-container input, .glass-container textarea, .glass-container .bg-white\\/80 {
-            background: rgba(0, 0, 0, 0.4);
-            color: #F5F5F7;
-            border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-          }
-          .glass-container input:focus, .glass-container textarea:focus {
-            box-shadow: 0 0 0 2px rgba(0, 102, 255, 0.5), inset 0 2px 4px rgba(0,0,0,0.2);
-          }
-        }
-        .animate-fade-in {
-          animation: fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}} />
-      <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] sm:min-h-[812px] shadow-2xl flex flex-col relative sm:rounded-[16px] overflow-hidden glass-container mac-glass-container backdrop-blur-xl bg-white/30">
-        {/* Header */}
-        <div className="w-full p-6 pb-2 pt-12 flex justify-between items-center z-10">
-           <h1 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7]">OHC Setup</h1>
-           <div className="text-xs font-semibold px-2 py-1 bg-blue-50 dark:bg-blue-900/30 dark:bg-blue-900/30 text-[#0066FF] rounded-full">
-             Step {Math.min(step, 4)} of 4
-           </div>
-        </div>
+  if (!isLoaded) return null;
 
-        {/* Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto z-10 flex flex-col">
+  return (
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+        <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
             </div>
           )}
 
           {step === 1 && (
             <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What do you do?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Tell us what you sell or the services you provide.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Sell cakes, plumbing"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Online Store', 'Service Business', 'Restaurant / Food', 'Creative', 'Local Business'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => {
-                      setBusinessType(type);
-                      setStep(2);
-                      setError("");
-                    }}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {type}
-                  </button>
-                ))}
+              <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
               </div>
-              <button
-                onClick={handleNext}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-              >
-                Next
-              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Tell us about your business</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8">
+                Describe what you do, or paste your Instagram link. Our AI will set up your store automatically.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <textarea
+                  value={businessDescription}
+                  onChange={(e) => setBusinessDescription(e.target.value)}
+                  placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="mt-auto pt-6">
+                <button
+                  onClick={handleIntake}
+                  disabled={!businessDescription.trim() || isLoading}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Analyzing...' : 'Generate My Business'}
+                </button>
+              </div>
             </div>
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What's the name of your business?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Don't worry, you can change this later.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleNext(); }}
-                placeholder="e.g. Maya's Cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="next"
-                autoComplete="off"
-              />
-              <div className="flex gap-3">
+            <div className="flex flex-col flex-1 animate-fade-in">
+              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Here's what our AI figured out. Feel free to tweak these.
+              </p>
+
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
+                  <input
+                    type="text"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
+                  <input
+                    type="text"
+                    value={categories.join(', ')}
+                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
+                      <input
+                        type="text"
+                        value={firstProductName}
+                        onChange={(e) => setFirstProductName(e.target.value)}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
+                      <input
+                        type="text"
+                        value={firstProductPrice}
+                        onChange={(e) => setFirstProductPrice(e.target.value)}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      />
+                   </div>
+                </div>
+              </div>
+
+              <div className="mt-auto pt-6">
                 <button
-                  onClick={() => setStep(1)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
+                  onClick={() => setStep(3)}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
-                >
-                  Next
+                  Continue
                 </button>
               </div>
             </div>
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">What's your niche?</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6">Products, services, or bookings.</p>
-              <input
-                type="text"
-                inputMode="text"
-                value={businessCategory}
-                onChange={(e) => setBusinessCategory(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleIntakeSubmit(); }}
-                placeholder="e.g. I bake custom wedding cakes"
-                className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none transition-all text-lg mb-4 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md shadow-sm"
-                autoFocus
-                enterKeyHint="done"
-                autoComplete="off"
-              />
-              <div className="flex flex-wrap gap-2 mb-6">
-                {['Food & Beverage', 'Health & Beauty', 'Home Services', 'Retail', 'Consulting'].map((niche) => (
-                  <button
-                    key={niche}
-                    onClick={() => handleIntakeSubmit(niche)}
-                    className="px-4 py-2 rounded-full border border-white/40 bg-white/30 hover:bg-white/50 text-sm text-gray-700 transition-all backdrop-blur-sm"
-                  >
-                    {niche}
-                  </button>
-                ))}
+            <div className="flex flex-col flex-1 animate-fade-in">
+              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
+              </button>
+              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
+                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+              </p>
+
+              <div className="space-y-4 flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
+                      <div
+                        key={template}
+                        onClick={() => setWebsiteTemplate(template)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                      >
+                        <div className="font-semibold">{template}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-3">
+
+              <div className="mt-auto pt-6">
                 <button
-                  onClick={() => setStep(2)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={() => handleIntakeSubmit()}
+                  onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Generate Draft"
-                  )}
+                  Launch Store
                 </button>
               </div>
             </div>
           )}
 
-          {step === 4 && intakeData && (
-            <div className="flex flex-col flex-1 justify-start animate-fade-in pb-8">
-              <div className="w-16 h-16 bg-[#eef2ff] rounded-full flex items-center justify-center mb-6 mx-auto shrink-0">
-                <span className="text-3xl text-[#0066FF]">✨</span>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2 text-center shrink-0">Ready to Launch!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-6 text-center shrink-0">Review your AI-generated setup and choose your options.</p>
-
-              <div className="space-y-6 flex-1 overflow-visible">
-                {/* Product Section */}
-                <div className="bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md p-5 rounded-[16px] border border-white/50 dark:border-white/10 dark:border-white/10 shadow-sm space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit">First Product/Service</h3>
-                   <div className="flex gap-3">
-                     <div className="flex-1">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Name</label>
-                       <input
-                         type="text"
-                         inputMode="text"
-                         enterKeyHint="next"
-                         value={firstProductName || (intakeData.initial_products?.[0]?.name || '')}
-                         onChange={(e) => setFirstProductName(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
-                         placeholder="e.g. Custom Cake"
-                       />
-                     </div>
-                     <div className="w-24">
-                       <label className="text-xs font-semibold text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] uppercase tracking-wider mb-1 block">Price</label>
-                       <input
-                         type="text"
-                         inputMode="decimal"
-                         pattern="[0-9]*\.?[0-9]*"
-                         value={firstProductPrice || (intakeData.initial_products?.[0]?.price || '')}
-                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] shadow-inner transition-all"
-                         placeholder="0.00"
-                       />
-                     </div>
-                   </div>
-                </div>
-
-                {/* Template Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Choose a Template</h3>
-                   <div className="grid grid-cols-2 gap-3">
-                     {['Modern', 'Elegant', 'Playful', 'Minimal'].map((t) => (
-                       <button
-                         key={t}
-                         onClick={() => setTemplate(t)}
-                         className={`p-3 rounded-[8px] border ${template === t ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                       >
-                         {t}
-                       </button>
-                     ))}
-                   </div>
-                </div>
-
-                {/* Domain Selection */}
-                <div className="space-y-3">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] font-outfit pl-1">Domain Name</h3>
-                   <div className="flex flex-col gap-3">
-                     <button
-                       onClick={() => setDomain('free')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'free' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Free OHC Domain</span>
-                       <span className="text-xs opacity-70 font-normal">myshop.ohc.store</span>
-                     </button>
-                     <button
-                       onClick={() => setDomain('custom')}
-                       className={`p-4 rounded-[8px] border flex justify-between items-center ${domain === 'custom' ? 'border-[#0066FF] bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#0066FF] font-bold shadow-sm' : 'border-white/50 dark:border-white/10 dark:border-white/10 bg-white/40 dark:bg-black/20 dark:bg-black/20 backdrop-blur-md text-gray-700 hover:border-white/80 dark:hover:border-white/20 dark:hover:border-white/20'} transition-all text-sm`}
-                     >
-                       <span>Connect Custom Domain</span>
-                       <span className="text-xs opacity-70 font-normal">www.myshop.com</span>
-                     </button>
-                   </div>
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-auto">
-                <button
-                  onClick={() => setStep(3)}
-                  className="px-6 py-4 rounded-[8px] font-bold bg-white/50 dark:bg-white/10 dark:bg-white/10 backdrop-blur-sm text-gray-700 hover:bg-white/70 dark:bg-white/10 dark:hover:bg-white/20 dark:bg-white/10 dark:hover:bg-white/20 shadow-sm border border-white/40 dark:border-white/10 dark:border-white/10 transition-all"
-                  disabled={isLoading}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={handleStartOnboarding}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-70 flex justify-center items-center"
-                >
-                  {isLoading ? (
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                  ) : (
-                    "Publish Now"
-                  )}
-                </button>
-              </div>
-            </div>
+          {step === 4 && (
+             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+               <div className="w-24 h-24 relative mb-8">
+                 <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
+                 <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
+               </div>
+               <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Building Your Business...</h2>
+               <div className="space-y-2">
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse">Generating your product catalog</p>
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '0.5s' }}>Configuring payment settings</p>
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1s' }}>Designing your storefront</p>
+                 <p className="text-gray-500 dark:text-[#A1A1A6] text-sm animate-pulse" style={{ animationDelay: '1.5s' }}>Onboarding your AI agents</p>
+               </div>
+             </div>
           )}
 
           {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
-              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+              <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] mb-2">You're Live!</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] dark:text-[#A1A1A6] text-sm mb-8 px-4">
+              <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">You're Live!</h2>
+              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-8 px-4">
                 {startResult.message || "Your business has been successfully launched."}
               </p>
 
               <div className="w-full space-y-3 mt-auto">
+                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                   <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
+                   <div className="flex items-center gap-2">
+                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
+                   </div>
+                </div>
+
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-black active:scale-[0.98] transition-all"
+                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront
                 </a>
