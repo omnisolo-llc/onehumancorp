@@ -437,9 +437,14 @@ pub async fn meta_webhook_verify_handler(
 
 
 pub async fn meta_webhook_handler(
+    headers: axum::http::HeaderMap,
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     axum::Json(payload): axum::Json<MetaEvent>,
 ) -> impl IntoResponse {
+    if !verify_webhook_signature(&headers, "meta_secret") {
+        return axum::response::Response::builder().status(axum::http::StatusCode::UNAUTHORIZED).body(axum::body::Body::empty()).unwrap();
+    }
+
     let pool = &webhook_state.db_pool;
 
     for entry in payload.entry {
