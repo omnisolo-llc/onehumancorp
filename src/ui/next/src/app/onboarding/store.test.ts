@@ -1,5 +1,5 @@
 import { useOnboardingStore } from './store';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 describe('useOnboardingStore', () => {
   beforeEach(() => {
@@ -11,6 +11,11 @@ describe('useOnboardingStore', () => {
       error: '',
       startResult: null,
     });
+    global.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state', () => {
@@ -64,15 +69,22 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductPrice).toBe('5.00');
   });
 
-  it('should persist state to localStorage', () => {
+  it('should persist state to backend API', async () => {
+    (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: async () => ({})
+    });
+
     useOnboardingStore.getState().setStep(3);
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
-    expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessDescription).toBe('Persisted Description');
-    expect(storedState.state.businessName).toBe('Persisted Name');
+    // wait for async fetch
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(global.fetch).toHaveBeenCalledWith('/api/onboarding/state', expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({'Content-Type': 'application/json'})
+    }));
   });
 });

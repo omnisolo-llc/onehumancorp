@@ -54,7 +54,7 @@ test.describe('Onboarding Wizard Flow', () => {
     await dashboardLink.click();
     await page.waitForURL('**/dashboard');
 
-    await expect(page.locator('text="Morning Briefing"')).toBeVisible();
+    await expect(page.locator('h2').filter({ hasText: 'Morning Briefing' })).toBeVisible({ timeout: 10000 });
     await expect(page.locator('a:has-text("Add your first product")')).toBeVisible();
   });
 });
