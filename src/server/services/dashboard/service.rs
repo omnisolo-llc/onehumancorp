@@ -365,18 +365,13 @@ impl DashboardService for MyDashboardService {
                     _ => ::server_ohc::common::Role::Unspecified as i32,
                 };
 
-                let name = if req.mobile_optimized {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
-                } else {
-                    a.name
-                };
-
+                let organization_id = if req.mobile_optimized { String::new() } else { a.organization_id };
                 ::server_ohc::agent::Agent {
                     id: a.id,
-                    name,
+                    name: a.name,
                     role: role_val,
                     status: status_val,
-                    organization_id: a.organization_id,
+                    organization_id,
                 }
             })
             .collect::<Vec<_>>();
@@ -676,7 +671,8 @@ mod tests {
         });
 
         let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        assert_eq!(res_mobile.agents[0].organization_id, "", "Mobile optimization should clear agent organization_id");
+        assert_ne!(res_mobile.agents[0].name, "", "Mobile optimization should preserve agent names");
         if let Some(org) = res_mobile.organization {
             assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
             assert!(org.members.is_empty(), "Mobile optimization should clear org members");

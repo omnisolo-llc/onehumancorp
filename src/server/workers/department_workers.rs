@@ -241,6 +241,7 @@ impl OperationsWorker {
                             let mut drafted_msg = String::new();
                             if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
                                 let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
+                                let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
                                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                         prompt,
@@ -735,6 +736,7 @@ impl CustomerSuccessWorker {
             if event_type == "CustomerMessageReceived" {
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
                 let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
+                let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                         prompt,
@@ -757,6 +759,7 @@ impl CustomerSuccessWorker {
                 if !api_key.is_empty() {
                     let minimax = crate::minimax::MinimaxClient::new(api_key);
                     let prompt = format!("Evaluate this customer message and the drafted reply. If the drafted reply perfectly and safely addresses the customer message, reply with exactly 'CONFIDENT'. Otherwise reply with 'REVIEW'. Message: '{}'. Draft: '{}'", payload.get("message").and_then(|m| m.as_str()).unwrap_or(""), drafted_msg);
+                    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
                     if let Ok(res) = minimax.reason(&prompt).await {
                         if res.trim() == "CONFIDENT" {
                             confidence = "CONFIDENT".to_string();
@@ -881,6 +884,7 @@ impl PromoterWorker {
                             let org_id = payload_json.get("organization_id").and_then(|o| o.as_str()).unwrap_or("system");
 
                             let prompt = format!("Generate a catchy and engaging 7-day social media content calendar (7 distinct posts) for our new product: '{}'. Ensure the drafts include emojis and ask questions to drive engagement. Be professional but exciting.", product_name);
+                            let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
                             let mut drafted_post = format!("Check out our new product: {}! 🚀 #newarrival #ohc", product_name);
 
@@ -943,6 +947,7 @@ impl PromoterWorker {
 
                             if !session_id.is_empty() {
                                 let prompt = format!("Extract business information from this bio: \"{}\". Return JSON with keys: company_name, business_type (one of: Online Store, Service Business, Restaurant / Food, Creative / Portfolio, Local Business, Other), product_name, product_price, company_description, domain_choice (free or custom), website_template.", bio);
+                                let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
                                 let mut resolved_payload = serde_json::json!({});
 
