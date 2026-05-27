@@ -15,6 +15,7 @@ pub mod mercadopago;
 pub use ::server_integrations_chromadb as chromadb;
 pub mod meta;
 pub mod google_calendar;
+pub mod google_business_profile;
 pub use ::server_integrations_cal_com as cal_com;
 pub use ::server_integrations_sendgrid as sendgrid;
 pub use ::server_integrations_shippo as shippo;

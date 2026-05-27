@@ -1,0 +1,34 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+
+exports_files(
+    [
+        "client.rs",
+        "mod.rs",
+        "provider.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_integrations_google_business_profile",
+    srcs = [
+        "bazel_lib.rs",
+        "client.rs",
+        "mod.rs",
+        "provider.rs",
+    ],
+    crate_root = "bazel_lib.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "//src/server/integrations/core:server_integrations_core",
+        "//src/server/telemetry:server_telemetry",
+        "@crates//:reqwest",
+        "@crates//:serde_json",
+        "@crates//:tracing",
+    ],
+)

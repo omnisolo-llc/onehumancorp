@@ -2027,6 +2027,10 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
+                .route("/api/settings/hours", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            tracing::info!("Updating GBP hours via integration mock: {:?}", req.get("hours"));
+            axum::response::Json(serde_json::json!({ "success": true }))
+        }))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 

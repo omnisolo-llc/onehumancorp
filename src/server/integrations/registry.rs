@@ -23,6 +23,7 @@ pub struct IntegrationsRegistry {
     calendly_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::calendly::provider::CalendlyProvider>>>,
     cal_com_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::cal_com::provider::CalComProvider>>>,
     google_calendar_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_calendar::provider::GoogleCalendarProvider>>>,
+    google_business_profile_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::google_business_profile::provider::GoogleBusinessProfileProvider>>>,
     mailchimp_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mailchimp::provider::MailchimpProvider>>>,
     mercadopago_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::mercadopago::provider::MercadoPagoProvider>>>,
     alipay_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::alipay::provider::AlipayProvider>>>,
@@ -63,6 +64,7 @@ impl IntegrationsRegistry {
             calendly_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             cal_com_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             google_calendar_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            google_business_profile_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mailchimp_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             mercadopago_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             razorpay_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
@@ -225,6 +227,10 @@ impl IntegrationsRegistry {
         if integration_id == "google_calendar" {
             let mut clients = self.google_calendar_clients.write().unwrap();
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_calendar::provider::GoogleCalendarProvider::new(creds.api_token.clone())));
+        }
+        if integration_id == "google_business_profile" {
+            let mut clients = self.google_business_profile_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::google_business_profile::provider::GoogleBusinessProfileProvider::new(creds.api_token.clone())));
         }
         if integration_id == "mailchimp" {
             let mut clients = self.mailchimp_clients.write().unwrap();
@@ -678,6 +684,51 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn gbp_update_hours(&self, integration_id: &str, location_id: &str, hours: &serde_json::Value) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_business_profile" {
+                let clients = self.google_business_profile_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.update_hours(location_id, hours).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn gbp_fetch_reviews(&self, integration_id: &str, location_id: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_business_profile" {
+                let clients = self.google_business_profile_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_reviews(location_id).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
+    pub async fn gbp_reply_to_review(&self, integration_id: &str, location_id: &str, review_id: &str, reply: &str) -> Result<String, String> {
+        let client = {
+            if integration_id == "google_business_profile" {
+                let clients = self.google_business_profile_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.reply_to_review(location_id, review_id, reply).await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn get_booking_link(&self, integration_id: &str, event_type: &str) -> Result<String, String> {
         let client = {
             if integration_id == "cal_com" {
@@ -775,4 +826,5 @@ mod tests {
         assert_eq!(msg.content, "Hello World");
 
     }
+
 }

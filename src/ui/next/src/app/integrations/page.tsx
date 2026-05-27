@@ -9,6 +9,7 @@ export default function Integrations() {
 
   const [integrations, setIntegrations] = useState([
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
+    { id: "google_business_profile", name: "Google Business Profile", category: "marketing", status: "disconnected", icon: "🏢", description: "Automated Local SEO and Reputation Management." },
     { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
@@ -22,6 +23,13 @@ export default function Integrations() {
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const handleConnect = (id: string) => {
+    if (id === 'google_business_profile') {
+      alert("Connecting Google Business Profile via OAuth...");
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push("/dashboard");
+    }
     if (id === 'calendly') {
       alert("Connecting Calendly via OAuth...");
       setIntegrations(prev => prev.map(integration =>
