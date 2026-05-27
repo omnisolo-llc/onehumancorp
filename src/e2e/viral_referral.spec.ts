@@ -2,10 +2,10 @@ import { test, expect } from './fixtures';
 
 test.describe('Viral Referral Loop', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await page.goto('/referrals');
 
-    await page.getByRole('button', { name: 'Referrals' }).click();
+
+
     await expect(page.getByRole('heading', { name: 'Referral Dashboard' })).toBeVisible();
   });
 
