@@ -1,5 +1,5 @@
-ANDROID_API_LEVEL = 36
-ANDROID_BUILD_TOOLS_VERSION = "36.0.0"
+ANDROID_API_LEVEL = 35
+ANDROID_BUILD_TOOLS_VERSION = "35.0.0"
 
 # Tauri's generated Android/AGP project still asks for Build Tools 35 in some
 # dependency modules, so provision it in the Bazel SDK to keep Gradle offline.
