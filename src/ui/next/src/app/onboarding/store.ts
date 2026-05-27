@@ -10,6 +10,8 @@ interface OnboardingState {
   websiteTemplate: string;
   firstProductName: string;
   firstProductPrice: string;
+  aiAgents: string[];
+  aiTone: string;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -21,6 +23,8 @@ interface OnboardingState {
   setWebsiteTemplate: (template: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setAiAgents: (agents: string[]) => void;
+  setAiTone: (tone: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
@@ -37,6 +41,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       websiteTemplate: 'Modern',
       firstProductName: '',
       firstProductPrice: '',
+      aiAgents: ['Inventory', 'Customer Support'],
+      aiTone: 'Professional',
       isLoading: false,
       error: '',
       startResult: null,
@@ -48,12 +54,14 @@ export const useOnboardingStore = create<OnboardingState>()(
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setAiAgents: (aiAgents) => set({ aiAgents }),
+      setAiTone: (aiTone) => set({ aiTone }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4', // Changed name to avoid cache collision with new structure
     }
   )
 );

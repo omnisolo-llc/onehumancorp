@@ -10,6 +10,8 @@ describe('useOnboardingStore', () => {
       isLoading: false,
       error: '',
       startResult: null,
+      aiAgents: ['Inventory', 'Customer Support'],
+      aiTone: 'Professional',
     });
   });
 
@@ -20,6 +22,8 @@ describe('useOnboardingStore', () => {
     expect(state.isLoading).toBe(false);
     expect(state.error).toBe('');
     expect(state.startResult).toBeNull();
+    expect(state.aiAgents).toEqual(['Inventory', 'Customer Support']);
+    expect(state.aiTone).toBe('Professional');
   });
 
   it('should update step', () => {
@@ -30,6 +34,16 @@ describe('useOnboardingStore', () => {
   it('should update businessDescription', () => {
     useOnboardingStore.getState().setBusinessDescription('Test Description');
     expect(useOnboardingStore.getState().businessDescription).toBe('Test Description');
+  });
+
+  it('should update aiAgents', () => {
+    useOnboardingStore.getState().setAiAgents(['Marketing']);
+    expect(useOnboardingStore.getState().aiAgents).toEqual(['Marketing']);
+  });
+
+  it('should update aiTone', () => {
+    useOnboardingStore.getState().setAiTone('Playful');
+    expect(useOnboardingStore.getState().aiTone).toBe('Playful');
   });
 
   it('should update isLoading', () => {
@@ -68,11 +82,15 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setStep(3);
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
+    useOnboardingStore.getState().setAiAgents(['Inventory']);
+    useOnboardingStore.getState().setAiTone('Playful');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v4'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
+    expect(storedState.state.aiAgents).toEqual(['Inventory']);
+    expect(storedState.state.aiTone).toBe('Playful');
   });
 });

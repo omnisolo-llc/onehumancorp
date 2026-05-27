@@ -13,6 +13,8 @@ describe('OnboardingWizard', () => {
       isLoading: false,
       error: '',
       startResult: null,
+      aiAgents: ['Inventory', 'Customer Support'],
+      aiTone: 'Professional',
     });
 
     global.fetch = vi.fn();
@@ -26,6 +28,7 @@ describe('OnboardingWizard', () => {
     act(() => { render(<OnboardingWizard />); });
 
     expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    // In our modified wizard, validation fails initially if description < 10 chars
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
@@ -52,8 +55,8 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(input, 'I am a baker in NY');
+    const input = screen.getByPlaceholderText(/e.g. I bake custom vegan cakes/i);
+    await userEvent.type(input, 'I am a baker in NY'); // > 10 chars
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
@@ -78,6 +81,10 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
+      expect(screen.getByText("Playful")).toBeInTheDocument();
+      // the span contains "Marketing Agent", so getByText won't find exact "Marketing" if it's mixed with " Agent"
+      // or we can just use regex
+      expect(screen.getByText(/Marketing Agent/i)).toBeInTheDocument();
     });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
@@ -102,7 +109,7 @@ describe('OnboardingWizard', () => {
 
     act(() => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    const input = screen.getByPlaceholderText(/e.g. I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });

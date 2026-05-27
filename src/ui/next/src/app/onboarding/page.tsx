@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -13,6 +13,8 @@ export default function OnboardingWizard() {
     websiteTemplate, setWebsiteTemplate,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    aiAgents, setAiAgents,
+    aiTone, setAiTone,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -92,7 +94,9 @@ export default function OnboardingWizard() {
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
           domain_choice: 'subdomain',
-          price_type: 'fixed'
+          price_type: 'fixed',
+          ai_agents: aiAgents,
+          ai_tone: aiTone
         })
       });
 
@@ -113,11 +117,22 @@ export default function OnboardingWizard() {
     }
   };
 
+  const isStep1Valid = businessDescription.trim().length >= 10;
+  const isStep2Valid = businessName.trim() !== '' && businessType.trim() !== '' && !isNaN(Number(firstProductPrice)) && Number(firstProductPrice) > 0;
+
+  const handleAgentToggle = (agent: string) => {
+    if (aiAgents.includes(agent)) {
+      setAiAgents(aiAgents.filter(a => a !== agent));
+    } else {
+      setAiAgents([...aiAgents, agent]);
+    }
+  };
+
   if (!isLoaded) return null;
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[750px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -142,17 +157,23 @@ export default function OnboardingWizard() {
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
+                {!isStep1Valid && businessDescription.length > 0 && (
+                   <p className="text-xs text-[#FF9500]">Please provide a bit more detail (min 10 chars).</p>
+                )}
               </div>
 
               <div className="mt-auto pt-6">
                 <button
                   onClick={handleIntake}
-                  disabled={!businessDescription.trim() || isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                  disabled={isLoading || !isStep1Valid}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {isLoading ? 'Analyzing...' : 'Generate My Business'}
+                  {isLoading ? 'Processing...' : 'Generate My Business'}
+                  {!isLoading && (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -175,7 +196,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -184,7 +205,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -193,7 +214,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -203,7 +224,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -212,7 +233,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className={`w-full p-3 rounded-[8px] border outline-none bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] ${isNaN(Number(firstProductPrice)) || Number(firstProductPrice) <= 0 ? 'border-[#FF3B30] focus:border-[#FF3B30]' : 'border-white/50 dark:border-white/10 focus:border-[#0066FF]'}`}
                       />
                    </div>
                 </div>
@@ -221,7 +242,8 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all"
+                  disabled={!isStep2Valid}
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
                 >
                   Continue
                 </button>
@@ -230,16 +252,16 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in overflow-y-auto">
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+                Pick your storefront vibe and your AI team.
               </p>
 
-              <div className="space-y-4 flex-1">
+              <div className="space-y-6 flex-1 pb-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -247,22 +269,54 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-[#F5F5F7]'}`}
                       >
-                        <div className="font-semibold">{template}</div>
+                        <div className="font-semibold text-sm">{template}</div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">AI Tone</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Professional', 'Playful', 'Direct'].map(tone => (
+                      <div
+                        key={tone}
+                        onClick={() => setAiTone(tone)}
+                        className={`p-2 text-center rounded-[8px] border cursor-pointer transition-all bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] ${aiTone === tone ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-[#F5F5F7]'}`}
+                      >
+                        <div className="font-semibold text-xs">{tone}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">AI Agent Team</label>
+                  <div className="flex flex-col gap-2">
+                    {['Inventory', 'Customer Support', 'Marketing', 'Finance'].map(agent => (
+                      <label key={agent} className="flex items-center gap-3 p-3 rounded-[8px] border border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 backdrop-blur-[30px] saturate-[210%] cursor-pointer hover:bg-white/80 dark:hover:bg-black/50 transition-all text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        <input
+                          type="checkbox"
+                          checked={aiAgents.includes(agent)}
+                          onChange={() => handleAgentToggle(agent)}
+                          className="w-4 h-4 text-[#0066FF] border-gray-300 rounded focus:ring-[#0066FF]"
+                        />
+                        <span className="text-sm font-semibold">{agent} Agent</span>
+                      </label>
                     ))}
                   </div>
                 </div>
               </div>
 
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-6 border-t border-white/20 dark:border-white/10">
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  Launch Store
+                  {isLoading ? 'Launching...' : 'Launch Store'}
                 </button>
               </div>
             </div>
@@ -312,7 +366,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-[30px] saturate-[210%] text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all"
                 >
                   Preview Storefront
                 </a>
