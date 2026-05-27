@@ -20,11 +20,10 @@ test.describe('Pricing Page', () => {
   });
 
   test('shows current plan and cost dashboard', async ({ page }) => {
-    await page.goto('/plan');
+    await page.goto('/my-plan');
     await expect(page.getByRole('heading', { name: 'My Plan' })).toBeVisible();
-    await expect(page.getByText('Current Plan')).toBeVisible();
-    await expect(page.getByText('Free', { exact: true })).toBeVisible();
-    await page.getByText('View Cost Details', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
+    await expect(page.getByText('Plan: Free')).toBeVisible();
+    await page.getByRole('button', { name: 'View Cost Details' }).click();
+    await expect(page.getByRole('heading', { name: 'Cost & AI Usage' })).toBeVisible();
   });
 });
