@@ -22,7 +22,75 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
-  }, []);
+
+    // Fetch state from server for cross-device resume
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load onboarding state from server', e);
+      }
+    };
+    fetchState();
+  }, [setStep, setBusinessName, setBusinessType, setBusinessDescription, setCategories, setWebsiteTemplate, setFirstProductName, setFirstProductPrice]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    // Save state to server
+    const saveState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessName,
+            businessType,
+            businessDescription,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice
+          })
+        });
+      } catch (e) {
+        console.error('Failed to save onboarding state to server', e);
+      }
+    };
+
+    const timeoutId = setTimeout(saveState, 500); // debounce
+    return () => clearTimeout(timeoutId);
+  }, [isLoaded, step, businessName, businessType, businessDescription, categories, websiteTemplate, firstProductName, firstProductPrice]);
 
   const handleIntake = async () => {
     setIsLoading(true);

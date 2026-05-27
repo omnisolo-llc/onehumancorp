@@ -2949,14 +2949,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
         }
 
         #setup-screen button, #setup-screen input {
-            border-radius: 8px;
+            border-radius: 8px !important;
             transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @media (max-width: 375px) {
             #setup-screen.glass {
-                margin: 10px;
+                margin: 10px auto;
                 padding: 16px;
+                box-sizing: border-box;
+                width: 100%;
+                border-radius: 16px;
             }
             #setup-screen h1 {
                 font-size: 24px;
@@ -4971,6 +4974,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
                                     alert('Please enter a valid email address');
+                                    return false;
+                                }
+                                const passwordInput = document.querySelector('#step-7-user-password');
+                                if (!passwordInput || passwordInput.value.trim().length < 8) {
+                                    alert('Password must be at least 8 characters long');
                                     return false;
                                 }
                             }
