@@ -65,7 +65,7 @@ pub mod benchmarks;
 
 pub use ::server_config as config;
 pub use ::server_common as common;
-pub use ::server_ohc as ohc;
+pub use crate::proto as ohc;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -186,10 +186,10 @@ pub mod proto {
     }
 }
 
-use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
-use ::server_ohc::billing::billing_service_server::BillingServiceServer;
-use ::server_ohc::orchestration::*;
+use crate::proto::orchestration::hub_service_server::{HubService, HubServiceServer};
+use crate::proto::orchestration::growth_service_server::GrowthServiceServer;
+use crate::proto::billing::billing_service_server::BillingServiceServer;
+use crate::proto::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
