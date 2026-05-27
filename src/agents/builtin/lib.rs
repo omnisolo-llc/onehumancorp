@@ -64,5 +64,3 @@ pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;
 pub mod deerflow_subagents;
-
-pub mod tool_executor_engine;

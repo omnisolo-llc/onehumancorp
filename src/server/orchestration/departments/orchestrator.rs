@@ -110,7 +110,7 @@ impl Department for DummyDepartment {
 
 
 pub struct DepartmentOrchestrator {
-    db: Arc<crate::db::DB>,
+    pub db: Arc<crate::db::DB>,
     departments: RwLock<HashMap<DepartmentType, Arc<tokio::sync::RwLock<dyn Department>>>>,
     agents: RwLock<HashMap<String, Arc<tokio::sync::RwLock<dyn BaseAgent>>>>,
     event_subscriptions: RwLock<HashMap<String, Vec<DepartmentType>>>,
