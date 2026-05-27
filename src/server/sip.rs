@@ -429,17 +429,55 @@ mod tests {
 
     #[tokio::test]
     async fn test_handoff_mission_marks_blocked() {
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return, // Skip test if no DB available
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to DATABASE_URL in test");
 
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+        {
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
 
-        let res = sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await;
-        // Should error out gracefully with our dummy pool timeout instead of panicking
-        assert!(res.is_err());
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            ).execute(&pool).await.unwrap();
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
+                .bind("dummy_handoff_id")
+                .bind("PENDING")
+                .bind("{}")
+                .bind("test_org")
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            let res = sip_db.handoff_mission("dummy_handoff_id", "Blocked by prompt instructions").await;
+            assert!(res.is_ok());
+
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'dummy_handoff_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            use sqlx::Row;
+            let status: String = row.get("status");
+            assert_eq!(status, "blocked");
+
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'dummy_handoff_id'").execute(&pool).await.unwrap();
+        }
     }
 
     #[tokio::test]
@@ -518,17 +556,57 @@ mod tests {
 
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
-        // Just verify it doesn't crash on execution with a valid pool.
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let database_url = match std::env::var("DATABASE_URL") {
+            Ok(val) => val,
+            Err(_) => return, // Skip test if no DB available
+        };
+
+        let pool = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
-            .acquire_timeout(std::time::Duration::from_millis(10))
-            .connect_lazy("postgres://localhost/dummy")
-            .unwrap();
+            .connect(&database_url)
+            .await
+            .expect("Failed to connect to DATABASE_URL in test");
 
-        let sip_db = SipDB::new(pool, "test_org".to_string());
+        {
+            sqlx::query(
+                "CREATE TABLE IF NOT EXISTS agent_missions (
+                    id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    payload TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    tenant_id TEXT,
+                    mission_log TEXT
+                )"
+            ).execute(&pool).await.unwrap();
 
-        let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
-        // Should error out gracefully with our dummy pool timeout instead of panicking
-        assert!(res.is_err());
+            let old_time = chrono::Utc::now() - chrono::Duration::hours(25);
+
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+                .bind("stuck_id")
+                .bind("STUCK")
+                .bind("{}")
+                .bind("test_org")
+                .bind(old_time)
+                .execute(&pool)
+                .await
+                .unwrap();
+
+            let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
+
+            let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+            assert!(res.is_ok());
+
+            let row = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_id'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+
+            use sqlx::Row;
+            let status: String = row.get("status");
+            assert_eq!(status, "FAILED");
+
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'stuck_id'").execute(&pool).await.unwrap();
+        }
     }
 }
