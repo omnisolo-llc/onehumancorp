@@ -15,6 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
+      "transparent": true,
   "id": null,
   "links": [],
   "panels": [
@@ -70,6 +71,7 @@
         "x": 0,
         "y": 0
       },
+      "transparent": true,
       "id": 1,
       "options": {
         "legend": {
@@ -145,6 +147,7 @@
         "x": 12,
         "y": 0
       },
+      "transparent": true,
       "id": 2,
       "options": {
         "legend": {
@@ -220,6 +223,7 @@
         "x": 0,
         "y": 8
       },
+      "transparent": true,
       "id": 3,
       "options": {
         "legend": {
