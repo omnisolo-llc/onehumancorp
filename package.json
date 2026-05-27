@@ -8,6 +8,8 @@
     "@modelcontextprotocol/server-github": "^0.6.2",
     "@types/pg": "^8.20.0",
     "google-protobuf": "^3.21.4",
+    "ink-spinner": "^5.0.0",
+    "ink-text-input": "^6.0.0",
     "pg": "^8.21.0",
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"

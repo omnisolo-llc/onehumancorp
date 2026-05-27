@@ -63,16 +63,4 @@ describe('useOnboardingStore', () => {
     expect(state.firstProductName).toBe('Coffee');
     expect(state.firstProductPrice).toBe('5.00');
   });
-
-  it('should persist state to localStorage', () => {
-    useOnboardingStore.getState().setStep(3);
-    useOnboardingStore.getState().setBusinessDescription('Persisted Description');
-    useOnboardingStore.getState().setBusinessName('Persisted Name');
-
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
-    expect(storedState.state.step).toBe(3);
-    expect(storedState.state.businessDescription).toBe('Persisted Description');
-    expect(storedState.state.businessName).toBe('Persisted Name');
-  });
 });

@@ -11,23 +11,19 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
       localStorage.setItem('user_id', 'e2e-cross-device-user');
     });
 
-    // 1. Visit the builder on Device 1
+    // 1. Visit the onboarding wizard on Device 1
     await page1.goto('/onboarding');
-    await expect(page1.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
+    await expect(page1.getByRole('heading', { name: "Tell us about your business" })).toBeVisible({ timeout: 15000 });
 
-    // 2. Start flow and type business name
-    await page1.getByPlaceholder('e.g. Sell cakes, plumbing').fill('Sell custom cakes');
-    await page1.getByRole('button', { name: /Next/ }).click();
+    // 2. Start flow and type business description
+    await page1.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...').fill('I run a boutique guitar shop');
 
-    await page1.getByPlaceholder('e.g. Maya\'s Cakes').fill('Maya\'s Cross-Device Bakery');
-    await page1.getByRole('button', { name: /Next/i }).click();
-    await page1.getByPlaceholder('e.g. I bake custom wedding cakes').fill('I bake custom vegan cakes');
-    await page1.getByRole('button', { name: /Generate Draft/i }).click();
+    // We expect the state to be saved automatically to the backend on change
 
-    // Wait for the debounce saveWizardState to trigger
+    // Wait for the network request or simple timeout
     await page1.waitForTimeout(3000);
 
-    // Close context 1 to prove we aren't relying on it
+    // Close context 1 to prove we aren't relying on local browser state
     await context1.close();
 
     // 3. Open a completely new incognito browser session (Device 2)
@@ -41,11 +37,10 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     });
 
     await page2.goto('/onboarding');
-    await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
+    await expect(page2.getByRole('heading', { name: "Tell us about your business" })).toBeVisible({ timeout: 15000 });
 
-    // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-    await expect(page2.getByPlaceholder('0.00')).toBeVisible();
+    // The backend should restore the state and pre-fill the description
+    await expect(page2.getByPlaceholder('e.g. I bake custom vegan cakes in Portland, OR...')).toHaveValue('I run a boutique guitar shop', { timeout: 15000 });
 
     await context2.close();
   });

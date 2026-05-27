@@ -20,9 +20,124 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Save state helper (debounced)
+  const saveState = async (updates: any) => {
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const currentState = {
+      step,
+      businessDescription,
+      businessName,
+      businessType,
+      categories,
+      websiteTemplate,
+      firstProductName,
+      firstProductPrice,
+      startResult,
+      ...updates
+    };
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify(currentState)
+        });
+      } catch (e) {
+        console.error("Failed to save state", e);
+      }
+    }, 500);
+  };
+
   useEffect(() => {
-    setIsLoaded(true);
-  }, []);
+    // Fetch state on mount
+    const fetchState = async () => {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      try {
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.step) {
+            setStep(data.step || 1);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.startResult) setStartResult(data.startResult);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load state", e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    fetchState();
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [setStep, setBusinessDescription, setBusinessName, setBusinessType, setCategories, setWebsiteTemplate, setFirstProductName, setFirstProductPrice, setStartResult]);
+
+  // Save state helper (immediate)
+  const saveStateImmediate = async (updates: any) => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const currentState = {
+      step,
+      businessDescription,
+      businessName,
+      businessType,
+      categories,
+      websiteTemplate,
+      firstProductName,
+      firstProductPrice,
+      startResult,
+      ...updates
+    };
+
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify(currentState)
+      });
+    } catch (e) {
+      console.error("Failed to save state immediately", e);
+    }
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -55,6 +170,7 @@ export default function OnboardingWizard() {
       setCategories(intakeData.categories || ['physical']);
 
       setStep(2); // Go to review step
+      saveStateImmediate({ step: 2, businessType: intakeData.business_type || 'Online Store', businessName: intakeData.business_name || 'My Business', firstProductName: intakeData.initial_products?.[0]?.name || 'First Product', firstProductPrice: intakeData.initial_products?.[0]?.price || '10.00', categories: intakeData.categories || ['physical'] });
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -67,6 +183,7 @@ export default function OnboardingWizard() {
     setIsLoading(true);
     setError('');
     setStep(4); // Go to loading screen
+    saveStateImmediate({ step: 4 });
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -103,6 +220,7 @@ export default function OnboardingWizard() {
       const result = await startRes.json();
       setStartResult(result);
       setStep(5); // Go to "You're Live" screen
+      saveStateImmediate({ step: 5, startResult: result });
 
     } catch (err: any) {
       console.error(err);
@@ -140,8 +258,15 @@ export default function OnboardingWizard() {
               <div className="space-y-4 flex-1">
                 <textarea
                   value={businessDescription}
-                  onChange={(e) => setBusinessDescription(e.target.value)}
+                  onChange={(e) => {
+                    setBusinessDescription(e.target.value);
+                    saveState({ businessDescription: e.target.value });
+                  }}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
+                  enterKeyHint="next"
+                  autoCapitalize="sentences"
+                  autoComplete="off"
+                  spellCheck={true}
                   className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
               </div>
@@ -174,7 +299,14 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     value={businessName}
-                    onChange={(e) => setBusinessName(e.target.value)}
+                    onChange={(e) => {
+                      setBusinessName(e.target.value);
+                      saveState({ businessName: e.target.value });
+                    }}
+                    enterKeyHint="next"
+                    autoCapitalize="words"
+                    autoComplete="organization"
+                    spellCheck={false}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -183,7 +315,14 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     value={businessType}
-                    onChange={(e) => setBusinessType(e.target.value)}
+                    onChange={(e) => {
+                      setBusinessType(e.target.value);
+                      saveState({ businessType: e.target.value });
+                    }}
+                    enterKeyHint="next"
+                    autoCapitalize="words"
+                    autoComplete="off"
+                    spellCheck={true}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -192,7 +331,15 @@ export default function OnboardingWizard() {
                   <input
                     type="text"
                     value={categories.join(', ')}
-                    onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
+                    onChange={(e) => {
+                      const newCategories = e.target.value.split(',').map(c => c.trim());
+                      setCategories(newCategories);
+                      saveState({ categories: newCategories });
+                    }}
+                    enterKeyHint="next"
+                    autoCapitalize="words"
+                    autoComplete="off"
+                    spellCheck={true}
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
@@ -202,7 +349,14 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         value={firstProductName}
-                        onChange={(e) => setFirstProductName(e.target.value)}
+                        onChange={(e) => {
+                          setFirstProductName(e.target.value);
+                          saveState({ firstProductName: e.target.value });
+                        }}
+                        enterKeyHint="next"
+                        autoCapitalize="words"
+                        autoComplete="off"
+                        spellCheck={true}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -211,7 +365,14 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
+                        onChange={(e) => {
+                          setFirstProductPrice(e.target.value);
+                          saveState({ firstProductPrice: e.target.value });
+                        }}
+                        enterKeyHint="done"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        spellCheck={false}
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
@@ -220,7 +381,10 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => {
+                    setStep(3);
+                    saveStateImmediate({ step: 3 });
+                  }}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all"
                 >
                   Continue
@@ -231,7 +395,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => { setStep(2); saveStateImmediate({ step: 2 }); }} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
@@ -246,7 +410,10 @@ export default function OnboardingWizard() {
                     {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
                       <div
                         key={template}
-                        onClick={() => setWebsiteTemplate(template)}
+                        onClick={() => {
+                          setWebsiteTemplate(template);
+                          saveState({ websiteTemplate: template });
+                        }}
                         className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold">{template}</div>

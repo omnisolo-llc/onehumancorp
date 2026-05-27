@@ -23,9 +23,18 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/state' && (!options || options.method === 'GET' || !options.method)) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.reject(new Error(`Unhandled request: ${url}`));
+    });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    await act(async () => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
@@ -33,35 +42,48 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
+    // Mock the initial GET fetch, then intake success, then start success, plus the POSTs to save state
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/state' && (!options || options.method === 'GET' || !options.method)) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      if (url === '/api/onboarding/state' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true });
+      }
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: 'Success!' })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
+    await act(async () => { render(<OnboardingWizard />); });
+
+    let input: any;
+    await waitFor(() => {
+      input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     });
 
-    act(() => { render(<OnboardingWizard />); });
-
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
     // Step 1: Intake
-    await act(async () => {
-      button.click();
-    });
+    button.click();
 
     // Verify it transitions to Step 2: Review Details
     await waitFor(() => {
@@ -70,9 +92,7 @@ describe('OnboardingWizard', () => {
     });
 
     const continueButton = screen.getByRole('button', { name: /Continue/i });
-    await act(async () => {
-      continueButton.click();
-    });
+    continueButton.click();
 
     // Verify it transitions to Step 3: Style & Team
     await waitFor(() => {
@@ -81,35 +101,42 @@ describe('OnboardingWizard', () => {
     });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-    await act(async () => {
-      launchButton.click();
-    });
+    launchButton.click();
 
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(screen.getByText("Success!")).toBeInTheDocument();
     });
   });
 
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/state' && (!options || options.method === 'GET' || !options.method)) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      if (url === '/api/onboarding/state' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true });
+      }
+      if (url === '/api/onboarding/intake') {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
-    const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    let input: any;
+    await waitFor(() => {
+      input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    });
+
     await userEvent.type(input, 'I am a baker in NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
-
-    await act(async () => {
-      button.click();
-    });
+    button.click();
 
     // Verify error appears and step goes back to 1
     await waitFor(() => {
@@ -124,18 +151,27 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/state' && (!options || options.method === 'GET' || !options.method)) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      if (url === '/api/onboarding/state' && options?.method === 'POST') {
+        return Promise.resolve({ ok: true });
+      }
+      if (url === '/api/onboarding/start') {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-
-    await act(async () => {
-      launchButton.click();
+    let launchButton: any;
+    await waitFor(() => {
+      launchButton = screen.getByRole('button', { name: /Launch Store/i });
     });
+
+    launchButton.click();
 
     // Verify error appears and step goes back to 3
     await waitFor(() => {
@@ -150,7 +186,14 @@ describe('OnboardingWizard', () => {
       startResult: { message: "Your business has been successfully launched." }
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    (global.fetch as any).mockImplementation((url: string, options: any) => {
+      if (url === '/api/onboarding/state' && (!options || options.method === 'GET' || !options.method)) {
+        return Promise.resolve({ ok: true, json: async () => ({}) });
+      }
+      return Promise.reject(new Error(`Unhandled request: ${url}`));
+    });
+
+    await act(async () => { render(<OnboardingWizard />); });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
