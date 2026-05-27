@@ -1,6 +1,5 @@
 use std::env;
 use axum::response::IntoResponse;
-use sqlx::{Pool, Any};
 
 #[derive(serde::Deserialize, serde::Serialize, Clone)]
 pub struct SyncDelta {
