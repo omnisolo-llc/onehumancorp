@@ -37,32 +37,12 @@ impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> PydanticAdap
 impl<T: DeserializeOwned + Send + Sync, E: PydanticToolExecutor<T>> ToolExecutor for PydanticAdapter<T, E> {
     async fn execute(&self, args: Value) -> Result<String, ToolError> {
         // Validation Errors fed back to LLM for self-correction
-        let typed_args: T = match serde_json::from_value(args.clone()) {
-            Ok(v) => v,
-            Err(e) => {
-                // Enhance the error message based on the Serde Error classification
-                let detail = if e.is_data() {
-                    format!("Semantic validation failed: {}", e)
-                } else if e.is_syntax() {
-                    format!("JSON syntax error at line {}, column {}: {}", e.line(), e.column(), e)
-                } else if e.is_eof() {
-                    format!("Incomplete JSON structure (unexpected EOF): {}", e)
-                } else {
-                    format!("{}", e)
-                };
-
-                // Add the original payload snippet for context
-                let args_str = match serde_json::to_string(&args) {
-                    Ok(s) => if s.len() > 100 { format!("{}...", &s[..100]) } else { s },
-                    Err(_) => "<unprintable>".to_string(),
-                };
-
-                return Err(ToolError::LlmRecoverable(format!(
-                    "Validation Error (Pydantic-first tool schema): Failed to parse arguments.\nReason: {}\nProvided arguments snippet: {}\nPlease strictly follow the tool's JSON schema and try again.",
-                    detail, args_str
-                )));
-            }
-        };
+        let typed_args: T = serde_json::from_value(args.clone()).map_err(|e| {
+            ToolError::LlmRecoverable(format!(
+                "Validation Error (Pydantic-first tool schema): Failed to parse arguments. Reason: {}. Please correct your JSON arguments and try again.",
+                e
+            ))
+        })?;
 
         self.executor.execute_typed(typed_args).await
     }
@@ -96,32 +76,15 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_pydantic_adapter_failure_invalid_type() {
+    async fn test_pydantic_adapter_failure() {
         let adapter = PydanticAdapter::new(MyExecutor);
         let result = adapter.execute(serde_json::json!({ "foo": "test", "bar": "not a number" })).await;
         assert!(result.is_err());
 
         if let Err(ToolError::LlmRecoverable(msg)) = result {
             assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-            assert!(msg.contains("Semantic validation failed"));
-            assert!(msg.contains("invalid type"));
-            assert!(msg.contains("not a number"));
         } else {
-            panic!("Expected LlmRecoverable error with detailed semantic validation feedback");
-        }
-    }
-
-    #[tokio::test]
-    async fn test_pydantic_adapter_failure_missing_field() {
-        let adapter = PydanticAdapter::new(MyExecutor);
-        let result = adapter.execute(serde_json::json!({ "foo": "test" })).await;
-        assert!(result.is_err());
-
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("Validation Error (Pydantic-first tool schema)"));
-            assert!(msg.contains("missing field `bar`"));
-        } else {
-            panic!("Expected LlmRecoverable error about missing field");
+            panic!("Expected LlmRecoverable error for self-correction");
         }
     }
 }

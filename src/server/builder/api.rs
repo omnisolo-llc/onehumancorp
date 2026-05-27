@@ -53,27 +53,6 @@ pub struct PublishDraftRequest {
 use super::db;
 use super::jobs;
 
-fn validate_block(block_type: &str, content: &Value) -> bool {
-    match block_type {
-        "HeroBlock" => {
-            content.get("headline").is_some() && content.get("subtitle").is_some()
-        },
-        "ProductGridBlock" => {
-            content.get("items").and_then(|v| v.as_array()).is_some()
-        },
-        "ServiceBookingBlock" => {
-            content.get("title").is_some() && content.get("availability").is_some()
-        },
-        "TestimonialBlock" => {
-            content.get("quotes").and_then(|v| v.as_array()).is_some()
-        },
-        "ContactFormBlock" | "BookingCalendarBlock" => {
-            content.is_object()
-        },
-        _ => false,
-    }
-}
-
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     Router::new()
         .route("/sites", get(list_sites).post(create_site))
@@ -299,9 +278,7 @@ async fn create_block(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
-    if !validate_block(&payload.block_type, &payload.content) {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
-    }
+    if payload.block_type != "HeroBlock" && payload.block_type != "ProductGridBlock" && payload.block_type != "ContactFormBlock" && payload.block_type != "BookingCalendarBlock" && payload.block_type != "ServiceBookingBlock" && payload.block_type != "TestimonialBlock" { return Err(axum::http::StatusCode::BAD_REQUEST); }
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
     let block = db::create_block(
         &pool,
@@ -333,13 +310,6 @@ async fn update_block(
     Json(payload): Json<UpdateBlockRequest>,
 ) -> Result<Json<BlockResponse>, axum::http::StatusCode> {
     let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
-
-    // Fetch block to check its type for validation
-    let existing_block = db::get_block(&pool, tenant_id, block_id).await.map_err(|_| axum::http::StatusCode::NOT_FOUND)?;
-    if !validate_block(&existing_block.block_type, &payload.content) {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
-    }
-
     let block = db::update_block(&pool, tenant_id, block_id, payload.content)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
