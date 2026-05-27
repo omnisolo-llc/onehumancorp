@@ -76,7 +76,7 @@ describe('Dashboard Component', () => {
             expect(screen.getByText('Drafted refund for Order #456.')).toBeInTheDocument();
         });
 
-                                                await waitFor(() => {
+        await waitFor(() => {
             const btns = screen.getAllByRole('button');
             const hasEdit = btns.some(b => b.textContent === 'Edit');
             const hasReject = btns.some(b => b.textContent === 'Reject');
