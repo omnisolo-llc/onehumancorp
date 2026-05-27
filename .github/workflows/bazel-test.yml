@@ -28,18 +28,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Free runner disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "/usr/local/share/powershell"
-          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
-          docker image prune --all --force
-          sudo rm -rf /usr/lib/jvm
-          sudo rm -rf /usr/local/graalvm
-          sudo rm -rf /usr/local/julia
-          sudo rm -rf /usr/local/rust
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
