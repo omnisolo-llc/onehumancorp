@@ -2130,16 +2130,27 @@ impl Agent {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
                 }
 
-                if let Err(e) = verification_manager.run_computational_guides("", "").await {
-                    messages.push(Message::user(e));
-                    continue;
+                let (comp_res, vis_res, inf_res) = tokio::join!(
+                    verification_manager.run_computational_guides("", ""),
+                    verification_manager.run_visual_verifiers(""),
+                    verification_manager.run_inferential_sensors(&last_assistant_content, "")
+                );
+
+                let mut combined_errors = Vec::new();
+
+                if let Err(mut e) = comp_res { combined_errors.append(&mut e); }
+                if let Err(mut e) = vis_res { combined_errors.append(&mut e); }
+                if let Err(mut e) = inf_res {
+                    for err in e {
+                        combined_errors.push(format!("LLM-as-judge subagent rejected the output. Reason: {}
+Please correct your work and use tools to fix the issue.", err));
+                    }
                 }
-                if let Err(e) = verification_manager.run_visual_verifiers("").await {
-                    messages.push(Message::user(e));
-                    continue;
-                }
-                if let Err(e) = verification_manager.run_inferential_sensors(&last_assistant_content, "").await {
-                    messages.push(Message::user(format!("LLM-as-judge subagent rejected the output. Reason: {}\nPlease correct your work and use tools to fix the issue.", e)));
+
+                if !combined_errors.is_empty() {
+                    messages.push(Message::user(combined_errors.join("
+
+")));
                     continue;
                 }
                 // OpenAI Mechanic: Output Guardrails
