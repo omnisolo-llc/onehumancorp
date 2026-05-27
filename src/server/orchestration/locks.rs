@@ -1,6 +1,7 @@
 use std::sync::Arc;
 use tokio::sync::{Mutex, OwnedMutexGuard};
 use std::collections::HashMap;
+use tokio::time::{sleep, Duration};
 
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {
@@ -13,11 +14,26 @@ pub struct LockGuard {
     redis_key: Option<String>,
 }
 
+impl LockGuard {
+    pub async fn release(mut self) {
+        if let (Some(client), Some(key)) = (&self.redis_client, &self.redis_key) {
+            if let Ok(mut conn) = client.get_multiplexed_async_connection().await {
+                let _: redis::RedisResult<()> = redis::cmd("DEL").arg(key).query_async(&mut conn).await;
+            }
+            self.redis_client = None;
+            self.redis_key = None;
+        }
+    }
+}
+
 impl Drop for LockGuard {
     fn drop(&mut self) {
         if let (Some(client), Some(key)) = (&self.redis_client, &self.redis_key) {
-            let mut conn = client.get_connection().unwrap();
-            let _: redis::RedisResult<()> = redis::cmd("DEL").arg(key).query(&mut conn);
+            // Synchronous fallback cleanup in drop to avoid tokio::spawn panics
+            // if we are outside of a runtime context, but prefer calling `release()` explicitly.
+            if let Ok(mut conn) = client.get_connection() {
+                let _: redis::RedisResult<()> = redis::cmd("DEL").arg(key).query(&mut conn);
+            }
         }
     }
 }
@@ -72,18 +88,30 @@ impl DistributedLock for RedisLock {
         }).await.map_err(|e| e.to_string())?.clone();
         let key = format!("ohc:lock:task:{}", task_id);
 
-        let acquired: bool = redis::cmd("SET")
-            .arg(&key)
-            .arg("1")
-            .arg("NX")
-            .arg("EX")
-            .arg(5)
-            .query_async(&mut conn)
-            .await
-            .unwrap_or(false);
+        let mut retries = 5;
+        let mut acquired = false;
+
+        while retries > 0 {
+            acquired = redis::cmd("SET")
+                .arg(&key)
+                .arg("1")
+                .arg("NX")
+                .arg("EX")
+                .arg(5)
+                .query_async(&mut conn)
+                .await
+                .unwrap_or(false);
+
+            if acquired {
+                break;
+            }
+
+            sleep(Duration::from_millis(100)).await;
+            retries -= 1;
+        }
 
         if !acquired {
-            return Err("failed to acquire redis lock".to_string());
+            return Err("failed to acquire redis lock after retries".to_string());
         }
 
         Ok(LockGuard {

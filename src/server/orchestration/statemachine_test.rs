@@ -100,3 +100,31 @@ async fn test_statemachine_concurrent_transitions() {
 
     assert_eq!(success_count, 1, "Only one transition should succeed");
 }
+
+#[tokio::test]
+async fn test_statemachine_with_publisher() {
+    let repo = Arc::new(MockRepository::new());
+    let lock = Arc::new(StandaloneLock::new());
+
+    let published_events = Arc::new(tokio::sync::Mutex::new(Vec::new()));
+    let published_events_clone = published_events.clone();
+
+    let publisher = Box::new(move |task_id: String, state: State, agent_id: String| {
+        let events = published_events_clone.clone();
+        Box::pin(async move {
+            events.lock().await.push((task_id, state, agent_id));
+            Ok(())
+        }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), String>> + Send>>
+    });
+
+    let sm = StateMachine::with_publisher(repo.clone(), lock, Some(publisher));
+    let task_id = "task4";
+
+    sm.transition_to_ready(task_id).await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent2").await.unwrap();
+
+    let events = published_events.lock().await;
+    assert_eq!(events.len(), 2);
+    assert_eq!(events[0], ("task4".to_string(), State::Ready, "".to_string()));
+    assert_eq!(events[1], ("task4".to_string(), State::InProgress, "agent2".to_string()));
+}
