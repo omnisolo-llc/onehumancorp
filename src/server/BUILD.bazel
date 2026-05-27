@@ -436,21 +436,17 @@ rust_binary(
     ],
 )
 
-# Keep these groups stable and non-overlapping. Rust libtest filters are plain
-# substring matches, not module globs, so broad filters like "hub::", "tasks::",
-# or "workers" can accidentally select tests from another module path such as
-# "orchestration::hub::" or "orchestration::tasks::". When adding a server_lib
-# unit test here:
+# Keep the remaining root server_lib groups stable and non-overlapping. Rust
+# libtest filters are plain substring matches, not module globs, so broad
+# filters like "hub::" or "tasks::" can accidentally select tests from another
+# module path such as "orchestration::hub::" or "orchestration::tasks::". When
+# adding a root server_lib unit test here:
 # - Prefer a precise module prefix that cannot appear under another group.
 # - Use full test-name filters for ambiguous short module names.
-# - Preserve exhaustive coverage and zero duplicates; validate with
-#   `bazel test --test_arg=--list //src/server:server_lib_unit_test` and check
-#   the produced bazel-testlogs.
+# - Prefer a package wrapper test below when the test belongs to a subpackage.
 SERVER_LIB_TEST_GROUPS = {
     "agents": [
-        "api::agents::",
         "sip::tests::test_delegate_mission_tc2_agents_md",
-        "workers::",
     ],
     "core": [
         "analytics::",
@@ -458,7 +454,6 @@ SERVER_LIB_TEST_GROUPS = {
         "chaos::",
         "db::",
         "scheduler::",
-        "services::org::",
         "settings::",
         "autodream_pipeline::pipeline::tests::test_chunk_content",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
@@ -483,52 +478,49 @@ SERVER_LIB_TEST_GROUPS = {
         "tasks::tests::test_review_task",
         "ultraplan::",
     ],
-    "domain": [
-        "builder::",
-        "domain::",
-    ],
     "interop": [
-        "interop::",
         "msgbus::",
     ],
-    "orchestration_departments": [
-        "orchestration::departments::",
-    ],
-    "orchestration_mesh": [
-        "orchestration::handoff::",
-        "orchestration::hub::",
-        "orchestration::locks_test::",
-        "orchestration::mesh::",
-    ],
-    "orchestration_misc": [
-        "orchestration::health::",
-        "orchestration::hybrid_sync::",
-        "orchestration::local_sandbox::",
-        "services::sync::service::tests::test_hybrid_sync_missions_empty",
-    ],
-    "orchestration_state": [
-        "orchestration::orchestration_test::",
-        "orchestration::state::",
-        "orchestration::statemachine",
-    ],
-    "orchestration_tasks": [
-        "orchestration::shared_tasks_test::",
-        "orchestration::tasks::",
-    ],
-    "services": [
-        "api::growth::",
-        "services::sync::service::tests::test_power_sync",
-    ],
-    "tools": [
-        "tools::config_sync::",
-        "tools::hybridfsmcp::",
-    ],
 }
+
+SERVER_LIB_SUBCRATE_TESTS = [
+    "//src/server/agents:server_agents_unit_test",
+    "//src/server/api:server_api_unit_test",
+    "//src/server/auth:server_auth_unit_test",
+    "//src/server/autodream:server_autodream_unit_test",
+    "//src/server/autodream_pipeline:server_autodream_pipeline_unit_test",
+    "//src/server/benchmarks:server_benchmarks_unit_test",
+    "//src/server/builder:server_builder_unit_test",
+    "//src/server/config:server_config_unit_test",
+    "//src/server/domain:server_domain_unit_test",
+    "//src/server/integrations:server_integrations_unit_test",
+    "//src/server/integrations/alipay:server_integrations_alipay_unit_test",
+    "//src/server/integrations/mercadopago:server_integrations_mercadopago_unit_test",
+    "//src/server/integrations/meta:server_integrations_meta_unit_test",
+    "//src/server/integrations/stripe:server_integrations_stripe_unit_test",
+    "//src/server/interop:server_interop_unit_test",
+    "//src/server/oidc:server_oidc_unit_test",
+    "//src/server/orchestration:server_orchestration_unit_test",
+    "//src/server/services:server_services_unit_test",
+    "//src/server/services/billing:server_services_billing_unit_test",
+    "//src/server/services/chat:server_services_chat_unit_test",
+    "//src/server/services/dashboard:server_services_dashboard_unit_test",
+    "//src/server/services/growth:server_services_growth_unit_test",
+    "//src/server/services/mcp:server_services_mcp_unit_test",
+    "//src/server/services/onboarding:server_services_onboarding_unit_test",
+    "//src/server/services/org:server_services_org_unit_test",
+    "//src/server/services/sync:server_services_sync_unit_test",
+    "//src/server/storage:server_storage_unit_test",
+    "//src/server/telemetry:server_telemetry_unit_test",
+    "//src/server/tools:server_tools_unit_test",
+    "//src/server/utils:server_utils_unit_test",
+    "//src/server/workers:server_workers_unit_test",
+]
 
 SERVER_LIB_SPLIT_TESTS = [
     "server_lib_%s_unit_test" % group
     for group in SERVER_LIB_TEST_GROUPS
-]
+] + SERVER_LIB_SUBCRATE_TESTS
 
 [
     rust_test(

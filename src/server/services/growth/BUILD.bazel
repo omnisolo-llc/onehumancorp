@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
@@ -118,4 +118,18 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_services_growth_unit_test",
+    size = "large",
+    crate = ":server_services_growth",
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

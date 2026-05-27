@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 rust_library(
     name = "server_utils",
@@ -33,5 +33,19 @@ rust_library(
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
+    ],
+)
+
+rust_test(
+    name = "server_utils_unit_test",
+    size = "small",
+    crate = ":server_utils",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:reqwest",
     ],
 )
