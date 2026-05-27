@@ -19,10 +19,90 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const skipSyncRef = useRef(false);
 
   useEffect(() => {
     setIsLoaded(true);
-  }, []);
+
+    // Fetch initial state from backend
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (Object.keys(data).length > 0) {
+            skipSyncRef.current = true;
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+
+            // Allow state changes to sync again after a short delay
+            setTimeout(() => {
+              skipSyncRef.current = false;
+            }, 500);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch onboarding state', err);
+      }
+    };
+
+    fetchState();
+  }, []); // Run once on mount
+
+  // Sync state changes to backend
+  useEffect(() => {
+    if (!isLoaded || skipSyncRef.current) return;
+
+    const syncState = async () => {
+      try {
+        const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error('Failed to sync onboarding state', err);
+      }
+    };
+
+    // Debounce the sync
+    const timeoutId = setTimeout(syncState, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [
+    isLoaded, step, businessDescription, businessName, businessType,
+    categories, websiteTemplate, firstProductName, firstProductPrice
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -117,7 +197,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto bg-white/65 dark:bg-[#16161a]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -138,10 +218,12 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="space-y-4 flex-1">
+                <label htmlFor="businessDescription" className="sr-only">Business Description</label>
                 <textarea
+                  id="businessDescription"
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
-                  placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
+                  placeholder="e.g. Sell cakes, plumbing"
                   className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
               </div>
@@ -170,17 +252,20 @@ export default function OnboardingWizard() {
 
               <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
+                  <label htmlFor="businessName" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
+                    id="businessName"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="e.g. Maya's Cakes"
                     className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
+                  <label htmlFor="businessType" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Type</label>
                   <input
+                    id="businessType"
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
@@ -188,8 +273,9 @@ export default function OnboardingWizard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
+                  <label htmlFor="categories" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Categories (Comma separated)</label>
                   <input
+                    id="categories"
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
@@ -198,8 +284,9 @@ export default function OnboardingWizard() {
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
+                      <label htmlFor="firstProductName" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">First Product</label>
                       <input
+                        id="firstProductName"
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
@@ -207,11 +294,13 @@ export default function OnboardingWizard() {
                       />
                    </div>
                    <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
+                      <label htmlFor="firstProductPrice" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
+                        id="firstProductPrice"
                         type="text"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
+                        placeholder="0.00"
                         className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
