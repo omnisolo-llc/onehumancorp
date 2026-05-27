@@ -87,6 +87,7 @@ jobs:
           bazelisk query '
             kind(".* rule", //...)
             except kind(".*_test rule", //...)
+            except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
             except //src/ui/tauri:all
             except //deploy:all
