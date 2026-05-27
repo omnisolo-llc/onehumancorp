@@ -333,7 +333,17 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-center w-full">
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅

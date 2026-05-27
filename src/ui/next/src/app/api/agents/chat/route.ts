@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export function routeIntent(message: string) {
+function routeIntent(message: string) {
   const lowerMsg = message.toLowerCase();
 
   if (lowerMsg.includes('quote') || lowerMsg.includes('lead') || lowerMsg.includes('sale')) {
