@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use super::ast::ASTParser;
 use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
-use crate::telemetry::ViolationStore;
+use super::super::telemetry::ViolationStore;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
