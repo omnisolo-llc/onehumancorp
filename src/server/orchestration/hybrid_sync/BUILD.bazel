@@ -1,9 +1,11 @@
-load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 
 exports_files(
     [
         "daemon.rs",
         "daemon_test.rs",
+        "rag_sync.rs",
+        "rag_sync_test.rs",
         "mod.rs",
     ],
     visibility = ["//visibility:public"],
@@ -15,6 +17,8 @@ rust_library(
         "bazel_lib.rs",
         "daemon.rs",
         "daemon_test.rs",
+        "rag_sync.rs",
+        "rag_sync_test.rs",
         "mod.rs",
     ],
     crate_root = "bazel_lib.rs",
@@ -108,4 +112,9 @@ rust_library(
         "@crates//:uuid",
         "@crates//:walkdir",
     ],
+)
+
+rust_test(
+    name = "server_orchestration_hybrid_sync_test",
+    crate = ":server_orchestration_hybrid_sync",
 )

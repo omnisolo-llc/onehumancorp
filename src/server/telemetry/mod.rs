@@ -1105,3 +1105,24 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+static RAG_RECORDS_SYNCED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static RAG_SYNC_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_rag_records_synced_counter() -> &'static Counter<u64> {
+    RAG_RECORDS_SYNCED_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("rag_records_synced_total")
+            .with_description("Total number of RAG records synced to the cloud")
+            .build()
+    })
+}
+
+pub fn get_rag_sync_errors_counter() -> &'static Counter<u64> {
+    RAG_SYNC_ERRORS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("rag_sync_errors_total")
+            .with_description("Total number of errors encountered during RAG sync")
+            .build()
+    })
+}
