@@ -1,181 +1,152 @@
-# Scout Tool Integration Research Report
+# 🔍 Scout: Tool Integration Research Report
+
+## Executive Summary
+This report summarizes the research and evaluation of seven tool integration categories designed to expand OneHumanCorp's (OHC) capabilities for small business owners. The focus is on tools that directly address pain points for non-technical users, ensuring high usability, fair pricing, and clear benefits across multiple business personas.
+
+---
 
 ## 1. Social Media Integration
+**Problem Statement:** Non-technical business owners receive messages across multiple platforms (Instagram, Facebook, WhatsApp). Checking each app separately causes missed leads and delayed responses.
+**Tool Evaluated:** Meta Graph API (Instagram/Facebook) + WhatsApp Business API
+**Market Context:** Unified inboxes are standard in expensive enterprise tools (like HubSpot) but often too complex for micro-businesses.
+**Ease of Use (Persona Lens):**
+- **Pros:** Business owners authenticate once via OAuth. All incoming DMs and comments appear in the OHC "Customer Success" unified inbox. AI can draft replies automatically.
+- **Cons:** Meta's OAuth process can be intimidating due to multiple permission screens.
+**Pricing:** API access is generally free for standard usage; WhatsApp charges per conversation.
+**Deployment Modes:** Cloud (OAuth via OHC), Standalone (User provided App credentials).
+**Design Doc:**
+- User clicks "Connect Social Media" in the Operations department.
+- Authenticates with Meta.
+- Inbound messages trigger notifications in OHC.
+- OHC "Customer Success" agent reads messages and suggests replies.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Integrate Meta platforms so users can manage all customer chats in one OHC inbox.
+- **Acceptance Criteria:** OAuth connection works, incoming messages sync to inbox, replies send correctly.
+**Priority:** P0 (Critical)
+**Estimated Scope:** Large
 
-**Title**: [Social Media] Unified Inbox Integration for Instagram, Facebook, WhatsApp, and TikTok
-
-**Problem Statement**: Small business owners like Maya (The Home Baker) and Priya (The Boutique Owner) receive inquiries across multiple social media platforms. Checking Instagram DMs, Facebook comments, WhatsApp, and TikTok messages separately is overwhelming and leads to missed sales opportunities. They need a single place to view and respond to all customer messages.
-
-**Research Report**:
-- **Evaluated Tools**: Meta Graph API (for FB/IG/WhatsApp), TikTok for Business API, external aggregators like MessageBird or Twilio.
-- **Ease of Use**: Non-technical users struggle with complex OAuth flows (e.g., Meta Business Manager). The integration must abstract the setup into a simple "Connect with Facebook" button.
-- **Pricing**: Meta APIs are mostly free for basic messaging, but WhatsApp Business API has per-conversation pricing. Twilio/MessageBird adds a per-message markup.
-- **OAuth Complexity**: High for Meta due to app review requirements.
-- **Message Parsing Quality**: High for text, variable for media (voice notes, images).
-- **Webhook Reliability**: High for Meta, but requires strict SLA compliance to avoid app suspension.
-- **Cloud vs Standalone**: Works well in Cloud mode. In Standalone mode, webhooks require a tunneling or polling mechanism, which adds complexity.
-
-**Design Doc**:
-- **Triggers**: A customer sends a message on a connected social platform.
-- **Actions**: The system receives the webhook, maps it to the corresponding customer profile, and displays it in the OHC unified inbox. The AI Customer Success agent can automatically draft or send replies based on business context.
-- **User View**: A single "Inbox" screen on their phone where messages from all platforms appear seamlessly, with the platform logo indicating the source.
-
-**Implementation Prompt**:
-Implement a unified inbox feature that allows users to connect their social media accounts. When a customer messages them on Instagram, Facebook, WhatsApp, or TikTok, the message should appear in a central OHC inbox. The business owner should be able to reply from OHC, and the response should be delivered back to the original platform. Ensure the setup process is a simple 1-click OAuth flow without requiring technical configuration.
-
-**Priority**: P1
-**Estimated Scope**: Large
-
+---
 
 ## 2. Calendar & Scheduling
+**Problem Statement:** Managing appointments manually leads to double-booking and missed appointments. Business owners need a simple way for customers to pick a time that automatically syncs with their personal calendar.
+**Tool Evaluated:** Google Calendar API
+**Market Context:** Over 80% of target personas already use Google Calendar.
+**Ease of Use (Persona Lens):**
+- **Pros:** Single-click OAuth connection. No new calendar interface to learn.
+- **Cons:** Permission scopes must be clearly explained so users aren't afraid to grant access.
+**Pricing:** Free for standard usage.
+**Deployment Modes:** Cloud and Standalone via standard OAuth 2.0 flow.
+**Design Doc:**
+- User connects Google Calendar in Operations.
+- User sets working hours (e.g., M-F, 9-5).
+- Storefront displays available slots based on real-time free/busy status.
+- Bookings automatically create events in Google Calendar.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Customers can book open timeslots that sync directly to the owner's Google Calendar.
+- **Acceptance Criteria:** Calendar OAuth works, storefront shows only available times, booking creates event.
+**Priority:** P0 (Critical)
+**Estimated Scope:** Medium
 
-**Title**: [Calendar] Sync and Scheduling via Google Calendar and Outlook
-
-**Problem Statement**: Service providers like Carlos (Freelance Handyman) and Leo (Music Tutor) manage their time using personal calendar apps. They need a booking system that automatically reads their availability to prevent double-booking and adds new appointments directly to their calendars.
-
-**Research Report**:
-- **Evaluated Tools**: Google Calendar API, Microsoft Graph API (Outlook), Nylas, Cronofy.
-- **Ease of Use**: Native APIs require users to grant OAuth permissions, which is standard and well-understood. Aggregators like Nylas simplify multi-provider support but add cost.
-- **Pricing**: Google and Microsoft APIs are free for basic usage. Nylas charges per connected account ($1-$2/mo).
-- **Calendar Conflict Resolution**: Native APIs provide robust free/busy querying.
-- **Timezone Handling**: Complex but manageable using standard IANA timezone databases.
-- **Cloud vs Standalone**: Fully supported in both modes, though Standalone may need to handle token refresh locally.
-
-**Design Doc**:
-- **Triggers**: A user connects their calendar; a customer views the booking page; a customer books a slot.
-- **Actions**: System queries the connected calendar for free/busy times, subtracts them from the business's working hours, and displays available slots. Upon booking, a calendar event is created for both the business owner and the customer.
-- **User View**: A "Connect Calendar" button in the Operations settings. The booking page seamlessly reflects real-time availability.
-
-**Implementation Prompt**:
-Build a two-way calendar sync feature supporting Google Calendar and Outlook. The business owner should be able to connect their calendar with a single click. The OHC booking page must only show available time slots by checking against the connected calendar's busy times. When a booking is made, it should automatically appear on the owner's personal calendar.
-
-**Priority**: P1
-**Estimated Scope**: Medium
-
+---
 
 ## 3. Email Marketing
+**Problem Statement:** Business owners want to notify past customers about new products or promotions but find tools like Mailchimp too complex to set up.
+**Tool Evaluated:** SendGrid API
+**Market Context:** Competitors offer basic email marketing, but setting up templates and managing lists is still a manual chore.
+**Ease of Use (Persona Lens):**
+- **Pros:** Invisible to the user. The "Marketing" AI drafts the email content and sends it to the customer list automatically.
+- **Cons:** Requires domain authentication (SPF/DKIM) which is highly technical.
+**Pricing:** Pay per email volume. Can be bundled into OHC Pro tiers.
+**Deployment Modes:** Cloud (Managed SendGrid), Standalone (Bring Your Own API Key).
+**Design Doc:**
+- "Marketing & Advertising" agent suggests a campaign.
+- Owner approves the AI-drafted email.
+- Backend uses SendGrid API to dispatch emails.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Business owners can send bulk emails to their customers drafted by AI.
+- **Acceptance Criteria:** API integration sends emails reliably, unsubscribe links are included, open rates are tracked.
+**Priority:** P1 (High)
+**Estimated Scope:** Medium
 
-**Title**: [Email Marketing] Automated Campaigns and Customer Newsletters
+---
 
-**Problem Statement**: Business owners like Priya (The Boutique Owner) want to notify their existing customers about new stock or promotions. They do not have the time or skills to use complex platforms like Mailchimp and need a simple way to send beautiful emails directly from their customer list.
+## 4. Payment Processing (LATAM Focus)
+**Problem Statement:** Stripe is not widely used or supported in many Latin American countries, limiting OHC's global reach.
+**Tool Evaluated:** Mercado Pago API
+**Market Context:** Mercado Pago dominates LATAM e-commerce, offering local payment methods like Pix (Brazil) and OXXO (Mexico).
+**Ease of Use (Persona Lens):**
+- **Pros:** Connects directly to existing accounts. Instantly enables local checkout options.
+- **Cons:** Asynchronous payments (like cash vouchers) mean orders stay "pending" for days.
+**Pricing:** Percentage fee per transaction paid by the merchant.
+**Deployment Modes:** Cloud (OAuth), Standalone (User provided API Keys).
+**Design Doc:**
+- User in supported region connects Mercado Pago via OAuth.
+- Storefront checkout dynamically displays local payment options.
+- Webhooks handle asynchronous payment confirmations.
+**Implementation Prompt:**
+- **User-Facing Outcome:** LATAM users can offer their customers local checkout options.
+- **Acceptance Criteria:** Mercado Pago OAuth integration works, checkout handles regional payment methods, webhooks update order status.
+**Priority:** P1 (High)
+**Estimated Scope:** Large
 
-**Research Report**:
-- **Evaluated Tools**: SendGrid, Amazon SES, Postmark, Resend.
-- **Ease of Use**: End-users will not interact with these tools directly. OHC will provide a simplified UI, and the backend will route via the chosen provider.
-- **Pricing**: Amazon SES is the cheapest ($0.10/1k emails). Resend offers a great developer experience but is pricier ($20/mo for 50k).
-- **Template Quality**: OHC must provide pre-built, premium glassmorphism-inspired HTML templates.
-- **Spam Compliance**: Built-in handling of unsubscribe links and CAN-SPAM requirements is essential.
-- **Cloud vs Standalone**: Cloud handles delivery easily. Standalone may require the user to input an SMTP server or use a cloud relay to avoid being flagged as spam.
-
-**Design Doc**:
-- **Triggers**: User initiates a campaign, or an automated trigger (e.g., "new stock") fires.
-- **Actions**: The Marketing agent generates the email copy and design. The system batches the emails and sends them via the email API provider, handling unsubscribes and bounces.
-- **User View**: A simple "Send Announcement" screen where the user selects an AI-generated draft, reviews it, and hits send. They can see an "Opened" or "Clicked" metric later.
-
-**Implementation Prompt**:
-Create a simple email marketing tool allowing business owners to send announcements or promotions to their customer list. Provide a clean UI to select an audience, review an AI-generated or custom email, and send it. The system must automatically include compliance requirements like unsubscribe links and handle bounce tracking seamlessly.
-
-**Priority**: P2
-**Estimated Scope**: Medium
-
-
-## 4. Payment Processing
-
-**Title**: [Payments] Global Alternative Payment Methods (Mercado Pago, Paytm, Alipay)
-
-**Problem Statement**: While Stripe is excellent, it is not supported or preferred in all regions. Business owners in LATAM, India, or China need local payment methods to successfully convert sales, as credit card penetration is lower and local wallets are dominant.
-
-**Research Report**:
-- **Evaluated Tools**: Mercado Pago (LATAM), Paytm (India), Alipay/WeChat Pay (China), Razorpay.
-- **Ease of Use**: Varies. Razorpay provides a Stripe-like experience for India. Mercado Pago is dominant in LATAM.
-- **Pricing**: Typically 2-3% per transaction, competitive with Stripe but in local currencies.
-- **Settlement Speed**: Often faster than Stripe for local bank transfers (T+1 or instant).
-- **Currency Support**: Highly localized.
-- **Cloud vs Standalone**: Both modes support API calls, but webhook handling in Standalone requires secure local tunneling.
-
-**Design Doc**:
-- **Triggers**: Customer proceeds to checkout.
-- **Actions**: The system detects the region or allows the user to select their preferred local payment provider, redirecting to the provider's secure checkout page, and handling the success webhook.
-- **User View**: In the Finance settings, owners can toggle specific regional payment methods. Customers see familiar local payment options at checkout.
-
-**Implementation Prompt**:
-Integrate alternative payment providers to support global users, starting with Mercado Pago for LATAM and Razorpay for India. Allow the business owner to enable these options in their payment settings. Ensure the checkout flow seamlessly transitions to these providers when selected, and correctly records the payment success in the OHC Finance dashboard.
-
-**Priority**: P2
-**Estimated Scope**: Large
-
+---
 
 ## 5. Shipping & Logistics
+**Problem Statement:** Calculating shipping costs manually is error-prone. Business owners need real-time rates and easy label printing.
+**Tool Evaluated:** Shippo API
+**Market Context:** Shipping is the #1 pain point for physical product sellers. Tools like Shopify have robust integrated shipping.
+**Ease of Use (Persona Lens):**
+- **Pros:** Aggregates carriers. Auto-calculates rates at checkout. One-click label generation.
+- **Cons:** Requires users to accurately input product weights and box dimensions upfront.
+**Pricing:** Pay per label generated.
+**Deployment Modes:** Cloud only (due to complex carrier agreements), Standalone would require user's own carrier accounts.
+**Design Doc:**
+- User inputs product weight.
+- At checkout, Shippo API calculates shipping cost.
+- In Operations dashboard, owner clicks "Print Label", Shippo generates the PDF.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Merchants can get live shipping rates and print labels without leaving OHC.
+- **Acceptance Criteria:** Shipping rates fetch correctly at checkout, label PDF is generated and downloadable.
+**Priority:** P1 (High)
+**Estimated Scope:** Large
 
-**Title**: [Shipping] Real-Time Rates and Label Generation
-
-**Problem Statement**: Product sellers like Maya (The Home Baker, if shipping non-perishables) or Priya (The Boutique Owner) struggle with calculating shipping costs and printing labels. They need an automated way to charge customers the correct shipping amount and print ready-to-use courier labels.
-
-**Research Report**:
-- **Evaluated Tools**: Shippo, EasyPost, ShipStation.
-- **Ease of Use**: Shippo and EasyPost offer excellent APIs. The complexity of package dimensions and weights must be abstracted for the user.
-- **Pricing**: Shippo is $0.05 per label + postage. EasyPost is similar.
-- **Carrier Coverage**: Excellent global coverage (USPS, FedEx, UPS, DHL, local carriers).
-- **Cloud vs Standalone**: Fully supported in both environments via standard REST APIs.
-
-**Design Doc**:
-- **Triggers**: Customer views cart (rate calculation); owner fulfills order (label generation).
-- **Actions**: System calculates real-time shipping rates based on cart contents and destination. Upon fulfillment, it purchases the label and retrieves a printable PDF and tracking number.
-- **User View**: Customer sees accurate shipping costs at checkout. The owner clicks "Print Shipping Label" on an order, automatically generating the PDF and emailing the tracking link to the customer.
-
-**Implementation Prompt**:
-Implement a shipping management integration using a provider like Shippo or EasyPost. The system must automatically calculate shipping rates at checkout based on standard package sizes. Add a feature to the order management screen allowing the business owner to generate and download a shipping label with one click, automatically updating the order status to "Shipped" and notifying the customer.
-
-**Priority**: P2
-**Estimated Scope**: Medium
-
+---
 
 ## 6. SMS & Notifications
+**Problem Statement:** Email is too slow for time-sensitive updates (e.g., "Food is ready for pickup"). Many customers prefer texts.
+**Tool Evaluated:** Twilio Messaging API
+**Market Context:** SMS boasts a 90%+ open rate. Competitors often require third-party plugins.
+**Ease of Use (Persona Lens):**
+- **Pros:** Completely automated. Order status changes trigger SMS instantly.
+- **Cons:** Complex regulatory compliance (e.g., A2P 10DLC registration) must be completely abstracted.
+**Pricing:** Per message segment. Must be metered or included in premium tiers.
+**Deployment Modes:** Cloud (OHC managed Twilio), Standalone (User provides Twilio SID/Auth).
+**Design Doc:**
+- Owner enables SMS notifications.
+- Customers opt-in at checkout.
+- Automated triggers (Order Confirmed, Ready for Pickup) send SMS via Twilio.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Customers receive text updates about their orders automatically.
+- **Acceptance Criteria:** Twilio API integration sends SMS upon order status change, STOP replies are handled.
+**Priority:** P1 (High)
+**Estimated Scope:** Medium
 
-**Title**: [SMS] Automated Order Notifications and Alerts
-
-**Problem Statement**: Users like Fatima (The Food Cart Operator) may not always be looking at the app or have reliable mobile data. SMS notifications are a critical, low-tech way to alert owners of new orders instantly and inform customers that their food is ready for pickup.
-
-**Research Report**:
-- **Evaluated Tools**: Twilio, Vonage, Plivo, MessageBird.
-- **Ease of Use**: High via API. The owner simply provides their phone number.
-- **Pricing**: Twilio is ~$0.0079 per SMS in the US, but international rates vary wildly (up to $0.10+ in some regions).
-- **Delivery Reliability**: Very high.
-- **Opt-Out Compliance**: Mandatory compliance (STOP messages) is required.
-- **Cloud vs Standalone**: Fully supported.
-
-**Design Doc**:
-- **Triggers**: New order received; order status changed to "Ready".
-- **Actions**: System dispatches a formatted SMS via the provider's API.
-- **User View**: The owner receives a text: "New Order #102: 2x Chicken Over Rice. Paid." The customer receives a text: "Your order is ready for pickup!"
-
-**Implementation Prompt**:
-Integrate an SMS notification system (e.g., using Twilio) to send critical alerts. Allow business owners to opt-in to receive SMS alerts for new orders, which is especially important for fast-paced environments like food carts. Additionally, enable automatic SMS notifications to customers when their order status changes to "Ready for Pickup" or "Shipped".
-
-**Priority**: P1
-**Estimated Scope**: Small
-
+---
 
 ## 7. Video Conferencing
-
-**Title**: [Video] Automated Zoom/Meet Link Generation for Services
-
-**Problem Statement**: Service providers like Leo (The Music Tutor) conduct their business online. Manually creating a Zoom link for every booked lesson and emailing it to the student is tedious and prone to human error.
-
-**Research Report**:
-- **Evaluated Tools**: Zoom API, Google Meet API (via Google Calendar), Whereby.
-- **Ease of Use**: Whereby embedded links are easiest to generate via API. Zoom requires OAuth setup. Google Meet is seamless if the user already connected Google Calendar.
-- **Pricing**: Zoom requires a paid plan for API access. Google Meet is free with Calendar. Whereby has API pricing.
-- **Join Experience**: Critical that students can join without installing new software if possible.
-- **Cloud vs Standalone**: Fully supported in both modes.
-
-**Design Doc**:
-- **Triggers**: A customer books an online service.
-- **Actions**: System creates a meeting via the provider's API and attaches the join URL to the booking confirmation and calendar event.
-- **User View**: A setting to "Enable Video Meeting for this Service". The booking confirmation automatically includes a big "Join Meeting" button.
-
-**Implementation Prompt**:
-Build an automated video meeting integration. For services marked as "Online", the system should automatically generate a unique meeting link (e.g., using Google Meet or Zoom) upon booking. This link must be included in the customer's confirmation email, the calendar invite, and displayed prominently in the business owner's upcoming appointments dashboard.
-
-**Priority**: P2
-**Estimated Scope**: Small
+**Problem Statement:** Online tutors and consultants need to automatically generate meeting links for booked appointments without manual copy-pasting.
+**Tool Evaluated:** Zoom API (and Google Meet via Calendar)
+**Market Context:** Auto-generating links is standard for scheduling tools (Calendly).
+**Ease of Use (Persona Lens):**
+- **Pros:** Zero effort. When a customer books an online service, the link is right there.
+- **Cons:** Connecting Zoom requires a separate OAuth flow if they don't use Google Calendar/Meet.
+**Pricing:** Zoom API is free; requires a licensed Zoom account for meetings >40 mins.
+**Deployment Modes:** Cloud (OAuth), Standalone (OAuth).
+**Design Doc:**
+- If user connects Google Calendar, use native Meet link generation (`conferenceData`).
+- If user connects Zoom via OAuth, backend uses Zoom API to create a meeting.
+**Implementation Prompt:**
+- **User-Facing Outcome:** Online bookings automatically include a video meeting link.
+- **Acceptance Criteria:** Zoom API generates meetings, link is included in email and calendar invites.
+**Priority:** P2 (Medium)
+**Estimated Scope:** Medium
