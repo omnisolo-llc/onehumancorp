@@ -109,11 +109,11 @@ impl TaskManager {
         }
     }
 
-    pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
-        self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority)
+    pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String, action_risk_proto: Option<i32>) -> Result<SharedTask, String> {
+        self.create_task_with_plan(org_id, mission_id, String::new(), vec![], title, description, priority, action_risk_proto)
     }
 
-    pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
+    pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String, action_risk_proto: Option<i32>) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
         
@@ -123,10 +123,14 @@ impl TaskManager {
             None
         };
 
-        let action_risk = if priority == "P1" || priority == "HIGH" {
-            Some(ActionRisk::High)
-        } else {
-            Some(ActionRisk::Low)
+        let action_risk = match action_risk_proto {
+            Some(1) => Some(ActionRisk::Low),
+            Some(2) => Some(ActionRisk::High),
+            _ => if priority == "P1" || priority == "HIGH" {
+                Some(ActionRisk::High)
+            } else {
+                Some(ActionRisk::Low)
+            }
         };
 
         let task = SharedTask {
@@ -382,7 +386,7 @@ mod tests {
     #[test]
     fn test_create_and_get_task() {
         let tm = TaskManager::new();
-        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         
         assert_eq!(task.title, "Test Task");
         assert_eq!(task.status, "PENDING");
@@ -393,7 +397,7 @@ mod tests {
     #[test]
     fn test_claim_task() {
         let tm = TaskManager::new();
-        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         
         let claimed = tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         assert!(claimed.is_some());
@@ -408,7 +412,7 @@ mod tests {
     #[test]
     fn test_review_task() {
         let tm = TaskManager::new();
-        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         
@@ -423,7 +427,7 @@ mod tests {
     #[test]
     fn test_fail_task() {
         let tm = TaskManager::new();
-        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
 
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
 
@@ -439,7 +443,7 @@ mod tests {
     #[test]
     fn test_complete_task() {
         let tm = TaskManager::new();
-        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let task = tm.create_task("org1".to_string(), "mission1".to_string(), "Test Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         
         tm.claim_task(&task.id, "agent1".to_string()).unwrap();
         
@@ -456,18 +460,18 @@ mod tests {
     #[test]
     fn test_get_pending_approvals() {
         let tm = TaskManager::new();
-        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Pending Approval Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Pending Approval Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
 
         task.approval_status = Some("PENDING".to_string());
         task.action_risk = Some(ActionRisk::High);
 
         tm.insert_task(task.clone());
 
-        let mut ignored_task = tm.create_task("org1".to_string(), "mission1".to_string(), "Other Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let mut ignored_task = tm.create_task("org1".to_string(), "mission1".to_string(), "Other Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         ignored_task.approval_status = Some("APPROVED".to_string());
         tm.insert_task(ignored_task.clone());
 
-        let mut ignored_task2 = tm.create_task("org2".to_string(), "mission1".to_string(), "Other Org Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let mut ignored_task2 = tm.create_task("org2".to_string(), "mission1".to_string(), "Other Org Task".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         ignored_task2.approval_status = Some("PENDING".to_string());
         tm.insert_task(ignored_task2.clone());
 
@@ -480,7 +484,7 @@ mod tests {
     #[tokio::test]
     async fn test_approve_task() {
         let tm = TaskManager::new();
-        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Approve".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Approve".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         task.approval_status = Some("PENDING".to_string());
         tm.insert_task(task.clone());
 
@@ -494,7 +498,7 @@ mod tests {
     #[tokio::test]
     async fn test_reject_task() {
         let tm = TaskManager::new();
-        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Reject".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
+        let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Task to Reject".to_string(), "Description".to_string(), "P2".to_string(), None).unwrap();
         task.approval_status = Some("PENDING".to_string());
         tm.insert_task(task.clone());
 
@@ -520,7 +524,7 @@ mod tests {
         });
 
         let tm = TaskManager::with_db(db);
-        let mut task = tm.create_task("org_int".to_string(), "mission1".to_string(), "Int Task".to_string(), "Desc".to_string(), "P2".to_string()).unwrap();
+        let mut task = tm.create_task("org_int".to_string(), "mission1".to_string(), "Int Task".to_string(), "Desc".to_string(), "P2".to_string(), None).unwrap();
         task.approval_status = Some("PENDING".to_string());
         tm.insert_task(task.clone());
 

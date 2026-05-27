@@ -408,12 +408,7 @@ export default function Dashboard() {
                     {approvals.map(approval => {
                         // Extract plain english message and payload
                         let plainMessage = approval.description;
-                        let payload = "";
-                        const payloadIdx = approval.description.indexOf(" | Payload: ");
-                        if (payloadIdx !== -1) {
-                            plainMessage = approval.description.substring(0, payloadIdx);
-                            payload = approval.description.substring(payloadIdx + " | Payload: ".length);
-                        }
+                        let payload = approval.payload ? JSON.stringify(approval.payload, null, 2) : "";
 
                         return (
                             <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>

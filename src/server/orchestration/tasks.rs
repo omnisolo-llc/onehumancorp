@@ -36,8 +36,8 @@ impl TaskDecompositionService {
                     INSERT INTO shared_tasks_decomposition (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
-                        depth, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                        depth, created_at, updated_at, action_risk
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                     "#
                 )
                 .bind(&task.id)
@@ -54,6 +54,7 @@ impl TaskDecompositionService {
                 .bind(task.depth)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
+                .bind(&task.action_risk.as_ref().map(|r| r.as_str()))
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -68,8 +69,8 @@ impl TaskDecompositionService {
                     INSERT INTO shared_tasks_decomposition (
                         id, organization_id, mission_id, parent_plan_id, dependencies,
                         title, description, status, priority, payload, deliberation_log,
-                        depth, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        depth, created_at, updated_at, action_risk
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task.id)
@@ -86,6 +87,7 @@ impl TaskDecompositionService {
                 .bind(task.depth)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
+                .bind(&task.action_risk.as_ref().map(|r| r.as_str()))
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;

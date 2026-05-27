@@ -150,6 +150,7 @@ message CreateTaskRequest {
   string title = 2;
   string description = 3;
   string priority = 4;
+  ActionRisk action_risk = 5;
 }
 
 message PollTasksRequest {

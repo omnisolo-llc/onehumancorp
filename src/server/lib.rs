@@ -1204,6 +1204,7 @@ impl HubService for MyHubService {
             req.title,
             req.description,
             req.priority,
+            Some(req.action_risk)
         ).map_err(|e| Status::internal(e))?;
         
         Ok(Response::new(::server_ohc::orchestration::SharedTask {
@@ -1361,6 +1362,7 @@ impl HubService for MyHubService {
             format!("Process Custom Order for {}", req.customer_name),
             req.details.clone(),
             "P1".to_string(),
+            None
         ).map_err(|e| Status::internal(e))?;
         ops_task.action_risk = Some(crate::tasks::ActionRisk::Low);
         self.hub.task_manager().insert_task(ops_task);
@@ -1371,6 +1373,7 @@ impl HubService for MyHubService {
             format!("Draft Confirmation for {}", req.customer_name),
             req.details.clone(),
             "P1".to_string(),
+            None
         ).map_err(|e| Status::internal(e))?;
         cs_task.action_risk = Some(crate::tasks::ActionRisk::High);
         cs_task.approval_status = Some("PENDING".to_string());
