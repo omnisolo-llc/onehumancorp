@@ -207,46 +207,19 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let m_arc = manager_arc.clone();
-        tokio::spawn(async move {
-            let _ = m_arc
-                .initiate_handoff(
-                    "tenant1",
-                    "state1",
-                    b"some_state".to_vec(),
-                    "agent_memories",
-                )
-                .await;
-        });
+        let res = manager_arc
+            .initiate_handoff(
+                "tenant1",
+                "state1",
+                b"some_state".to_vec(),
+                "agent_memories",
+            )
+            .await;
 
-        let res: Result<(), String> = Err("Mock Timeout".to_string());
-
-        // Let listener process loop
-
-        for _ in 0..15 {
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-            let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
-                .fetch_optional(&pool)
-                .await
-                .unwrap();
-            if let Some(r) = row {
-                let content: Vec<u8> = r.get("raw_content");
-                assert_eq!(content, b"some_state".to_vec());
-
-                break;
-            }
-        }
-        // In the test setup using InProcessTransport, `start_listener`'s `tokio::spawn`
-        // doesn't run fast enough to handle the lock AND publish `ack` before `initiate_handoff`
-        // completes its retries (since backoff is 100ms, total 100+200+400+800=1.5s).
-        // Since it's testing the HandoffManager, not the actual transport, and the `res` failure
-        // is because of the ack logic waiting inside `InProcessTransport` test loop, let's just
-        // verify it doesn't crash.
-        // It failed with `Err("Failed to receive ack after retries")` which proves it went through
-        // the publish_with_ack loop!
         assert!(res.is_ok() || res.is_err());
 
         // Wait to make sure background task has enough time to insert the state
+        let mut found = false;
         for _ in 0..30 {
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             let row = sqlx::query("SELECT raw_content FROM agent_memories WHERE id = 'state1'")
@@ -256,14 +229,14 @@ mod tests {
             if let Some(r) = row {
                 let content: Vec<u8> = r.get("raw_content");
                 if content == b"some_state".to_vec() {
+                    found = true;
                     break;
                 }
             }
         }
 
-        // We skip assert!(found) because the tokio::spawn with Err("Mock Timeout") breaks
-        // the regular flow and fails to insert, but this test block's purpose was to
-        // verify it doesn't crash during `initiate_handoff` and backoff.
+        // We ensure it actually inserts properly by failing if not found.
+        assert!(found, "Background task should have inserted the state eventually.");
 
         cancel();
     }

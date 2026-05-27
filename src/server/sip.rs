@@ -273,7 +273,6 @@ impl SipDB {
         if !updated {
             // Either force_local was false, or the update found no row.
             // If it exists, ON CONFLICT will do nothing.
-            // If force_local was false but row exists, it skips update but ON CONFLICT will skip insert.
             sqlx::query("INSERT INTO agent_missions (id, status, payload, created_at, updated_at, tenant_id) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $4) ON CONFLICT(id) DO NOTHING")
                 .bind(mission_id)
                 .bind(&final_status)

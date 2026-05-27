@@ -20,10 +20,7 @@ mod tests {
 
         let pg_pool = match pg_pool {
             Ok(p) => p,
-            Err(_) => {
-                // If PG is not running during the test, we'll just mock or skip.
-                return;
-            }
+            Err(e) => panic!("Postgres must be running for this test: {}", e),
         };
 
         sqlx::query(
@@ -125,7 +122,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     let pg_pool = match pg_pool {
         Ok(p) => p,
-        Err(_) => return,
+        Err(e) => panic!("Postgres must be running for this test: {}", e),
     };
 
     sqlx::query(

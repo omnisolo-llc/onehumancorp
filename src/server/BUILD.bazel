@@ -408,7 +408,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -578,7 +578,7 @@ test_suite(
         proc_macro_deps = [
             "@crates//:async-trait",
         ],
-        tags = ["manual"],
+        tags = [],
         target_compatible_with = select({
             "@platforms//os:linux": [],
             "//conditions:default": ["@platforms//:incompatible"],
@@ -667,7 +667,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -722,7 +722,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -748,7 +748,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -775,7 +775,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -805,7 +805,7 @@ rust_test(
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
-    tags = ["manual"],
+    tags = [],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],

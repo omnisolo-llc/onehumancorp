@@ -31,7 +31,6 @@ pub async fn bench_db_query_time() {
     let iterations = 1000;
 
     // Cloud Mode (Postgres)
-    // Only run if the database URL actually points to postgres, otherwise skip
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let mut pg_times = Vec::new();

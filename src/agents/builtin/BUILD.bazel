@@ -241,7 +241,7 @@ rust_test(
         args = [module],
         crate = ":ohc_builtin_agent_lib",
         edition = "2024",
-        tags = ["manual"],
+        tags = [],
         target_compatible_with = select({
             "@platforms//os:linux": [],
             "//conditions:default": ["@platforms//:incompatible"],

@@ -1176,20 +1176,14 @@ mod security_tests_final {
 
         temp_env::with_vars(vec![("DATABASE_URL", Some(&*database_url)), ("OHC_SQLITE_KEY", Some("dummy_key"))], || {
             tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        // Ensure the directory actually gets created if DB::new randomly skipped it due to parallel races
         let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
+        fs::create_dir_all(parent_dir).unwrap();
 
-        // Touch the file directly first since SQLx parallel test race conditions cause DB::new to fail here occasionally
-        let _ = fs::File::create(&db_path);
+        // Touch the file directly and safely handle SQLx parallel test race conditions
+        fs::File::create(&db_path).unwrap();
 
-        // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
-        // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        let _ = DB::new().await;
-        let parent_dir = db_path.parent().unwrap();
-        let _ = fs::create_dir_all(parent_dir);
+        // Properly wait for DB connection, no silent ignore
+        let _db = DB::new().await;
 
         // Securely create the database file with restricted permissions initially to avoid TOCTOU
         #[cfg(unix)]
