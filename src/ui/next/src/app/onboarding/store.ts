@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, StateStorage, createJSONStorage } from 'zustand/middleware';
 
 interface OnboardingState {
   step: number;
@@ -25,6 +25,49 @@ interface OnboardingState {
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
 }
+
+
+const customStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const response = await fetch('/api/onboarding/state', {
+        headers: {
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data?.state ? JSON.stringify(data.state) : null;
+      }
+      return null;
+    } catch (error) {
+      return null;
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    try {
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify({ state: JSON.parse(value) })
+      });
+    } catch (e) {}
+  },
+  removeItem: async (name: string): Promise<void> => {
+    // Implementation not required for this use case
+  },
+};
 
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
@@ -53,7 +96,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       setStartResult: (startResult) => set({ startResult }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4',
+      storage: createJSONStorage(() => customStorage),
     }
   )
 );
