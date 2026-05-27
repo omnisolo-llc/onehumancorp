@@ -2,7 +2,7 @@ use axum::{
     extract::{Extension, State, Path},
     response::IntoResponse,
     http::StatusCode,
-    routing::post,
+    routing::{get, post},
     Router,
     Json,
 };
@@ -22,8 +22,25 @@ where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/{department}", get(get_setting))
         .route("/{department}", post(update_setting))
         .with_state(orchestrator)
+}
+
+async fn get_setting(
+    State(orchestrator): State<Arc<DepartmentOrchestrator>>,
+    Path(department): Path<String>,
+    Extension(claims): Extension<Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 0.0 })).into_response(),
+    };
+
+    match orchestrator.get_department_config(&tenant_id, &department).await {
+        Ok(config) => (StatusCode::OK, Json(config)).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DepartmentConfig { tone_of_voice: "professional".to_string(), auto_approve_limits: 0.0 })).into_response(),
+    }
 }
 
 async fn update_setting(

@@ -100,4 +100,30 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
 
     await page.waitForTimeout(500);
   });
+
+  test('Test 6: Toggle Configuration', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByPlaceholder('Email or Username').fill(E2E_ADMIN_USER.email);
+    await page.locator('input[type="password"]').fill(E2E_ADMIN_USER.password);
+    await page.locator('button:has-text("Login")').click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
+
+    await page.goto('/team');
+    await expect(page.getByText('The Ambassador')).toBeVisible();
+    await page.getByText('The Ambassador').click();
+
+    // Settings icon
+    await page.locator('svg').nth(1).click();
+
+    await expect(page.getByText('The Ambassador Settings')).toBeVisible();
+
+    // Choose auto pilot mode
+    await page.getByText('Auto-pilot').click();
+    await page.getByRole('button', { name: 'Save Preferences' }).click();
+
+    // Reopen and check if it saved
+    await page.locator('svg').nth(1).click();
+    await expect(page.getByText('The Ambassador Settings')).toBeVisible();
+    await expect(page.locator('button.bg-blue-50').getByText('Auto-pilot')).toBeVisible();
+  });
 });

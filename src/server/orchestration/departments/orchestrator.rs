@@ -264,7 +264,17 @@ impl DepartmentOrchestrator {
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
         }
 
-        match risk {
+        // Adjust risk based on department settings if configured
+        let mut final_risk = risk.clone();
+        if final_risk == ActionRisk::DraftForReview {
+            if let Ok(config) = self.get_department_config(&tenant_id, &department.to_string()).await {
+                if config.auto_approve_limits > 0.0 {
+                    final_risk = ActionRisk::AutoExecute;
+                }
+            }
+        }
+
+        match final_risk {
             ActionRisk::AutoExecute => {
                 let req = ApprovalRequest {
                     id: Uuid::new_v4().to_string(),
@@ -612,12 +622,94 @@ impl DepartmentOrchestrator {
         self.memory_repo.upsert(&record).await.map_err(|e| e.to_string())
     }
 
+    pub async fn get_department_config(&self, tenant_id: &str, department: &str) -> Result<crate::orchestration::departments::types::DepartmentConfig, String> {
+        let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
+
+        let (config_val, found) = match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = $1 AND department_type = $2")
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .fetch_optional(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let v: serde_json::Value = r.try_get("config").unwrap_or(serde_json::json!({}));
+                    (v, true)
+                } else {
+                    (serde_json::json!({}), false)
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query("SELECT config FROM agent_departments WHERE tenant_id = ? AND department_type = ?")
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .fetch_optional(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let s: String = r.try_get("config").unwrap_or_else(|_| "{}".to_string());
+                    let v: serde_json::Value = serde_json::from_str(&s).unwrap_or(serde_json::json!({}));
+                    (v, true)
+                } else {
+                    (serde_json::json!({}), false)
+                }
+            }
+        };
+
+        if found {
+            let config = serde_json::from_value(config_val).unwrap_or(crate::orchestration::departments::types::DepartmentConfig {
+                tone_of_voice: "professional".to_string(),
+                auto_approve_limits: 0.0,
+            });
+            Ok(config)
+        } else {
+            Ok(crate::orchestration::departments::types::DepartmentConfig {
+                tone_of_voice: "professional".to_string(),
+                auto_approve_limits: 0.0,
+            })
+        }
+    }
+
     pub async fn update_department_config(&self, tenant_id: &str, department: &str, config: crate::orchestration::departments::types::DepartmentConfig) -> Result<(), String> {
         let deps = self.departments.read().await;
         let dep_type = crate::orchestration::departments::types::DepartmentType::from_str(department)?;
         if let Some(dep_lock) = deps.get(&dep_type) {
             let mut dep = dep_lock.write().await;
-            dep.set_config(tenant_id.to_string(), config);
+            dep.set_config(tenant_id.to_string(), config.clone());
+
+            let config_json = serde_json::to_value(&config).map_err(|e| e.to_string())?;
+
+            match &self.db.store {
+                crate::db::DbStore::Postgres => {
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_departments (id, tenant_id, department_type, config) VALUES ($1, $2, $3, $4) ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = $4, updated_at = CURRENT_TIMESTAMP"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .bind(&config_json)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_departments (id, tenant_id, department_type, config) VALUES (?, ?, ?, json(?)) ON CONFLICT (tenant_id, department_type) DO UPDATE SET config = json(?), updated_at = CURRENT_TIMESTAMP"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(tenant_id)
+                    .bind(dep_type.to_string())
+                    .bind(config_json.to_string())
+                    .bind(config_json.to_string())
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                }
+            }
+
             Ok(())
         } else {
             Err("Department not found".to_string())
