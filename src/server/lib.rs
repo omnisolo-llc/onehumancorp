@@ -5668,7 +5668,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
                             { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
                             { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' },
+                            { id: 'changelog', title: 'Release Notes & Changelog', desc: 'See what\'s new in the latest OneHumanCorp updates.', icon: '✨', action: () => showScreen('changelog-screen') },
+                            { id: 'api-docs', title: 'API Documentation', desc: 'Interactive API reference for advanced users.', icon: '💻', action: () => showScreen('api-docs-screen') }
                         ];
 
                         function renderHelpCenter() {
@@ -5691,7 +5693,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const card = document.createElement('div');
                                 card.className = 'help-category-card';
                                 card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
-                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                card.onclick = () => {
+                                    if (topic.action) {
+                                        topic.action();
+                                    } else {
+                                        document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase();
+                                        document.getElementById('ai-chat-widget').style.display = 'flex';
+                                        submitHelpQuery();
+                                    }
+                                };
                                 container.appendChild(card);
                             });
                         }
