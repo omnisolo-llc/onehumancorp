@@ -30,8 +30,15 @@ test.describe('Onboarding Wizard', () => {
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
-    // 2. Simplified Mobile First Onboarding - wait for it to generate (Step 2 & 3)
-    // Step 2 is automatic, so wait for Step 3 directly
+    // 2. Step 2: Review Details
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // 3. Step 3: Style & Team
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // 4. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // Verify shareable link is present
@@ -75,10 +82,18 @@ test.describe('Onboarding Wizard', () => {
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
-    // 2. Simplified Mobile First Onboarding - wait for it to generate
+    // 2. Step 2: Review Details
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Continue/i }).click();
+
+    // 3. Step 3: Style & Team
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // 4. Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
-    // 4. Verify Dashboard redirect and action banner
+    // 5. Verify Dashboard redirect and action banner
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
