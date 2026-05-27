@@ -118,16 +118,32 @@ export default function OnboardingWizard() {
       try {
         const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront';
         const userId = localStorage.getItem('user_id') || 'test-user';
+
+        // Use sendBeacon for immediate exit or navigation cases if possible, but fetch is fine for normal state updates
         await fetch('/api/onboarding/state', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
-          body: currentStateStr
+          body: currentStateStr,
+          keepalive: true
         });
         lastSyncState.current = currentStateStr;
       } catch (err) {
         console.error("Failed to sync onboarding state", err);
       }
     };
+
+    // If only the step changed, or we just finished a major action, sync immediately.
+    // We check if only the step changed by comparing the previous state.
+    const prev = lastSyncState.current ? JSON.parse(lastSyncState.current) : null;
+    const isStepChangeOnly = prev && prev.step !== step &&
+      prev.businessType === businessType &&
+      prev.businessName === businessName &&
+      prev.businessCategory === businessCategory;
+
+    if (isStepChangeOnly) {
+       syncState();
+       return;
+    }
 
     const timer = setTimeout(syncState, 1000); // Debounce sync with 1s delay
     return () => clearTimeout(timer);

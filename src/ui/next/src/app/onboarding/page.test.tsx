@@ -125,6 +125,34 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Step 1: User empty submit error branch', async () => {
+    useOnboardingStore.setState({ step: 1, businessType: '' });
+    (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) });
+    act(() => { render(<OnboardingWizard />); });
+
+    act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
+
+    await waitFor(() => {
+      expect(screen.getByText("Please describe what you sell.")).toBeInTheDocument();
+    });
+  });
+
+  it('Step 1: User short submit error branch', async () => {
+    useOnboardingStore.setState({ step: 1, businessType: '' });
+    (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) });
+    act(() => { render(<OnboardingWizard />); });
+
+    const input = screen.getByPlaceholderText("e.g. Sell cakes, plumbing");
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    await act(async () => { await userEvent.type(input, 'ab'); });
+    act(() => { screen.getByRole('button', { name: /Next/i }).click(); });
+
+    await waitFor(() => {
+      expect(screen.getByText("Please enter at least 3 characters.")).toBeInTheDocument();
+    });
+  });
+
   it('Step 2: User enters business name and clicks next', async () => {
     useOnboardingStore.setState({ step: 2, businessType: 'Bakery' });
     (global.fetch as any).mockResolvedValue({ ok: true, json: async () => ({}) });
@@ -205,14 +233,14 @@ describe('OnboardingWizard', () => {
     // Let's just test `handleIntakeSubmit` which has the exact same check. Oh, line 146 IS in `handleNext`.
 
     // Error on short submit (intake submit)
-    await userEvent.type(input, 'abcd');
+    await act(async () => { await userEvent.type(input, 'abcd'); });
     act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
     await waitFor(() => expect(screen.getByText('Niche description must be at least 5 characters.')).toBeInTheDocument());
 
     // Valid submit
-    await userEvent.clear(input);
-    await userEvent.type(input, "I bake custom vegan cakes");
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => { await userEvent.clear(input); });
+    await act(async () => { await userEvent.type(input, "I bake custom vegan cakes"); });
+    await act(async () => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
 
     await waitFor(() => {
       expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
@@ -227,7 +255,7 @@ describe('OnboardingWizard', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) }); // Intake API Error
 
     act(() => { render(<OnboardingWizard />); });
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
 
     await waitFor(() => {
       expect(screen.getByText("Failed to process intake")).toBeInTheDocument();
@@ -258,10 +286,10 @@ describe('OnboardingWizard', () => {
     // Edit product
     const nameInput = await screen.findByPlaceholderText("e.g. Custom Cake");
     const priceInput = screen.getByPlaceholderText("0.00");
-    await userEvent.clear(nameInput);
-    await userEvent.type(nameInput, "Vegan Cake");
-    await userEvent.clear(priceInput);
-    await userEvent.type(priceInput, "30.00");
+    await act(async () => { await userEvent.clear(nameInput); });
+    await act(async () => { await userEvent.type(nameInput, "Vegan Cake"); });
+    await act(async () => { await userEvent.clear(priceInput); });
+    await act(async () => { await userEvent.type(priceInput, "30.00"); });
 
     // Select template and domain
     act(() => { screen.getByRole('button', { name: 'Elegant' }).click(); });
@@ -272,13 +300,13 @@ describe('OnboardingWizard', () => {
     // Navigate back to edit and then back to Step 4
     act(() => { screen.getByRole('button', { name: /Edit/i }).click(); });
     expect(useOnboardingStore.getState().step).toBe(3);
-    act(() => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
+    await act(async () => { screen.getByRole('button', { name: /Generate Draft/i }).click(); });
     await waitFor(() => {
       expect(screen.getByText("Ready to Launch!")).toBeInTheDocument();
     });
 
     // Publish
-    act(() => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
+    await act(async () => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
@@ -300,7 +328,7 @@ describe('OnboardingWizard', () => {
       .mockResolvedValueOnce({ ok: false, json: async () => ({}) }); // Publish API Error
 
     act(() => { render(<OnboardingWizard />); });
-    act(() => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
+    await act(async () => { screen.getByRole('button', { name: /Publish Now/i }).click(); });
 
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
