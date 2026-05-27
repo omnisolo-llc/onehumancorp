@@ -1105,3 +1105,64 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static SYNC_CONFLICTS_RESOLVED_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static OMNI_CONTEXT_BYTES_ROUTED: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
+    HARNESS_EXECUTION_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .f64_histogram("harness_execution_latency_bucket")
+            .with_description("Latency for Harness execution")
+            .build()
+    })
+}
+
+pub fn get_sync_conflicts_resolved_total() -> &'static Counter<u64> {
+    SYNC_CONFLICTS_RESOLVED_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sync");
+        meter
+            .u64_counter("sync_conflicts_resolved_total")
+            .with_description("Total number of sync conflicts resolved")
+            .build()
+    })
+}
+
+pub fn get_omni_context_bytes_routed() -> &'static Counter<u64> {
+    OMNI_CONTEXT_BYTES_ROUTED.get_or_init(|| {
+        let meter = global::meter("ohc.routing");
+        meter
+            .u64_counter("omni_context_bytes_routed_total")
+            .with_description("Total number of Omni context bytes routed")
+            .build()
+    })
+}
+
+pub fn record_harness_execution_latency(deployment_mode: &str, latency_seconds: f64) {
+    let histogram = get_harness_execution_latency();
+    histogram.record(
+        latency_seconds,
+        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+    );
+}
+
+pub fn record_sync_conflicts_resolved(deployment_mode: &str, count: u64) {
+    let counter = get_sync_conflicts_resolved_total();
+    counter.add(
+        count,
+        &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())],
+    );
+}
+
+pub fn record_omni_context_bytes_routed(deployment_mode: &str, tenant_id: &str, bytes: u64) {
+    let counter = get_omni_context_bytes_routed();
+    counter.add(
+        bytes,
+        &[
+            opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string()),
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+        ],
+    );
+}

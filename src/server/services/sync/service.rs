@@ -1,3 +1,4 @@
+use ::server_telemetry::{record_sync_conflicts_resolved, get_deployment_mode};
 use tonic::{Request, Response, Status};
 use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::sync_service_server::SyncService;
@@ -48,6 +49,9 @@ impl SyncService for MySyncService {
             let force_local = md.get("x-ohc-conflict-resolution")
                 .map(|v| v.to_str().unwrap_or_default() == "force-local")
                 .unwrap_or(false);
+            if force_local {
+                record_sync_conflicts_resolved(get_deployment_mode(), 1);
+            }
 
             match sip_db.upsert_mission(&p.id, &status, &p.payload, force_local).await {
                 Ok(_) => {

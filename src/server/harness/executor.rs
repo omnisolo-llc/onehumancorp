@@ -1,3 +1,4 @@
+use ::server_telemetry::{record_harness_execution_latency};
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
@@ -41,6 +42,8 @@ impl LocalShellTask {
         let exit_code = output.status.code().unwrap_or(-1);
 
         let latency = start.elapsed().as_secs_f64() * 1000.0;
+        let latency_seconds = start.elapsed().as_secs_f64();
+        record_harness_execution_latency(::server_telemetry::get_deployment_mode(), latency_seconds);
         record_bubblewrap_execution_latency(agent_id, task_id, latency);
 
         if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes

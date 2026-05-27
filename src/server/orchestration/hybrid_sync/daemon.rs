@@ -1,3 +1,4 @@
+use ::server_telemetry::{record_omni_context_bytes_routed, get_deployment_mode};
 use std::time::Duration;
 use sqlx::{SqlitePool, PgPool, Row};
 use serde_json::{Value, json};
@@ -105,6 +106,7 @@ impl HybridSyncDaemon {
             let parsed: Value = serde_json::from_str(&context).unwrap_or(json!({ "raw": context }));
             let sanitized = ::server_telemetry::redact_interface_pii(parsed);
 
+            record_omni_context_bytes_routed(get_deployment_mode(), "system", sanitized.to_string().len() as u64);
             let payload = json!({
                 "source": "hybrid_sync",
                 "memory_id": id,
