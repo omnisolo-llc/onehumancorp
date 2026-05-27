@@ -1407,6 +1407,7 @@ impl HubService for MyHubService {
                 st.title,
                 st.description,
                 st.priority,
+                None
             ).map_err(|e| Status::internal(e))?;
         }
         
