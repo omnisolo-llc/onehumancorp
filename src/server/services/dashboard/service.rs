@@ -5,10 +5,10 @@ use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
 use std::sync::OnceLock;
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
-static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::organization::Product>>>> = OnceLock::new();
+static ORDERS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::app::Order>>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
-static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static AGENTS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::Agent>>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -76,7 +76,7 @@ impl DashboardService for MyDashboardService {
                     return Ok::<_, String>(agents);
                 }
 
-                let agents = hub1.get_agents().await.to_vec();
+                let agents = hub1.get_agents().await;
                 cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(agents)
             }),
@@ -162,8 +162,9 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
-                Ok::<_, String>(results)
+                let results_arc = Arc::new(results);
+                cache.set(&cache_key, results_arc.clone(), std::time::Duration::from_secs(3600)).await;
+                Ok::<_, String>(results_arc)
             }),
             tokio::spawn(async move {
                 let org_id = org_id2;
@@ -216,8 +217,9 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
-                Ok::<_, String>(results)
+                let results_arc = Arc::new(results);
+                cache.set(&cache_key, results_arc.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(results_arc)
             }),
             tokio::spawn(async move {
                 let org_id = org_id3;
@@ -297,38 +299,38 @@ impl DashboardService for MyDashboardService {
 
         let products = if req.mobile_optimized {
             products
-                .into_iter()
+                .iter()
                 .map(|p| ::server_ohc::organization::Product {
                     description: String::new(),
                     metadata_json: String::new(),
                     fulfillment_strategy: String::new(),
                     currency: String::new(),
-                    ..p
+                    ..p.clone()
                 })
                 .collect()
         } else {
-            products
+            products.to_vec()
         };
 
         let orders = if req.mobile_optimized {
             orders
-                .into_iter()
+                .iter()
                 .map(|o| ::server_ohc::app::Order {
                     product_id: String::new(),
                     status: String::new(),
                     organization_id: String::new(),
-                    ..o
+                    ..o.clone()
                 })
                 .collect()
         } else {
-            orders
+            orders.to_vec()
         };
 
         let mut out_meetings: Vec<::server_ohc::app::MeetingRoom> = Vec::new();
         for m in _meetings.iter() {
             let mut transcript = Vec::new();
             if !req.mobile_optimized {
-                for msg in &m.transcript {
+                for msg in m.transcript.iter() {
                     transcript.push(::server_ohc::agent::AgentMessage {
                         id: msg.id.clone(),
                         from_agent_id: msg.from_agent.clone(),
