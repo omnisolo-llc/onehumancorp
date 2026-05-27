@@ -850,33 +850,11 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
-
-                            loop {
-                                match tool.execute.execute(args.clone()).await {
-                                    Ok(res) => {
-                                        final_res = Ok(res);
-                                        break;
-                                    }
-                                    Err(crate::types::ToolError::Transient(msg)) => {
-                                        if retry_count < max_retries {
-                                            retry_count += 1;
-                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                            tokio::time::sleep(backoff).await;
-                                            continue;
-                                        } else {
-                                            final_res = Err(crate::types::ToolError::Transient(msg));
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        final_res = Err(e);
-                                        break;
-                                    }
-                                }
-                            }
+                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                                tool,
+                                &crate::types::ToolCall { id: id.to_string(), name: name.to_string(), arguments: args },
+                                std::cmp::min(cfg_max_retries, 2) as usize,
+                            ).await;
                             (id, final_res)
                         } else {
                             // Unreachable if tool not found goes to mutating calls
@@ -985,33 +963,11 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
-
-                        loop {
-                            match tool.execute.execute(args.clone()).await {
-                                Ok(res) => {
-                                    final_res = Ok(res);
-                                    break;
-                                }
-                                Err(crate::types::ToolError::Transient(msg)) => {
-                                    if retry_count < max_retries {
-                                        retry_count += 1;
-                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                        tokio::time::sleep(backoff).await;
-                                        continue;
-                                    } else {
-                                        final_res = Err(crate::types::ToolError::Transient(msg));
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    final_res = Err(e);
-                                    break;
-                                }
-                            }
-                        }
+                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+                            tool,
+                            &crate::types::ToolCall { id: id.to_string(), name: name.to_string(), arguments: args },
+                            std::cmp::min(cfg_max_retries, 2) as usize,
+                        ).await;
 
                         match final_res {
                             Ok(res) => {
@@ -2217,28 +2173,9 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                    loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
-                            Ok(r) => {
-                                return (tc_clone, Ok(r));
-                            }
-                            Err(ToolError::Transient(msg)) => {
-                                if retry_count < max_retries {
-                                    retry_count += 1;
-                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                    tokio::time::sleep(backoff).await;
-                                    continue;
-                                } else {
-                                    return (tc_clone, Err(ToolError::Transient(msg)));
-                                }
-                            }
-                            Err(e) => {
-                                return (tc_clone, Err(e));
-                            }
-                        }
-                    }
+                    // 4-Tier LangGraph mechanics handled within `execute_tool`
+                    let res = self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg_max_retries).await;
+                    (tc_clone, res)
                 }.instrument(tool_span));
             }
 
@@ -2863,6 +2800,7 @@ impl Agent {
         tc: &ToolCall,
         session_tools: &[Tool],
         current_messages: &[Message],
+        max_retries: usize,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
@@ -2887,7 +2825,15 @@ impl Agent {
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
-        tool.execute.execute(args).await
+        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(
+            tool,
+            &crate::types::ToolCall {
+                id: tc.id.clone(),
+                name: tc.name.clone(),
+                arguments: args,
+            },
+            max_retries,
+        ).await
     }
 }
 
@@ -3261,7 +3207,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[]).await;
+        let res = agent.execute_tool(&valid_call, &tools, &[], 2).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -3270,7 +3216,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[]).await;
+        let res = agent.execute_tool(&missing_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -3285,7 +3231,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[]).await;
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
