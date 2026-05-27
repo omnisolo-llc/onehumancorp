@@ -1996,10 +1996,9 @@ pub struct MetaConnectQuery {
 
 
 pub async fn meta_oauth_callback_handler(
-    axum::extract::Extension(hub): axum::extract::Extension<std::sync::Arc<crate::hub::Hub>>,
+    axum::extract::Extension(_hub): axum::extract::Extension<std::sync::Arc<crate::hub::Hub>>,
     axum::extract::Query(query): axum::extract::Query<MetaConnectQuery>,
 ) -> impl axum::response::IntoResponse {
-    let pool = &hub.pool;
     let tenant_id = query.state; // simplistic for now, state should be tenant_id
 
     // In a real app, exchange `code` for an access token
