@@ -44,6 +44,7 @@ def define_playwright_tests(specs, ci_specs = [], data = [], server = None):
             timeout = "eternal",
             tags = [
                 "e2e",
+                "exclusive",
                 "manual",
                 "no-remote-exec",
                 "requires-docker",
