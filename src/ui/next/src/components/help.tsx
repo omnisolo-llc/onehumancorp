@@ -103,6 +103,7 @@ export function HelpWidget() {
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeVideo, setActiveVideo] = useState<{id: number, title: string, duration: string, url: string} | null>(null);
 
   const [helpArticles, setHelpArticles] = useState<{title: string, desc: string, link?: string}[]>([]);
 
@@ -119,7 +120,7 @@ export function HelpWidget() {
     a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [videos, setVideos] = useState<{id: number, title: string, duration: string, url: string}[]>([]);
 
   useEffect(() => {
     fetch("/api/videos")
@@ -269,22 +270,44 @@ export function HelpWidget() {
             )}
 
             {tab === "videos" && (
-              <div>
-                <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
-                      <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
-                      <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
-                        <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-                      </div>
-                      <div className="absolute bottom-2 left-2 right-2 z-10">
-                        <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
-                        <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
-                      </div>
+              <div className="flex flex-col h-full relative">
+                {activeVideo ? (
+                  <div className="absolute inset-0 bg-black rounded-xl overflow-hidden z-20 flex flex-col">
+                     <div className="flex justify-between items-center p-3 bg-gradient-to-b from-black/80 to-transparent absolute top-0 w-full z-30">
+                        <h4 className="text-white font-bold text-sm drop-shadow-md">{activeVideo.title}</h4>
+                        <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-black/50 rounded-full p-1">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                     </div>
+                     <video
+                       src={activeVideo.url}
+                       controls
+                       autoPlay
+                       playsInline
+                       className="w-full h-full object-cover"
+                     >
+                        Your browser does not support the video tag.
+                     </video>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
+                    <div className="grid grid-cols-2 gap-4 pb-4 overflow-y-auto">
+                      {videos.map((v) => (
+                        <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-900 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer shadow-sm border border-gray-200">
+                          <div className="absolute inset-0 bg-blue-900/20 group-hover:bg-blue-900/40 transition-all"></div>
+                          <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
+                            <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                          </div>
+                          <div className="absolute bottom-2 left-2 right-2 z-10">
+                            <p className="text-white text-xs font-bold drop-shadow-md line-clamp-2 leading-tight">{v.title}</p>
+                            <p className="text-white/80 text-[10px] font-medium mt-0.5">{v.duration}</p>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </>
+                )}
               </div>
             )}
 
