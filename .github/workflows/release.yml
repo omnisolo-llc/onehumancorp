@@ -16,6 +16,9 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  # Prevent Git Bash on Windows runners from rewriting Bazel labels such as
+  # //release:all_release_artifacts into filesystem paths like /release:...
+  MSYS2_ARG_CONV_EXCL: "*"
 
 defaults:
   run:
@@ -50,11 +53,14 @@ jobs:
             bazel_config: macos_aarch64
             archive_name: ohc-aarch64-apple-darwin.tar.gz
             install_linux_deps: false
-          - name: macos-x86_64
-            runner: macos-15-intel
-            bazel_config: macos_x86_64
-            archive_name: ohc-x86_64-apple-darwin.tar.gz
-            install_linux_deps: false
+          # Disabled until toolchains_llvm provides a darwin x86_64
+          # distribution for the pinned LLVM version. The desktop installer job
+          # still builds the macOS universal user-facing release artifact.
+          # - name: macos-x86_64
+          #   runner: macos-15-intel
+          #   bazel_config: macos_x86_64
+          #   archive_name: ohc-x86_64-apple-darwin.tar.gz
+          #   install_linux_deps: false
     steps:
       - uses: actions/checkout@v6
 
@@ -119,6 +125,9 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    env:
+      HAS_TAURI_SIGNING: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY != '' && secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+      HAS_MACOS_DESKTOP_SIGNING: ${{ secrets.MACOS_CERTIFICATE_BASE64 != '' && secrets.MACOS_CERTIFICATE_PASSWORD != '' && secrets.MACOS_SIGNING_IDENTITY != '' && secrets.APPLE_ID != '' && secrets.APPLE_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && secrets.APPLE_KEYCHAIN_PASSWORD != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -146,8 +155,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Skip unsigned desktop installer
+        if: env.HAS_TAURI_SIGNING != 'true' || (matrix.os_name == 'macos' && env.HAS_MACOS_DESKTOP_SIGNING != 'true')
+        run: |
+          if [[ "${HAS_TAURI_SIGNING}" != "true" ]]; then
+            echo "Skipping desktop installer build because Tauri updater signing secrets are not configured."
+          elif [[ "${{ matrix.os_name }}" == "macos" && "${HAS_MACOS_DESKTOP_SIGNING}" != "true" ]]; then
+            echo "Skipping macOS desktop installer build because Apple signing/notarization secrets are not configured."
+          fi
+
       - name: Install Linux desktop packaging dependencies
-        if: matrix.install_linux_deps
+        if: matrix.install_linux_deps && env.HAS_TAURI_SIGNING == 'true'
         run: |
           echo 'Acquire::Retries "5";' | sudo tee /etc/apt/apt.conf.d/80-retries
           sudo apt-get update -qq
@@ -160,14 +178,16 @@ jobs:
             || sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.0-dev
 
       - name: Set up Rust
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         uses: dtolnay/rust-toolchain@stable
 
       - name: Add macOS universal Rust targets
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.HAS_TAURI_SIGNING == 'true' && env.HAS_MACOS_DESKTOP_SIGNING == 'true'
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
       - name: Set up Bazel
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
@@ -178,12 +198,14 @@ jobs:
             build --show_timestamps
 
       - name: Build Tauri CLI with Bazel
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         run: |
           bazelisk build @crates//:tauri-cli__cargo-tauri
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
           echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
 
       - name: Prepare release version and updater signing
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         env:
           TAURI_SIGNING_PUBLIC_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -232,7 +254,7 @@ jobs:
           echo "OHC_RELEASE_TAG=v$VERSION" >> "$GITHUB_ENV"
 
       - name: Install macOS signing assets
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.HAS_TAURI_SIGNING == 'true' && env.HAS_MACOS_DESKTOP_SIGNING == 'true'
         env:
           MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
           MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
@@ -272,6 +294,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build Tauri desktop bundles
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         working-directory: src/ui/tauri
         run: |
           set -euo pipefail
@@ -292,7 +315,7 @@ jobs:
           esac
 
       - name: Prepare macOS release assets
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.HAS_TAURI_SIGNING == 'true' && env.HAS_MACOS_DESKTOP_SIGNING == 'true'
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -323,7 +346,7 @@ jobs:
           ls -lh dist/
 
       - name: Verify macOS signing and notarization
-        if: matrix.os_name == 'macos'
+        if: matrix.os_name == 'macos' && env.HAS_TAURI_SIGNING == 'true' && env.HAS_MACOS_DESKTOP_SIGNING == 'true'
         run: |
           set -euo pipefail
           BUNDLE_ROOT="src/ui/tauri/target/universal-apple-darwin/release/bundle"
@@ -348,7 +371,7 @@ jobs:
           xcrun stapler validate "$DMG_PATH"
 
       - name: Prepare Windows release assets
-        if: matrix.os_name == 'windows'
+        if: matrix.os_name == 'windows' && env.HAS_TAURI_SIGNING == 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -384,7 +407,7 @@ jobs:
           Get-ChildItem dist | Format-Table Name, Length
 
       - name: Prepare Linux release assets
-        if: matrix.os_name == 'linux'
+        if: matrix.os_name == 'linux' && env.HAS_TAURI_SIGNING == 'true'
         run: |
           set -euo pipefail
           mkdir -p dist
@@ -413,6 +436,7 @@ jobs:
           ls -lh dist/
 
       - name: Generate desktop installer checksums
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         run: |
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
@@ -423,6 +447,7 @@ jobs:
           cat checksums-desktop-${{ matrix.name }}.txt
 
       - name: Upload desktop installer artifacts
+        if: env.HAS_TAURI_SIGNING == 'true' && (matrix.os_name != 'macos' || env.HAS_MACOS_DESKTOP_SIGNING == 'true')
         uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.name }}
@@ -443,6 +468,8 @@ jobs:
     name: Build mobile artifacts (${{ matrix.name }})
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
+    env:
+      HAS_IOS_SIGNING: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' && secrets.APPLE_CERTIFICATE_PASSWORD != '' && secrets.APPLE_PROVISIONING_PROFILE_BASE64 != '' && secrets.APPLE_KEYCHAIN_PASSWORD != '' }}
     strategy:
       fail-fast: false
       matrix:
@@ -458,13 +485,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Skip unsigned iOS build
+        if: matrix.name == 'ios' && env.HAS_IOS_SIGNING != 'true'
+        run: echo "Skipping iOS artifact build because the required Apple signing secrets are not configured."
+
       - name: Install iOS build dependencies
-        if: matrix.name == 'ios'
+        if: matrix.name == 'ios' && env.HAS_IOS_SIGNING == 'true'
         run: |
           sudo xcode-select -s /Applications/Xcode.app
 
       - name: Install iOS signing assets
-        if: matrix.name == 'ios'
+        if: matrix.name == 'ios' && env.HAS_IOS_SIGNING == 'true'
         env:
           APPLE_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -496,6 +527,7 @@ jobs:
           cp "$profile_path" "$HOME/Library/MobileDevice/Provisioning Profiles/ohc.mobileprovision"
 
       - name: Set up Bazel
+        if: matrix.name != 'ios' || env.HAS_IOS_SIGNING == 'true'
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelrc: |
@@ -506,9 +538,11 @@ jobs:
             build --show_timestamps
 
       - name: Build Tauri mobile artifacts
+        if: matrix.name != 'ios' || env.HAS_IOS_SIGNING == 'true'
         run: bazelisk build ${{ matrix.targets }}
 
       - name: Collect mobile artifacts
+        if: matrix.name != 'ios' || env.HAS_IOS_SIGNING == 'true'
         run: |
           mkdir -p dist
           : > mobile-files.txt
@@ -528,6 +562,7 @@ jobs:
           find dist -type f | sort
 
       - name: Generate mobile checksums
+        if: matrix.name != 'ios' || env.HAS_IOS_SIGNING == 'true'
         run: |
           cd dist
           if command -v sha256sum >/dev/null 2>&1; then
@@ -538,6 +573,7 @@ jobs:
           cat checksums-mobile-${{ matrix.name }}.txt
 
       - name: Upload mobile artifacts
+        if: matrix.name != 'ios' || env.HAS_IOS_SIGNING == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: mobile-${{ matrix.name }}
@@ -683,6 +719,7 @@ jobs:
           ls -lh dl
 
       - name: Generate latest.json
+        id: latest
         env:
           REPO: ${{ github.repository }}
           TAG: ${{ github.ref_name }}
@@ -738,14 +775,20 @@ jobs:
           add('linux-aarch64', env.linux_arm64_url, env.linux_arm64_sig);
 
           if (Object.keys(latest.platforms).length === 0) {
-            throw new Error('No signed updater artifacts found for latest.json');
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_latest=false\n');
+            console.log('No signed updater artifacts found; skipping latest.json upload.');
+            process.exit(0);
           }
 
           fs.writeFileSync('latest.json', `${JSON.stringify(latest, null, 2)}\n`);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, 'has_latest=true\n');
           NODE
-          cat latest.json
+          if [[ -f latest.json ]]; then
+            cat latest.json
+          fi
 
       - name: Upload latest.json
+        if: steps.latest.outputs.has_latest == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -757,6 +800,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      HAS_DOCKERHUB_LOGIN: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -768,6 +813,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
+        if: env.HAS_DOCKERHUB_LOGIN == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -783,16 +829,24 @@ jobs:
             build --color=yes
             build --show_timestamps
 
-      - name: Push server web image
+      - name: Push server web image to GHCR
         run: |
           bazelisk run //deploy:server_push_ghcr \
             -- --tag "${{ github.ref_name }}"
+
+      - name: Push server web image to Docker Hub
+        if: env.HAS_DOCKERHUB_LOGIN == 'true'
+        run: |
           bazelisk run //deploy:server_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
 
-      - name: Push agent image
+      - name: Push agent image to GHCR
         run: |
           bazelisk run //deploy:agent_push_ghcr \
             -- --tag "${{ github.ref_name }}"
+
+      - name: Push agent image to Docker Hub
+        if: env.HAS_DOCKERHUB_LOGIN == 'true'
+        run: |
           bazelisk run //deploy:agent_push_dockerhub \
             -- --tag "${{ github.ref_name }}"
