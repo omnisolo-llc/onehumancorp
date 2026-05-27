@@ -2254,8 +2254,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" },
-            { "title": "Understanding Your Analytics", "desc": "Learn how to read your dashboard to see what is selling best and where your customers are coming from.", "link": "/help/analytics" }
+            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
@@ -2279,8 +2278,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "id": 7, "title": "Using the builder", "duration": "1:30" },
             { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
             { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" },
-            { "id": 11, "title": "Understanding your sales numbers", "duration": "1:30" }
+            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
@@ -5321,13 +5319,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                         }
                                                     }
                                                 },
-                                                "/api/analytics": {
-                                                    "get": {
-                                                        "summary": "Get Dashboard Analytics",
-                                                        "tags": ["Analytics"],
-                                                        "responses": { "200": { "description": "Success" } }
-                                                    }
-                                                },
                                                 "/api/videos": {
                                                     "get": {
                                                         "summary": "Get video tutorials",
@@ -5708,8 +5699,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         const walkthroughs = {
                             'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
                             'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ],
-                            'Dashboard Analytics': [ { target: 'todays-sales', title: 'Daily Sales', text: 'This shows your total sales for today.' }, { target: 'approval-inbox', title: 'AI Tasks', text: 'Review and approve tasks from your AI workforce.' } ]
+                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -5749,8 +5739,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
                             { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
                             { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' },
-                            { id: 'analytics', title: 'Understanding Your Analytics', desc: 'Learn how to read your dashboard to see what is selling best and where your customers are coming from.', icon: '📈' }
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
                         ];
 
                         function renderHelpCenter() {
@@ -5765,7 +5754,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <button class="secondary" onclick="startWalkthrough('Set up your store')">🗺️ Tour: Set up your store</button>
                                     <button class="secondary" onclick="startWalkthrough('Activate your AI Support Agent')">🗺️ Tour: Activate your AI Support Agent</button>
                                     <button class="secondary" onclick="startWalkthrough('Accept your first payment')">🗺️ Tour: Accept your first payment</button>
-                                    <button class="secondary" onclick="startWalkthrough('Dashboard Analytics')">🗺️ Tour: Dashboard Analytics</button>
                                 </div>
                             `;
                             container.appendChild(toursDiv);
@@ -5853,12 +5841,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="changelog-screen" class="screen">
                         <h1>What's New</h1>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
-                        <div class="card" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
-                            <div>
-                                <h3>Version 2.5 - Dashboard Analytics</h3>
-                                <p>We've added a new interactive walkthrough and Help Center article explaining how to read your store metrics.</p>
-                            </div>
-                        </div>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
                             <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
                             <div>
