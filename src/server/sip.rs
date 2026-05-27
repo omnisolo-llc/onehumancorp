@@ -224,6 +224,8 @@ impl SipDB {
                         }
                         if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
                             let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, "upsert_mission").await;
+                        } else if !is_standalone && (err_str.contains("deadlock") || err_str.contains("timeout") || err_str.contains("database is locked") || err_str.contains("serialization")) {
+                            crate::telemetry::record_postgres_lock_contention("upsert_mission");
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
@@ -232,6 +234,9 @@ impl SipDB {
                     }
                 }
                 Err(timeout_err) => {
+                    if !is_standalone {
+                        crate::telemetry::record_postgres_lock_contention("upsert_mission");
+                    }
                     attempt += 1;
                     if attempt >= max_attempts {
                         return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
