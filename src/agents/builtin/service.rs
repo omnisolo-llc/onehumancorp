@@ -39,7 +39,9 @@ pub fn inject_memories_into_prompt(memories: &[MemoryEntry], system_prompt: &str
     s
 }
 
-use crate::memory_store::{VectorRepository, EmbeddingRecord};
+use crate::consolidation_worker::ConsolidationWorker;
+use crate::departments::{get_department_config, Department};
+use crate::memory_store::{EmbeddingRecord, VectorRepository};
 use crate::proto::agent_service::{
     agent_service_server::AgentService, EventType, PingRequest, PingResponse, RunTaskEvent,
     RunTaskRequest, SkillConfig, SubAgentRequest, SubAgentResponse, ToolsetConfig,
@@ -48,13 +50,11 @@ use ohc_builtin_agent_tools::{
     sendmessage::Mailbox, task::TaskStore, todowrite::TodoItem, SharedMailbox, SharedTaskStore,
     SharedTodos, Tool,
 };
-use crate::departments::{Department, get_department_config};
-use std::str::FromStr;
-use tokio::sync::RwLock;
-use crate::consolidation_worker::ConsolidationWorker;
 use serde_json::Value;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::time::Duration;
+use tokio::sync::RwLock;
 
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:50051";
 const AGENT_VERSION: &str = "1.0.0";
@@ -84,8 +84,10 @@ pub struct AgentServiceImpl {
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
 }
 
-
-async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Option<&str>) -> String {
+async fn load_cascading_agents_md(
+    current_dir: &std::path::Path,
+    working_dir: Option<&str>,
+) -> String {
     let current = current_dir.to_path_buf();
     let target = if let Some(wd) = working_dir {
         current.join(wd)
@@ -133,7 +135,6 @@ async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Op
     let mut combined = String::new();
     // Reconstruct string backwards to ensure leaf is prioritized if truncation happens.
 
-
     for (i, content) in all_contents.iter().enumerate() {
         if i > 0 {
             combined.push_str("\n\n");
@@ -170,7 +171,8 @@ impl AgentServiceImpl {
 
     pub async fn init_memory(&mut self) {
         if std::env::var("OHC_ENABLE_ANTHROPIC_MEMORY").unwrap_or_default() == "true" {
-            let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR").unwrap_or_else(|_| ".agent-memory".to_string());
+            let base_dir = std::env::var("OHC_ANTHROPIC_MEMORY_DIR")
+                .unwrap_or_else(|_| ".agent-memory".to_string());
             if let Ok(store) = crate::memory_store::Anthropic3TierMemoryStore::new(&base_dir) {
                 self.anthropic_memory = Some(Arc::new(store));
             } else {
@@ -184,7 +186,14 @@ impl AgentServiceImpl {
                 match sqlx::SqlitePool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.worker_handle = Some(
+                            Arc::new(ConsolidationWorker::new(
+                                repo.clone(),
+                                Duration::from_secs(3600),
+                                180,
+                            ))
+                            .spawn_background_task(),
+                        );
                         self.memory = Some(repo);
                     }
                     Err(e) => {
@@ -195,7 +204,14 @@ impl AgentServiceImpl {
                 match sqlx::PgPool::connect_lazy(&db_url) {
                     Ok(pool) => {
                         let repo = Arc::new(VectorRepository::new(pool));
-                        self.worker_handle = Some(Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_secs(3600), 180)).spawn_background_task());
+                        self.worker_handle = Some(
+                            Arc::new(ConsolidationWorker::new(
+                                repo.clone(),
+                                Duration::from_secs(3600),
+                                180,
+                            ))
+                            .spawn_background_task(),
+                        );
                         self.memory = Some(repo);
                     }
                     Err(e) => {
@@ -293,7 +309,8 @@ impl AgentServiceImpl {
         } else if !self.cfg.llm_endpoint.trim().is_empty() {
             Some(self.cfg.llm_endpoint.clone())
         } else {
-            Self::first_non_empty_env(env_keys).or_else(|| Self::ai_provider_config_string("baseUrl"))
+            Self::first_non_empty_env(env_keys)
+                .or_else(|| Self::ai_provider_config_string("baseUrl"))
         }
     }
 
@@ -374,11 +391,9 @@ impl AgentServiceImpl {
                         ],
                     )
                     .unwrap_or_else(|| "https://api.openai.com/v1".to_string());
-                Arc::new(OpenAIClient::from_config(OpenAIClientConfig::openai_compatible(
-                    key,
-                    endpoint,
-                    Some(model),
-                )))
+                Arc::new(OpenAIClient::from_config(
+                    OpenAIClientConfig::openai_compatible(key, endpoint, Some(model)),
+                ))
             }
             "minimax" => {
                 let key = self.configured_api_key(&["MINIMAX_API_KEY", "OHC_LLM_API_KEY"]);
@@ -437,7 +452,12 @@ impl AgentServiceImpl {
         }
     }
 
-    async fn build_run_config(&self, req: &RunTaskRequest, department: &str, llm: &Arc<dyn LlmClient>) -> AgentRunConfig {
+    async fn build_run_config(
+        &self,
+        req: &RunTaskRequest,
+        department: &str,
+        llm: &Arc<dyn LlmClient>,
+    ) -> AgentRunConfig {
         let provider = self.effective_provider_owned(&req.llm_provider);
         let model = self.resolve_model_for_request(&provider, &req.model);
 
@@ -449,16 +469,23 @@ impl AgentServiceImpl {
             } else {
                 vec![]
             };
-            store.semantic_search(&org_id, &embedding, 5).await.map(|records| {
-                records.into_iter().map(|r| MemoryEntry {
-                    memory_id: r.id,
-                    context: r.content,
-                    embedding: None,
-                    source_plugin: Some(r.source_type),
-                    created_at: r.created_at,
-                    organization_id: r.tenant_id,
-                }).collect::<Vec<_>>()
-            }).unwrap_or_default()
+            store
+                .semantic_search(&org_id, &embedding, 5)
+                .await
+                .map(|records| {
+                    records
+                        .into_iter()
+                        .map(|r| MemoryEntry {
+                            memory_id: r.id,
+                            context: r.content,
+                            embedding: None,
+                            source_plugin: Some(r.source_type),
+                            created_at: r.created_at,
+                            organization_id: r.tenant_id,
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .unwrap_or_default()
         } else {
             vec![]
         };
@@ -478,33 +505,40 @@ impl AgentServiceImpl {
             inject_memories_into_prompt(&memories, &req.system_prompt)
         };
 
-
         // Inject SqliteMemoryStore if configured
         let mut sqlite_memory = None;
         if std::env::var("OHC_ENABLE_SQLITE_MEMORY").unwrap_or_default() == "true" {
-            let db_url = std::env::var("OHC_SQLITE_MEMORY_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-            if let Ok(store) = crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await {
-                sqlite_memory = Some(std::sync::Arc::new(store) as std::sync::Arc<dyn crate::memory_store::LongTermMemory>);
+            let db_url = std::env::var("OHC_SQLITE_MEMORY_URL")
+                .unwrap_or_else(|_| "sqlite::memory:".to_string());
+            if let Ok(store) =
+                crate::sqlite_memory::SqliteMemoryStore::new(&db_url, llm.clone()).await
+            {
+                sqlite_memory = Some(std::sync::Arc::new(store)
+                    as std::sync::Arc<dyn crate::memory_store::LongTermMemory>);
             } else {
                 tracing::warn!("Failed to initialize SqliteMemoryStore");
             }
         }
 
-        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> = if sqlite_memory.is_some() {
-            sqlite_memory
-        } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
-            let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR").unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
-            Some(Arc::new(crate::json_store::NamespaceJsonStore::new(&base_dir)))
-        } else {
-            self.memory.as_ref().map(|repo| {
-                Arc::new(crate::memory_store::PersistentMemoryStore {
-                    repo: repo.clone(),
-                    tenant_id: org_id.clone(),
-                    agent_id: self.agent_id.clone(),
-                    llm: llm.clone(),
-                }) as Arc<dyn crate::memory_store::LongTermMemory>
-            })
-        };
+        let long_term_memory: Option<std::sync::Arc<dyn crate::memory_store::LongTermMemory>> =
+            if sqlite_memory.is_some() {
+                sqlite_memory
+            } else if std::env::var("OHC_USE_JSON_MEMORY_STORE").unwrap_or_default() == "true" {
+                let base_dir = std::env::var("OHC_JSON_MEMORY_STORE_DIR")
+                    .unwrap_or_else(|_| ".agent-memory/namespaces".to_string());
+                Some(Arc::new(crate::json_store::NamespaceJsonStore::new(
+                    &base_dir,
+                )))
+            } else {
+                self.memory.as_ref().map(|repo| {
+                    Arc::new(crate::memory_store::PersistentMemoryStore {
+                        repo: repo.clone(),
+                        tenant_id: org_id.clone(),
+                        agent_id: self.agent_id.clone(),
+                        llm: llm.clone(),
+                    }) as Arc<dyn crate::memory_store::LongTermMemory>
+                })
+            };
 
         // Attempt to load AGENTS.md for user instructions
         let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
@@ -522,18 +556,30 @@ impl AgentServiceImpl {
                     developer_instructions.push_str(&format!(
                         "- {} via {}\n",
                         server.name,
-                        if server.endpoint.is_empty() { "stdio" } else { &server.endpoint }
+                        if server.endpoint.is_empty() {
+                            "stdio"
+                        } else {
+                            &server.endpoint
+                        }
                     ));
                 }
             }
         }
 
         let raw_max_tokens = if req.max_tokens == 0 {
-            if self.cfg.max_tokens == 0 { 2048 } else { self.cfg.max_tokens }
+            if self.cfg.max_tokens == 0 {
+                2048
+            } else {
+                self.cfg.max_tokens
+            }
         } else {
             req.max_tokens
         };
-        let max_tokens = if raw_max_tokens > 4096 { 4096 } else { raw_max_tokens };
+        let max_tokens = if raw_max_tokens > 4096 {
+            4096
+        } else {
+            raw_max_tokens
+        };
 
         let max_iterations = if req.max_context_messages == 0 {
             self.cfg.max_iterations
@@ -558,14 +604,23 @@ impl AgentServiceImpl {
             enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
+            permission_architecture: crate::types::PermissionArchitecture::Permissive,
             agent_id: self.agent_id.clone(),
             model,
             server_system_message,
             developer_instructions,
             user_instructions,
             max_tokens,
-            temperature: if req.temperature == 0.0 { self.cfg.temperature } else { req.temperature },
-            max_iterations: if max_iterations == 0 { 100 } else { max_iterations },
+            temperature: if req.temperature == 0.0 {
+                self.cfg.temperature
+            } else {
+                req.temperature
+            },
+            max_iterations: if max_iterations == 0 {
+                100
+            } else {
+                max_iterations
+            },
             max_task_tokens: 100_000,
             confidence_threshold,
             enable_acon_context_strategy: false,
@@ -620,7 +675,9 @@ impl AgentServiceImpl {
             return String::new();
         }
 
-        let mut out = String::from("[Loaded Skills]\nSkills are exposed as callable tools named Skill_<name>. Invoke the matching skill tool when a task fits its description.\n");
+        let mut out = String::from(
+            "[Loaded Skills]\nSkills are exposed as callable tools named Skill_<name>. Invoke the matching skill tool when a task fits its description.\n",
+        );
         for skill in skills {
             let loaded = ohc_builtin_agent_tools::skill::LoadedSkill {
                 name: skill.name.clone(),
@@ -659,7 +716,6 @@ impl AgentServiceImpl {
             memory_accessor,
             observation_store,
         );
-
 
         // Add create_skill tool
         tools.push(crate::tools::create_skill::create_skill_tool(()));
@@ -703,11 +759,15 @@ impl AgentServiceImpl {
     }
 
     pub async fn run_ralph_loop(&self, req: RunTaskRequest) {
-        let task_id = if req.task_id.is_empty() { uuid::Uuid::new_v4().to_string() } else { req.task_id.clone() };
+        let task_id = if req.task_id.is_empty() {
+            uuid::Uuid::new_v4().to_string()
+        } else {
+            req.task_id.clone()
+        };
         let progress_file = format!(".ralph_progress_{}.json", task_id);
         let llm = self.resolve_llm(&req.llm_provider, &req.model, &req.llm_endpoint);
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
-        
+
         let observation_store = Arc::new(dashmap::DashMap::new());
         let tools = self
             .build_tools(
@@ -728,7 +788,7 @@ impl AgentServiceImpl {
             unarc_agent = unarc_agent.with_memory_store(store.clone());
         }
         let agent = Arc::new(unarc_agent);
-        
+
         let ralph = crate::ralph_loop::RalphLoop::new(agent, run_cfg, &progress_file);
         if let Err(e) = ralph.run(&req.task).await {
             tracing::error!("Ralph Loop error: {}", e);
@@ -765,8 +825,14 @@ impl AgentService for AgentServiceImpl {
         self.check_auth(&req)?;
 
         let task_req = req.into_inner();
-        let llm = self.resolve_llm(&task_req.llm_provider, &task_req.model, &task_req.llm_endpoint);
-        let run_cfg = self.build_run_config(&task_req, &task_req.department, &llm).await;
+        let llm = self.resolve_llm(
+            &task_req.llm_provider,
+            &task_req.model,
+            &task_req.llm_endpoint,
+        );
+        let run_cfg = self
+            .build_run_config(&task_req, &task_req.department, &llm)
+            .await;
         let task = task_req.task.clone();
         let memory = self.memory.clone();
 
@@ -775,7 +841,9 @@ impl AgentService for AgentServiceImpl {
         let accessor = if let Some(mem) = &anthropic_memory {
             use crate::memory_store::LongTermMemory;
             mem.as_anthropic_accessor()
-        } else { None };
+        } else {
+            None
+        };
         let observation_store = Arc::new(dashmap::DashMap::new());
         let tools = self
             .build_tools(
@@ -833,7 +901,10 @@ impl AgentService for AgentServiceImpl {
                     },
                     AgentEvent::CheckpointSaved { iteration, path } => RunTaskEvent {
                         r#type: EventType::TextChunk as i32,
-                        content: format!("[Checkpoint Saved: Iteration {}, Path: {}]\n", iteration, path),
+                        content: format!(
+                            "[Checkpoint Saved: Iteration {}, Path: {}]\n",
+                            iteration, path
+                        ),
                         ..Default::default()
                     },
                     AgentEvent::TextChunk { content } => RunTaskEvent {
@@ -874,9 +945,16 @@ impl AgentService for AgentServiceImpl {
                         content: format!("HANDOFF REQUESTED TO: {}", target_agent),
                         ..Default::default()
                     },
-                    AgentEvent::RewindOccurred { iteration, checkpoint_id, reason } => RunTaskEvent {
+                    AgentEvent::RewindOccurred {
+                        iteration,
+                        checkpoint_id,
+                        reason,
+                    } => RunTaskEvent {
                         r#type: EventType::TextChunk as i32,
-                        content: format!("[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n", iteration, checkpoint_id, reason),
+                        content: format!(
+                            "[Rewind Occurred at Iteration {}: Checkpoint {}, Reason: {}]\n",
+                            iteration, checkpoint_id, reason
+                        ),
                         ..Default::default()
                     },
                 };
@@ -891,8 +969,9 @@ impl AgentService for AgentServiceImpl {
                 attempt += 1;
                 let res = tokio::time::timeout(
                     std::time::Duration::from_secs(60),
-                    agent_clone.run(&run_cfg, &task, &mut on_event)
-                ).await;
+                    agent_clone.run(&run_cfg, &task, &mut on_event),
+                )
+                .await;
 
                 match res {
                     Ok(Ok(content)) => {
@@ -901,10 +980,14 @@ impl AgentService for AgentServiceImpl {
                     }
                     Ok(Err(e)) => {
                         let err_str = e.to_string().to_lowercase();
-                        if err_str.contains("timeout") || err_str.contains("rate limit") || err_str.contains("unavailable") {
+                        if err_str.contains("timeout")
+                            || err_str.contains("rate limit")
+                            || err_str.contains("unavailable")
+                        {
                             if attempt < max_attempts {
                                 last_result = Err(e);
-                                tokio::time::sleep(std::time::Duration::from_secs(1 << attempt)).await;
+                                tokio::time::sleep(std::time::Duration::from_secs(1 << attempt))
+                                    .await;
                                 continue;
                             }
                         }
@@ -912,11 +995,16 @@ impl AgentService for AgentServiceImpl {
                         break;
                     }
                     Err(_) => {
-                        let err_msg = format!("AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).", attempt);
-                        on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                        let err_msg = format!(
+                            "AI agent job timed out on attempt {} (ML-Resilience 60s rule exceeded).",
+                            attempt
+                        );
+                        on_event(AgentEvent::TaskError {
+                            error: err_msg.clone(),
+                        });
                         last_result = Err(err_msg.into());
                         if attempt < max_attempts {
-                             continue;
+                            continue;
                         }
                     }
                 }
@@ -926,7 +1014,8 @@ impl AgentService for AgentServiceImpl {
 
             // Record memory entry.
             if let (Ok(content), Some(store)) = (&result, &memory) {
-                let org_id = std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
+                let org_id =
+                    std::env::var("OHC_ORGANIZATION_ID").unwrap_or_else(|_| "system".to_string());
                 let record = EmbeddingRecord {
                     id: uuid::Uuid::new_v4().to_string(),
                     tenant_id: org_id,
@@ -972,7 +1061,8 @@ impl AgentService for AgentServiceImpl {
                 enable_single_agent_maximization: false,
             enable_vercel_tool_scoping_metric: false,
             enable_lazy_tool_loading: false,
-                agent_id: self.agent_id.clone(),
+                permission_architecture: crate::types::PermissionArchitecture::Permissive,
+            agent_id: self.agent_id.clone(),
                 model: if sub_req.model.is_empty() { self.cfg.model.clone() } else { sub_req.model.clone() },
                 server_system_message: self.cfg.system_prompt.clone(),
                 developer_instructions: "You are a highly capable AI assistant operating within the OneHumanCorp environment. Obey all security rules and always verify your actions.".to_string(),
@@ -1028,7 +1118,11 @@ impl AgentService for AgentServiceImpl {
 
             let observation_store = Arc::new(dashmap::DashMap::new());
 
-            let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
+            let working_dir = if sub_req.working_dir.is_empty() {
+                Some(Self::workspace_path())
+            } else {
+                Some(std::path::PathBuf::from(&sub_req.working_dir))
+            };
             let tools = self
                 .build_tools(
                     sub_req.toolset_config.as_ref(),
@@ -1058,13 +1152,12 @@ impl AgentService for AgentServiceImpl {
             agent_service_client::AgentServiceClient, RunTaskRequest,
         };
 
-        let channel = tonic::transport::Channel::from_shared(
-            format!("http://{}", sub_req.sub_agent_address),
-        )
-        .map_err(|e| Status::internal(format!("invalid sub-agent address: {}", e)))?
-        .connect()
-        .await
-        .map_err(|e| Status::internal(format!("connect to sub-agent: {}", e)))?;
+        let channel =
+            tonic::transport::Channel::from_shared(format!("http://{}", sub_req.sub_agent_address))
+                .map_err(|e| Status::internal(format!("invalid sub-agent address: {}", e)))?
+                .connect()
+                .await
+                .map_err(|e| Status::internal(format!("connect to sub-agent: {}", e)))?;
 
         let mut client = AgentServiceClient::new(channel);
         let run_req = RunTaskRequest {
@@ -1124,7 +1217,10 @@ impl AgentService for SharedAgentService {
         self.0.run_task(req).await
     }
 
-    async fn ping(&self, req: tonic::Request<PingRequest>) -> Result<tonic::Response<PingResponse>, tonic::Status> {
+    async fn ping(
+        &self,
+        req: tonic::Request<PingRequest>,
+    ) -> Result<tonic::Response<PingResponse>, tonic::Status> {
         self.0.ping(req).await
     }
 
@@ -1151,7 +1247,8 @@ mod tests {
         root_file.flush().unwrap();
 
         std::fs::create_dir_all(base_dir.join("nested")).unwrap();
-        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        let mut nested_file =
+            std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
         nested_file.write_all(b"NESTED INSTRUCTION").unwrap();
         nested_file.flush().unwrap();
 
@@ -1173,7 +1270,8 @@ mod tests {
         root_file.flush().unwrap();
 
         std::fs::create_dir_all(base_dir.join("nested")).unwrap();
-        let mut nested_file = std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
+        let mut nested_file =
+            std::fs::File::create(base_dir.join("nested").join("AGENTS.md")).unwrap();
         nested_file.write_all(b"CRITICAL_LEAF").unwrap();
         nested_file.flush().unwrap();
 
@@ -1187,14 +1285,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_start_builtin_agent_task_assigned_subscribe() {
+        use crate::auth::AuthMode;
         use crate::mesh::transport::InProcessTransport;
         use crate::mesh::transport::MeshTransport;
-        use std::sync::Arc;
         use prost::Message;
-        use crate::auth::AuthMode;
+        use std::sync::Arc;
 
         let transport = Arc::new(InProcessTransport::new());
-        let svc = Arc::new(AgentServiceImpl::new("test_agent", AgentConfig::default(), AuthMode::Disabled));
+        let svc = Arc::new(AgentServiceImpl::new(
+            "test_agent",
+            AgentConfig::default(),
+            AuthMode::Disabled,
+        ));
 
         crate::service::start_builtin_agent(transport.clone(), svc.clone()).await;
 
@@ -1206,7 +1308,8 @@ mod tests {
             payload: serde_json::json!({
                 "model": "gpt-4-test",
                 "department": "sales"
-            }).to_string(),
+            })
+            .to_string(),
             ..Default::default()
         };
 
@@ -1216,13 +1319,18 @@ mod tests {
         // The InProcessTransport internally executes local subscribers immediately.
         // It's a bit tricky to assert side-effects of tokio::spawn inside without mocking the entire service,
         // but we verify the publish is correctly handled by the framework without crashing.
-        let result = transport.publish("task.assigned", crate::mesh::transport::Message {
-            agent_id: "agent".to_string(),
-            action: "task.assigned".to_string(),
-            status: "ok".to_string(),
-            payload: buf,
-            msg_id: uuid::Uuid::new_v4().to_string(),
-        }).await;
+        let result = transport
+            .publish(
+                "task.assigned",
+                crate::mesh::transport::Message {
+                    agent_id: "agent".to_string(),
+                    action: "task.assigned".to_string(),
+                    status: "ok".to_string(),
+                    payload: buf,
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                },
+            )
+            .await;
 
         assert!(result.is_ok());
 
@@ -1252,13 +1360,18 @@ pub async fn start_builtin_agent(
                                 let mut buf = Vec::new();
                                 use prost::Message;
                                 if evt.encode(&mut buf).is_ok() {
-                                    let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                        agent_id: "agent".to_string(),
-                                        action: "agent_events".to_string(),
-                                        status: "ok".to_string(),
-                                        payload: buf,
-                                        msg_id: uuid::Uuid::new_v4().to_string(),
-                                    }).await;
+                                    let _ = transport
+                                        .publish(
+                                            "agent_events",
+                                            crate::mesh::transport::Message {
+                                                agent_id: "agent".to_string(),
+                                                action: "agent_events".to_string(),
+                                                status: "ok".to_string(),
+                                                payload: buf,
+                                                msg_id: uuid::Uuid::new_v4().to_string(),
+                                            },
+                                        )
+                                        .await;
                                 }
                             }
                         }
@@ -1272,7 +1385,10 @@ pub async fn start_builtin_agent(
     };
 
     if let Err(e) = transport.subscribe("agent_jobs", handler).await {
-        tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
+        tracing::error!(
+            "Failed to subscribe to 'agent_jobs' on mesh transport: {}",
+            e
+        );
     } else {
         tracing::info!("Subscribed to mesh channel 'agent_jobs'");
     }
@@ -1283,14 +1399,19 @@ pub async fn start_builtin_agent(
         Box::new(move |msg: crate::mesh::transport::Message| {
             use prost::Message;
             if let Ok(shared_task) = crate::proto::hub::SharedTask::decode(&msg.payload[..]) {
-                tracing::info!("Received SharedTask from mesh (task.assigned): {}", shared_task.id);
+                tracing::info!(
+                    "Received SharedTask from mesh (task.assigned): {}",
+                    shared_task.id
+                );
 
                 // Decode metadata payload to extract overriding config
                 let mut system_prompt = String::new();
                 let mut department = String::new();
                 let mut model = String::new();
 
-                if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&shared_task.payload) {
+                if let Ok(payload_json) =
+                    serde_json::from_str::<serde_json::Value>(&shared_task.payload)
+                {
                     if let Some(sp) = payload_json.get("system_prompt").and_then(|v| v.as_str()) {
                         system_prompt = sp.to_string();
                     }
@@ -1331,16 +1452,24 @@ pub async fn start_builtin_agent(
                                         let mut buf = Vec::new();
                                         use prost::Message;
                                         let _ = evt.encode(&mut buf);
-                                        let _ = transport.publish("agent_events", crate::mesh::transport::Message {
-                                            agent_id: "agent".to_string(),
-                                            action: "agent_events".to_string(),
-                                            status: "ok".to_string(),
-                                            payload: buf,
-                                            msg_id: uuid::Uuid::new_v4().to_string(),
-                                        }).await;
+                                        let _ = transport
+                                            .publish(
+                                                "agent_events",
+                                                crate::mesh::transport::Message {
+                                                    agent_id: "agent".to_string(),
+                                                    action: "agent_events".to_string(),
+                                                    status: "ok".to_string(),
+                                                    payload: buf,
+                                                    msg_id: uuid::Uuid::new_v4().to_string(),
+                                                },
+                                            )
+                                            .await;
                                     }
                                     Err(e) => {
-                                        tracing::error!("Stream error running task from task.assigned: {}", e);
+                                        tracing::error!(
+                                            "Stream error running task from task.assigned: {}",
+                                            e
+                                        );
                                         break; // Or handle dead-letter logic
                                     }
                                 }
@@ -1352,13 +1481,16 @@ pub async fn start_builtin_agent(
                     }
                 });
             } else {
-                 tracing::error!("Failed to decode SharedTask from task.assigned topic");
+                tracing::error!("Failed to decode SharedTask from task.assigned topic");
             }
         }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
     };
 
     if let Err(e) = transport.subscribe("task.assigned", handler_tasks).await {
-        tracing::error!("Failed to subscribe to 'task.assigned' on mesh transport: {}", e);
+        tracing::error!(
+            "Failed to subscribe to 'task.assigned' on mesh transport: {}",
+            e
+        );
     } else {
         tracing::info!("Subscribed to mesh channel 'task.assigned'");
     }
@@ -1378,12 +1510,13 @@ pub async fn start_builtin_agent(
     };
 
     if let Err(e) = transport.subscribe("ralph_jobs", handler_ralph).await {
-        tracing::error!("Failed to subscribe to 'ralph_jobs' on mesh transport: {}", e);
+        tracing::error!(
+            "Failed to subscribe to 'ralph_jobs' on mesh transport: {}",
+            e
+        );
     } else {
         tracing::info!("Subscribed to mesh channel 'ralph_jobs'");
     }
-
-
 }
 
 #[cfg(test)]
@@ -1400,12 +1533,18 @@ mod memory_tests {
         let mut service = AgentServiceImpl::new("test", AgentConfig::default(), AuthMode::Disabled);
         service.init_memory().await;
 
-        assert!(service.anthropic_memory.is_some(), "Anthropic Memory should be initialized");
+        assert!(
+            service.anthropic_memory.is_some(),
+            "Anthropic Memory should be initialized"
+        );
         let mem = service.anthropic_memory.as_ref().unwrap();
 
         use crate::memory_store::LongTermMemory;
         let accessor = mem.as_anthropic_accessor();
-        assert!(accessor.is_some(), "Should return the anthropic memory accessor");
+        assert!(
+            accessor.is_some(),
+            "Should return the anthropic memory accessor"
+        );
 
         unsafe {
             std::env::remove_var("OHC_ENABLE_ANTHROPIC_MEMORY");

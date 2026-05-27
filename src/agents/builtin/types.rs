@@ -120,8 +120,7 @@ pub struct Usage {
 }
 
 /// Tool definition for the LLM.
-#[derive(Debug, Clone)]
-#[derive(serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ToolDefinition {
     pub name: String,
     pub description: String,
@@ -175,4 +174,18 @@ pub enum HumanInLoopSpectrum {
     CollaborativeEdit,
     /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
     Supervisory,
+}
+
+/// Architectural Decision 5: Permission Architecture
+/// Permissive (auto-approve) vs Restrictive (require approval).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PermissionArchitecture {
+    Permissive,
+    Restrictive,
+}
+
+impl Default for PermissionArchitecture {
+    fn default() -> Self {
+        Self::Permissive
+    }
 }
