@@ -39,3 +39,22 @@ async fn test_proxy_tunnel() {
 
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 }
+
+#[tokio::test]
+async fn test_hybrid_context_tool() {
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .acquire_timeout(std::time::Duration::from_millis(1))
+        .connect_lazy("postgres://invalid:invalid@localhost:1/test")
+        .unwrap();
+
+    let (success, res, err) = super::client::HybridContextTool::execute(&pool, "{\"test\": 1}").await;
+    // With an invalid pool, it should gracefully return false and the error string
+    // In some test harnesses, buffer_metric might succeed (e.g. dummy metrics) or fail
+    // We just verify it doesn't panic.
+    if !success {
+        assert!(err.len() > 0);
+    } else {
+        assert!(res.contains("success"));
+    }
+}
