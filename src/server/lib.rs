@@ -259,12 +259,14 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
 }
+
+static METRICS_CACHE: std::sync::OnceLock<crate::utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
@@ -299,6 +301,14 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let cache = METRICS_CACHE.get_or_init(|| {
+        let redis_client = std::env::var("REDIS_URL").ok().and_then(|url| redis::Client::open(url).ok());
+        crate::utils::cache::HybridCache::new(redis_client)
+    });
+    if let Some(cached_response) = cache.get(&tenant_id).await {
+        return (StatusCode::OK, axum::Json(cached_response)).into_response();
+    }
+
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
@@ -324,9 +334,12 @@ async fn http_metrics_handler(
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
 
+    let response = HttpMetricsResponse { active_customers, pending_orders, total_sales };
+    cache.set(&tenant_id, response.clone(), std::time::Duration::from_secs(30)).await;
+
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
+        axum::Json(response),
     )
         .into_response()
 }
@@ -519,22 +532,27 @@ async fn advisory_insights_handler(
         }
     };
 
-    // Gather context from DB
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    // Fetch context and order counts concurrently
+    let (tenant_res, orders_res) = tokio::join!(
+        async {
+            sqlx::query_as::<_, (String, String)>("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1")
+                .bind(&tenant_id)
+                .fetch_optional(&db.pool)
+                .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
+                .bind(&tenant_id)
+                .fetch_one(&db.pool)
+                .await
+        }
+    );
 
-    // Get order counts
-    let active_orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (business_name, industry) = tenant_res
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
+    let active_orders = orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
