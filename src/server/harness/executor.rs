@@ -31,23 +31,27 @@ impl LocalShellTask {
         record_bubblewrap_spawn(agent_id, task_id);
         let start = Instant::now();
 
-        // In a real execution, we would run `wrapped_cmd` using `tokio::process::Command`
-        // For the scope of this harness executor logic, we just return the wrapped command
-        // or execute it if needed. Let's return the wrapped command as a success placeholder
-        // to show interception logic.
+        let output = tokio::process::Command::new("bash")
+            .arg("-c")
+            .arg(&wrapped_cmd)
+            .output()
+            .await
+            .map_err(|e| format!("Failed to spawn process: {}", e))?;
 
-        // Simulating the actual execution and trapping permission denied (just an example).
-        // Real implementation would spawn and wait, then check the exit status.
-        let mock_exit_code = 0; // Replace this with actual `process.wait().await?.code().unwrap_or(-1)` in reality
+        let exit_code = output.status.code().unwrap_or(-1);
 
         let latency = start.elapsed().as_secs_f64() * 1000.0;
         record_bubblewrap_execution_latency(agent_id, task_id, latency);
 
-        if mock_exit_code == 13 || mock_exit_code == 126 { // Permission denied related exit codes
+        if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");
         }
 
-        Ok(format!("Executing: {}", wrapped_cmd))
+        if !output.status.success() {
+            return Err(format!("Process exited with error: {}\n{}", exit_code, String::from_utf8_lossy(&output.stderr)));
+        }
+
+        Ok(format!("Executing: {}\n{}", wrapped_cmd, String::from_utf8_lossy(&output.stdout)))
     }
 }
 
