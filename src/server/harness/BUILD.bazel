@@ -14,6 +14,8 @@ rust_library(
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
         "sandbox/macos_sandbox.rs",
+        "sandbox/linux_sandbox.rs",
+        "network_proxy.rs",
         "mcp/mod.rs",
         "mcp/client.rs",
     ],
@@ -22,6 +24,7 @@ rust_library(
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/telemetry:server_telemetry",
+        "//src/server/tools/local_proxy:server_tools_local_proxy",
         "@crates//:chrono",
         "@crates//:opentelemetry",
         "@crates//:regex",
