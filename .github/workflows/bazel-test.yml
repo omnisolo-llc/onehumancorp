@@ -30,6 +30,8 @@ jobs:
 
       - name: Free Disk Space (Ubuntu)
         uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
 
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
