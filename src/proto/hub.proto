@@ -206,8 +206,8 @@ message SharedTask {
 
 enum ActionRisk {
   ACTION_RISK_UNSPECIFIED = 0;
-  ACTION_RISK_LOW = 1;
-  ACTION_RISK_HIGH = 2;
+  ACTION_RISK_AUTO_EXECUTE = 1;
+  ACTION_RISK_DRAFT_FOR_REVIEW = 2;
 }
 
 

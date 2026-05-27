@@ -57,16 +57,16 @@ impl SharedTask {
 #[sqlx(type_name = "VARCHAR")]
 pub enum ActionRisk {
     Unspecified,
-    Low,
-    High,
+    AutoExecute,
+    DraftForReview,
 }
 
 impl ActionRisk {
     pub fn to_proto(&self) -> ::server_ohc::orchestration::ActionRisk {
         match self {
             ActionRisk::Unspecified => ::server_ohc::orchestration::ActionRisk::Unspecified,
-            ActionRisk::Low => ::server_ohc::orchestration::ActionRisk::Low,
-            ActionRisk::High => ::server_ohc::orchestration::ActionRisk::High,
+            ActionRisk::AutoExecute => ::server_ohc::orchestration::ActionRisk::AutoExecute,
+            ActionRisk::DraftForReview => ::server_ohc::orchestration::ActionRisk::DraftForReview,
         }
     }
 }
@@ -75,15 +75,15 @@ impl ActionRisk {
     pub fn as_str(&self) -> &'static str {
         match self {
             ActionRisk::Unspecified => "UNSPECIFIED",
-            ActionRisk::Low => "LOW",
-            ActionRisk::High => "HIGH",
+            ActionRisk::AutoExecute => "AUTO_EXECUTE",
+            ActionRisk::DraftForReview => "DRAFT_FOR_REVIEW",
         }
     }
 
     pub fn from_str(s: &str) -> Self {
         match s.to_uppercase().as_str() {
-            "LOW" => ActionRisk::Low,
-            "HIGH" => ActionRisk::High,
+            "AUTO_EXECUTE" => ActionRisk::AutoExecute,
+            "DRAFT_FOR_REVIEW" => ActionRisk::DraftForReview,
             _ => ActionRisk::Unspecified,
         }
     }
@@ -124,9 +124,9 @@ impl TaskManager {
         };
 
         let action_risk = if priority == "P1" || priority == "HIGH" {
-            Some(ActionRisk::High)
+            Some(ActionRisk::DraftForReview)
         } else {
-            Some(ActionRisk::Low)
+            Some(ActionRisk::AutoExecute)
         };
 
         let task = SharedTask {
@@ -459,7 +459,7 @@ mod tests {
         let mut task = tm.create_task("org1".to_string(), "mission1".to_string(), "Pending Approval Task".to_string(), "Description".to_string(), "P2".to_string()).unwrap();
 
         task.approval_status = Some("PENDING".to_string());
-        task.action_risk = Some(ActionRisk::High);
+        task.action_risk = Some(ActionRisk::DraftForReview);
 
         tm.insert_task(task.clone());
 
@@ -474,7 +474,7 @@ mod tests {
         let pending = tm.get_pending_approvals("org1");
         assert_eq!(pending.len(), 1);
         assert_eq!(pending[0].id, task.id);
-        assert_eq!(pending[0].action_risk, Some(ActionRisk::High));
+        assert_eq!(pending[0].action_risk, Some(ActionRisk::DraftForReview));
     }
 
     #[tokio::test]

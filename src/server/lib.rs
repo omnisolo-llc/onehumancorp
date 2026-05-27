@@ -1221,8 +1221,8 @@ impl HubService for MyHubService {
             created_at_unix: task.created_at.timestamp(),
             updated_at_unix: task.updated_at.timestamp(),
             action_risk: match task.action_risk {
-                Some(crate::tasks::ActionRisk::Low) => 1,
-                Some(crate::tasks::ActionRisk::High) => 2,
+                Some(crate::tasks::ActionRisk::AutoExecute) => 1,
+                Some(crate::tasks::ActionRisk::DraftForReview) => 2,
                 _ => 0,
             },
             approval_status: task.approval_status.unwrap_or_default(),
@@ -1255,8 +1255,8 @@ impl HubService for MyHubService {
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
                 action_risk: match task.action_risk {
-                    Some(crate::tasks::ActionRisk::Low) => 1,
-                    Some(crate::tasks::ActionRisk::High) => 2,
+                    Some(crate::tasks::ActionRisk::AutoExecute) => 1,
+                    Some(crate::tasks::ActionRisk::DraftForReview) => 2,
                     _ => 0,
                 },
                 approval_status: task.approval_status.unwrap_or_default(),
@@ -1335,8 +1335,8 @@ impl HubService for MyHubService {
                 created_at_unix: task.created_at.timestamp(),
                 updated_at_unix: task.updated_at.timestamp(),
                 action_risk: match task.action_risk {
-                    Some(crate::tasks::ActionRisk::Low) => 1,
-                    Some(crate::tasks::ActionRisk::High) => 2,
+                    Some(crate::tasks::ActionRisk::AutoExecute) => 1,
+                    Some(crate::tasks::ActionRisk::DraftForReview) => 2,
                     _ => 0,
                 },
                 approval_status: task.approval_status.unwrap_or_default(),
@@ -1362,7 +1362,7 @@ impl HubService for MyHubService {
             req.details.clone(),
             "P1".to_string(),
         ).map_err(|e| Status::internal(e))?;
-        ops_task.action_risk = Some(crate::tasks::ActionRisk::Low);
+        ops_task.action_risk = Some(crate::tasks::ActionRisk::AutoExecute);
         self.hub.task_manager().insert_task(ops_task);
 
         let mut cs_task = self.hub.task_manager().create_task(
@@ -1372,7 +1372,7 @@ impl HubService for MyHubService {
             req.details.clone(),
             "P1".to_string(),
         ).map_err(|e| Status::internal(e))?;
-        cs_task.action_risk = Some(crate::tasks::ActionRisk::High);
+        cs_task.action_risk = Some(crate::tasks::ActionRisk::DraftForReview);
         cs_task.approval_status = Some("PENDING".to_string());
         cs_task.proposed_content = Some(format!("Hi {}, thank you for your custom order!", req.customer_name));
         self.hub.task_manager().insert_task(cs_task);

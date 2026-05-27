@@ -276,6 +276,16 @@ impl DepartmentOrchestrator {
                     payload: Some(_action_payload),
                 };
                 self.add_approval_request(req.clone()).await;
+
+                let payload = serde_json::json!({
+                    "request_id": req.id,
+                    "tenant_id": req.tenant_id,
+                    "action_payload": req.payload.clone(),
+                });
+                let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
+                let topic = format!("agent:{}:approved", department);
+                let _ = self.mesh.publish(&topic, payload_bytes).await;
+
                 Ok(req.clone())
             }
             ActionRisk::DraftForReview => {
@@ -543,9 +553,9 @@ impl DepartmentOrchestrator {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
-        let opt_department = match &self.db.store {
+        let opt_row = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -555,14 +565,21 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let payload_opt: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
+                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
+                        Some((r.get::<String, _>("department"), payload_opt))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department, payload")
                     .bind(new_status)
                     .bind(now)
                     .bind(request_id)
@@ -572,7 +589,14 @@ impl DepartmentOrchestrator {
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
-                        Some(r.get::<String, _>("department"))
+                        let payload_opt: Option<serde_json::Value> = match r.try_get::<String, _>("payload") {
+                            Ok(p) => serde_json::from_str(&p).unwrap_or(None),
+                            Err(_) => match r.try_get::<serde_json::Value, _>("payload") {
+                                Ok(p) => Some(p),
+                                Err(_) => None,
+                            }
+                        };
+                        Some((r.get::<String, _>("department"), payload_opt))
                     }
                     Ok(None) => return Err("Unauthorized".to_string()),
                     Err(e) => return Err(e.to_string()),
@@ -581,10 +605,11 @@ impl DepartmentOrchestrator {
         };
 
         if approved {
-            if let Some(dep) = opt_department {
+            if let Some((dep, action_payload)) = opt_row {
                 let payload = serde_json::json!({
                     "request_id": request_id,
-                    "tenant_id": tenant_id
+                    "tenant_id": tenant_id,
+                    "action_payload": action_payload,
                 });
                 let payload_bytes = serde_json::to_vec(&payload).unwrap_or_default();
                 let topic = format!("agent:{}:approved", dep);
