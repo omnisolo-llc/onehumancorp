@@ -11,11 +11,14 @@ use std::sync::Arc;
 
 use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig};
 use crate::orchestration::local_sandbox::LocalSandbox;
+use crate::harness::capabilities::CapabilityAuthorizer;
 
 pub struct LocalProxyClient {
     client: McpReverseTunnelServiceClient<Channel>,
     spiffe_id: String,
     blob_provider: Arc<dyn BlobProvider>,
+    authorizer: Option<Arc<CapabilityAuthorizer>>,
+    session_id: String,
 }
 
 impl LocalProxyClient {
@@ -29,6 +32,8 @@ impl LocalProxyClient {
             client: McpReverseTunnelServiceClient::new(channel),
             spiffe_id,
             blob_provider: create_blob_provider(),
+            authorizer: None,
+            session_id: "unknown".to_string(),
         }
     }
 
@@ -37,7 +42,15 @@ impl LocalProxyClient {
             client,
             spiffe_id,
             blob_provider: create_blob_provider(),
+            authorizer: None,
+            session_id: "unknown".to_string(),
         }
+    }
+
+    pub fn with_authorizer(mut self, authorizer: Arc<CapabilityAuthorizer>, session_id: String) -> Self {
+        self.authorizer = Some(authorizer);
+        self.session_id = session_id;
+        self
     }
 
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -59,12 +72,41 @@ impl LocalProxyClient {
 
         let tx_clone = tx.clone();
         let blob_provider = self.blob_provider.clone();
+        let authorizer = self.authorizer.clone();
+        let session_id = self.session_id.clone();
+        let spiffe_id = self.spiffe_id.clone();
+
         tokio::spawn(async move {
             while let Ok(Some(msg)) = in_stream.message().await {
                 if let Some(payload) = msg.payload {
                     match payload {
                         ::server_ohc::mcp_proxy::server_to_proxy::Payload::InvokeRequest(req) => {
                             info!("Received invoke request for tool: {}", req.tool_id);
+
+                            // Check capabilities if authorizer is present
+                            if let Some(auth) = &authorizer {
+                                let (capability, action_details) = match req.tool_id.as_str() {
+                                    "shell" => ("bash", serde_json::json!({"command": req.params})),
+                                    "fs_read" => ("read", serde_json::json!({"path": req.params})),
+                                    "fs_write" => {
+                                        let path = req.params.splitn(2, "||").next().unwrap_or("unknown");
+                                        ("write", serde_json::json!({"path": path}))
+                                    },
+                                    _ => ("unknown", serde_json::json!({"tool": req.tool_id, "params": req.params})),
+                                };
+
+                                if let Err(e) = auth.authorize("system", &spiffe_id, &session_id, capability, action_details).await {
+                                    let _ = tx_clone.send(ProxyToServer {
+                                        request_id: msg.request_id,
+                                        payload: Some(proxy_to_server::Payload::InvokeResponse(::server_ohc::mcp_proxy::InvokeCommandResponse {
+                                            success: false,
+                                            result: "".to_string(),
+                                            error_details: format!("Capability denied: {}", e),
+                                        })),
+                                    }).await;
+                                    continue;
+                                }
+                            }
 
                             let (success, result, error_details) = match req.tool_id.as_str() {
                                 "shell" => {

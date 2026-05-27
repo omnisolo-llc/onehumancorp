@@ -3,15 +3,34 @@ use sqlx::PgPool;
 use std::time::Instant;
 use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
 
+use super::capabilities::CapabilityAuthorizer;
+use std::sync::Arc;
+
 pub struct LocalShellTask {
     manager: SandboxManager,
+    authorizer: Option<Arc<CapabilityAuthorizer>>,
+    tenant_id: String,
+    agent_id: String,
+    session_id: String,
 }
 
 impl LocalShellTask {
     pub fn new(pool: Option<PgPool>) -> Self {
         LocalShellTask {
             manager: SandboxManager::new(pool),
+            authorizer: None,
+            tenant_id: "unknown_tenant".to_string(),
+            agent_id: "unknown_agent".to_string(),
+            session_id: "unknown_session".to_string(),
         }
+    }
+
+    pub fn with_authorizer(mut self, authorizer: Arc<CapabilityAuthorizer>, tenant_id: String, agent_id: String, session_id: String) -> Self {
+        self.authorizer = Some(authorizer);
+        self.tenant_id = tenant_id;
+        self.agent_id = agent_id;
+        self.session_id = session_id;
+        self
     }
 
     pub async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
@@ -19,6 +38,12 @@ impl LocalShellTask {
     }
 
     pub async fn execute(&self, cmd: &str) -> Result<String, String> {
+        if let Some(auth) = &self.authorizer {
+            if let Err(e) = auth.authorize(&self.tenant_id, &self.agent_id, &self.session_id, "bash", serde_json::json!({"command": cmd})).await {
+                return Err(format!("SANDBOX_FAILURE: Command execution denied: {}", e));
+            }
+        }
+
         let wrapped_cmd = match self.manager.wrap_command(cmd).await {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
