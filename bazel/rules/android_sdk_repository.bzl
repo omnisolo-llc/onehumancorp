@@ -42,7 +42,7 @@ def _tauri_android_sdk_repository_impl(repo_ctx):
         if version != repo_ctx.attr.build_tools_version:
             packages.append("build-tools;%s" % version)
     jdk = repo_ctx.path("jdk")
-    install = "export JAVA_HOME=\"%s\"\nexport PATH=\"%s/bin:$PATH\"\nwhile true; do printf 'y\\n'; done | \"%s\" --sdk_root=\"%s\" --licenses >/dev/null || true\n\"%s\" --sdk_root=\"%s\" %s" % (
+    install = "export JAVA_HOME=\"%s\"\nexport PATH=\"%s/bin:$PATH\"\nwhile true; do printf 'y\\n'; done | \"%s\" --sdk_root=\"%s\" --licenses >/dev/null || true\nwhile true; do printf 'y\\n'; done | \"%s\" --sdk_root=\"%s\" %s" % (
         jdk,
         jdk,
         sdkmanager,
