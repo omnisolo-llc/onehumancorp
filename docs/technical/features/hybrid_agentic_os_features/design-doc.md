@@ -38,7 +38,7 @@ One Human Corp (OHC) is building a Hybrid Agentic OS to empower a single human t
 
 **Design:**
 - **Orchestration:** A background worker (`AutoDreamPipeline`) extracts raw memory, chunks it, and feeds it into the existing `AutoDream` logic.
-- **Embeddings:** Consolidated memory is embedded using the Rust LLM clients under `src/agents/builtin/llm/`.
+- **Embeddings:** Consolidated memory is embedded using existing LLM clients (`src/server/agents/local/llm.go`).
 - **Storage:** Embeddings are stored in a `pgvector`-enabled PostgreSQL table (`consolidated_memory`) for efficient similarity search.
 
 ## 3. Hybrid Consistency

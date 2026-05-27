@@ -43,15 +43,14 @@ graph LR
 
 ## 3. Data Model Extensions
 
-### 3.1 Trust Agreement (`src/server/domain/b2b.rs`)
-```rust
-#[derive(serde::Serialize, serde::Deserialize)]
-struct TrustAgreement {
-    id: String,
-    partner_org: String,
-    partner_jwks_url: String,
-    allowed_roles: Vec<String>,
-    status: String,
+### 3.1 Trust Agreement (`src/domain/b2b.go`)
+```go
+type TrustAgreement struct {
+    ID          string   `json:"id"`
+    PartnerOrg  string   `json:"partner_org"`
+    PartnerJWKS string   `json:"partner_jwks_url"`
+    AllowedRoles []string `json:"allowed_roles"`
+    Status      string   `json:"status"` // PENDING, ACTIVE, REVOKED
 }
 ```
 

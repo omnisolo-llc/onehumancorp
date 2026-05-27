@@ -12,7 +12,7 @@ def _playwright_target_name(spec):
     return "playwright_" + spec.replace("/", "_").replace(".", "_").replace("-", "_")
 
 def define_playwright_tests(specs, data = [], server = None):
-    """Generate one cacheable sh_test per *.spec.ts file, plus a manual sharded aggregate."""
+    """Generate one sh_test target per *.spec.ts file (manual), plus a single sharded sh_test target."""
     common_data = [
         "//src/e2e:fixtures.ts",
         "//src/e2e:ai-judge.ts",
@@ -44,10 +44,10 @@ def define_playwright_tests(specs, data = [], server = None):
             timeout = "eternal",
             tags = [
                 "e2e",
-                "exclusive",
                 "no-remote-exec",
                 "requires-docker",
                 "no-sandbox",
+                "manual",  # Tag manual so it does not run in bazel test //...
             ],
             target_compatible_with = select({
                 "@platforms//os:linux": [],
@@ -72,7 +72,6 @@ def define_playwright_tests(specs, data = [], server = None):
             "no-remote-exec",
             "requires-docker",
             "no-sandbox",
-            "manual",
         ],
         target_compatible_with = select({
             "@platforms//os:linux": [],
