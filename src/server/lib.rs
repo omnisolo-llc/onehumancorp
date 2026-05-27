@@ -4702,7 +4702,17 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
-                            document.getElementById('milestone-body').textContent = body;
+                            let htmlBody = body;
+                            if (title === '🎉 10th Order!') {
+                                const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
+                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
+                                htmlBody += '<div style="margin-top: 15px;">' +
+                                    '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
+                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
+                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; background: #1DA1F2; color: white; text-decoration: none; border-radius: 4px;">Share to X</a>' +
+                                    '</div>';
+                            }
+                            document.getElementById('milestone-body').innerHTML = htmlBody;
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
