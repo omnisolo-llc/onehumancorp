@@ -1692,6 +1692,7 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         "failed_payment" => settings.sms_alert_failed_payment,
         "new_order" => settings.sms_alert_new_order,
         "urgent_booking" => settings.sms_alert_urgent_booking,
+        "draft_approval" => true, // Ensure approval notifications are sent
         _ => false,
     };
 
