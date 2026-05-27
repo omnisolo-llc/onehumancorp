@@ -1,7 +1,15 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom';
+import { describe, it, expect, vi } from 'vitest';
 import AgentAuditDashboard from './page';
+
+vi.mock('next/link', () => {
+  return {
+    default: ({ children, href }: { children: React.ReactNode; href: string }) => {
+      return <a href={href}>{children}</a>;
+    }
+  };
+});
 
 describe('Agent Audit Dashboard', () => {
   it('renders Agent Audit Dashboard heading', () => {
