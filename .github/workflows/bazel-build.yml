@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -73,13 +73,25 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ matrix.name }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
             build --build_metadata=ROLE=CI
             build --color=yes
             build --show_timestamps
-            test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
         if: matrix.name != 'android'
@@ -89,12 +101,15 @@ jobs:
             except kind(".*_test rule", //...)
             except filter(".*_test$", //...)
             except attr("tags", "manual", //...)
+            except filter("^//:(\\.aspect_rules_js/node_modules|node_modules)(/|$)", //...)
             except //src/ui/tauri:all
             except //deploy:all
+            except //release:all
           ' > build-targets.txt
           xargs -r bazelisk build \
             --config=${{ matrix.bazel_config }} \
             --skip_incompatible_explicit_targets \
+            --build_tag_filters=-manual,-e2e,-requires-docker,-local,-no-sandbox \
             $BAZEL_BUILD_FLAGS \
             < build-targets.txt
 
@@ -122,7 +137,8 @@ jobs:
 
       - name: Build server web image tarball
         if: matrix.name == 'linux-x86_64'
-        run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
+        run: |
+          bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'
