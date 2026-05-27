@@ -45,10 +45,10 @@ impl Department for CustomerSuccessAgent {
 
         if event.event_type == "agent:customer_success:approved" {
             // Actual logic to send the message when approved.
-            if let Some(action_payload) = event.payload.get("action_payload") {
-                tracing::info!("Simulating sending approved message for tenant: {} with payload: {:?}", event.tenant_id, action_payload);
+            if let Some(_action_payload) = event.payload.get("action_payload") {
+                tracing::info!("Simulating sending approved message for tenant");
             } else {
-                tracing::info!("Simulating sending approved message for tenant: {}", event.tenant_id);
+                tracing::info!("Simulating sending approved message for tenant");
             }
             return Ok(());
         }
