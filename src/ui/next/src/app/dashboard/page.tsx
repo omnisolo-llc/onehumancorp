@@ -510,6 +510,25 @@ export default function Dashboard() {
              </div>
          </section>
 
+         {/* Plain-Language Weekly Financial Brief */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
+            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
+                <div className="flex items-start gap-4">
+                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                   </div>
+                   <div>
+                       <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
+                       <p className="text-gray-800 text-sm leading-relaxed">
+                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
+                       </p>
+                   </div>
+                </div>
+            </div>
+         </section>
+
          {/* Business Snapshot */}
          <section>
             <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
@@ -534,12 +553,12 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Automated AI Review Requests Growth Loop */}
+         {/* Automated review requests for recent orders Growth Loop */}
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
                     <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated AI Review Requests
+                        Automated review requests for recent orders
                         <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
                             New Growth Loop
                         </span>
@@ -986,6 +1005,34 @@ export default function Dashboard() {
                         <div className="text-5xl font-outfit font-bold text-gray-900 mb-2">{trialDaysLeft}</div>
                         <div className="text-sm font-medium text-gray-500 uppercase tracking-widest">Days Left</div>
                     </div>
+                </div>
+            </div>
+         </section>
+
+         {/* Growth Loop: Social Share Cards */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Social Share Cards</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
+                        <span className="text-xs font-medium text-purple-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Share Your Store</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Generate beautiful, branded share cards for your store, products, or milestones to share on social media. Each card includes a trackable link.</p>
+                    <Link
+                        href="/share-cards"
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
+                    >
+                        <span>Generate Share Cards</span>
+                    </Link>
+                </div>
+                <div className="w-full md:w-1/3 bg-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px]">
+                    <div className="text-4xl mb-3">🎴</div>
+                    <span className="text-sm font-medium text-purple-600 text-center">Stand out on social media</span>
                 </div>
             </div>
          </section>
@@ -1492,7 +1539,7 @@ export default function Dashboard() {
             <div className="text-5xl mb-4">✨</div>
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
