@@ -9,11 +9,13 @@ use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
+use crate::harness::network::proxy::NetworkBridgeProxy;
 
 pub struct LinuxSandbox {
     evaluator: PermissionEvaluator,
     policy: SandboxPolicy,
     violation_store: Arc<ViolationStore>,
+    network_proxy: Option<NetworkBridgeProxy>,
 }
 
 impl LinuxSandbox {
@@ -23,6 +25,7 @@ impl LinuxSandbox {
             evaluator: PermissionEvaluator::new(),
             policy: SandboxPolicy::default(),
             violation_store,
+            network_proxy: None,
         }
     }
 
@@ -44,9 +47,16 @@ impl LinuxSandbox {
         args.push("/".to_string());
 
         // Handle network restrictions. For strict isolation, if there are ANY blocked domains,
-        // we drop the network entirely by not providing `--share-net`.
+        // we drop the network entirely by not providing \`--share-net\`.
+        // WITH PROXY: Instead of just dropping share-net, we also bind the proxy socket.
         if self.policy.blocked_domains.is_empty() {
             args.push("--share-net".to_string());
+        }
+
+        if let Some(proxy) = &self.network_proxy {
+            args.push("--bind".to_string());
+            args.push(proxy.socket_path().to_string());
+            args.push(proxy.socket_path().to_string());
         }
 
         // Now, for every read-only path, we bind it as ro-bind to restrict writes.
@@ -106,6 +116,12 @@ impl SandboxAdapter for LinuxSandbox {
             prefix.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.policy.blocked_domains.join(",")));
         }
 
+        if let Some(proxy) = &self.network_proxy {
+            prefix.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
+            prefix.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
+            prefix.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
+        }
+
         Ok(format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd))
     }
 
@@ -115,6 +131,14 @@ impl SandboxAdapter for LinuxSandbox {
 
         self.evaluator.update_policy(policy.clone());
         self.policy = policy;
+
+        if !self.policy.blocked_domains.is_empty() {
+            let mut proxy = NetworkBridgeProxy::new(self.policy.blocked_domains.clone());
+            let _ = proxy.start();
+            self.network_proxy = Some(proxy);
+        } else {
+            self.network_proxy = None;
+        }
 
         Ok(())
     }
@@ -156,6 +180,15 @@ mod tests {
         assert!(args.contains(&"--ro-bind".to_string()));
         assert!(args.contains(&"/etc".to_string()));
         assert!(args.contains(&"/var/log".to_string()));
+
+        let mut found_proxy_bind = false;
+        for i in 0..args.len() {
+            if args[i] == "--bind" && args[i+1].starts_with("/tmp/ohc-agent-http-") {
+                found_proxy_bind = true;
+                break;
+            }
+        }
+        assert!(found_proxy_bind);
     }
 
     #[tokio::test]
@@ -183,5 +216,21 @@ mod tests {
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Command execution denied by sandbox policy");
+    }
+
+    #[tokio::test]
+    async fn test_wrap_command_with_proxy() {
+        let mut sandbox = LinuxSandbox::new(None);
+        let policy_json = r#"{
+            "blocked_domains": ["evil.com"]
+        }"#;
+
+        sandbox.update_config(policy_json).await.unwrap();
+        let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
+
+        assert!(wrapped.contains("export HTTP_PROXY='unix:///tmp/ohc-agent-http-"));
+        assert!(wrapped.contains("export HTTPS_PROXY='unix:///tmp/ohc-agent-http-"));
+        assert!(wrapped.contains("export ALL_PROXY='unix:///tmp/ohc-agent-http-"));
+        assert!(wrapped.contains("export BLOCKED_DOMAINS='evil.com';"));
     }
 }

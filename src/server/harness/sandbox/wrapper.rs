@@ -1,8 +1,10 @@
 use super::manager::SandboxPolicy;
+use crate::harness::network::proxy::NetworkBridgeProxy;
 
 pub struct BashWrapper {
     read_only_paths: Vec<String>,
     blocked_domains: Vec<String>,
+    network_proxy: Option<NetworkBridgeProxy>,
 }
 
 impl BashWrapper {
@@ -10,12 +12,21 @@ impl BashWrapper {
         BashWrapper {
             read_only_paths: Vec::new(),
             blocked_domains: Vec::new(),
+            network_proxy: None,
         }
     }
 
     pub fn update_policy(&mut self, policy: SandboxPolicy) {
         self.read_only_paths = policy.read_only_paths;
         self.blocked_domains = policy.blocked_domains;
+
+        if !self.blocked_domains.is_empty() {
+            let mut proxy = NetworkBridgeProxy::new(self.blocked_domains.clone());
+            let _ = proxy.start();
+            self.network_proxy = Some(proxy);
+        } else {
+            self.network_proxy = None;
+        }
     }
 
     pub fn wrap(&self, cmd: &str) -> String {
@@ -28,6 +39,12 @@ impl BashWrapper {
         }
         if !self.blocked_domains.is_empty() {
             preamble.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.blocked_domains.join(",")));
+        }
+
+        if let Some(proxy) = &self.network_proxy {
+            preamble.push_str(&format!("export HTTP_PROXY='unix://{}'; ", proxy.socket_path()));
+            preamble.push_str(&format!("export HTTPS_PROXY='unix://{}'; ", proxy.socket_path()));
+            preamble.push_str(&format!("export ALL_PROXY='unix://{}'; ", proxy.socket_path()));
         }
 
         format!("bash -c \"{}{}\"", preamble, cmd.replace("\"", "\\\""))
@@ -58,6 +75,7 @@ mod tests {
         let wrapped = wrapper.wrap("echo hello");
         assert!(wrapped.contains("export READ_ONLY_PATHS='/etc:/var';"));
         assert!(wrapped.contains("export BLOCKED_DOMAINS='evil.com';"));
+        assert!(wrapped.contains("export HTTP_PROXY='unix:///tmp/ohc-agent-http-"));
         assert!(wrapped.contains("echo hello"));
     }
 }
