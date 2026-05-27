@@ -1,0 +1,8 @@
+Miser Verified Features:
+1. LLM Token Efficiency
+2. Storage Compression & CDN
+3. AI Agent Rate Limiting
+4. Infrastructure Cost Metering
+5. Transaction Fee Optimization
+6. Pricing Page & Billing Portal
+7. Cost Transparency Dashboard
