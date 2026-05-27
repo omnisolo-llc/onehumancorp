@@ -11,7 +11,7 @@ test.describe('Manychat Integration', () => {
     await expect(page.getByText('Manychat')).toBeVisible();
 
     // Click the connect button for Manychat
-    const connectButton = page.locator('div').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
+    const connectButton = page.locator('div.rounded-\\[16px\\]').filter({ hasText: 'Manychat' }).getByRole('button', { name: 'Connect' });
 
     // Stub alert
     page.on('dialog', dialog => dialog.accept());
