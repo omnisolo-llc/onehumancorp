@@ -1,1 +1,0 @@
-ALTER TABLE swarm_truth_embeddings ADD COLUMN sync_error TEXT; ALTER TABLE swarm_truth_embeddings ADD COLUMN last_synced_at TIMESTAMP; ALTER TABLE swarm_truth_embeddings ADD COLUMN escalation_required INTEGER DEFAULT 0; ALTER TABLE swarm_truth_embeddings ADD COLUMN sync_status TEXT DEFAULT 'PENDING';

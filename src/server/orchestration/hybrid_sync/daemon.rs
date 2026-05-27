@@ -91,7 +91,7 @@ impl HybridSyncDaemon {
 
     pub async fn sync_step(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Find tasks requiring cloud escalation
-        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING' AND (sync_error IS NULL OR last_synced_at < datetime('now', '-5 minutes'))")
+        let rows = sqlx::query("SELECT memory_id, context FROM swarm_truth_embeddings WHERE escalation_required = 1 AND sync_status = 'PENDING'")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -122,11 +122,6 @@ impl HybridSyncDaemon {
                 Ok(t) => t,
                 Err(e) => {
                     warn!("Failed to begin pg transaction: {}, gracefully degrading (cloud unreachable).", e);
-                    let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
-                        .bind(e.to_string())
-                        .bind(&id)
-                        .execute(&self.sqlite_pool)
-                        .await;
                     continue;
                 }
             };
@@ -139,11 +134,6 @@ impl HybridSyncDaemon {
 
             if let Err(e) = mission_res {
                 warn!("Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).", e);
-                let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
-                    .bind(e.to_string())
-                    .bind(&id)
-                    .execute(&self.sqlite_pool)
-                    .await;
                 let _ = tx.rollback().await;
                 continue;
             }
@@ -160,11 +150,6 @@ impl HybridSyncDaemon {
                     let commit_res = tx.commit().await;
                     if let Err(e) = commit_res {
                         warn!("Failed to commit pg transaction for memory_id: {}, gracefully degrading. Error: {}", id, e);
-                        let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
-                            .bind(e.to_string())
-                            .bind(&id)
-                            .execute(&self.sqlite_pool)
-                            .await;
                         continue;
                     }
 
@@ -183,11 +168,6 @@ impl HybridSyncDaemon {
                 Err(e) => {
                     let _ = tx.rollback().await;
                     warn!("Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}", id, e);
-                    let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
-                        .bind(e.to_string())
-                        .bind(&id)
-                        .execute(&self.sqlite_pool)
-                        .await;
                 }
             }
         }

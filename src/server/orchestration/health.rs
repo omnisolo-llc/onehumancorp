@@ -77,7 +77,7 @@ pub async fn run_health_monitor(
                 }
                 pending_fires.retain(|k, _| !active_agent_ids.contains(k) || !ping_ok);
                 for agent_id in to_fire_now {
-                    tracing::trace!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
+                    tracing::info!("HEALTH MONITOR: Agent {} is definitively unresponsive. Firing and initiating reassignment.", agent_id);
                     monitor_hub.fire_agent(&agent_id);
                     pending_fires.remove(&agent_id);
                 }
