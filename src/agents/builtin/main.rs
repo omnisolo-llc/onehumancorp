@@ -101,6 +101,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     i += 1;
                 }
             }
+            "deploy" => {
+                // SOTA Harness Patterns: 4. Scalable multi-agent -> single-user CLI to 1000+ agent cloud deployments
+                match ohc_builtin_agent::scalable_multi_agent::cli_deploy_command(&args[i..]).await {
+                    Ok(results) => {
+                        println!("Successfully deployed {} agents.", results.len());
+                        for r in results {
+                            println!("{}", r);
+                        }
+                        std::process::exit(0);
+                    }
+                    Err(e) => {
+                        eprintln!("Deploy failed: {}", e);
+                        std::process::exit(1);
+                    }
+                }
+            }
             _ => {}
         }
         i += 1;
