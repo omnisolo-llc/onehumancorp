@@ -4,6 +4,28 @@ use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use crate::db::DB;
 use chrono::{DateTime, Utc};
+use uuid::Uuid;
+use serde_json::Value;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Epic {
+    pub id: Uuid,
+    pub title: String,
+    pub description: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KairosTask {
+    pub id: Uuid,
+    pub epic_id: Option<Uuid>,
+    pub title: String,
+    pub status: String,
+    pub assigned_agent: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTask {
@@ -92,6 +114,8 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
+    pub(crate) epics: RwLock<HashMap<Uuid, Epic>>,
+    pub(crate) kairos_tasks: RwLock<HashMap<Uuid, KairosTask>>,
 }
 
 impl TaskManager {
@@ -99,6 +123,8 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
+            epics: RwLock::new(HashMap::new()),
+            kairos_tasks: RwLock::new(HashMap::new()),
         }
     }
 
@@ -106,7 +132,231 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
+            epics: RwLock::new(HashMap::new()),
+            kairos_tasks: RwLock::new(HashMap::new()),
         }
+    }
+
+    pub async fn create_epic(&self, title: String, description: Option<String>) -> Result<Epic, String> {
+        let epic = Epic {
+            id: Uuid::new_v4(),
+            title,
+            description,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        if let Some(db) = &*self.db.read().unwrap() {
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query("INSERT INTO epics (id, title, description, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)")
+                        .bind(epic.id)
+                        .bind(&epic.title)
+                        .bind(&epic.description)
+                        .bind(epic.created_at)
+                        .bind(epic.updated_at)
+                        .execute(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query("INSERT INTO epics (id, title, description, created_at, updated_at) VALUES (?, ?, ?, ?, ?)")
+                        .bind(epic.id.to_string())
+                        .bind(&epic.title)
+                        .bind(&epic.description)
+                        .bind(epic.created_at.to_rfc3339())
+                        .bind(epic.updated_at.to_rfc3339())
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        self.epics.write().unwrap().insert(epic.id, epic.clone());
+        Ok(epic)
+    }
+
+    pub async fn get_epic(&self, id: Uuid) -> Result<Option<Epic>, String> {
+        if let Some(epic) = self.epics.read().unwrap().get(&id) {
+            return Ok(Some(epic.clone()));
+        }
+
+        if let Some(db) = &*self.db.read().unwrap() {
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let row = sqlx::query!("SELECT * FROM epics WHERE id = $1", id)
+                        .fetch_optional(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    if let Some(row) = row {
+                        let epic = Epic {
+                            id: row.id,
+                            title: row.title,
+                            description: row.description,
+                            created_at: row.created_at.unwrap_or_else(Utc::now),
+                            updated_at: row.updated_at.unwrap_or_else(Utc::now),
+                        };
+                        self.epics.write().unwrap().insert(id, epic.clone());
+                        return Ok(Some(epic));
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    use sqlx::Row;
+                    let id_str = id.to_string();
+                    let row = sqlx::query("SELECT * FROM epics WHERE id = ?")
+                        .bind(&id_str)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    if let Some(row) = row {
+                        let id_str: String = row.get("id");
+                        let parsed_id = Uuid::parse_str(&id_str).unwrap_or_default();
+
+                        let created_str: String = row.get("created_at");
+                        let created_at = chrono::DateTime::parse_from_rfc3339(&created_str)
+                            .map(|d| d.with_timezone(&Utc))
+                            .unwrap_or_else(|_| Utc::now());
+
+                        let updated_str: String = row.get("updated_at");
+                        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_str)
+                            .map(|d| d.with_timezone(&Utc))
+                            .unwrap_or_else(|_| Utc::now());
+
+                        let epic = Epic {
+                            id: parsed_id,
+                            title: row.get("title"),
+                            description: row.try_get("description").unwrap_or(None),
+                            created_at,
+                            updated_at,
+                        };
+                        self.epics.write().unwrap().insert(id, epic.clone());
+                        return Ok(Some(epic));
+                    }
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    pub async fn create_kairos_task(&self, epic_id: Option<Uuid>, title: String, assigned_agent: Option<String>) -> Result<KairosTask, String> {
+        let task = KairosTask {
+            id: Uuid::new_v4(),
+            epic_id,
+            title,
+            status: "PENDING".to_string(),
+            assigned_agent,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        };
+
+        if let Some(db) = &*self.db.read().unwrap() {
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query("INSERT INTO tasks (id, epic_id, title, status, assigned_agent, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                        .bind(task.id)
+                        .bind(task.epic_id)
+                        .bind(&task.title)
+                        .bind(&task.status)
+                        .bind(&task.assigned_agent)
+                        .bind(task.created_at)
+                        .bind(task.updated_at)
+                        .execute(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    let epic_id_str = task.epic_id.map(|id| id.to_string());
+                    sqlx::query("INSERT INTO tasks (id, epic_id, title, status, assigned_agent, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                        .bind(task.id.to_string())
+                        .bind(epic_id_str)
+                        .bind(&task.title)
+                        .bind(&task.status)
+                        .bind(&task.assigned_agent)
+                        .bind(task.created_at.to_rfc3339())
+                        .bind(task.updated_at.to_rfc3339())
+                        .execute(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+            }
+        }
+
+        self.kairos_tasks.write().unwrap().insert(task.id, task.clone());
+        Ok(task)
+    }
+
+    pub async fn get_kairos_task(&self, id: Uuid) -> Result<Option<KairosTask>, String> {
+        if let Some(task) = self.kairos_tasks.read().unwrap().get(&id) {
+            return Ok(Some(task.clone()));
+        }
+
+        if let Some(db) = &*self.db.read().unwrap() {
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let row = sqlx::query!("SELECT * FROM tasks WHERE id = $1", id)
+                        .fetch_optional(&db.pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    if let Some(row) = row {
+                        let task = KairosTask {
+                            id: row.id,
+                            epic_id: row.epic_id,
+                            title: row.title,
+                            status: row.status,
+                            assigned_agent: row.assigned_agent,
+                            created_at: row.created_at.unwrap_or_else(Utc::now),
+                            updated_at: row.updated_at.unwrap_or_else(Utc::now),
+                        };
+                        self.kairos_tasks.write().unwrap().insert(id, task.clone());
+                        return Ok(Some(task));
+                    }
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    use sqlx::Row;
+                    let id_str = id.to_string();
+                    let row = sqlx::query("SELECT * FROM tasks WHERE id = ?")
+                        .bind(&id_str)
+                        .fetch_optional(pool)
+                        .await
+                        .map_err(|e| e.to_string())?;
+
+                    if let Some(row) = row {
+                        let id_str: String = row.get("id");
+                        let parsed_id = Uuid::parse_str(&id_str).unwrap_or_default();
+
+                        let epic_id_str: Option<String> = row.try_get("epic_id").unwrap_or(None);
+                        let epic_id = epic_id_str.and_then(|s| Uuid::parse_str(&s).ok());
+
+                        let created_str: String = row.get("created_at");
+                        let created_at = chrono::DateTime::parse_from_rfc3339(&created_str)
+                            .map(|d| d.with_timezone(&Utc))
+                            .unwrap_or_else(|_| Utc::now());
+
+                        let updated_str: String = row.get("updated_at");
+                        let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_str)
+                            .map(|d| d.with_timezone(&Utc))
+                            .unwrap_or_else(|_| Utc::now());
+
+                        let task = KairosTask {
+                            id: parsed_id,
+                            epic_id,
+                            title: row.get("title"),
+                            status: row.get("status"),
+                            assigned_agent: row.try_get("assigned_agent").unwrap_or(None),
+                            created_at,
+                            updated_at,
+                        };
+                        self.kairos_tasks.write().unwrap().insert(id, task.clone());
+                        return Ok(Some(task));
+                    }
+                }
+            }
+        }
+        Ok(None)
     }
 
     pub fn create_task(&self, org_id: String, mission_id: String, title: String, description: String, priority: String) -> Result<SharedTask, String> {
