@@ -36,6 +36,9 @@ jobs:
           - name: windows-x86_64
             runner: ubuntu-latest
             bazel_config: windows_x86_64
+          - name: android
+            runner: ubuntu-latest
+            bazel_config: linux_x86_64
          # - name: windows-arm64
           #  runner: windows-11-arm
          #   bazel_config: windows_arm64
@@ -47,6 +50,20 @@ jobs:
           #  bazel_config: macos_x86_64
     steps:
       - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        if: startsWith(matrix.runner, 'ubuntu')
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
 
       - name: Select Xcode
         if: startsWith(matrix.name, 'macos-')
@@ -64,6 +81,7 @@ jobs:
             test --sandbox_add_mount_pair=/var/run/docker.sock
 
       - name: Build non-test artifacts
+        if: matrix.name != 'android'
         run: |
           bazelisk query '
             kind(".* rule", //...)
@@ -102,7 +120,7 @@ jobs:
         run: bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball
 
       - name: Build Tauri Android Bazel targets
-        if: matrix.name == 'linux-x86_64'
+        if: matrix.name == 'android'
         run: |
           bazelisk build \
             //src/ui/tauri:tauri_android_apk \
