@@ -65,6 +65,12 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
+        // We do this by actively setting anything in stuck threshold to FAILED so it can be re-routed.
+        // Also clear out unassigned jobs hanging around over 24h
+        sqlx::query("DELETE FROM agent_missions WHERE status = 'PENDING' AND created_at < $1")
+            .bind(Utc::now() - chrono::Duration::hours(24))
+            .execute(&self.pool)
+            .await?;
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)

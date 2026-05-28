@@ -23,7 +23,20 @@ defaults:
 
 jobs:
   bazel-test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            bazel_config: linux
+          - name: windows-x86_64
+            runner: windows-latest
+            bazel_config: windows
+          - name: macos-x86_64
+            runner: macos-latest
+            bazel_config: macos
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
@@ -58,4 +71,5 @@ jobs:
             --test_output=errors \
             --test_summary=terse \
             --test_timeout=300,600,900,1800 \
+            --config=${{ matrix.bazel_config }} \
             //...

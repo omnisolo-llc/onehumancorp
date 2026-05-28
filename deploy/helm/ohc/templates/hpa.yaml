@@ -25,6 +25,13 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.backend.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Pods
+      pods:
+        metric:
+          name: multi_tenant_active_sessions
+        target:
+          type: AverageValue
+          averageValue: 50
 {{- end }}
 ---
 {{- if and .Values.ohcCore.enabled .Values.ohcCore.autoscaling.enabled }}

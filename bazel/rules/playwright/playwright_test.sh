@@ -134,6 +134,18 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
 fi
 
 # Check if Docker is available. If not, skip E2E tests gracefully.
+if ! docker image inspect pgvector/pgvector:pg16 >/dev/null 2>&1 && ! docker pull pgvector/pgvector:pg16 >/dev/null 2>&1; then
+  if [[ "${CI:-}" == "true" ]]; then
+    echo "Error: Docker pull failed in CI environment"
+    exit 1
+  fi
+  echo "Skip E2E tests due to docker pull rate limit"
+  if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
+    touch "$TEST_SHARD_STATUS_FILE"
+  fi
+  exit 0
+fi
+
 if ! docker info >/dev/null 2>&1; then
   echo "Skip E2E tests due to docker failure in sandbox"
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then

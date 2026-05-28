@@ -1046,7 +1046,7 @@ export default function Dashboard() {
                 {swarmActivity.length === 0 ? (
                     <div className="p-8 text-center">
                         <div className="inline-block w-8 h-8 rounded-full border-2 border-gray-200 border-t-blue-500 animate-spin mb-3"></div>
-                        <p className="text-sm" style={{ color: '#86868B' }}>Waiting for team activity...</p>
+                        <p className="text-sm" style={{ color: '#86868B' }}>No recent activity.</p>
                     </div>
                 ) : (
                     <div className="flex flex-col">
