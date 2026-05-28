@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import DepartmentCard from './components/DepartmentCard';
-import ApprovalInbox from './components/ApprovalInbox';
+import ActionFeed from './components/ActionFeed';
 
 export type ApprovalRequest = {
   id: string;
@@ -27,25 +27,34 @@ const DEPARTMENTS = [
 
 export default function TeamPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [activities, setActivities] = useState<ApprovalRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchApprovals = async () => {
+  const fetchData = async () => {
     try {
-      const response = await fetch('/api/agents/approvals');
-      if (response.ok) {
-        const data = await response.json();
-        setApprovals(data.pending_approvals || []);
+      const [appRes, actRes] = await Promise.all([
+        fetch('/api/agents/approvals'),
+        fetch('/api/agents/approvals/activity')
+      ]);
+
+      if (appRes.ok) {
+        const appData = await appRes.json();
+        setApprovals(appData.pending_approvals || []);
+      }
+
+      if (actRes.ok) {
+        const actData = await actRes.json();
+        setActivities(actData.pending_approvals || []);
       }
     } catch (error) {
-      console.error("Failed to fetch approvals", error);
+      console.error("Failed to fetch data", error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchApprovals();
+    fetchData();
   }, []);
 
   const handleApprove = async (id: string) => {
@@ -56,10 +65,10 @@ export default function TeamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved: true })
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to approve", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
@@ -71,28 +80,14 @@ export default function TeamPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ approved: false })
       });
-      if (!response.ok) fetchApprovals();
+      if (!response.ok) fetchData();
     } catch (error) {
       console.error("Failed to reject", error);
-      fetchApprovals();
+      fetchData();
     }
   };
 
-  if (selectedDepartment) {
-    const deptInfo = DEPARTMENTS.find(d => d.id === selectedDepartment);
-    const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
-
-    return (
-      <ApprovalInbox
-        departmentId={selectedDepartment}
-        departmentName={deptInfo?.name || selectedDepartment}
-        approvals={deptApprovals}
-        onBack={() => setSelectedDepartment(null)}
-        onApprove={handleApprove}
-        onReject={handleReject}
-      />
-    );
-  }
+  const feedItems = [...approvals, ...activities];
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
@@ -114,24 +109,39 @@ export default function TeamPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 hide-scrollbar">
-          {loading ? (
-             <div className="flex justify-center py-10">
-               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-             </div>
-          ) : (
-            DEPARTMENTS.map(dept => {
-              const pendingCount = approvals.filter(a => a.department === dept.id).length;
-              return (
-                <DepartmentCard
-                  key={dept.id}
-                  name={dept.name}
-                  pendingCount={pendingCount}
-                  onClick={() => setSelectedDepartment(dept.id)}
-                />
-              );
-            })
-          )}
+        <div className="flex-1 overflow-y-auto pb-24 hide-scrollbar">
+          {/* Horizontal scroll for departments */}
+          <div className="px-6 py-6 border-b border-gray-200/50">
+            <div className="flex overflow-x-auto pb-2 -mx-6 px-6 hide-scrollbar">
+              {DEPARTMENTS.map(dept => {
+                const pendingCount = approvals.filter(a => {
+                   let formattedDept = dept.id.replace('_', '');
+                   let aDept = a.department.replace('_', '').toLowerCase();
+                   return aDept === formattedDept || a.department === dept.id;
+                }).length;
+                return (
+                  <DepartmentCard
+                    key={dept.id}
+                    name={dept.name}
+                    pendingCount={pendingCount}
+                    onClick={() => {}}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Vertical Action Feed */}
+          <div className="px-4 py-6 bg-gray-50/50 min-h-[500px]">
+            <h2 className="text-xs font-bold text-gray-500 mb-4 font-outfit uppercase tracking-wider px-2">Action Feed</h2>
+            {loading ? (
+               <div className="flex justify-center py-10">
+                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+               </div>
+            ) : (
+              <ActionFeed feedItems={feedItems} onApprove={handleApprove} onReject={handleReject} />
+            )}
+          </div>
         </div>
       </div>
 
