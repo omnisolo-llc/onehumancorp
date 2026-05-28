@@ -12,6 +12,16 @@ export default function AgentsPage() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const [hasPro, setHasPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedAgentName, setSelectedAgentName] = useState("");
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
+  }, []);
+
   const fetchFeed = async () => {
     setFeedLoading(true);
     try {
@@ -69,15 +79,25 @@ export default function AgentsPage() {
   };
 
   const departments = [
-    { id: 'operations', name: 'The Manager', role: 'Operations', icon: '⚙️', description: 'Handles inventory, orders, and fulfillment.' },
-    { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', icon: '🤝', description: 'Responds to customer inquiries and builds loyalty.' },
-    { id: 'marketing', name: 'The Promoter', role: 'Marketing', icon: '📣', description: 'Creates social posts and promotional campaigns.' },
-    { id: 'sales', name: 'The Closer', role: 'Sales', icon: '💼', description: 'Generates quotes and follows up on leads.' },
-    { id: 'finance', name: 'The Accountant', role: 'Finance', icon: '💰', description: 'Tracks expenses and generates invoices.' },
-    { id: 'legal', name: 'The Counsel', role: 'Legal', icon: '⚖️', description: 'Drafts contracts and handles compliance.' },
-    { id: 'business_advisory', name: 'The Strategist', role: 'Advisory', icon: '📈', description: 'Provides insights and growth strategies.' },
-    { id: 'discovery', name: 'The Scout', role: 'Discovery', icon: '🔍', description: 'Optimizes structured data for LLM crawlers.' },
+    { id: 'operations', name: 'The Manager', role: 'Operations', icon: '⚙️', description: 'Handles inventory, orders, and fulfillment.', isPremium: false },
+    { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', icon: '🤝', description: 'Responds to customer inquiries and builds loyalty.', isPremium: false },
+    { id: 'marketing', name: 'The Promoter', role: 'Marketing', icon: '📣', description: 'Creates social posts and promotional campaigns.', isPremium: true },
+    { id: 'sales', name: 'The Closer', role: 'Sales', icon: '💼', description: 'Generates quotes and follows up on leads.', isPremium: true },
+    { id: 'finance', name: 'The Accountant', role: 'Finance', icon: '💰', description: 'Tracks expenses and generates invoices.', isPremium: true },
+    { id: 'legal', name: 'The Counsel', role: 'Legal', icon: '⚖️', description: 'Drafts contracts and handles compliance.', isPremium: true },
+    { id: 'business_advisory', name: 'The Strategist', role: 'Advisory', icon: '📈', description: 'Provides insights and growth strategies.', isPremium: true },
+    { id: 'discovery', name: 'The Scout', role: 'Discovery', icon: '🔍', description: 'Optimizes structured data for LLM crawlers.', isPremium: true },
   ];
+
+  const handleAgentClick = (dept: any) => {
+    if (dept.isPremium && !hasPro) {
+      setSelectedAgentName(dept.name);
+      setShowUpgradeModal(true);
+    } else {
+      // In a real app we might navigate to agent configuration, or show a toast
+      alert(`Activating ${dept.name}...`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex justify-center font-inter">
@@ -137,8 +157,14 @@ export default function AgentsPage() {
               {departments.map((dept) => (
                 <div
                   key={dept.id}
-                  className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => handleAgentClick(dept)}
+                  className="bg-white/70 backdrop-blur-[30px] saturate-[210%] border border-white/50 shadow-sm p-4 rounded-[16px] flex items-start gap-4 cursor-pointer hover:shadow-md transition-shadow relative overflow-hidden"
                 >
+                  {dept.isPremium && !hasPro && (
+                    <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-[10px] font-bold px-3 py-1 rounded-bl-lg shadow-sm">
+                      PRO
+                    </div>
+                  )}
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-2xl shrink-0">
                     {dept.icon}
                   </div>
@@ -243,6 +269,67 @@ export default function AgentsPage() {
           )}
         </main>
       </div>
+
+      {/* SaaS Conversion: Upgrade Modal (Soft Paywall) */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-yellow-100">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-yellow-600">
+                🤖
+              </div>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Hire {selectedAgentName}</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Premium agents are exclusive to Pro members. Upgrade your plan to instantly delegate specialized tasks and scale your business faster with advanced AI.
+            </p>
+
+            <div className="space-y-4 font-inter text-sm mb-6">
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <span className="text-gray-700">Unlimited premium agent hires</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <span className="text-gray-700">24/7 automated workflows</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                <span className="text-gray-700">Advanced reasoning and insights</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  window.location.href = '/checkout';
+                }}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gradient-to-r from-yellow-500 to-orange-500 text-white hover:from-yellow-600 hover:to-orange-600 shadow-md hover:shadow-lg"
+              >
+                Upgrade to Pro - $29/mo
+              </button>
+
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-2 rounded-xl text-sm font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Maybe later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
         .font-inter { font-family: 'Inter', sans-serif; }
