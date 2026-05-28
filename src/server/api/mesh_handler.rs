@@ -80,23 +80,7 @@ pub async fn orchestration_tasks_stream_handler(
     ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
 }
 
-pub async fn broadcast_handler(
-    headers: HeaderMap,
-    State(transport): State<Arc<dyn MeshTransport>>,
-    axum::Json(payload): axum::Json<BroadcastRequest>,
-) -> impl IntoResponse {
-    if let Err(err_response) = check_spiffe_auth(&headers) {
-        return err_response;
-    }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
-        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
-        Err(e) => {
-            let error_res = serde_json::json!({ "error": e.to_string() });
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
-        }
-    }
-}
 
 pub async fn direct_handler(
     headers: HeaderMap,
@@ -208,7 +192,7 @@ mod tests {
 
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
-            .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
+
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();

@@ -2238,7 +2238,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
-        .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
+        .route("/api/mesh/v2/broadcast", axum::routing::post(crate::orchestration::mesh_api::handle_mesh_v2_broadcast).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/mailbox", axum::routing::post(api::mesh_handler::mailbox_handler).with_state(mesh_transport.clone()))
         .route("/v1/orchestration/mesh/broadcast", axum::routing::post(api::mesh_handler::orchestration_broadcast_handler).with_state(mesh_transport.clone()))
