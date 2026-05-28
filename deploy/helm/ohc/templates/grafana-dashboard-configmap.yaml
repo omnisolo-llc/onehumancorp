@@ -9,3 +9,4 @@ data:
 {{- range $path, $bytes := .Files.Glob "dashboards/*.json" }}
   {{ base $path }}: |-
 {{ $bytes | toString | indent 4 }}
+{{- end }}
