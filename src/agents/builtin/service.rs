@@ -553,8 +553,6 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             enable_progressive_skills: false,
-            enable_sona_neural_patterns: false,
-            sona_pattern_matcher: None,
             progressive_skills_dir: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
@@ -969,8 +967,6 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 enable_progressive_skills: false,
-            enable_sona_neural_patterns: false,
-            sona_pattern_matcher: None,
                 progressive_skills_dir: None,
                 max_retries: 2,
                 enable_single_agent_maximization: false,

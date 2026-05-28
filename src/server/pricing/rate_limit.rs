@@ -4,11 +4,8 @@ use tokio::sync::OnceCell;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PlanTier {
     Free,
-    Entry,
     Starter,
-    Standard,
     Pro,
-    Advanced,
     Business,
 }
 
@@ -16,10 +13,7 @@ impl PlanTier {
     pub fn monthly_action_limit(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_ACTIONS",
-            PlanTier::Entry => "OHC_ENTRY_TIER_ACTIONS",
             PlanTier::Starter => "OHC_STARTER_TIER_ACTIONS",
-            PlanTier::Standard => "OHC_STANDARD_TIER_ACTIONS",
-            PlanTier::Advanced => "OHC_ADVANCED_TIER_ACTIONS",
             _ => "",
         };
         if !env_var.is_empty() {
@@ -30,10 +24,7 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(100),
-            PlanTier::Entry => Some(500),
             PlanTier::Starter => Some(1000),
-            PlanTier::Standard => Some(5000),
-            PlanTier::Advanced => Some(10000),
             PlanTier::Pro | PlanTier::Business => None, // Unlimited
         }
     }
@@ -41,10 +32,7 @@ impl PlanTier {
     pub fn agent_action_limit(&self) -> Option<u32> {
         match self {
             PlanTier::Free => Some(20),
-            PlanTier::Entry => Some(100),
             PlanTier::Starter => Some(200),
-            PlanTier::Standard => Some(1000),
-            PlanTier::Advanced => Some(5000),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -52,10 +40,7 @@ impl PlanTier {
     pub fn storage_limit_mb(&self) -> Option<u32> {
         let env_var = match self {
             PlanTier::Free => "OHC_FREE_TIER_STORAGE_MB",
-            PlanTier::Entry => "OHC_ENTRY_TIER_STORAGE_MB",
             PlanTier::Starter => "OHC_STARTER_TIER_STORAGE_MB",
-            PlanTier::Standard => "OHC_STANDARD_TIER_STORAGE_MB",
-            PlanTier::Advanced => "OHC_ADVANCED_TIER_STORAGE_MB",
             PlanTier::Pro => "OHC_PRO_TIER_STORAGE_MB",
             PlanTier::Business => "OHC_BUSINESS_TIER_STORAGE_MB",
         };
@@ -67,22 +52,16 @@ impl PlanTier {
 
         match self {
             PlanTier::Free => Some(500),
-            PlanTier::Entry => Some(1000),     // 1GB
-            PlanTier::Starter => Some(5000),   // 5GB
-            PlanTier::Standard => Some(10000), // 10GB
-            PlanTier::Advanced => Some(25000), // 25GB
-            PlanTier::Pro => Some(50000),      // 50GB
-            PlanTier::Business => Some(512000),        // 500GB
+            PlanTier::Starter => Some(5000), // 5GB
+            PlanTier::Pro => Some(50000),    // 50GB
+            PlanTier::Business => Some(512000),      // 500GB
         }
     }
 
     pub fn max_agents(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(1),
-            PlanTier::Entry => Some(2),
             PlanTier::Starter => Some(3),
-            PlanTier::Standard => Some(5),
-            PlanTier::Advanced => Some(8),
             PlanTier::Pro => Some(10),
             PlanTier::Business => None,
         }
@@ -91,10 +70,7 @@ impl PlanTier {
     pub fn max_products(&self) -> Option<usize> {
         match self {
             PlanTier::Free => Some(10),
-            PlanTier::Entry => Some(50),
             PlanTier::Starter => Some(100),
-            PlanTier::Standard => Some(500),
-            PlanTier::Advanced => Some(1000),
             PlanTier::Pro | PlanTier::Business => None,
         }
     }
@@ -135,10 +111,7 @@ impl RedisRateLimiter {
         let tier: Option<String> = conn.get(format!("tenant:{}:tier", tenant_id)).await.map_err(|e| e.to_string())?;
 
         match tier.as_deref() {
-            Some("Entry") => Ok(PlanTier::Entry),
             Some("Starter") => Ok(PlanTier::Starter),
-            Some("Standard") => Ok(PlanTier::Standard),
-            Some("Advanced") => Ok(PlanTier::Advanced),
             Some("Pro") => Ok(PlanTier::Pro),
             Some("Business") => Ok(PlanTier::Business),
             _ => Ok(PlanTier::Free),
@@ -165,10 +138,7 @@ impl RedisRateLimiter {
         let mut conn = self.get_connection().await?;
         let tier_str = match tier {
             PlanTier::Free => "Free",
-            PlanTier::Entry => "Entry",
             PlanTier::Starter => "Starter",
-            PlanTier::Standard => "Standard",
-            PlanTier::Advanced => "Advanced",
             PlanTier::Pro => "Pro",
             PlanTier::Business => "Business",
         };
@@ -208,10 +178,7 @@ impl RedisRateLimiter {
                         "You've hit your {} tier limit of {} AI actions this month. Keep your business growing with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
-                            PlanTier::Entry => "Entry",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Standard => "Standard",
-                            PlanTier::Advanced => "Advanced",
                             _ => "Current",
                         },
                         limit
@@ -232,10 +199,7 @@ impl RedisRateLimiter {
                         "This agent has hit its {} tier limit of {} actions this month. Upgrade to unlock more power for your business.",
                         match tier {
                             PlanTier::Free => "Free",
-                            PlanTier::Entry => "Entry",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Standard => "Standard",
-                            PlanTier::Advanced => "Advanced",
                             _ => "Current",
                         },
                         limit
@@ -275,10 +239,7 @@ impl RedisRateLimiter {
                         "You've reached your {} tier limit of {} products. Keep building your store with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
-                            PlanTier::Entry => "Entry",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Standard => "Standard",
-                            PlanTier::Advanced => "Advanced",
                             _ => "Current",
                         },
                         limit
@@ -325,10 +286,7 @@ impl RedisRateLimiter {
                         "You've reached your {} tier limit of {} agent. Upgrade to unlock more power!",
                         match tier {
                             PlanTier::Free => "Free",
-                            PlanTier::Entry => "Entry",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Standard => "Standard",
-                            PlanTier::Advanced => "Advanced",
                             _ => "Current",
                         },
                         limit
@@ -386,10 +344,7 @@ impl RedisRateLimiter {
                         "You've reached your {} tier limit of {}MB storage. Keep your business running smoothly with a plan upgrade!",
                         match tier {
                             PlanTier::Free => "Free",
-                            PlanTier::Entry => "Entry",
                             PlanTier::Starter => "Starter",
-                            PlanTier::Standard => "Standard",
-                            PlanTier::Advanced => "Advanced",
                             PlanTier::Pro => "Pro",
                             _ => "Current",
                         },
@@ -414,40 +369,25 @@ mod tests {
     #[test]
     fn test_plan_tier_limits() {
         assert_eq!(PlanTier::Free.monthly_action_limit(), Some(100));
-        assert_eq!(PlanTier::Entry.monthly_action_limit(), Some(500));
         assert_eq!(PlanTier::Starter.monthly_action_limit(), Some(1000));
-        assert_eq!(PlanTier::Standard.monthly_action_limit(), Some(5000));
-        assert_eq!(PlanTier::Advanced.monthly_action_limit(), Some(10000));
         assert_eq!(PlanTier::Pro.monthly_action_limit(), None);
         assert_eq!(PlanTier::Business.monthly_action_limit(), None);
 
         assert_eq!(PlanTier::Free.agent_action_limit(), Some(20));
-        assert_eq!(PlanTier::Entry.agent_action_limit(), Some(100));
         assert_eq!(PlanTier::Starter.agent_action_limit(), Some(200));
-        assert_eq!(PlanTier::Standard.agent_action_limit(), Some(1000));
-        assert_eq!(PlanTier::Advanced.agent_action_limit(), Some(5000));
 
         assert_eq!(PlanTier::Free.storage_limit_mb(), Some(500));
-        assert_eq!(PlanTier::Entry.storage_limit_mb(), Some(1000));
         assert_eq!(PlanTier::Starter.storage_limit_mb(), Some(5000));
-        assert_eq!(PlanTier::Standard.storage_limit_mb(), Some(10000));
-        assert_eq!(PlanTier::Advanced.storage_limit_mb(), Some(25000));
         assert_eq!(PlanTier::Pro.storage_limit_mb(), Some(50000));
         assert_eq!(PlanTier::Business.storage_limit_mb(), Some(512000));
 
         assert_eq!(PlanTier::Free.max_agents(), Some(1));
-        assert_eq!(PlanTier::Entry.max_agents(), Some(2));
         assert_eq!(PlanTier::Starter.max_agents(), Some(3));
-        assert_eq!(PlanTier::Standard.max_agents(), Some(5));
-        assert_eq!(PlanTier::Advanced.max_agents(), Some(8));
         assert_eq!(PlanTier::Pro.max_agents(), Some(10));
         assert_eq!(PlanTier::Business.max_agents(), None);
 
         assert_eq!(PlanTier::Free.max_products(), Some(10));
-        assert_eq!(PlanTier::Entry.max_products(), Some(50));
         assert_eq!(PlanTier::Starter.max_products(), Some(100));
-        assert_eq!(PlanTier::Standard.max_products(), Some(500));
-        assert_eq!(PlanTier::Advanced.max_products(), Some(1000));
         assert_eq!(PlanTier::Pro.max_products(), None);
         assert_eq!(PlanTier::Business.max_products(), None);
     }

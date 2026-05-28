@@ -14,26 +14,12 @@ static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        let mut pg_url = database_url.clone();
-        if !pg_url.starts_with("sqlite") {
-            if !pg_url.contains("statement_cache_capacity=0") {
-                if pg_url.contains('?') {
-                    pg_url.push_str("&statement_cache_capacity=0");
-                } else {
-                    pg_url.push_str("?statement_cache_capacity=0");
-                }
-            }
-        }
-
-        let pool = sqlx::postgres::PgPoolOptions::new()
+        sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
-            .connect_lazy(&pg_url)
-            .expect("Failed to connect to DB pool lazily");
-
-        let _ = GLOBAL_POOL.set(pool.clone());
-        pool
+            .connect_lazy(&database_url)
+            .expect("Failed to connect to DB pool lazily")
     })
 }
 

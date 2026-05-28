@@ -60,10 +60,7 @@ pub async fn my_plan_handler(
 
     let plan_name = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => "Free",
-        ::server_pricing::rate_limit::PlanTier::Entry => "Entry",
         ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-        ::server_pricing::rate_limit::PlanTier::Standard => "Standard",
-        ::server_pricing::rate_limit::PlanTier::Advanced => "Advanced",
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
     }.to_string();
@@ -73,10 +70,7 @@ pub async fn my_plan_handler(
 
     let next_bill_estimated = match tier {
         ::server_pricing::rate_limit::PlanTier::Free => 0,
-        ::server_pricing::rate_limit::PlanTier::Entry => 5,
         ::server_pricing::rate_limit::PlanTier::Starter => 9,
-        ::server_pricing::rate_limit::PlanTier::Standard => 19,
-        ::server_pricing::rate_limit::PlanTier::Advanced => 24,
         ::server_pricing::rate_limit::PlanTier::Pro => 29,
         ::server_pricing::rate_limit::PlanTier::Business => 79,
     };
