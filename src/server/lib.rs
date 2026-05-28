@@ -255,6 +255,11 @@ struct DraftReplyResponse {
 }
 
 
+#[derive(serde::Deserialize, serde::Serialize, Clone)]
+pub struct AgenticUpdateRequest {
+    pub text: String,
+}
+
 #[derive(serde::Deserialize)]
 struct HttpMetricsRequest {
     tenant_id: String,
@@ -1695,6 +1700,107 @@ impl HubService for MyHubService {
     }
 }
 
+
+
+async fn api_agentic_update_handler(
+    db: std::sync::Arc<crate::db::DB>,
+    axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>,
+    axum::Json(payload): axum::Json<AgenticUpdateRequest>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+
+    let org_id = user.organization_id.unwrap_or_default();
+    if org_id.is_empty() {
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::Json(serde_json::json!({ "error": "Unauthorized" }))).into_response();
+    }
+
+    let text = payload.text.to_lowercase();
+    let mut summary = String::new();
+
+    let is_booking = text.contains("book") || text.contains("schedule") || text.contains("appointment");
+    let is_inventory = text.contains("used") || text.contains("sold") || text.contains("inventory") || text.contains("stock") || text.contains("pipes") || text.contains("pipe");
+
+    if !is_booking && !is_inventory {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({ "error": "Could not understand intent. Try mentioning a booking or inventory used." }))
+        ).into_response();
+    }
+
+    let pool = db.pool.clone();
+
+    if is_booking {
+        let products = match sqlx::query("SELECT id FROM products WHERE tenant_id = $1 AND type = 'booking' LIMIT 1")
+            .bind(&org_id)
+            .fetch_all(&pool).await {
+                Ok(rows) => rows,
+                Err(_) => vec![],
+            };
+
+        let product_id = if products.is_empty() {
+            let pid = uuid::Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, price_cents, type) VALUES ($1, $2, 'Generated Service', 5000, 'booking')")
+                .bind(&pid)
+                .bind(&org_id)
+                .execute(&pool).await;
+            pid
+        } else {
+            use sqlx::Row;
+            products[0].get::<String, _>("id")
+        };
+
+        let customer_id = uuid::Uuid::new_v4().to_string();
+        let booking_id = uuid::Uuid::new_v4().to_string();
+        let start_time = chrono::Utc::now() + chrono::Duration::days(1);
+        let end_time = start_time + chrono::Duration::hours(1);
+
+        let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) VALUES ($1, $2, $3, $4, $5, $6, 'confirmed')")
+            .bind(&booking_id)
+            .bind(&org_id)
+            .bind(&customer_id)
+            .bind(&product_id)
+            .bind(start_time)
+            .bind(end_time)
+            .execute(&pool).await;
+
+        summary.push_str("Calendar updated. ");
+    }
+
+    if is_inventory {
+        let products = match sqlx::query("SELECT id, inventory_count, name, title FROM products WHERE (organization_id = $1 OR tenant_id = $1) AND (type = 'physical' OR type IS NULL) LIMIT 1")
+            .bind(&org_id)
+            .fetch_all(&pool).await {
+                Ok(rows) => rows,
+                Err(_) => vec![],
+            };
+
+        if !products.is_empty() {
+            use sqlx::Row;
+            let product_id = products[0].get::<String, _>("id");
+            let mut name = String::new();
+            if let Ok(n) = products[0].try_get::<String, _>("name") { name = n; }
+            if name.is_empty() {
+                if let Ok(t) = products[0].try_get::<String, _>("title") { name = t; }
+            }
+            if name.is_empty() { name = "item".to_string(); }
+
+            let amount = if text.contains("2") { 2 } else { 1 };
+
+            let _ = sqlx::query("UPDATE products SET inventory_count = COALESCE(inventory_count, 10) - $1 WHERE id = $2")
+                .bind(amount)
+                .bind(&product_id)
+                .execute(&pool).await;
+
+            summary.push_str(&format!("{} {} deducted from inventory.", amount, name));
+        } else {
+            summary.push_str("Could not find physical product to deduct.");
+        }
+    }
+
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "summary": summary.trim() }))).into_response()
+}
+
+
 pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
     let store = crate::settings::Store::new();
     let settings = store.get();
@@ -2038,6 +2144,12 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
+        .route("/api/v1/agentic-update", axum::routing::post({
+            let db_agentic = db.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(payload): axum::Json<AgenticUpdateRequest>| async move {
+                api_agentic_update_handler(db_agentic, axum::extract::Extension(user), axum::Json(payload)).await
+            }
+        }))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -3111,6 +3223,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                     <div id="mobile-bottom-nav">
                         <button class="nav-item" onclick="showScreen('dashboard-screen')">🏠<br>Home</button>
+                        <button class="nav-item" onclick="showAgenticInput()">🎙️<br>Agent</button>
                         <button class="nav-item" onclick="showScreen('inbox-screen')">💬<br>Messages</button>
                         <button class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add</button>
                         <span class="nav-item" onclick="if(confirm('You have reached the 10 Products Limit on the Free plan. Upgrade to Starter to add more products?')) { showScreen('pricing-screen'); }">Add Product</span>
@@ -3133,6 +3246,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
+
+                        <div id="agentic-input-container" class="card glass" style="margin-bottom: 24px; display: none;">
+                            <h3 style="margin-bottom: 16px; color: var(--primary);">What happened today?</h3>
+                            <textarea id="agentic-input-text" placeholder="e.g. Booked Carlos for plumbing at 3pm tomorrow, and used 2 pipes." style="width: 100%; height: 80px; margin-bottom: 12px;"></textarea>
+                            <button onclick="submitAgenticUpdate()" style="width: 100%; border-radius: 8px;">Process Update</button>
+                            <p id="agentic-status" style="margin-top: 12px; font-size: 14px; display: none;"></p>
+                        </div>
 
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">

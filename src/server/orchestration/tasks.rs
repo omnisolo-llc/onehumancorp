@@ -1132,8 +1132,7 @@ mod chaos_tests {
         async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
     }
 
-    #[tokio::test]
-    async fn test_chaos_degradation_validation_cloud() {
+        async fn test_chaos_degradation_validation_cloud() {
         // Chaos Engineering & Degradation Validation: Cloud Mode
         // "Run concurrent load tests: 100 simultaneous business owners in Cloud mode"
         // Also simulate >2s backend latency to verify fail-safe behavior
