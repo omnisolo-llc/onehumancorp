@@ -8,6 +8,7 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
+    { id: "instagram", name: "Instagram DM Sales Agent", category: "marketing", status: "disconnected", icon: "📸", description: "Let AI read and autonomously reply to Instagram DMs on behalf of your business." },
     { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
     { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
@@ -160,6 +161,36 @@ export default function Integrations() {
               <h3 className="font-bold font-outfit text-gray-900 text-lg mb-2">{integration.name}</h3>
               <p className="text-gray-500 text-sm mb-6 flex-1">{integration.description}</p>
 
+              {integration.id === "instagram" ? (
+                <>
+                  <div className="flex justify-between items-center mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                      <span className="font-medium text-sm">Enable AI Instagram Assistant</span>
+                      <label className="switch relative inline-block w-10 h-5">
+                          <input type="checkbox" className="peer opacity-0 w-0 h-0" onChange={(e) => {
+                              const el = document.getElementById('instagram-agent-advanced');
+                              if (el) el.style.display = e.target.checked ? 'block' : 'none';
+                          }} />
+                          <span className="slider round absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 transition-colors duration-300 rounded-[34px] peer-checked:bg-[#34C759] before:absolute before:content-[''] before:h-4 before:w-4 before:left-[2px] before:bottom-[2px] before:bg-white before:transition-transform before:duration-300 before:rounded-[50%] peer-checked:before:translate-x-[20px]"></span>
+                      </label>
+                  </div>
+                  <div id="instagram-agent-advanced" style={{ display: 'none' }} className="border-t border-gray-200 pt-4 mt-2">
+                      <div className="mb-3">
+                          <label className="block text-sm font-semibold mb-2">Custom Prompt Instructions</label>
+                          <textarea className="w-full p-2 rounded-md border border-gray-200 text-sm" rows={3} placeholder="E.g., You are Maya's Bakery assistant. Quote custom cakes starting at $50. Check inventory before confirming..."></textarea>
+                      </div>
+                      <div className="mb-3">
+                          <label className="block text-sm font-semibold mb-2">Recent AI Interactions</label>
+                          <div className="max-h-[100px] overflow-y-auto text-xs text-gray-500 bg-gray-50 p-2 rounded-md">
+                              <p className="mb-1"><strong>@customer:</strong> How much for a chocolate cake?</p>
+                              <p className="mb-2 text-[#0066FF]"><strong>AI:</strong> A standard chocolate cake is $35. Would you like to order?</p>
+                              <p className="mb-1"><strong>@another_user:</strong> Do you deliver?</p>
+                              <p className="mb-0 text-[#0066FF]"><strong>AI:</strong> Yes! Local delivery is $5 within a 10-mile radius.</p>
+                          </div>
+                      </div>
+                      <button className="w-full bg-[#0066FF] text-white py-3 rounded-[8px] font-semibold text-sm shadow-sm hover:bg-[#005bd3] transition-colors" onClick={() => alert('Authenticating with Meta OAuth...')}>Authenticate with Meta</button>
+                  </div>
+                </>
+              ) : (
               <button
                 onClick={() => handleConnect(integration.id)}
                 className={`w-full py-3 rounded-[8px] font-semibold text-sm transition-transform active:scale-[0.98] ${
@@ -169,6 +200,7 @@ export default function Integrations() {
                 }`} style={integration.status === 'connected' ? {} : { background: '#0066FF' }}>
                 {integration.status === 'connected' ? 'Manage' : 'Connect'}
               </button>
+              )}
             </div>
           ))}
         </div>

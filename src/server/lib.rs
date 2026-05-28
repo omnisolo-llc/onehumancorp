@@ -3740,6 +3740,40 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                            <!-- Autonomous Instagram DM Sales Agent Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Instagram DM Sales Agent</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📸</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let AI read and autonomously reply to Instagram DMs on behalf of your business.</p>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                                    <span style="font-weight: 500;">Enable AI Instagram Assistant</span>
+                                    <label class="switch">
+                                        <input type="checkbox" onchange="document.getElementById('instagram-agent-advanced').style.display = this.checked ? 'block' : 'none';">
+                                        <span class="slider round"></span>
+                                    </label>
+                                </div>
+
+                                <div id="instagram-agent-advanced" style="display: none; border-top: 1px solid var(--border); padding-top: 16px;">
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Custom Prompt Instructions</label>
+                                        <textarea style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-primary); color: var(--text-primary); font-size: 13px;" rows="3" placeholder="E.g., You are Maya's Bakery assistant. Quote custom cakes starting at $50. Check inventory before confirming..."></textarea>
+                                    </div>
+                                    <div style="margin-bottom: 12px;">
+                                        <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px;">Recent AI Interactions</label>
+                                        <div style="max-height: 100px; overflow-y: auto; font-size: 12px; color: var(--text-secondary); background: rgba(0,0,0,0.03); padding: 8px; border-radius: 6px;">
+                                            <p style="margin: 0 0 4px 0;"><strong>@customer:</strong> How much for a chocolate cake?</p>
+                                            <p style="margin: 0 0 8px 0; color: #0066FF;"><strong>AI:</strong> A standard chocolate cake is $35. Would you like to order?</p>
+                                            <p style="margin: 0 0 4px 0;"><strong>@another_user:</strong> Do you deliver?</p>
+                                            <p style="margin: 0 0 0 0; color: #0066FF;"><strong>AI:</strong> Yes! Local delivery is $5 within a 10-mile radius.</p>
+                                        </div>
+                                    </div>
+                                    <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Authenticating with Meta OAuth...')">Authenticate with Meta</button>
+                                </div>
+                            </div>
+
                             <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
