@@ -113,7 +113,7 @@ export default function MilestonesPage() {
                                 </div>
 
                                 <div className="absolute bottom-6 flex flex-col items-center gap-1 opacity-90">
-                                    <a href="ohc://join?ref=milestone" target="_blank" className="text-xs uppercase font-bold tracking-widest hover:underline text-white">Powered by OHC</a>
+                                    <a href="ohc://join?ref=milestone" target="_blank" rel="noopener noreferrer" className="text-xs uppercase font-bold tracking-widest hover:underline text-white">Powered by OHC</a>
                                 </div>
                             </div>
 
