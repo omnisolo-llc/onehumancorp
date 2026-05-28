@@ -302,22 +302,52 @@ async fn http_metrics_handler(
 
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                        .bind(&tenant_id)
+                        .fetch_one(&db.pool)
+                        .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
+                        .bind(&tenant_id)
+                        .fetch_one(pool)
+                        .await
+                }
+            }
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                        .bind(&tenant_id)
+                        .fetch_one(&db.pool)
+                        .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+                        .bind(&tenant_id)
+                        .fetch_one(pool)
+                        .await
+                }
+            }
         },
         async {
-            sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
+            match &db.store {
+                crate::db::DbStore::Postgres => {
+                    sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
+                        .bind(&tenant_id)
+                        .fetch_one(&db.pool)
+                        .await
+                }
+                crate::db::DbStore::Sqlite(pool) => {
+                    sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
+                        .bind(&tenant_id)
+                        .fetch_one(pool)
+                        .await
+                }
+            }
         }
     );
 
@@ -1602,19 +1632,19 @@ impl HubService for MyHubService {
         Ok(Response::new(Box::pin(rx_stream) as Self::StreamMeshEventsStream))
     }
 
-    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<TeammateMeshEvent, Status>> + Send>>;
+    type StreamTeammateMeshStream = Pin<Box<dyn Stream<Item = Result<::server_ohc::orchestration::TeammateMeshEvent, Status>> + Send>>;
 
     async fn publish_teammate_mesh_event(
         &self,
-        request: Request<PublishTeammateMeshEventRequest>,
-    ) -> Result<Response<PublishMessageResponse>, Status> {
+        request: Request<::server_ohc::orchestration::PublishTeammateMeshEventRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::PublishMessageResponse>, Status> {
         let req = request.into_inner();
         if req.channel.is_empty() {
             return Err(Status::invalid_argument("channel is required"));
         }
         if let Some(event) = req.event {
             match self.hub.publish_teammate_event(req.channel, event) {
-                Ok(_) => Ok(Response::new(PublishMessageResponse { success: true })),
+                Ok(_) => Ok(Response::new(::server_ohc::orchestration::PublishMessageResponse { success: true })),
                 Err(e) => Err(Status::internal(e)),
             }
         } else {
@@ -1624,7 +1654,7 @@ impl HubService for MyHubService {
 
     async fn stream_teammate_mesh(
         &self,
-        request: Request<EventStreamRequest>,
+        request: Request<::server_ohc::orchestration::EventStreamRequest>,
     ) -> Result<Response<Self::StreamTeammateMeshStream>, Status> {
         let req = request.into_inner();
         if req.topic.is_empty() {
@@ -1644,8 +1674,8 @@ impl HubService for MyHubService {
 
     async fn invite(
         &self,
-        request: Request<InviteRequest>,
-    ) -> Result<Response<InviteResponse>, Status> {
+        request: Request<::server_ohc::orchestration::InviteRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::InviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.team_id.is_empty() || req.inviter_id.is_empty() || req.invitee_id.is_empty() {
@@ -1657,13 +1687,13 @@ impl HubService for MyHubService {
 
         self.viral_loop_tracker.record_invite_sent(&req.inviter_id);
 
-        Ok(Response::new(InviteResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::InviteResponse { success: true }))
     }
 
     async fn accept_invite(
         &self,
-        request: Request<AcceptInviteRequest>,
-    ) -> Result<Response<AcceptInviteResponse>, Status> {
+        request: Request<::server_ohc::orchestration::AcceptInviteRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::AcceptInviteResponse>, Status> {
         let req = request.into_inner();
         
         if req.invitee_id.is_empty() {
@@ -1672,21 +1702,21 @@ impl HubService for MyHubService {
 
         self.viral_loop_tracker.record_invite_accepted(&req.invitee_id);
 
-        Ok(Response::new(AcceptInviteResponse { success: true }))
+        Ok(Response::new(::server_ohc::orchestration::AcceptInviteResponse { success: true }))
     }
 
     async fn get_meetings(
         &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<GetMeetingsResponse>, Status> {
+        _request: Request<::server_ohc::orchestration::EmptyRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::GetMeetingsResponse>, Status> {
         let meetings = self.hub.get_meetings();
-        Ok(Response::new(GetMeetingsResponse { meetings: meetings.await.to_vec() }))
+        Ok(Response::new(::server_ohc::orchestration::GetMeetingsResponse { meetings: meetings.await.to_vec() }))
     }
 
     async fn start_onboarding(
         &self,
-        request: Request<StartOnboardingRequest>,
-    ) -> Result<Response<StartOnboardingResponse>, Status> {
+        request: Request<::server_ohc::orchestration::StartOnboardingRequest>,
+    ) -> Result<Response<::server_ohc::orchestration::StartOnboardingResponse>, Status> {
         let req = request.into_inner();
         match self.onboarding_agent.start_onboarding(req).await {
             Ok(resp) => Ok(Response::new(resp)),
