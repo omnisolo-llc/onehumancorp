@@ -12,7 +12,7 @@ use sqlx::Row;
 pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
     Router::new()
         .route("/", post(migration_handler))
-        .route("/:id/status", get(migration_status_handler))
+        .route("/{id}/status", get(migration_status_handler))
         .with_state(db)
 }
 

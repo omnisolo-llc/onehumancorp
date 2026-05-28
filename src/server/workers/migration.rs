@@ -53,7 +53,7 @@ impl MigrationWorker {
                         Ok(extracted_products) => {
                             let mut tx2 = self.db.pool.begin().await?;
                             if let Err(e) = crate::common::auth_utils::set_org_context(&mut *tx2, &tenant_id).await {
-                                self.mark_failed(id, format!("Auth context failed: {}", e)).await?;
+                                self.mark_failed(id.clone(), format!("Auth context failed: {}", e)).await?;
                                 return Ok(());
                             }
 
@@ -84,7 +84,7 @@ impl MigrationWorker {
 
                                 if let Err(e) = res {
                                     tx2.rollback().await?;
-                                    self.mark_failed(id, format!("Insert product failed: {}", e)).await?;
+                                    self.mark_failed(id.clone(), format!("Insert product failed: {}", e)).await?;
                                     return Ok(());
                                 }
                             }
@@ -99,14 +99,14 @@ impl MigrationWorker {
 
                             if let Err(e) = res {
                                 tx2.rollback().await?;
-                                self.mark_failed(id, format!("Finalize update failed: {}", e)).await?;
+                                self.mark_failed(id.clone(), format!("Finalize update failed: {}", e)).await?;
                                 return Ok(());
                             }
 
                             tx2.commit().await?;
                         }
                         Err(e) => {
-                            self.mark_failed(id, format!("Extraction failed: {}", e)).await?;
+                            self.mark_failed(id.clone(), format!("Extraction failed: {}", e)).await?;
                         }
                     }
                 } else {
@@ -158,7 +158,7 @@ impl MigrationWorker {
                                 .await;
 
                                 if let Err(e) = res {
-                                    self.mark_failed_sqlite(id, format!("Insert product failed: {}", e)).await?;
+                                    self.mark_failed_sqlite(id.clone(), format!("Insert product failed: {}", e)).await?;
                                     return Ok(());
                                 }
                             }
@@ -171,12 +171,12 @@ impl MigrationWorker {
                                 .await;
 
                             if let Err(e) = res {
-                                self.mark_failed_sqlite(id, format!("Finalize update failed: {}", e)).await?;
+                                self.mark_failed_sqlite(id.clone(), format!("Finalize update failed: {}", e)).await?;
                                 return Ok(());
                             }
                         }
                         Err(e) => {
-                            self.mark_failed_sqlite(id, format!("Extraction failed: {}", e)).await?;
+                            self.mark_failed_sqlite(id.clone(), format!("Extraction failed: {}", e)).await?;
                         }
                     }
                 }
