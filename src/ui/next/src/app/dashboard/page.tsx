@@ -18,6 +18,7 @@ export default function Dashboard() {
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  const [showMilestoneBanner, setShowMilestoneBanner] = useState<boolean>(true);
   const [swarmActivity, setSwarmActivity] = useState<any[]>([]);
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
@@ -339,7 +340,17 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-center w-full">
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -391,6 +402,26 @@ export default function Dashboard() {
                    Add your first product
                  </Link>
                </div>
+             </div>
+           </section>
+         )}
+
+         {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
+         {!hasPro && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all flex flex-col sm:flex-row items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+               <div>
+                   <div className="flex items-center gap-3 mb-2">
+                     <div className="text-2xl">🚀</div>
+                     <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Ready to scale?</h2>
+                   </div>
+                   <p className="text-gray-600 font-inter text-sm leading-relaxed max-w-lg">
+                     Upgrade to Pro for unlimited agents, advanced analytics, and custom domains. Grow your business faster and without limits.
+                   </p>
+               </div>
+               <Link href="/pricing" className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] whitespace-nowrap">
+                 Upgrade to Pro
+               </Link>
              </div>
            </section>
          )}
@@ -514,6 +545,25 @@ export default function Dashboard() {
                      </button>
                  </WithTooltip>
              </div>
+         </section>
+
+         {/* Plain-Language Weekly Financial Brief */}
+         <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Weekly Insights</h2>
+            <div className="p-6 shadow-sm border rounded-2xl bg-white border-blue-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 rounded-bl-full -z-10"></div>
+                <div className="flex items-start gap-4">
+                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                   </div>
+                   <div>
+                       <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
+                       <p className="text-gray-800 text-sm leading-relaxed">
+                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
+                       </p>
+                   </div>
+                </div>
+            </div>
          </section>
 
          {/* Business Snapshot */}
@@ -902,6 +952,38 @@ export default function Dashboard() {
                 </div>
             </div>
          </section>
+
+         {/* Growth Loop: Milestone Celebration */}
+         {showMilestoneBanner && (
+           <section className="mb-8 animate-fade-in">
+              <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                  <div className="flex-1 text-white">
+                      <div className="flex items-center gap-3 mb-2">
+                          <span className="text-3xl">🎉</span>
+                          <h3 className="text-xl font-bold font-outfit text-white">Milestone Unlocked: Your First Customers!</h3>
+                      </div>
+                      <p className="text-sm text-white/90 mb-4 leading-relaxed font-medium">You've reached <strong className="text-white">100 active customers</strong>. Share your store's success to earn a free month of Pro!</p>
+                      <button
+                          onClick={() => {
+                              const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+                              const url = `ohc://join?ref=${tenant}`;
+                              const text = `I just reached 100 customers on my store! Start your own business today with One Human Corp: ${url}`;
+                              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                              setShowMilestoneBanner(false);
+                          }}
+                          className="px-5 py-2.5 bg-white text-orange-500 font-bold rounded-xl shadow-md hover:bg-orange-50 transition-all font-inter text-sm"
+                      >
+                          Share & Claim Reward
+                      </button>
+                  </div>
+                  <div className="hidden md:flex flex-col items-center justify-center p-4">
+                      <div className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm border border-white/30">
+                          <span className="text-4xl font-bold text-white">100</span>
+                      </div>
+                  </div>
+              </div>
+           </section>
+         )}
 
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">

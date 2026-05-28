@@ -145,6 +145,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
+    pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -201,6 +202,7 @@ enable_llmcompiler_plan_and_execute: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
         }
     }
@@ -503,7 +505,7 @@ impl Agent {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
                     let res = match gating_res {
-                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await,
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
                         Err(e) => Err(e),
                     };
                     (tc_clone, res)
@@ -564,7 +566,7 @@ impl Agent {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
                 let res = match gating_res {
-                    Ok(_) => self.execute_tool(tc, session_tools, &messages).await,
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
                     Err(e) => Err(e),
                 };
 
@@ -1310,7 +1312,7 @@ impl Agent {
             read_only_futures.push(async move {
                 let mut retry_count = 0;
                 loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[]).await {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1387,7 +1389,7 @@ impl Agent {
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&tc, session_tools, &[]).await {
+                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1598,6 +1600,36 @@ impl Agent {
         Ok(parsed)
     }
 
+    pub async fn resume_from_checkpoint<F>(
+        &self,
+        cfg: &AgentRunConfig,
+        checkpoint_id: &str,
+        on_event: &mut F,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>>
+    where
+        F: FnMut(AgentEvent) + Send + Sync,
+    {
+        let thread_id = cfg.thread_id.as_deref().unwrap_or("default");
+        if let Some(checkpointer) = &self.checkpointer {
+            let cp = checkpointer.get_checkpoint(thread_id, checkpoint_id).await
+                .map_err(|e| format!("Failed to get checkpoint: {}", e))?
+                .ok_or_else(|| format!("Checkpoint {} not found", checkpoint_id))?;
+
+            checkpointer.restore_checkpoint(checkpoint_id).await
+                .map_err(|e| format!("Failed to restore workspace: {}", e))?;
+
+            let restored_msgs: Vec<crate::types::Message> = serde_json::from_value(cp.data)
+                .map_err(|e| format!("Failed to deserialize messages: {}", e))?;
+
+            let mut new_cfg = cfg.clone();
+            new_cfg.injected_context = Some(restored_msgs);
+
+            self.run(&new_cfg, "", on_event).await
+        } else {
+            Err("Checkpointer not configured".into())
+        }
+    }
+
     pub async fn run<F>(
         &self,
         cfg: &AgentRunConfig,
@@ -1609,7 +1641,6 @@ impl Agent {
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
-
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1893,7 +1924,11 @@ impl Agent {
 
         let mut final_messages = messages.clone();
 
-
+        // Context Management (Preventing Context Rot): Observation Masking (JetBrains' Junie)
+        // Hide the raw output of old tools from the prompt, but keep the `tool_calls` themselves visible so the model remembers what it did.
+        if final_cfg.enable_observation_masking {
+            crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
+        }
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
@@ -1984,7 +2019,7 @@ impl Agent {
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
-                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Business owner has been notified. Please try again later.".to_string();
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         return Err(err_msg.into());
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {
@@ -2210,19 +2245,12 @@ impl Agent {
                     let mut retry_count = 0;
                     let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
                             Err(ToolError::Transient(msg)) => {
-                                if retry_count < max_retries {
-                                    retry_count += 1;
-                                    let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                    tokio::time::sleep(backoff).await;
-                                    continue;
-                                } else {
-                                    return (tc_clone, Err(ToolError::Transient(msg)));
-                                }
+                                return (tc_clone, Err(ToolError::Transient(msg)));
                             }
                             Err(e) => {
                                 return (tc_clone, Err(e));
@@ -2425,7 +2453,7 @@ impl Agent {
                         agent_id = %final_cfg.agent_id,
                         tool_name = %tc.name,
                     );
-                    match self.execute_tool(&tc, &session_tools, &messages).instrument(tool_span).await {
+                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2588,7 +2616,7 @@ impl Agent {
                                 session_id: thread_id.clone(),
                                 messages_json: msgs_json,
                                 current_step: iteration as usize,
-                                active_tools: vec![],
+                                active_tools: vec![], memory_size_bytes: Some(messages.len()),
                             };
                             let _ = hm.hibernate(thread_id, &state).await;
                         }
@@ -2853,6 +2881,7 @@ impl Agent {
         tc: &ToolCall,
         session_tools: &[Tool],
         current_messages: &[Message],
+        max_retries: usize,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
@@ -2877,7 +2906,9 @@ impl Agent {
             return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
-        tool.execute.execute(args).await
+        let mut modified_tc = tc.clone();
+        modified_tc.arguments = args;
+        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
     }
 }
 
@@ -3251,7 +3282,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[]).await;
+        let res = agent.execute_tool(&valid_call, &tools, &[], 2).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -3260,7 +3291,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[]).await;
+        let res = agent.execute_tool(&missing_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -3275,7 +3306,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[]).await;
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -4631,7 +4662,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("FAIL: The answer is incomplete."),
+                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4643,7 +4674,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("PASS"),
+                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -5722,8 +5753,76 @@ mod stream_tests {
     }
 
     #[tokio::test]
+    async fn test_resume_from_checkpoint() {
+        use crate::checkpointer::{CheckpointSaver, Checkpoint};
+        struct MockCheckpointerResume {
+            checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Checkpoint>>,
+        }
+
+        #[async_trait::async_trait]
+        impl CheckpointSaver for MockCheckpointerResume {
+            async fn get_checkpoint(&self, _tid: &str, cid: &str) -> Result<Option<Checkpoint>, String> {
+                Ok(self.checkpoints.lock().await.get(cid).cloned())
+            }
+            async fn put_checkpoint(&self, cp: Checkpoint) -> Result<(), String> {
+                self.checkpoints.lock().await.insert(cp.checkpoint_id.clone(), cp);
+                Ok(())
+            }
+            async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> { Ok(vec![]) }
+            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> { Ok(()) }
+        }
+
+        struct ResumeMockLlm {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl LlmClient for ResumeMockLlm {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                Ok(ChatResponse {
+                    message: Message::assistant("Rewound response"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id1".to_string()),
+                })
+            }
+        }
+
+        let cp_saver = Arc::new(MockCheckpointerResume {
+            checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()),
+        });
+        let llm = Arc::new(ResumeMockLlm { call_count: tokio::sync::Mutex::new(0) });
+        let mut agent = Agent::new(llm, vec![]);
+        agent.checkpointer = Some(cp_saver.clone());
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.thread_id = Some("test-thread".to_string());
+
+        let mut messages = vec![Message::user("Hello")];
+        messages.push(Message::assistant("World"));
+        let cp = Checkpoint {
+            thread_id: "test-thread".to_string(),
+            checkpoint_id: "test-cp-1".to_string(),
+            parent_id: None,
+            data: serde_json::to_value(&messages).unwrap(),
+            metadata: serde_json::json!({}),
+            created_at: chrono::Utc::now(),
+        };
+
+        cp_saver.put_checkpoint(cp).await.unwrap();
+
+        let mut on_event = |_| {};
+        let result = agent.resume_from_checkpoint(&cfg, "test-cp-1", &mut on_event).await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Rewound response");
+    }
+
+    #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
-        use ohc_builtin_agent_tools::ToolExecutor;
+        use crate::tools::ToolExecutor;
         use crate::checkpointer::{CheckpointSaver, Checkpoint};
 
         struct MockCheckpointerRewind {
@@ -6428,4 +6527,45 @@ async fn test_stripe_retry_limit() {
         let lock = agent.native_env.read().await;
         let val = lock.get_variable::<u64>("agent_secret").unwrap();
         assert_eq!(*val, 42);
+    }
+
+    #[tokio::test]
+    async fn test_progressive_skills_mechanic() {
+        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        struct SpyLlmClient {
+            system_prompt: std::sync::Mutex<String>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for SpyLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                *self.system_prompt.lock().unwrap() = req.system;
+                Ok(ChatResponse {
+                    message: Message::assistant("Got it"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let skills_dir = temp_dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+        std::fs::write(skills_dir.join("test_skill.md"), "# Secret Skill\nKeywords: analyze\n\nALWAYS perform deep analysis.").unwrap();
+
+        let client = Arc::new(SpyLlmClient { system_prompt: std::sync::Mutex::new(String::new()) });
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_progressive_skills = true;
+        cfg.progressive_skills_dir = Some(skills_dir.to_string_lossy().to_string());
+        cfg.developer_instructions = "Base Instructions".to_string();
+
+        let mut on_event = |_| {};
+        let _ = agent.run(&cfg, "Please analyze this data", &mut on_event).await;
+
+        let prompt = client.system_prompt.lock().unwrap().clone();
+        assert!(prompt.contains("Base Instructions"));
+        assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
+        assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
