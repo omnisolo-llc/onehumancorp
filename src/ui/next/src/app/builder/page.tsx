@@ -197,12 +197,12 @@ export default function BuilderPage() {
                     setBlocks(d);
                     setSelectedDraftIndex(idx);
                   }}
-                  className={`w-full text-left bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-lg' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
+                  className={`w-full text-left bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0071E3] ring-2 ring-[#0071E3]/20 shadow-lg' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
                 >
                    <div className="h-32 bg-white/50 dark:bg-black/30 flex items-center justify-center relative backdrop-blur-sm border-b border-white/40 dark:border-white/10">
                       <span className="font-outfit font-bold text-gray-400 dark:text-gray-500">Draft {idx + 1}</span>
                       {selectedDraftIndex === idx && (
-                        <div className="absolute top-2 right-2 bg-[#0066FF] text-white rounded-full p-1">
+                        <div className="absolute top-2 right-2 bg-[#0071E3] text-white rounded-full p-1">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                         </div>
                       )}
@@ -218,7 +218,7 @@ export default function BuilderPage() {
            <div className="absolute bottom-0 w-full p-6 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
               <button
                 onClick={() => setStatus("draft")}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+                className="w-full bg-gradient-to-r from-[#0071E3] to-[#005bb5] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
               >
                 Customize Selected Draft
               </button>
@@ -293,7 +293,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
@@ -303,7 +303,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
@@ -317,7 +317,7 @@ export default function BuilderPage() {
                 <button
                   className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
                     businessName.trim().length >= 3 && businessCategory.trim().length >= 5
-                      ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
+                      ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0071E3] to-[#005bb5]"
                       : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
                   }`}
                   style={{ borderRadius: '8px' }}
@@ -341,7 +341,7 @@ export default function BuilderPage() {
                       key={v}
                       onClick={() => setVibe(v)}
                       className={`p-4 border text-left transition-all font-semibold backdrop-blur-md ${
-                        vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 bg-white/40 dark:bg-black/20"
+                        vibe === v ? "border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 bg-white/40 dark:bg-black/20"
                       }`}
                       style={{ borderRadius: '8px' }}
                     >
@@ -361,7 +361,7 @@ export default function BuilderPage() {
                   <button
                     className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
                       vibe
-                        ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
+                        ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0071E3] to-[#005bb5]"
                         : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                     }`}
                     style={{ borderRadius: '8px' }}
@@ -390,7 +390,7 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                    className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0071E3]/50 focus:border-[#0071E3] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -412,7 +412,7 @@ export default function BuilderPage() {
                       id="generate-btn"
                       className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
                         bio.trim().length > 5
-                          ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
+                          ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0071E3] to-[#005bb5]"
                           : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                       }`}
                       style={{ borderRadius: '8px' }}
@@ -528,8 +528,8 @@ export default function BuilderPage() {
 
 
           {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-md border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
-            <h2 className="text-lg font-bold font-outfit text-[#0066FF] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
+          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-md border border-[#0071E3]/30 dark:border-[#0071E3]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
+            <h2 className="text-lg font-bold font-outfit text-[#0071E3] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
             <p className="text-xs text-blue-700 dark:text-blue-200 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
 
             {geoScore === null ? (
@@ -650,7 +650,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
+                  className="w-full p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0071E3] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -675,7 +675,7 @@ export default function BuilderPage() {
             )}
             <button
               onClick={() => setIsActionSheetOpen(false)}
-              className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+              className="w-full bg-gradient-to-r from-[#0071E3] to-[#005bb5] text-white p-4 rounded-[8px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
             >
               Save Changes
             </button>
@@ -688,7 +688,7 @@ export default function BuilderPage() {
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
             {!isPremium && (
               <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px]"
+                className="flex-1 py-2 text-sm font-medium text-[#0071E3] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0071E3]/30 rounded-[8px]"
                 onClick={() => setShowUpgradeModal(true)}
               >
                 Remove Branding ✨
