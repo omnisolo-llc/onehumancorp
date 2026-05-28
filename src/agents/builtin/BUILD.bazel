@@ -68,6 +68,7 @@ rust_library(
         "mesh/mod.rs",
         "mesh/transport.rs",
         "observability.rs",
+        "openhands.rs",
         "observation_masking.rs",
         "output_parser.rs",
         "plane.rs",
@@ -301,3 +302,9 @@ exports_files([
     "sandbox/manager.rs",
     "sandbox/session.rs",
 ])
+
+rust_test(
+    name = "openhands_test",
+    crate = ":ohc_builtin_agent_lib",
+    edition = "2024",
+)

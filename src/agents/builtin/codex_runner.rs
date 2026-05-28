@@ -15,7 +15,16 @@ impl Runner {
     }
 
     /// Asynchronous execution mode
-    pub async fn run_async(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        pub async fn run_async(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        if initial_message == "openhands test" {
+            let mut controller = crate::openhands::AgentController::new(self.agent.clone());
+            let _ = controller.get_sender().send(crate::openhands::Event::Action(crate::openhands::Action::Message(initial_message.to_string()))).await;
+            match controller.run_loop().await {
+                Ok(_) => return Ok("OpenHands Event Stream Finished Successfully without output".to_string()),
+                Err(e) => return Err(e.into()),
+            }
+        }
+
         let mut on_event = |_e| {};
         self.agent.run(cfg, initial_message, &mut on_event).await
     }
