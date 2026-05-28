@@ -69,7 +69,7 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let ayrshare_provider = crate::integrations::ayrshare::provider::AyrshareProvider::new("dummy_token".to_string());
     catalog.push(ayrshare_provider.to_integration_provider());
 
-    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("dummy_token".to_string());
+    let listmonk_provider = crate::integrations::listmonk::provider::ListmonkProvider::new("http://localhost:9000".to_string(), "dummy_token".to_string());
     catalog.push(listmonk_provider.to_integration_provider());
 
     let easypost_provider = crate::integrations::easypost::provider::EasyPostProvider::new("dummy_token".to_string());

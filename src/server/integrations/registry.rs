@@ -261,7 +261,7 @@ impl IntegrationsRegistry {
         }
         if integration_id == "listmonk" {
             let mut clients = self.listmonk_clients.write().unwrap();
-            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(creds.api_token.clone())));
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::listmonk::provider::ListmonkProvider::new(base_url.to_string(), creds.api_token.clone())));
         }
         if integration_id == "easypost" {
             let mut clients = self.easypost_clients.write().unwrap();
