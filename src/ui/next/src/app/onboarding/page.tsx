@@ -22,10 +22,88 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
-    setIsLoaded(true);
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenantId,
+            'x-user-id': userId
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step !== undefined) setStep(data.step);
+            if (data.chatStep !== undefined) setChatStep(data.chatStep);
+            if (data.businessName !== undefined) setBusinessName(data.businessName);
+            if (data.whatYouSell !== undefined) setWhatYouSell(data.whatYouSell);
+            if (data.location !== undefined) setLocation(data.location);
+            if (data.businessType !== undefined) setBusinessType(data.businessType);
+            if (data.categories !== undefined) setCategories(data.categories);
+            if (data.websiteTemplate !== undefined) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName !== undefined) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice !== undefined) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load state', err);
+      } finally {
+        setIsLoaded(true);
+        isInitialLoad.current = false;
+      }
+    };
+    loadState();
   }, []);
+
+  useEffect(() => {
+    if (!isLoaded || isInitialLoad.current) return;
+
+    const saveState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId,
+            'x-user-id': userId
+          },
+          body: JSON.stringify({
+            step,
+            chatStep,
+            businessName,
+            whatYouSell,
+            location,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice
+          })
+        });
+      } catch (err) {
+        console.error('Failed to save state', err);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      saveState();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    isLoaded, step, chatStep, businessName, whatYouSell, location,
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -122,7 +200,7 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div id="setup-screen" className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
@@ -154,6 +232,8 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        inputMode="text"
+                        autoCapitalize="words"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
@@ -188,6 +268,8 @@ export default function OnboardingWizard() {
                     <div>
                       <textarea
                         value={whatYouSell}
+                        inputMode="text"
+                        autoCapitalize="sentences"
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
@@ -221,6 +303,8 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        inputMode="text"
+                        autoCapitalize="words"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"

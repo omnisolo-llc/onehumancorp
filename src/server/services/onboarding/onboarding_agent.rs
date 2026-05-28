@@ -2522,6 +2522,39 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_state_persistence() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let tenant_id = "test_tenant";
+        let user_id = "test_user";
+
+        // Test saving state
+        let state_to_save = serde_json::json!({
+            "step": 3,
+            "businessName": "Maya's Cross-Device Bakery",
+            "whatYouSell": "I bake custom vegan cakes"
+        });
+
+        let save_res = agent.save_onboarding_state(tenant_id, user_id, 3, &state_to_save).await;
+        assert!(save_res.is_ok());
+
+        // Test getting state
+        let get_res = agent.get_onboarding_state(tenant_id, user_id).await;
+        assert!(get_res.is_ok());
+
+        let retrieved_state = get_res.unwrap();
+        assert_eq!(retrieved_state["step"], 3);
+        assert_eq!(retrieved_state["businessName"], "Maya's Cross-Device Bakery");
+        assert_eq!(retrieved_state["whatYouSell"], "I bake custom vegan cakes");
+    }
+
+    #[tokio::test]
     async fn test_process_intake() {
         let db = match setup_test_db().await {
             Some(db) => db,

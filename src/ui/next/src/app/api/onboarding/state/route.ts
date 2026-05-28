@@ -31,6 +31,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
+
     const res = await fetch(`${backendUrl}/api/onboarding/state`, {
       method: 'POST',
       headers: {

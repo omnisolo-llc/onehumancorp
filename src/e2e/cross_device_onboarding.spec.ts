@@ -44,8 +44,8 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
     // The backend should restore the state and auto-advance, or at least fill the inputs
-    await expect(page2.getByRole('heading', { name: 'Ready to Launch!' })).toBeVisible({ timeout: 15000 });
-    await expect(page2.getByPlaceholder('0.00')).toBeVisible();
+    await expect(page2.getByRole('heading', { name: 'Review Details' })).toBeVisible({ timeout: 15000 });
+    await expect(page2.getByDisplayValue("Maya's Cross-Device Bakery")).toBeVisible();
 
     await context2.close();
   });
