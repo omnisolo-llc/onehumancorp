@@ -68,8 +68,8 @@ def define_playwright_tests(specs, ci_specs = [], data = [], server = None):
             "BASE_URL": "http://localhost:18789",
             "PLAYWRIGHT_BROWSERS_PATH": "$(rootpath @playwright//:chromium-headless-shell)/../",
         },
-        size = "large",
-        timeout = "eternal",
+        size = "small",
+        timeout = "short",
         shard_count = 8,  # Parallelize the run across 8 shards
         tags = [
             "e2e",
