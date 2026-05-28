@@ -1080,12 +1080,20 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowAddItemModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
-                >
-                    <span>+ Add Item</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowAddItemModal(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-[8px] shadow-md hover:bg-black transition-all font-inter text-sm"
+                    >
+                        <span>+ Add Item</span>
+                    </button>
+                    <Link
+                        href="/products/new"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-[8px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm border border-blue-400/50"
+                    >
+                        <span>✨ Auto-Catalog</span>
+                    </Link>
+                </div>
             </div>
          </section>
 
