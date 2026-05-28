@@ -49,6 +49,11 @@ function routeIntent(message: string) {
   };
 }
 
+// Ensure the helper function is available to tests without exporting it from the route file.
+if (process.env.NODE_ENV === 'test') {
+  (global as any).__routeIntent = routeIntent;
+}
+
 export async function POST(req: Request) {
   const { message } = await req.json();
 

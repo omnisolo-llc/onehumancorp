@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { routeIntent } from './route';
+import './route';
+
+const routeIntent = (global as any).__routeIntent;
 
 describe('routeIntent', () => {
   it('should route sales messages to sales department', () => {
