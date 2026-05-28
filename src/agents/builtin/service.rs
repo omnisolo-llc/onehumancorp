@@ -603,6 +603,7 @@ impl AgentServiceImpl {
             // Long-term memory store for cross-department context sharing
             long_term_memory,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
         }
     }
@@ -1023,6 +1024,7 @@ impl AgentService for AgentServiceImpl {
                 max_rewind_attempts: 3,
                 long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
             };
 
