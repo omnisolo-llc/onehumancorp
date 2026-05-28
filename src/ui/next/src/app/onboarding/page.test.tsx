@@ -19,7 +19,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation((url: string) => { return Promise.resolve({ ok: true, json: async () => ({}) }); });
   });
 
   afterEach(() => {
@@ -37,21 +37,26 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
+    // Mock success
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        });
+      }
+      if (url.includes('/api/onboarding/start')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -115,8 +120,11 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/intake')) {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -159,8 +167,11 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes('/api/onboarding/start')) {
+        return Promise.resolve({ ok: false });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
