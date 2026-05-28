@@ -432,6 +432,48 @@ impl ResilientClient {
         }
     }
 
+    pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
+        let (tx, rx) = tokio::sync::mpsc::channel(100);
+        let mut stream = self.primary.reason_stream(prompt).await;
+
+        let fallback_client = LocalLLMClient::new();
+        let prompt_clone = prompt.to_string();
+
+        tokio::spawn(async move {
+            use tokio_stream::StreamExt;
+            let mut failed = false;
+
+            while let Some(res) = stream.next().await {
+                match res {
+                    Ok(val) => {
+                        if tx.send(Ok(val)).await.is_err() {
+                            return; // receiver dropped
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Primary LLM stream failed: {}. Falling back to local.", e);
+                        failed = true;
+                        break;
+                    }
+                }
+            }
+
+            if failed {
+                // Since LocalLLMClient does not support streaming yet in this snapshot, we fallback to non-stream logic
+                match fallback_client.reason(&prompt_clone).await {
+                    Ok(text) => {
+                        let _ = tx.send(Ok(text)).await;
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e)).await;
+                    }
+                }
+            }
+        });
+
+        Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx))
+    }
+
     pub async fn generate_embedding(&self, text: &str) -> Result<Vec<f32>, String> {
         match self.primary.generate_embedding(text).await {
             Ok(res) => Ok(res),

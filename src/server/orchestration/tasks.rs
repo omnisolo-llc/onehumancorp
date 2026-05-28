@@ -106,14 +106,19 @@ impl TaskDecompositionService {
             let now = Utc::now();
             let claim_future = self.claim_task_inner(agent_id, now);
             match tokio::time::timeout(std::time::Duration::from_secs(60), claim_future).await {
-                Ok(res) => return res,
-                Err(_) => {
-                    if start_time.elapsed() > std::time::Duration::from_millis(100) {
-                        ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                Ok(Ok(res)) => return Ok(res),
+                Ok(Err(e)) => {
+                    if attempt >= max_attempts {
+                        return Err(e);
                     }
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                }
+                Err(_) => {
+                    ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
                     if attempt >= max_attempts {
                         return Err("Timeout claiming task (ML-Resilience 60s boundary)".to_string());
                     }
+                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 }
             }
         }
