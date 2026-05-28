@@ -137,3 +137,4 @@ dummy.*
 dummy_*
 .next/
 /*.patch
+venv_docs/
