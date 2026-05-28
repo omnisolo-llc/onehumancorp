@@ -29,7 +29,7 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
+    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -57,7 +57,7 @@ describe('OnboardingWizard', () => {
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Custom Cakes/i);
     await userEvent.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
@@ -122,7 +122,7 @@ describe('OnboardingWizard', () => {
     act(() => { render(<OnboardingWizard />); });
 
     // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    const nameInput = screen.getByPlaceholderText(/e.g. Maya's Custom Cakes/i);
     await userEvent.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
