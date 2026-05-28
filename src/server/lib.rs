@@ -68,7 +68,6 @@ pub use ::server_config as config;
 pub use ::server_common as common;
 pub use crate::proto as ohc;
 use crate::ohc::orchestration::*;
-use crate::ohc::orchestration::*;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -462,7 +461,7 @@ async fn http_login_handler(
         }
     };
 
-    let _claims = ::server_common::Claims {
+    let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
