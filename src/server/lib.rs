@@ -14,22 +14,26 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
-    m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
-    m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
-    m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
-    m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
-    m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
-    m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
-    m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
-    m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
-    m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
-    m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
-    m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
-    m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
-    m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
-    m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
+    m.insert("bio-input-tooltip".to_string(), "Tell us what you sell and who buys it. Keep it simple!".to_string());
+    m.insert("generate-btn-tooltip".to_string(), "Click here to let our AI build your ready-to-launch store.".to_string());
+    m.insert("launch-btn-tooltip".to_string(), "Make your store live on the internet. Customers will be able to visit!".to_string());
+    m.insert("team-activity-tooltip".to_string(), "See exactly what your AI helpers are doing right now.".to_string());
+    m.insert("referral-tooltip".to_string(), "Share this link with friends. You earn credits if they sign up!".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI helpers are working hard on your tasks right now.".to_string());
+    m.insert("department-card-tooltip".to_string(), "Click here to see tasks that need your approval.".to_string());
+    m.insert("nav-dashboard-tooltip".to_string(), "Check your sales, recent orders, and how your store is doing.".to_string());
+    m.insert("nav-agents-tooltip".to_string(), "See your AI team, give them tasks, or hire new helpers.".to_string());
+    m.insert("nav-setup-tooltip".to_string(), "Set up your business info, logo, and how you get paid.".to_string());
+    m.insert("credit-tooltip".to_string(), "Get free credits for premium tools by inviting a friend.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here for guides, videos, and to ask our AI.".to_string());
+    m.insert("changelog-nav-tooltip".to_string(), "See the latest updates and new features we just added.".to_string());
+    m.insert("todays-sales-tooltip".to_string(), "How much money you made today. Great job!".to_string());
+    m.insert("approval-inbox-tooltip".to_string(), "Your AI helpers need your permission to do these tasks. Review them here.".to_string());
+    m.insert("ask-ai-tooltip".to_string(), "Click to ask our AI helper any question. It knows everything about our app.".to_string());
+    m.insert("stripe-setup-tooltip".to_string(), "Connect your bank account securely with Stripe to start getting paid.".to_string());
+    m.insert("checkout-pay-now-tooltip".to_string(), "Click here to securely finish your purchase and process your payment.".to_string());
+    m.insert("checkout-tap-to-pay-tooltip".to_string(), "Tap your card or phone on the reader to pay in person.".to_string());
+    m.insert("checkout-cancel-tooltip".to_string(), "Go back to the previous screen without buying anything.".to_string());
     RwLock::new(m)
     })
 }
@@ -5765,7 +5769,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
+                                if(data.link && data.link.title) {
+                                    let targetScreen = 'help-screen';
+                                    if(data.link.url === '/api-docs') targetScreen = 'api-docs-screen';
+                                    aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;' + targetScreen + '&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link.title + '</a>';
+                                }
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
