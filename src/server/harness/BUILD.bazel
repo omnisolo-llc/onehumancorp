@@ -14,6 +14,7 @@ rust_library(
         "sandbox/catalog.rs",
         "sandbox/wrapper.rs",
         "sandbox/macos_sandbox.rs",
+        "sandbox/network_proxy.rs",
         "mcp/mod.rs",
         "mcp/client.rs",
     ],
@@ -32,6 +33,10 @@ rust_library(
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
+        "@crates//:axum",
+        "@crates//:hyper",
+        "@crates//:hyper-util",
+        "@crates//:reqwest",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",

@@ -3,18 +3,26 @@ use sqlx::PgPool;
 use std::time::Instant;
 use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
 
+use super::sandbox::network_proxy::{start_network_proxy, ProxyState};
+use super::sandbox::manager::SandboxPolicy;
+
 pub struct LocalShellTask {
     manager: SandboxManager,
+    policy: SandboxPolicy,
 }
 
 impl LocalShellTask {
     pub fn new(pool: Option<PgPool>) -> Self {
         LocalShellTask {
             manager: SandboxManager::new(pool),
+            policy: SandboxPolicy::default(),
         }
     }
 
     pub async fn update_config(&mut self, policy_json: &str) -> Result<(), String> {
+        let policy: SandboxPolicy = serde_json::from_str(policy_json)
+            .map_err(|e| format!("Invalid policy JSON: {}", e))?;
+        self.policy = policy;
         self.manager.update_config(policy_json).await
     }
 
@@ -23,6 +31,17 @@ impl LocalShellTask {
             Ok(c) => c,
             Err(e) => return Err(self.manager.annotate_error(e, String::new())),
         };
+
+        // If socat proxy port is enabled, start the background proxy task
+        let mut _proxy_task = None;
+        if let Some(port) = self.policy.socat_proxy_port {
+            let proxy_state = ProxyState {
+                policy: self.policy.clone(),
+                agent_id: "unknown_agent".to_string(),
+                task_id: "unknown_task".to_string(),
+            };
+            _proxy_task = Some(start_network_proxy(proxy_state, port).await);
+        }
 
         // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
         let task_id = "unknown_task";

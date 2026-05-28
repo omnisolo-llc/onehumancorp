@@ -20,6 +20,8 @@ pub struct SandboxPolicy {
     #[serde(default)]
     pub blocked_domains: Vec<String>,
     #[serde(default)]
+    pub allowed_domains: Vec<String>,
+    #[serde(default)]
     pub seccomp_fd: Option<i32>,
     #[serde(default)]
     pub socat_socket_path: Option<String>,

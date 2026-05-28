@@ -33,8 +33,16 @@ impl BashWrapper {
                 "socat UNIX-LISTEN:'{}',fork TCP:127.0.0.1:{} & \n\
                  SOCAT_PID=$!\n\
                  trap 'kill $SOCAT_PID 2>/dev/null || true' EXIT\n\
-                 while [ ! -S '{}' ]; do sleep 0.05; done\n",
-                escaped_path, port, escaped_path
+                 while [ ! -S '{}' ]; do sleep 0.05; done\n\
+                 export HTTP_PROXY=http://127.0.0.1:{}\n\
+                 export HTTPS_PROXY=http://127.0.0.1:{}\n",
+                escaped_path, port, escaped_path, port, port
+            ));
+        } else if let Some(port) = self.socat_proxy_port {
+            preamble.push_str(&format!(
+                "export HTTP_PROXY=http://127.0.0.1:{}\n\
+                 export HTTPS_PROXY=http://127.0.0.1:{}\n",
+                port, port
             ));
         }
 
@@ -69,7 +77,7 @@ mod tests {
             disabled_commands: vec![],
             disabled_patterns: vec![],
             read_only_paths: vec!["/etc".to_string(), "/var".to_string()],
-            blocked_domains: vec!["evil.com".to_string()],
+            blocked_domains: vec!["evil.com".to_string()], allowed_domains: vec![],
             seccomp_fd: None,
             socat_socket_path: Some("/tmp/test.sock".to_string()),
             socat_proxy_port: Some(8080),
@@ -80,6 +88,8 @@ mod tests {
         assert!(wrapped.contains("export READ_ONLY_PATHS='/etc:/var';"));
         assert!(wrapped.contains("export BLOCKED_DOMAINS='evil.com';"));
         assert!(wrapped.contains("echo hello"));
+        assert!(wrapped.contains("export HTTP_PROXY=http://127.0.0.1:8080"));
+        assert!(wrapped.contains("export HTTPS_PROXY=http://127.0.0.1:8080"));
         assert!(wrapped.contains("socat UNIX-LISTEN:'/tmp/test.sock',fork TCP:127.0.0.1:8080 & \nSOCAT_PID=$!\ntrap 'kill $SOCAT_PID 2>/dev/null || true' EXIT\nwhile [ ! -S '/tmp/test.sock' ]; do sleep 0.05; done"));
     }
 }

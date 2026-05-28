@@ -39,13 +39,16 @@ impl LinuxSandbox {
         args.push("--proc".to_string());
         args.push("/proc".to_string());
 
-        args.push("--bind".to_string());
+        args.push("--ro-bind".to_string());
         args.push("/".to_string());
         args.push("/".to_string());
 
+        args.push("--tmpfs".to_string());
+        args.push("/tmp".to_string());
+
         // Handle network restrictions. For strict isolation, if there are ANY blocked domains,
-        // we drop the network entirely by not providing `--share-net`.
-        if self.policy.blocked_domains.is_empty() {
+        // or allowed domains, we drop the network entirely by not providing `--share-net`.
+        if self.policy.blocked_domains.is_empty() && self.policy.allowed_domains.is_empty() {
             args.push("--share-net".to_string());
         }
 
@@ -110,8 +113,13 @@ impl SandboxAdapter for LinuxSandbox {
         if !self.policy.blocked_domains.is_empty() {
             prefix.push_str(&format!("export BLOCKED_DOMAINS='{}'; ", self.policy.blocked_domains.join(",")));
         }
+        if !self.policy.allowed_domains.is_empty() {
+            prefix.push_str(&format!("export ALLOWED_DOMAINS='{}'; ", self.policy.allowed_domains.join(",")));
+        }
 
         let bwrap_cmd = format!("bwrap {} -- bash -c \"{}{}\"", bwrap_args_str, prefix, escaped_cmd);
+
+        // Always try to inject HTTP_PROXY if a proxy port is given
         if let (Some(path), Some(port)) = (&self.policy.socat_socket_path, self.policy.socat_proxy_port) {
             let escaped_path = path.replace("'", "'\\''");
             let proxy_script = format!(
@@ -119,8 +127,18 @@ impl SandboxAdapter for LinuxSandbox {
                  SOCAT_PID=$!\n\
                  trap 'kill $SOCAT_PID 2>/dev/null || true' EXIT\n\
                  while [ ! -S '{}' ]; do sleep 0.05; done\n\
+                 export HTTP_PROXY=http://127.0.0.1:{}\n\
+                 export HTTPS_PROXY=http://127.0.0.1:{}\n\
                  {}",
-                escaped_path, port, escaped_path, bwrap_cmd
+                escaped_path, port, escaped_path, port, port, bwrap_cmd
+            );
+            Ok(format!("bash -c \"{}\"", proxy_script.replace("\"", "\\\"")))
+        } else if let Some(port) = self.policy.socat_proxy_port {
+            let proxy_script = format!(
+                "export HTTP_PROXY=http://127.0.0.1:{}\n\
+                 export HTTPS_PROXY=http://127.0.0.1:{}\n\
+                 {}",
+                port, port, bwrap_cmd
             );
             Ok(format!("bash -c \"{}\"", proxy_script.replace("\"", "\\\"")))
         } else {
@@ -154,9 +172,9 @@ mod tests {
         assert!(args.contains(&"--unshare-all".to_string()));
         assert!(args.contains(&"--die-with-parent".to_string()));
         assert!(args.contains(&"--share-net".to_string()));
-        assert!(args.contains(&"--bind".to_string()));
         assert!(args.contains(&"--cap-drop".to_string()));
-        assert!(!args.contains(&"--ro-bind".to_string()));
+        assert!(args.contains(&"--ro-bind".to_string()));
+        assert!(args.contains(&"--tmpfs".to_string()));
     }
 
     #[tokio::test]
@@ -164,7 +182,7 @@ mod tests {
         let mut sandbox = LinuxSandbox::new(None);
         let policy_json = r#"{
             "read_only_paths": ["/etc", "/var/log"],
-            "blocked_domains": ["evil.com"],
+            "allowed_domains": ["evil.com"],
             "seccomp_fd": 11,
             "socat_socket_path": "/tmp/test.sock",
             "socat_proxy_port": 8080
@@ -197,6 +215,23 @@ mod tests {
         assert!(wrapped.contains("SOCAT_PID=$!"));
         assert!(wrapped.contains("trap \\'kill $SOCAT_PID"));
         assert!(wrapped.contains("while [ ! -S \\'/tmp/test.sock\\' ]; do sleep 0.05; done"));
+        assert!(wrapped.contains("export HTTP_PROXY=http://127.0.0.1:8080"));
+        assert!(wrapped.contains("export HTTPS_PROXY=http://127.0.0.1:8080"));
+        assert!(wrapped.contains("bwrap --unshare-all"));
+    }
+
+    #[tokio::test]
+    async fn test_wrap_command_with_only_proxy_port() {
+        let mut sandbox = LinuxSandbox::new(None);
+        let policy_json = r#"{
+            "socat_proxy_port": 8080
+        }"#;
+
+        sandbox.update_config(policy_json).await.unwrap();
+        let wrapped = sandbox.wrap_command("echo 'hello world'").await.unwrap();
+
+        assert!(wrapped.contains("export HTTP_PROXY=http://127.0.0.1:8080"));
+        assert!(wrapped.contains("export HTTPS_PROXY=http://127.0.0.1:8080"));
         assert!(wrapped.contains("bwrap --unshare-all"));
     }
 
