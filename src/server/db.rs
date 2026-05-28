@@ -592,7 +592,66 @@ impl DB {
                         owner_override BOOLEAN DEFAULT FALSE,
                         metadata TEXT
                     );
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        merchant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        total_amount REAL NOT NULL,
+                        currency TEXT NOT NULL,
+                        due_date TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS invoice_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS payment_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
                     CREATE TABLE IF NOT EXISTS agents (
+
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        merchant_id TEXT NOT NULL,
+                        customer_id TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        total_amount REAL NOT NULL,
+                        currency TEXT NOT NULL,
+                        due_date TEXT,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS invoice_line_items (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS payment_events (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        invoice_id TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        amount REAL NOT NULL,
+                        timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+                    );
                         id TEXT PRIMARY KEY,
                         name TEXT NOT NULL,
                         role TEXT NOT NULL,

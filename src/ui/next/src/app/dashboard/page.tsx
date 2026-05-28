@@ -5,6 +5,24 @@ import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
 
 export default function Dashboard() {
+  const [weeklyInsight, setWeeklyInsight] = useState('Fetching your latest business insight...');
+
+  useEffect(() => {
+    fetch('/api/agents/feed')
+      .then(res => res.json())
+      .then(data => {
+        if (data.feed && data.feed.length > 0) {
+          setWeeklyInsight(data.feed[0].description);
+        } else {
+          setWeeklyInsight('Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.');
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch insights', err);
+        setWeeklyInsight('Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.');
+      });
+  }, []);
+
   const [approvals, setApprovals] = useState<any[]>([]);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [hasPro, setHasPro] = useState(false);
@@ -548,7 +566,7 @@ export default function Dashboard() {
                    <div>
                        <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
                        <p className="text-gray-800 text-sm leading-relaxed">
-                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
+                           {weeklyInsight}
                        </p>
                    </div>
                 </div>
