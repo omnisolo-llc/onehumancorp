@@ -32,6 +32,7 @@ pub struct CostAuditor {
     total_compute_cost: Mutex<f64>,
     total_network_cost: Mutex<f64>,
     agent_revenues: Mutex<HashMap<String, f64>>,
+    total_payment_fees: Mutex<f64>,
     agent_output_tokens: Mutex<HashMap<String, i64>>,
     tenant_tokens: Mutex<HashMap<String, i64>>,
     agent_storage_bytes: Mutex<HashMap<String, i64>>,
@@ -59,6 +60,7 @@ impl CostAuditor {
             total_compute_cost: Mutex::new(0.0),
             total_network_cost: Mutex::new(0.0),
             agent_revenues: Mutex::new(HashMap::new()),
+            total_payment_fees: Mutex::new(0.0),
             agent_output_tokens: Mutex::new(HashMap::new()),
             tenant_tokens: Mutex::new(HashMap::new()),
             agent_storage_bytes: Mutex::new(HashMap::new()),
@@ -225,6 +227,21 @@ impl CostAuditor {
         let mut agent_revenues = self.agent_revenues.lock().unwrap();
         let current_revenue = agent_revenues.entry(agent_id.to_string()).or_insert(0.0);
         *current_revenue += amount;
+
+        // Also record the payment fee based on routing rules
+        let mut total_payment_fees = self.total_payment_fees.lock().unwrap();
+        let optimal_pm = crate::pricing::payment_routing::route_payment((amount * 100.0).round() as i64);
+        let fee = if optimal_pm == "ACH" {
+            (amount * 0.008).min(5.0)
+        } else {
+            (amount * 0.029) + 0.30
+        };
+        *total_payment_fees += fee;
+    }
+
+    pub fn get_total_payment_fees(&self) -> f64 {
+        let total_payment_fees = self.total_payment_fees.lock().unwrap();
+        *total_payment_fees
     }
 
     pub fn record_compute_event(&self, event: ComputeEvent) -> f64 {

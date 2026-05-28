@@ -707,7 +707,7 @@ impl HubService for MyHubService {
         let storage_gb = storage_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
         let storage_cost_f64 = storage_gb * 0.10; // $0.10 per GB
 
-        let payment_fees_f64 = total_revenue_f64 * 0.029;
+        let payment_fees_f64 = auditor.get_total_payment_fees();
 
         let total_costs_f64 = llm_cost_f64 + storage_cost_f64 + payment_fees_f64;
 
