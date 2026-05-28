@@ -771,10 +771,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_publish_mesh_event() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
             .connect_lazy(&db_url)
             .unwrap();
@@ -800,10 +798,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sanitize_hub_event_redaction() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -830,10 +826,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_cache_invalidation() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -895,11 +889,9 @@ mod tests {
     }
     #[tokio::test]
     async fn test_delegate_sub_task_invalid_sender() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
@@ -919,11 +911,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_delegate_sub_task_valid_hierarchy() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("RESET app.current_tenant").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -955,11 +945,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_fork_agent() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         let pool = sqlx::postgres::PgPoolOptions::new()
             .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))
@@ -1040,11 +1028,9 @@ mod tests {
     #[tokio::test]
     async fn test_check_health() {
         // Skip test if no database is available
-        if std::env::var("DATABASE_URL").is_err() {
-            return;
         }
 
-        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         // Since test db is likely unmigrated/empty, we connect lazily
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(50))

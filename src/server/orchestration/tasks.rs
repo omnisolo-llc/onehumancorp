@@ -19,7 +19,7 @@ impl TaskDecompositionService {
             db,
             sqlite_mu: tokio::sync::Mutex::new(()),
             mesh,
-        }
+
     }
 
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
@@ -90,7 +90,7 @@ impl TaskDecompositionService {
                 .await
                 .map_err(|e| e.to_string())?;
             }
-        }
+
 
         Ok(task)
     }
@@ -116,7 +116,7 @@ impl TaskDecompositionService {
                     }
                 }
             }
-        }
+
     }
 
     async fn claim_task_inner(&self, agent_id: &str, now: chrono::DateTime<Utc>) -> Result<Option<SharedTask>, String> {
@@ -289,7 +289,7 @@ impl TaskDecompositionService {
 
                 Ok(Some(task))
             }
-        }
+
     }
 
     async fn get_task_pg(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, id: &str) -> Result<SharedTask, String> {
@@ -329,7 +329,7 @@ impl TaskDecompositionService {
             action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
-        })
+)
     }
 
     async fn get_task_sqlite(&self, tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>, id: &str) -> Result<SharedTask, String> {
@@ -375,7 +375,7 @@ impl TaskDecompositionService {
             action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
-        })
+)
     }
 
 
@@ -481,14 +481,14 @@ impl TaskDecompositionService {
                     proposed_content: row.get("proposed_content"),
                 })
             }
-        }
+
     }
 
 
     pub async fn fail_task(&self, task_id: &str, agent_id: &str, reason: &str) -> Result<(), String> {
         if let Ok(task) = self.get_task(task_id).await {
             ::server_telemetry::record_mission_failure(&task.organization_id, ::server_telemetry::get_deployment_mode());
-        }
+
 
         let now = Utc::now();
         match &self.db.store {
@@ -594,7 +594,7 @@ impl TaskDecompositionService {
                 tx.commit().await.map_err(|e| e.to_string())?;
                 Ok(())
             }
-        }
+
     }
 
     pub async fn update_status(&self, id: &str, new_status: &str, agent_id: &str) -> Result<(), String> {
@@ -606,7 +606,7 @@ impl TaskDecompositionService {
                 let latency = ((now_ms - updated_ms).max(0) as f64) / 1000.0;
                 ::server_telemetry::record_mission_execution_latency(&task.organization_id, ::server_telemetry::get_deployment_mode(), latency);
             }
-        }
+
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -718,7 +718,7 @@ impl TaskDecompositionService {
                 }
 
             }
-        }
+
         Ok(())
     }
 }
@@ -735,7 +735,7 @@ mod tests {
         let result = tokio::time::timeout(std::time::Duration::from_millis(60), async {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             Ok::<(), String>(())
-        }).await;
+).await;
 
         assert!(result.is_err(), "Tasks orchestration must enforce ML-Resilience timeout");
         assert!(start.elapsed() >= std::time::Duration::from_millis(60), "Timeout should wait the configured time");
@@ -772,7 +772,7 @@ mod tests {
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
+
 
         let mesh = Arc::new(DummyMesh);
         let service = TaskDecompositionService::new(db, mesh);
@@ -799,7 +799,7 @@ mod tests {
             action_risk: None,
             approval_status: None,
             proposed_content: None,
-        };
+;
 
         service.create_task(task).await.unwrap();
 
@@ -836,7 +836,7 @@ mod tests {
             action_risk: None,
             approval_status: None,
             proposed_content: None,
-        };
+;
         service.create_task(fail_task).await.unwrap();
         service.fail_task(fail_task_id, "agent-1", "intentional failure").await.unwrap();
 
@@ -874,7 +874,7 @@ mod tests {
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
+
 
         let mesh = Arc::new(DummyMesh);
         let service = TaskDecompositionService::new(db.clone(), mesh.clone());
@@ -901,7 +901,7 @@ mod tests {
             action_risk: None,
             approval_status: None,
             proposed_content: None,
-        };
+;
         service.create_task(task1).await.unwrap();
 
         // Create task 2 depending on task 1
@@ -926,7 +926,7 @@ mod tests {
             action_risk: None,
             approval_status: None,
             proposed_content: None,
-        };
+;
         service.create_task(task2).await.unwrap();
 
         // Attempt to claim. Should get task 1 because task 2 is blocked.
@@ -949,14 +949,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_task_dag_dependencies_postgres() {
-        if std::env::var("DATABASE_URL").is_err() {
-            return; // Skip if no PG DB available for test
-        }
 
-        let database_url = std::env::var("DATABASE_URL").unwrap();
-        if !database_url.contains("test") {
-            return;
-        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
+
 
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .acquire_timeout(std::time::Duration::from_millis(500))
@@ -980,7 +976,7 @@ mod tests {
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
+
 
         let mesh = Arc::new(DummyMesh);
         let service = TaskDecompositionService::new(db_pg.clone(), mesh.clone());
@@ -1007,7 +1003,7 @@ mod tests {
             action_risk: None,
             approval_status: None,
             proposed_content: None,
-        };
+;
         let _ = service.create_task(task1).await; // Might fail if DB is not migrated, that's fine.
 
         // If creation succeeded (DB migrated), let's proceed to task 2
@@ -1052,7 +1048,7 @@ mod tests {
             let claimed_opt3 = service.claim_task("agent-2").await.unwrap();
             assert!(claimed_opt3.is_some());
             assert_eq!(claimed_opt3.unwrap().id, "task-pg-2");
-        }
+
     }
 
     #[tokio::test]
@@ -1080,7 +1076,7 @@ mod tests {
             async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
             async fn publish_state_handoff(&self, _payload: Vec<u8>) -> Result<(), String> { Ok(()) }
             async fn subscribe_state_handoff(&self, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
-        }
+
 
         let mesh = Arc::new(DummyMesh);
         let service = TaskDecompositionService::new(db_pg, mesh.clone());
@@ -1098,7 +1094,7 @@ mod tests {
             let service_sqlite = TaskDecompositionService::new(db_sqlite, mesh.clone());
             let result_sqlite = service_sqlite.get_task("123").await;
             assert!(result_sqlite.is_err()); // Covers sqlite path gracefully
-        }
+
     }
 }
 
@@ -1120,7 +1116,7 @@ mod chaos_tests {
                 return Err("Chaos: network drop".to_string());
             }
             Ok(())
-        }
+
         async fn subscribe(&self, _topic: &str, _handler: Box<dyn Fn(ohc_builtin_agent::mesh::transport::Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> { Ok(Box::new(|| {})) }
         async fn acquire_lock(&self, _resource: &str, _owner: &str, _ttl_seconds: u64) -> Result<bool, String> { Ok(true) }
         async fn release_lock(&self, _resource: &str, _owner: &str) -> Result<(), String> { Ok(()) }
@@ -1163,7 +1159,7 @@ mod chaos_tests {
             sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_{}", i))
                 .execute(&pool).await.unwrap();
-        }
+
 
         let mut handles = vec![];
         for i in 0..100 {
@@ -1175,7 +1171,7 @@ mod chaos_tests {
                 let elapsed = start.elapsed();
                 (res, elapsed.as_micros() as u64)
             }));
-        }
+
 
         let mut success = 0;
         let mut failed = 0;
@@ -1188,7 +1184,7 @@ mod chaos_tests {
                 Ok(None) => success += 1,
                 Err(_) => failed += 1, // Will fail if latency > 60s or chaos triggers
             }
-        }
+
 
         latencies.sort();
         let p50 = latencies[latencies.len() / 2];
@@ -1230,7 +1226,7 @@ mod chaos_tests {
             sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_sa_{}", i))
                 .execute(&pool).await.unwrap();
-        }
+
 
         let mut handles = vec![];
         for i in 0..10 {
@@ -1242,7 +1238,7 @@ mod chaos_tests {
                 let elapsed = start.elapsed();
                 (res, elapsed.as_micros() as u64)
             }));
-        }
+
 
         let mut success = 0;
         let mut failed = 0;
@@ -1255,7 +1251,7 @@ mod chaos_tests {
                 Ok(None) => success += 1,
                 Err(_) => failed += 1, // Will fail if latency > 60s or chaos triggers
             }
-        }
+
 
         latencies.sort();
         let p50 = latencies[latencies.len() / 2];

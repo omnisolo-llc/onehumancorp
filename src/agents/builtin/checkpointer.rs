@@ -430,8 +430,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
 
-        if let Err(_) = tokio::time::timeout(timeout_duration, query_future).await {
-            return; // Skip if database is unavailable or hangs
+        tokio::time::timeout(timeout_duration, query_future).await.unwrap().unwrap();
         }
 
         let saver = PgCheckpointer::new(pool);
@@ -457,8 +456,7 @@ mod tests {
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
 
-        if let Err(_) = tokio::time::timeout(timeout_duration, query_future).await {
-            return; // Skip if database is unavailable or hangs
+        tokio::time::timeout(timeout_duration, query_future).await.unwrap().unwrap();
         }
 
         let saver = PgCheckpointer::new(pool);
