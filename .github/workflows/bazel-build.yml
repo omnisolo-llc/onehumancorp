@@ -14,10 +14,6 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   BAZEL_BUILD_FLAGS: "--remote_download_minimal"
-  # Git Bash on Windows rewrites Bazel labels like //release:target to
-  # /release:target unless MSYS path conversion is disabled.
-  MSYS2_ARG_CONV_EXCL: "*"
-  MSYS_NO_PATHCONV: "1"
 
 permissions:
   contents: read
