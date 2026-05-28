@@ -26,6 +26,7 @@ export default function ChangelogPage() {
         version: "Version 1.0 (Latest)",
         contentLines: [
           "### 🌟 New Features",
+          "- **Dashboard Analytics:** A brand new interactive walkthrough and Help Center article explaining how to read your store metrics.",
           "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
           "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
           "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
