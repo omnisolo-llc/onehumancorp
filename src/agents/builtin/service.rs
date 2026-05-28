@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
@@ -160,7 +161,7 @@ struct ServiceConflictResolver {
     llm: Arc<dyn crate::llm::LlmClient>,
 }
 
-#[async_trait::async_trait]
+#[async_trait]
 impl crate::memory_store::ConflictResolver for ServiceConflictResolver {
     async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
         let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
