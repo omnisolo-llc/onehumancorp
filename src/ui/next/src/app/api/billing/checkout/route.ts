@@ -1,15 +1,13 @@
 import { NextResponse, NextRequest } from 'next/server';
 
-export async function POST(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+export async function POST(request: NextRequest) {
   const backendUrl = process.env.BACKEND_URL || 'http://localhost:8080';
   const tenantId = request.headers.get('x-tenant-id') || 'default';
-  const userId = request.headers.get('x-user-id') || 'default';
 
   const authHeader = request.headers.get('authorization');
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'x-tenant-id': tenantId,
-    'x-user-id': userId
   };
   if (authHeader) {
     headers['authorization'] = authHeader;
@@ -17,7 +15,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
   try {
     const body = await request.json();
-    const res = await fetch(`${backendUrl}/api/agents/approvals/${(await context.params).id}`, {
+    const res = await fetch(`${backendUrl}/api/billing/select-plan`, {
       method: 'POST',
       headers,
       body: JSON.stringify(body)
@@ -28,7 +26,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({ error: 'Failed to update approval' }, { status: res.status });
+    return NextResponse.json({ error: 'Failed to create checkout' }, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }

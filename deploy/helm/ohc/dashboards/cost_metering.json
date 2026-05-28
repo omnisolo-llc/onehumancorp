@@ -1,0 +1,47 @@
+{
+  "title": "Cost Metering Dashboard",
+  "panels": [
+    {
+      "title": "LLM Token Usage",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(ohc_llm_token_usage_total) by (tenant_id)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Storage Cost (Reads/Writes)",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(ohc_storage_rw_cost_total) by (tenant_id, operation)",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "title": "Email Send Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(ohc_email_send_cost_total) by (tenant_id)",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "title": "Outbound API Call Cost",
+      "type": "timeseries",
+      "targets": [
+        {
+          "expr": "sum(ohc_outbound_api_cost_total) by (tenant_id)",
+          "refId": "D"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 16,
+  "version": 0
+}

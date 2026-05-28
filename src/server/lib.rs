@@ -745,9 +745,12 @@ impl HubService for MyHubService {
         let alipay_client = std::env::var("ALIPAY_ACCESS_TOKEN").ok().map(|token| crate::integrations::alipay::client::AlipayClient::new(token));
 
         let amount = match req.plan_id.as_str() {
-            "Starter" => 9.0,
-            "Pro" => 29.0,
-            "Business" => 79.0,
+            "Entry" => 9.0,
+            "Starter" => 29.0,
+            "Standard" => 49.0,
+            "Pro" => 79.0,
+            "Advanced" => 99.0,
+            "Business" => 299.0,
             _ => 0.0
         };
 

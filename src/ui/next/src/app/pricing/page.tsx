@@ -27,7 +27,7 @@ export default function PricingPage() {
           <p className="text-lg" style={{ color: '#86868B' }}>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {/* Free Tier */}
           <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div>
@@ -42,6 +42,23 @@ export default function PricingPage() {
             </div>
             <button className="w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors" disabled>
               Current Plan
+            </button>
+          </div>
+
+          {/* Entry Tier */}
+          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div>
+              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Entry</h3>
+              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$9 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <ul className="text-sm text-gray-700 space-y-3 mb-6">
+                <li className="flex items-center gap-2"><span>✓</span> 2 Agents Limit</li>
+                <li className="flex items-center gap-2"><span>✓</span> 500 AI actions / month</li>
+                <li className="flex items-center gap-2"><span>✓</span> 1GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span>✓</span> 50 Products Limit</li>
+              </ul>
+            </div>
+            <button onClick={() => handleUpgrade('Entry')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
+              Upgrade to Entry via Stripe
             </button>
           </div>
 
@@ -64,6 +81,23 @@ export default function PricingPage() {
             </button>
           </div>
 
+          {/* Standard Tier */}
+          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div>
+              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Standard</h3>
+              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$49 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <ul className="text-sm text-gray-700 space-y-3 mb-6">
+                <li className="flex items-center gap-2"><span>✓</span> 5 Agents Limit</li>
+                <li className="flex items-center gap-2"><span>✓</span> 5,000 AI actions / month</li>
+                <li className="flex items-center gap-2"><span>✓</span> 10GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span>✓</span> 500 Products Limit</li>
+              </ul>
+            </div>
+            <button onClick={() => handleUpgrade('Standard')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
+              Upgrade to Standard via Stripe
+            </button>
+          </div>
+
           {/* Pro Tier */}
           <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
             <div>
@@ -78,6 +112,23 @@ export default function PricingPage() {
             </div>
             <button onClick={() => handleUpgrade('Pro')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
               Upgrade to Pro via Stripe
+            </button>
+          </div>
+
+          {/* Advanced Tier */}
+          <div className="p-6 shadow-sm flex flex-col justify-between" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <div>
+              <h3 className="text-2xl font-bold font-outfit mb-2" style={{ color: '#1D1D1F' }}>Advanced</h3>
+              <p className="text-xl font-semibold mb-4" style={{ color: '#1D1D1F' }}>$99 <span className="text-sm font-normal text-gray-500">/ month</span></p>
+              <ul className="text-sm text-gray-700 space-y-3 mb-6">
+                <li className="flex items-center gap-2"><span>✓</span> 8 Agents Limit</li>
+                <li className="flex items-center gap-2"><span>✓</span> 10,000 AI actions / month</li>
+                <li className="flex items-center gap-2"><span>✓</span> 25GB Storage Quota</li>
+                <li className="flex items-center gap-2"><span>✓</span> 1,000 Products Limit</li>
+              </ul>
+            </div>
+            <button onClick={() => handleUpgrade('Advanced')} className="w-full px-4 py-2 bg-gray-800 text-white rounded-lg font-medium hover:bg-gray-900 transition-colors shadow-sm">
+              Upgrade to Advanced via Stripe
             </button>
           </div>
 
