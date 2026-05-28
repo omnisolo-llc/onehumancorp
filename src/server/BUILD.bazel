@@ -124,6 +124,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration:shared_tasks_test.rs",
     "//src/server/orchestration:statemachine_test.rs",
     "//src/server/orchestration:statemachine_v2.rs",
+    "//src/server/orchestration:state_machine.rs",
     "//src/server/orchestration:tasks.rs",
     "//src/server/orchestration/departments:approvals_test.rs",
     "//src/server/orchestration/departments:business_advisory_agent.rs",
