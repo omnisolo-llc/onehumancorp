@@ -49,6 +49,15 @@ export default function InboxPage() {
     setReplyInput('Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.');
   };
 
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [channelError, setChannelError] = useState<string | null>(null);
+  const [twilioChannels, setTwilioChannels] = useState({
+    whatsapp: true,
+    instagram: true,
+    facebook: true,
+    sms: true,
+  });
+
   const sendReply = (msgId?: number) => {
     let contentToSend = replyInput;
     if (msgId) {
@@ -66,6 +75,16 @@ export default function InboxPage() {
     setEditingId(null);
   };
 
+  const toggleChannel = (key: keyof typeof twilioChannels) => {
+    // Simulate graceful error handling
+    if (key === 'facebook' && !twilioChannels.facebook) {
+        setChannelError("Could not connect to Facebook at this time. Please try again later.");
+        setTimeout(() => setChannelError(null), 3000);
+        return;
+    }
+    setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -73,12 +92,58 @@ export default function InboxPage() {
           &lt; Back
         </Link>
         <h1 className="text-2xl font-bold">Customer Inbox</h1>
-        <div className="ml-auto">
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black inline-block">
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
+            title="Channel Settings"
+          >
+            ⚙️
+          </button>
+          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
             Audit Dashboard
           </Link>
         </div>
       </div>
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
+
+            {channelError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                {channelError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {Object.entries(twilioChannels).map(([key, value]) => (
+                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
+                  <button
+                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                  >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
         {messages.map(msg => (
