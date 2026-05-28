@@ -525,13 +525,13 @@ impl HarnessBackend for LocalBackend {
 }
 
 pub struct DockerBackend {
-    validator: CommandValidator,
+    validator: Arc<ASTValidator>,
 }
 
 impl DockerBackend {
-    pub fn new() -> Self {
+    pub fn new(validator: Arc<ASTValidator>) -> Self {
         DockerBackend {
-            validator: CommandValidator::new(),
+            validator,
         }
     }
 }
@@ -694,7 +694,7 @@ impl Manager {
     pub fn new(config: Config) -> Self {
         let validator = Arc::new(ASTValidator::new());
         let local_backend = Arc::new(LocalBackend::new(validator.clone(), config.clone()));
-        let docker_backend = Arc::new(DockerBackend::new());
+        let docker_backend = Arc::new(DockerBackend::new(validator.clone()));
         let ssh_backend = Arc::new(SshBackend::new());
         let singularity_backend = Arc::new(SingularityBackend::new());
         let modal_backend = Arc::new(ModalBackend::new());
