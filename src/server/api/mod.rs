@@ -1,5 +1,6 @@
 pub mod mesh_handler;
 pub mod autodream;
+pub mod fulfillment;
 
 pub mod billing_webhook;
 pub mod billing_api;
