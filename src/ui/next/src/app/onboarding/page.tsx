@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
+import Confetti from 'react-confetti';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -22,10 +23,35 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     setIsLoaded(true);
+    setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (step === 5) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 5000); // Stop confetti after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText('my-business.ohc.store');
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -372,6 +398,16 @@ export default function OnboardingWizard() {
 
           {step === 5 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+              {showConfetti && (
+                <Confetti
+                  width={windowSize.width}
+                  height={windowSize.height}
+                  recycle={false}
+                  numberOfPieces={500}
+                  gravity={0.2}
+                  style={{ position: 'absolute', top: 0, left: 0, zIndex: 100 }}
+                />
+              )}
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -385,8 +421,23 @@ export default function OnboardingWizard() {
               <div className="w-full space-y-3 mt-auto">
                 <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
-                   <div className="flex items-center gap-2">
-                      <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
+                   <div className="flex items-center gap-2 bg-white/50 dark:bg-black/40 p-2 rounded-md border border-gray-200 dark:border-gray-700 w-full justify-between">
+                      <span className="text-[#0066FF] font-semibold text-sm truncate">my-business.ohc.store</span>
+                      <button
+                        onClick={handleCopyLink}
+                        className="p-1.5 bg-white dark:bg-gray-800 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                        title="Copy to clipboard"
+                      >
+                        {copied ? (
+                          <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
                    </div>
                 </div>
 

@@ -4,6 +4,12 @@ import OnboardingWizard from './page';
 import { useOnboardingStore } from './store';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 
+vi.mock('react-confetti', () => {
+  return {
+    default: () => <div data-testid="mock-confetti"></div>
+  };
+});
+
 describe('OnboardingWizard', () => {
   beforeEach(() => {
     localStorage.clear();
