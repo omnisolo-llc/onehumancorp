@@ -1981,6 +1981,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/health", axum::routing::get(api::health::health_handler))
         .with_state(hub.clone());
 
+    let media_router = axum::Router::new()
+        .route("/api/v1/media/upload", axum::routing::post(api::media::handle_media_upload));
+
     let db_for_login = db.clone();
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
@@ -2328,6 +2331,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .merge(webhook_router)
         .merge(health_router)
+        .merge(media_router)
         .fallback(ui_handler);
 
     let port = std::env::var("OHC_PORT")

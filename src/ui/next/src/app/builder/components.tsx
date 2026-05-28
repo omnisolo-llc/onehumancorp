@@ -126,14 +126,28 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     return (
       <div className="relative w-full overflow-hidden bg-white/20 dark:bg-black/20 min-w-[375px]">
         <div
-          className="absolute inset-0 bg-cover bg-center opacity-90"
+          className={`absolute inset-0 bg-cover bg-center transition-opacity duration-1000 ${props.isUploading ? 'opacity-50 blur-sm' : 'opacity-90'}`}
           style={{ backgroundImage: `url(${props.image})` }}
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
         </div>
+
+        {props.isUploading && (
+          <div className="absolute inset-x-0 bottom-0 h-1 bg-white/20 overflow-hidden z-20">
+            <div className="w-full h-full bg-[#0066FF] origin-left animate-pulse shadow-[0_0_10px_#0066FF]" />
+          </div>
+        )}
+
         <div className="relative z-10 p-6 flex flex-col items-center justify-center min-h-[300px] text-center text-white m-4 rounded-[16px] backdrop-blur-md bg-white/20 border border-white/40 shadow-lg">
           <h1 className="text-3xl font-bold font-outfit mb-3 tracking-tight">{props.headline}</h1>
           <p className="text-sm font-inter opacity-90 max-w-[280px]">{props.copy}</p>
+
+          {props.isUploading && (
+             <div className="mt-4 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-full text-xs font-semibold flex items-center gap-2 border border-white/20">
+               <span className="w-2 h-2 rounded-full bg-[#0066FF] animate-ping" />
+               AI enhancing image...
+             </div>
+          )}
         </div>
       </div>
     );

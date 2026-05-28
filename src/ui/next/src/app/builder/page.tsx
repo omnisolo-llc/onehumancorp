@@ -659,10 +659,67 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <label className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40 cursor-pointer">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
-                  </button>
+                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                      if (!e.target.files || e.target.files.length === 0) return;
+                      const file = e.target.files[0];
+                      const newBlocks = [...blocks];
+                      const oldImage = newBlocks[selectedBlockIndex || 0].props.image;
+
+                      // Set an immediate preview or loading state if needed.
+                      // For this implementation, we will trust the async flow.
+
+                      const formData = new FormData();
+                      formData.append("file", file);
+
+                      // Show immediate optimistic UI state: blur existing image, show upload progress
+                      newBlocks[selectedBlockIndex || 0].props.isUploading = true;
+                      setBlocks(newBlocks);
+                      setIsActionSheetOpen(false); // Close immediately for better UX
+
+                      try {
+                        const res = await fetch("/api/v1/media/upload", {
+                          method: "POST",
+                          body: formData
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+
+                          // We wait a few seconds to simulate the async background processing
+                          // returning via websocket or polling in a real environment
+                          setTimeout(() => {
+                            setBlocks(currentBlocks => {
+                              const updated = [...currentBlocks];
+                              if (updated[selectedBlockIndex || 0]) {
+                                updated[selectedBlockIndex || 0].props.image = data.url;
+                                updated[selectedBlockIndex || 0].props.isUploading = false;
+                              }
+                              return updated;
+                            });
+                          }, 2000);
+                        } else {
+                           setBlocks(currentBlocks => {
+                              const reverted = [...currentBlocks];
+                              if (reverted[selectedBlockIndex || 0]) {
+                                reverted[selectedBlockIndex || 0].props.isUploading = false;
+                              }
+                              return reverted;
+                           });
+                        }
+                      } catch (err) {
+                        console.error("Upload failed", err);
+                        setBlocks(currentBlocks => {
+                           const reverted = [...currentBlocks];
+                           if (reverted[selectedBlockIndex || 0]) {
+                             reverted[selectedBlockIndex || 0].props.isUploading = false;
+                           }
+                           return reverted;
+                        });
+                      }
+                    }} />
+                  </label>
                   <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
                     <span>✨</span>
                     <span>AI Generate</span>
@@ -673,6 +730,28 @@ export default function BuilderPage() {
             {blocks[selectedBlockIndex || 0]?.type !== 'Hero' && (
               <p className="text-sm text-gray-500 italic">Context-aware editing for {blocks[selectedBlockIndex || 0]?.type} coming soon...</p>
             )}
+
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <details className="group">
+                <summary className="text-xs font-bold text-gray-400 uppercase cursor-pointer list-none flex items-center justify-between">
+                  <span>Advanced Media Settings</span>
+                  <svg className="w-4 h-4 transform group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </summary>
+                <div className="mt-3 space-y-3 bg-white/30 dark:bg-black/20 p-3 rounded-[8px] border border-white/40 dark:border-white/10">
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Auto AI Smart Crop</span>
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#34C759] relative"></div>
+                  </label>
+                  <label className="flex items-center justify-between cursor-pointer">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Convert to WebP</span>
+                    <input type="checkbox" className="sr-only peer" defaultChecked />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#34C759] relative"></div>
+                  </label>
+                </div>
+              </details>
+            </div>
+
             <button
               onClick={() => setIsActionSheetOpen(false)}
               className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold mt-4 shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
