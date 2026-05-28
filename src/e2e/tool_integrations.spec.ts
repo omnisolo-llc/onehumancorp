@@ -28,7 +28,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Shipping Labels' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Local Payments' })).toBeVisible();
-    await expect(page.getByText('Print shipping labels and automatically track packages for your orders.')).toBeVisible();
+    await expect(page.getByText('Compare carrier rates, buy the label with one click, and track shipments.')).toBeVisible();
     await expect(page.getByText('Get paid easily using local payment methods in Latin America.')).toBeVisible();
   });
 
@@ -47,7 +47,7 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   test('can connect Social Media Accounts', async ({ page }) => {
     const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Ayrshare...');
+      expect(dialog.message()).toContain('Connecting to Meta Graph API...');
       dialog.accept();
     });
     await connectButton.click();
@@ -73,12 +73,34 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
     const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
+    let shippingDialogTriggered = false;
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Setting up Karrio...');
+      shippingDialogTriggered = true;
+      dialog.accept();
+    });
     await shippingBtn.click();
+    expect(shippingDialogTriggered).toBe(true);
+
     const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });
+    let smsDialogTriggered = false;
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Connecting to Twilio...');
+      smsDialogTriggered = true;
+      dialog.accept();
+    });
     await smsBtn.click();
+    expect(smsDialogTriggered).toBe(true);
+
     const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Online Meetings' }).getByRole('button', { name: 'Create my meeting room' });
+    let meetingDialogTriggered = false;
+    page.once('dialog', dialog => {
+      expect(dialog.message()).toContain('Setting up Jitsi Meet...');
+      meetingDialogTriggered = true;
+      dialog.accept();
+    });
     await meetingBtn.click();
+    expect(meetingDialogTriggered).toBe(true);
   });
 });
