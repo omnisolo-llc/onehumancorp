@@ -34,6 +34,7 @@ impl Department for BusinessAdvisoryAgent {
             ActionRisk::DraftForReview
         };
 
+        // Scheduled background worker triggers tenant.report.weekly_health to generate brief.
         self.orchestrator.execute_action(
             DepartmentType::BusinessAdvisory,
             "Draft weekly business health report and next-action suggestions".to_string(),
