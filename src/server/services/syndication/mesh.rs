@@ -25,7 +25,7 @@ impl SyndicationMeshService {
     pub async fn start(&self) -> Result<(), String> {
         let adapters_clone = self.adapters.clone();
 
-        let handler = Box::new(move |msg: Message| {
+        let handler: Box<dyn Fn(Message) + Send + Sync> = Box::new(move |msg: Message| {
             if let Ok(payload_str) = String::from_utf8(msg.payload.clone()) {
                 if let Ok(payload_json) = serde_json::from_str::<Value>(&payload_str) {
                     if let Some(action) = payload_json.get("action").and_then(|a| a.as_str()) {
@@ -46,7 +46,9 @@ impl SyndicationMeshService {
         });
 
         self.bus.subscribe("system:catalog_events".to_string(), handler).await?;
-        self.bus.subscribe("system:order_events".to_string(), Box::new(|_| {})).await?;
+
+        let empty_handler: Box<dyn Fn(Message) + Send + Sync> = Box::new(|_| {});
+        self.bus.subscribe("system:order_events".to_string(), empty_handler).await?;
 
         Ok(())
     }
