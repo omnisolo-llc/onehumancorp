@@ -29,7 +29,10 @@ interface OnboardingState {
   setFirstProductPrice: (price: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
+
   setStartResult: (result: any) => void;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -49,6 +52,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       isLoading: false,
       error: '',
       startResult: null,
+      _hasHydrated: false,
       setStep: (step) => set({ step }),
       setChatStep: (chatStep) => set({ chatStep }),
       setBusinessDescription: (businessDescription) => set({ businessDescription }),
@@ -63,9 +67,14 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
-      name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      name: 'onboarding-storage-v4',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      }
     }
+
   )
 );

@@ -69,10 +69,16 @@ describe('useOnboardingStore', () => {
     useOnboardingStore.getState().setBusinessDescription('Persisted Description');
     useOnboardingStore.getState().setBusinessName('Persisted Name');
 
-    // The state is persisted in localStorage under 'onboarding-storage-v3'
-    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v3') || '{}');
+    // The state is persisted in localStorage under 'onboarding-storage-v4'
+    const storedState = JSON.parse(localStorage.getItem('onboarding-storage-v4') || '{}');
     expect(storedState.state.step).toBe(3);
     expect(storedState.state.businessDescription).toBe('Persisted Description');
     expect(storedState.state.businessName).toBe('Persisted Name');
+  });
+
+  it('should have hydration state', () => {
+    const { setHasHydrated } = useOnboardingStore.getState();
+    setHasHydrated(true);
+    expect(useOnboardingStore.getState()._hasHydrated).toBe(true);
   });
 });

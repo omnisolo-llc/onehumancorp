@@ -182,8 +182,8 @@ export default function BuilderPage() {
 
   if (status === "selection") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl border">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
               <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
@@ -199,7 +199,7 @@ export default function BuilderPage() {
                   }}
                   className={`w-full text-left bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border-2 transition-all overflow-hidden ${selectedDraftIndex === idx ? 'border-[#0066FF] ring-2 ring-[#0066FF]/20 shadow-lg' : 'border-white/50 dark:border-white/10 opacity-70 hover:opacity-100 hover:border-white/80'}`}
                 >
-                   <div className="h-32 bg-white/50 dark:bg-black/30 flex items-center justify-center relative backdrop-blur-sm border-b border-white/40 dark:border-white/10">
+                   <div className="h-32 flex items-center justify-center relative border-b bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                       <span className="font-outfit font-bold text-gray-400 dark:text-gray-500">Draft {idx + 1}</span>
                       {selectedDraftIndex === idx && (
                         <div className="absolute top-2 right-2 bg-[#0066FF] text-white rounded-full p-1">
@@ -207,7 +207,7 @@ export default function BuilderPage() {
                         </div>
                       )}
                    </div>
-                   <div className="p-4 bg-white/60 dark:bg-black/40 backdrop-blur-md">
+                   <div className="p-4 dark:bg-black/40 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                       <p className="text-xs font-bold text-gray-500 dark:text-[#A1A1A6] uppercase tracking-wider mb-1">Preview</p>
                       <p className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1 font-inter">{d[0]?.props?.headline || "Storefront Preview"}</p>
                    </div>
@@ -215,7 +215,7 @@ export default function BuilderPage() {
               ))}
            </div>
 
-           <div className="absolute bottom-0 w-full p-6 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+           <div className="absolute bottom-0 w-full p-6 glass-container mac-glass-container rounded-[16px] border-t z-50 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
               <button
                 onClick={() => setStatus("draft")}
                 className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
@@ -230,15 +230,15 @@ export default function BuilderPage() {
 
   if (status === "onboarding") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter overflow-hidden">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl border">
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-            <div className="bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-8 w-full animate-fade-in" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <div className="rounded-[16px] border shadow-sm p-8 w-full animate-fade-in bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]" style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-6 leading-tight">
                 What are you building today?
               </h1>
@@ -255,7 +255,7 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setTimeout(() => setStatus("idle"), 300);
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full p-6 rounded-[16px] border flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-[250ms] group hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
                     <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>
@@ -271,8 +271,8 @@ export default function BuilderPage() {
 
   if (status === "idle") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl border">
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -293,7 +293,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Business Name</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border p-4 mb-6 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                   style={{ borderRadius: '8px' }}
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
@@ -303,7 +303,7 @@ export default function BuilderPage() {
                 <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block text-left">Category</label>
                 <input
                   type="text"
-                  className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                  className="w-full border p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                   style={{ borderRadius: '8px' }}
                   value={businessCategory}
                   onChange={(e) => setBusinessCategory(e.target.value)}
@@ -352,7 +352,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
+                    className="flex-1 p-4 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] active:scale-[0.98] border bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(1)}
                   >
@@ -390,7 +390,7 @@ export default function BuilderPage() {
                 <WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                   <textarea
                     id="bio-input"
-                    className="w-full border border-white/50 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner"
+                    className="w-full border p-4 mb-8 focus:ring-2 focus:ring-[#0066FF]/50 focus:border-[#0066FF] outline-none transition-all resize-none text-[#1D1D1F] dark:text-[#f5f5f7] shadow-inner bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                     style={{ borderRadius: '8px' }}
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -401,7 +401,7 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
+                    className="flex-1 p-4 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] active:scale-[0.98] border bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                     style={{ borderRadius: '8px' }}
                     onClick={() => setWizardStep(2)}
                   >
@@ -433,8 +433,8 @@ export default function BuilderPage() {
 
   if (status === "generating") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl border">
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
               <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
@@ -453,8 +453,8 @@ export default function BuilderPage() {
 
   if (status === "live") {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl px-6 pt-12 pb-8">
+      <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl px-6 pt-12 pb-8 border">
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
@@ -470,10 +470,10 @@ export default function BuilderPage() {
           </div>
 
           {/* Growth Loop: Embeddable Storefront Widget */}
-          <div className="w-full bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full rounded-[16px] border shadow-sm p-5 mb-4 text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Sell Anywhere 💻</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Embed your OHC storefront on your existing website, blog, or partner pages.</p>
-            <div className="bg-white/60 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 relative">
+            <div className="border rounded-[8px] p-3 relative bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                 <pre className="text-[10px] text-[#1D1D1F] dark:text-[#F5F5F7] overflow-x-auto font-mono whitespace-pre-wrap leading-tight">
 {`<div id="ohc-embed-root"></div>
 <script src="https://ohc.store/embed.js" data-store="${tenantId}"></script>
@@ -487,20 +487,20 @@ export default function BuilderPage() {
                         navigator.clipboard.writeText(code);
                         alert("Copied embed code to clipboard!");
                     }}
-                    className="absolute top-2 right-2 bg-white/70 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-white/90 dark:hover:bg-black/70 transition-colors backdrop-blur-sm"
+                    className="absolute top-2 right-2 dark:bg-black/50 text-[#1D1D1F] dark:text-[#F5F5F7] border px-2 py-1 rounded-[8px] text-[10px] font-semibold hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-black/70 transition-colors bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                 >
                     Copy
                 </button>
             </div>
           </div>
 
-          <div className="w-full bg-gray-50 p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
+          <div className="w-full bg-[#F5F5F7] dark:bg-[#16161a] p-3 rounded-xl border border-gray-100 mb-6 flex items-center justify-between">
             <span className="text-sm text-gray-700 truncate mr-2 font-medium">{liveUrl}</span>
             <button className="text-blue-600 font-semibold text-sm hover:underline shrink-0">Copy</button>
           </div>
 
           {/* Growth Loop 1: Acquisition (Get your first customer) */}
-          <div className="w-full bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/50 dark:border-white/10 shadow-sm p-5 mb-4 text-left">
+          <div className="w-full rounded-[16px] border shadow-sm p-5 mb-4 text-left bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">Get your first customer 🚀</h2>
             <p className="text-xs text-gray-500 dark:text-[#A1A1A6] mb-4">Share your new store with friends and family to get early sales.</p>
 
@@ -528,7 +528,7 @@ export default function BuilderPage() {
 
 
           {/* Generative Visibility Score */}
-          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 backdrop-blur-md border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px]">
+          <div className="w-full bg-blue-50/50 dark:bg-blue-900/20 border border-[#0066FF]/30 dark:border-[#0066FF]/20 shadow-sm p-5 mb-6 text-left rounded-[16px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
             <h2 className="text-lg font-bold font-outfit text-[#0066FF] dark:text-blue-300 mb-1">Generative Visibility Score (GEO)</h2>
             <p className="text-xs text-blue-700 dark:text-blue-200 mb-4">Improve how LLM crawlers like ChatGPT or Gemini see your business.</p>
 
@@ -566,7 +566,7 @@ export default function BuilderPage() {
           </div>
 
           <button
-            className="w-full bg-white/40 dark:bg-black/20 text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-white/60 dark:hover:bg-black/40 border border-white/50 dark:border-white/10 backdrop-blur-md"
+            className="w-full text-[#1D1D1F] dark:text-[#F5F5F7] font-bold p-4 rounded-[8px] active:scale-[0.98] transition-all hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] border bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
             onClick={() => setStatus("idle")}
           >
             Go to Dashboard
@@ -577,11 +577,11 @@ export default function BuilderPage() {
   }
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
+    <div className="flex flex-col items-center justify-center h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter">
+      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-2xl border">
 
         {/* Draft Preview Header */}
-        <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
+        <div className="absolute top-0 left-0 w-full bg-black/80 text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
           <span>Mobile Editor</span>
           <span className="bg-white/20 px-2 py-0.5 rounded">375px</span>
         </div>
@@ -650,7 +650,7 @@ export default function BuilderPage() {
                 <label className="text-xs font-bold text-gray-400 uppercase">Headline</label>
                 <input
                   type="text"
-                  className="w-full p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner"
+                  className="w-full p-4 rounded-[8px] border focus:ring-2 focus:ring-[#0066FF] outline-none transition-all text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                   value={blocks[selectedBlockIndex || 0]?.props.headline}
                   onChange={(e) => {
                     const newBlocks = [...blocks];
@@ -659,11 +659,11 @@ export default function BuilderPage() {
                   }}
                 />
                 <div className="grid grid-cols-2 gap-3 mt-4">
-                  <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 rounded-[8px] border text-sm font-bold flex flex-col items-center gap-2 hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                     <span>🖼️</span>
                     <span>Upload Photo</span>
                   </button>
-                  <button className="p-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 text-sm font-bold flex flex-col items-center gap-2 hover:bg-white/60 dark:hover:bg-black/40">
+                  <button className="p-4 rounded-[8px] border text-sm font-bold flex flex-col items-center gap-2 hover:bg-[rgba(255,255,255,0.8)] dark:hover:bg-[rgba(22,22,26,0.9)] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
                     <span>✨</span>
                     <span>AI Generate</span>
                   </button>
@@ -683,12 +683,12 @@ export default function BuilderPage() {
         </ActionSheet>
 
         {/* Bottom Action Bar */}
-        <div className="absolute bottom-0 w-full p-4 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+        <div className="absolute bottom-0 w-full p-4 glass-container mac-glass-container rounded-[16px] border-t z-50 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
           <div className="flex gap-3 mb-2">
-            <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
+            <button className="flex-1 py-2 text-sm font-medium text-gray-600 border rounded-[8px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">Change Vibe</button>
             {!isPremium && (
               <button
-                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 backdrop-blur-md border border-[#0066FF]/30 rounded-[8px]"
+                className="flex-1 py-2 text-sm font-medium text-[#0066FF] bg-blue-50/50 dark:bg-blue-900/30 border border-[#0066FF]/30 rounded-[8px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]"
                 onClick={() => setShowUpgradeModal(true)}
               >
                 Remove Branding ✨
@@ -709,15 +709,15 @@ export default function BuilderPage() {
 
         {/* Upgrade Modal */}
         {showUpgradeModal && (
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm z-[60] flex flex-col justify-end">
-            <div className="bg-white/90 dark:bg-[#16161a]/90 backdrop-blur-xl w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t border-white/40 dark:border-white/10">
+          <div className="absolute inset-0 bg-black/40 z-[60] flex flex-col justify-end bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
+            <div className="w-full rounded-t-[16px] p-6 shadow-2xl animate-slide-up pb-10 border-t bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)]">
               <div className="flex justify-between items-start mb-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[12px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-[8px] flex items-center justify-center text-2xl shadow-inner border border-yellow-300">
                   👑
                 </div>
                 <button
                   onClick={() => setShowUpgradeModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-black/40 transition-colors"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-white/40 dark:hover:bg-[rgba(22,22,26,0.9)] transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
