@@ -164,6 +164,7 @@ function KairosContent() {
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 24px;
+            font-family: 'Outfit', 'Inter', sans-serif;
         }
       `}} />
     </div>

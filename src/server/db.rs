@@ -296,6 +296,7 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+
                     CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
                         memory_id TEXT PRIMARY KEY,
                         context TEXT NOT NULL,
@@ -537,7 +538,7 @@ impl DB {
                         agent_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         content TEXT NOT NULL,
-                        embedding BLOB,
+                        embedding TEXT,
                         source_type TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',

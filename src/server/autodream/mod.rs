@@ -235,7 +235,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY updated_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -251,7 +251,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <=> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
@@ -277,7 +277,7 @@ impl AutoDreamWorker {
 
     async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         // Fetch sessions that aren't compressed yet
-        let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
+        let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 500")
             .fetch_all(&db.pool)
             .await?;
 
@@ -303,7 +303,7 @@ impl AutoDreamWorker {
     }
 
     async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+        let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 500")
             .fetch_all(&db.pool)
             .await?;
 

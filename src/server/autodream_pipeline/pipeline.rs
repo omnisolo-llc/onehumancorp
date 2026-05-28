@@ -70,7 +70,7 @@ impl AutoDreamPipeline {
             FROM shared_tasks t
             LEFT JOIN autodream_memories m ON t.id = m.task_id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
-            LIMIT 100
+            LIMIT 500
         ";
 
         let tasks = sqlx::query(query)
