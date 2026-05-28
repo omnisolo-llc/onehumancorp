@@ -18,7 +18,7 @@ export async function GET(request: Request) {
       return NextResponse.json(data);
     }
 
-    return NextResponse.json({}, { status: res.status });
+    return NextResponse.json({ error: 'Backend error' }, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       return new NextResponse(null, { status: 200 });
     }
 
-    return NextResponse.json({ error: 'Failed to update state' }, { status: res.status });
+    return NextResponse.json({ error: 'Backend error' }, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: 'Backend connection failed' }, { status: 500 });
   }

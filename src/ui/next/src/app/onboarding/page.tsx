@@ -25,6 +25,31 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenantId,
+            'x-user-id': userId
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            useOnboardingStore.getState().hydrateState(data);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch onboarding state from backend", e);
+      }
+    };
+
+    fetchState();
   }, []);
 
   const handleIntake = async () => {
@@ -123,7 +148,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-md mx-auto w-[min(100%,400px)] mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -165,7 +190,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
+                      disabled={businessName.trim().length < 2}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -198,7 +223,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
+                      disabled={whatYouSell.trim().length < 2}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -232,7 +257,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
+                      disabled={location.trim().length < 2 || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
@@ -306,7 +331,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={businessName.trim().length < 2 || businessType.trim().length < 2 || categories.length === 0 || categories.some(c => c.trim().length === 0) || firstProductName.trim().length < 2 || !/^\d+(\.\d{1,2})?$/.test(firstProductPrice.trim())}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
