@@ -3212,11 +3212,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('advisory-dashboard-screen')">Advisory</button>
                             <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button onclick="alert('Help Center')">Help Center</button>
+                            <button onclick="showScreen('help-screen')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
-                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
+                            <button onclick="showScreen('help-screen')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
-                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
+                            <button onclick="showScreen('changelog-screen')">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -3279,7 +3279,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="alert('Tutorial started')">Tutorial Library</button>
+                                <button onclick="showScreen('help-screen')">Tutorial Library</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
