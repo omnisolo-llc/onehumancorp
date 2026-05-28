@@ -67,26 +67,57 @@ async fn handle_webhook(
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
     // We route external messages (like DMs) to the Customer Success department
-    let risk = ActionRisk::DraftForReview;
+
+
+    // Fetch products and inventory for context
+    let mut products_info = String::new();
+    let pool = crate::db::get_pool();
+    let rows = sqlx::query("SELECT id, name, price, inventory_count FROM products WHERE tenant_id = $1 OR organization_id = $1")
+        .bind(&payload.tenant_id)
+        .fetch_all(&pool)
+        .await
+        .unwrap_or_default();
+
+    if rows.is_empty() {
+        products_info = "No products found in catalog.".to_string();
+    } else {
+        for row in rows {
+            use sqlx::Row;
+            let p_id: String = row.try_get("id").unwrap_or_default();
+            let p_name: String = row.try_get("name").unwrap_or_default();
+            let p_price: f64 = row.try_get("price").unwrap_or(0.0);
+            let p_inv: i32 = row.try_get("inventory_count").unwrap_or(0);
+            products_info.push_str(&format!("- {} (ID: {}): ${:.2} ({} in stock)\n", p_name, p_id, p_price, p_inv));
+        }
+    }
 
     // Generate a draft reply
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let draft_reply = if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
         let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
+            "You are an autonomous sales agent for a business. Business context: {}. \nHere is the current catalog and inventory:\n{}\n\nThe customer has sent the following message: '{}'\n\nUnderstand the customer's request, negotiate if appropriate, and check if the requested items are in stock. If the customer wants to buy an available product, provide a secure payment link in the format: https://ohc.app/checkout?product_id=[ID]&tenant={} \n\nWrite a concise, warm reply in the customer's language. If they request human help, add [HUMAN_NEEDED] to your response.",
+            business_context, products_info, payload.message, payload.tenant_id
         );
         let client = crate::minimax::MinimaxClient::new(api_key);
         client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
     };
+    let mut risk = ActionRisk::DraftForReview;
+    let mut status = "pending".to_string();
+
+    if draft_reply.contains("[HUMAN_NEEDED]") || draft_reply.to_lowercase().contains("human") || draft_reply.to_lowercase().contains("someone will get back to you") {
+        status = "pending_human".to_string();
+        // Route it strictly to human queue, perhaps risk is draft
+        risk = ActionRisk::DraftForReview;
+    }
+
 
     // Save to inbox_messages
     let id = Uuid::new_v4().to_string();
-    let status = "pending";
-    let pool = get_pool();
+
+    let pool = crate::db::get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
         Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),

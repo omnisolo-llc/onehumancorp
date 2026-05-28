@@ -10,6 +10,9 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [aiActive, setAiActive] = useState(true);
+  const [negotiationFlexibility, setNegotiationFlexibility] = useState(50);
+
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -475,6 +478,33 @@ export default function Dashboard() {
              </div>
            </section>
          )}
+
+
+         {/* Conversational Settings (Dashboard) */}
+         <section className="mb-6 p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+            <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Assistant Settings</h2>
+
+            <div className="flex items-center justify-between">
+                <span className="font-medium text-gray-800">[ AI Assistant: Active ]</span>
+                <button
+                    onClick={() => setAiActive(!aiActive)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${aiActive ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                >
+                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${aiActive ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
+            </div>
+
+            <div className="flex flex-col gap-2 mt-2">
+                <span className="font-medium text-gray-800">[ Negotiation Flexibility: Strict Pricing &lt;--&gt; Allow 10% Discounts ]</span>
+                <input
+                    type="range"
+                    min="0" max="100"
+                    value={negotiationFlexibility}
+                    onChange={(e) => setNegotiationFlexibility(parseInt(e.target.value))}
+                    className="w-full"
+                />
+            </div>
+         </section>
 
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (

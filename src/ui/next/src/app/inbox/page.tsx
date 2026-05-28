@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 type Message = {
+  human_needed?: boolean;
   id: number;
   sender: string;
   source: string;
@@ -153,9 +154,17 @@ export default function InboxPage() {
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
+
             <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
+
+            {msg.human_needed && (
+               <div className="mt-2 text-xs font-bold text-red-600 bg-red-100 px-2 py-1 rounded inline-block">
+                  🚨 AI Handled / Human Needed
+               </div>
+            )}
+
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
