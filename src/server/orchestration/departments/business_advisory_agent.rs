@@ -19,7 +19,10 @@ impl Department for BusinessAdvisoryAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.report.weekly_health".to_string()]
+        vec![
+            "tenant.report.weekly_health".to_string(),
+            "tenant.budget.soft_limit".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
@@ -33,6 +36,17 @@ impl Department for BusinessAdvisoryAgent {
         } else {
             ActionRisk::DraftForReview
         };
+
+        if event.event_type == "tenant.budget.soft_limit" {
+            // Gently notify owner about approaching limits and offer upgrade path
+            return self.orchestrator.execute_action(
+                DepartmentType::BusinessAdvisory,
+                "Notify owner: Approaching AI action limits. Recommend Pro upgrade for unlimited tasks.".to_string(),
+                event.tenant_id.clone(),
+                ActionRisk::AutoExecute, // Usually notifications themselves are safe to auto-execute
+                event.payload.clone(),
+            ).await.map(|_| ());
+        }
 
         // Scheduled background worker triggers tenant.report.weekly_health to generate brief.
         self.orchestrator.execute_action(

@@ -243,12 +243,38 @@ impl DepartmentOrchestrator {
         Ok(())
     }
 
-    pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+    pub async fn check_ai_budget(&self, tenant_id: &str, points: i32) -> Result<(bool, bool), String> {
 
         let throttler = crate::orchestration::departments::throttling::ThrottlingManager::new(self.db.clone());
 
         throttler.check_and_consume_budget(tenant_id, points).await
 
+    }
+
+    pub async fn dispatch_scheduled(&self, tenant_id: String, schedule_id: String, payload: serde_json::Value) -> Result<(), String> {
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id,
+            event_type: "system.scheduled.trigger".to_string(),
+            payload: serde_json::json!({
+                "schedule_id": schedule_id,
+                "data": payload
+            }),
+        };
+        self.dispatch_event(event).await
+    }
+
+    pub async fn dispatch_on_demand(&self, tenant_id: String, action: String, payload: serde_json::Value) -> Result<(), String> {
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id,
+            event_type: "system.ondemand.trigger".to_string(),
+            payload: serde_json::json!({
+                "action": action,
+                "data": payload
+            }),
+        };
+        self.dispatch_event(event).await
     }
 
     pub async fn execute_action(
@@ -260,8 +286,21 @@ impl DepartmentOrchestrator {
         _action_payload: serde_json::Value,
     ) -> Result<ApprovalRequest, String> {
         let cost = 1;
-        if !self.check_ai_budget(&tenant_id, cost).await.unwrap_or(false) {
+        let (has_budget, hit_soft_limit) = self.check_ai_budget(&tenant_id, cost).await.unwrap_or((false, false));
+
+        if !has_budget {
             return Err("AI Budget exhausted. Agents degraded to reactive mode. Please upgrade your plan.".to_string());
+        }
+
+        if hit_soft_limit && department != DepartmentType::BusinessAdvisory {
+            // Dispatch a soft limit event asynchronously
+            let tenant_id_clone = tenant_id.clone();
+            let _ = self.dispatch_event(DepartmentEvent {
+                id: Uuid::new_v4().to_string(),
+                tenant_id: tenant_id_clone,
+                event_type: "tenant.budget.soft_limit".to_string(),
+                payload: serde_json::json!({}),
+            }).await;
         }
 
         match risk {

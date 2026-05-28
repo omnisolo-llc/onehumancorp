@@ -223,4 +223,124 @@ mod tests {
 
         assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
     }
+
+    #[tokio::test]
+    async fn test_ai_budget_soft_limits() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::orchestration::departments::business_advisory_agent::BusinessAdvisoryAgent;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let advisory_agent = Arc::new(RwLock::new(BusinessAdvisoryAgent::new(orchestrator.clone())));
+        orchestrator.register_department(advisory_agent).await;
+
+        let tenant_id = "test-tenant-soft-limit-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 21) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 21")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 21) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 21")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        // Trigger action that consumes 1 point, bringing budget from 21 to 20 (crossing soft limit)
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "tenant.quote.accepted".to_string(), // Dummy event to trigger OperationsAgent (or any)
+            payload: serde_json::json!({}),
+        };
+
+        use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+        let _ = orchestrator.execute_action(
+            DepartmentType::Operations,
+            "Test action".to_string(),
+            tenant_id.clone(),
+            ActionRisk::AutoExecute,
+            event.payload
+        ).await;
+
+        let mut has_advisory_notification = false;
+        for _ in 0..10 {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+            // The advisory agent action executes via auto-execute (status: Approved), so we check activity feed instead of pending approvals
+            let activities = orchestrator.get_activity_feed(&tenant_id, None, 100).await;
+            if activities.iter().any(|req| req.description.contains("Approaching AI action limits")) {
+                has_advisory_notification = true;
+                break;
+            }
+        }
+
+        assert!(has_advisory_notification, "Crossing the soft limit should trigger an advisory notification");
+    }
+
+    #[tokio::test]
+    async fn test_scheduled_and_ondemand_dispatch() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        use crate::orchestration::departments::operations_agent::OperationsAgent;
+        use crate::orchestration::departments::orchestrator::DummyDepartment;
+        use crate::orchestration::departments::types::DepartmentType;
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let tenant_id = "test-tenant-dispatch-123".to_string();
+
+        let dummy_dep = Arc::new(RwLock::new(DummyDepartment::new(
+            DepartmentType::Marketing,
+            vec!["system.scheduled.trigger".to_string(), "system.ondemand.trigger".to_string()],
+            orchestrator.clone()
+        )));
+
+        orchestrator.register_department(dummy_dep.clone()).await;
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        let _ = orchestrator.dispatch_scheduled(tenant_id.clone(), "sched_1".to_string(), serde_json::json!({})).await;
+        let _ = orchestrator.dispatch_on_demand(tenant_id.clone(), "action_1".to_string(), serde_json::json!({})).await;
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+
+        let dep = dummy_dep.read().await;
+        let events = dep.received_events.lock().unwrap();
+
+        let has_scheduled = events.iter().any(|e| e.event_type == "system.scheduled.trigger");
+        let has_ondemand = events.iter().any(|e| e.event_type == "system.ondemand.trigger");
+
+        assert!(has_scheduled, "Scheduled event was not received");
+        assert!(has_ondemand, "On-demand event was not received");
+    }
 }
