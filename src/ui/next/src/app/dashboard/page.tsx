@@ -481,7 +481,7 @@ export default function Dashboard() {
                                             className="px-6 py-2 font-medium text-white transition-colors shadow-sm hover:opacity-90"
                                             style={{ borderRadius: '8px', backgroundColor: '#0066FF' }}
                                         >
-                                            Approve
+                                            {(approval.department === 'operations' || approval.department === 'Operations') && approval.title?.includes('Restock Item:') ? '1-Tap Restock' : 'Approve'}
                                         </button>
                                     </div>
                                 </div>

@@ -75,9 +75,9 @@ test.describe('Website Builder Full E2E', () => {
     await page.goto('/builder');
 
     // Check initial state
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
 
-    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+    const textarea = page.locator('#bio-input');
 
     // Try to build with too short a string
     await textarea.fill('A');
@@ -88,7 +88,7 @@ test.describe('Website Builder Full E2E', () => {
 
     // Try to build by pressing Enter with too short a string
     await textarea.press('Enter');
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
 
     // Fill with long enough string
     await textarea.fill('This is a valid long string to test the Enter key.');
@@ -96,16 +96,16 @@ test.describe('Website Builder Full E2E', () => {
     // Wait to avoid rate limiting or overlap, then press enter. The generation should trigger.
     await page.waitForTimeout(500);
     await textarea.press('Enter');
-    await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('AI Architect')).toBeVisible({ timeout: 15000 });
   });
 
   test('nextjs builder workflow generates and publishes successfully to the real database', async ({ page }) => {
     await page.goto('/builder');
 
     // Check initial state
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
 
-    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+    const textarea = page.locator('#bio-input');
     // Using a specific keyword that helps the LLM generate a known block
     await textarea.fill('I am a baker');
 

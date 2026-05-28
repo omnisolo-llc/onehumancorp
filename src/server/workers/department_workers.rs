@@ -758,7 +758,53 @@ impl CustomerSuccessWorker {
 
             if event_type == "CustomerMessageReceived" {
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
-                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
+
+                let mut context_str = String::new();
+                let mut message_embedding_str = String::new();
+
+                // 1. Get embedding for the customer message
+                if let Ok(api_key) = std::env::var("MINIMAX_API_KEY") {
+                    if !api_key.is_empty() {
+                        let minimax = crate::minimax::MinimaxClient::new(api_key);
+                        if let Ok(embedding) = minimax.embed(customer_message).await {
+                            message_embedding_str = format!("[{}]", embedding.iter().map(|f| f.to_string()).collect::<Vec<_>>().join(","));
+                        }
+                    }
+                }
+
+                // 2. Perform vector search if embedding is available, else fallback to latest memories
+                match &db.store {
+                    crate::db::DbStore::Postgres => {
+                        let rows = if !message_embedding_str.is_empty() {
+                            sqlx::query("SELECT content FROM knowledge_embeddings WHERE tenant_id = $1 ORDER BY embedding <=> $2::vector LIMIT 5")
+                                .bind(&tenant_id)
+                                .bind(&message_embedding_str)
+                                .fetch_all(&db.pool)
+                                .await
+                                .unwrap_or_default()
+                        } else {
+                            sqlx::query("SELECT content FROM knowledge_embeddings WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 5")
+                                .bind(&tenant_id)
+                                .fetch_all(&db.pool)
+                                .await
+                                .unwrap_or_default()
+                        };
+                        let contexts: Vec<String> = rows.into_iter().map(|r| r.get("content")).collect();
+                        context_str = contexts.join(" ");
+                    },
+                    crate::db::DbStore::Sqlite(pool) => {
+                        let rows = sqlx::query("SELECT content FROM knowledge_embeddings WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 5")
+                            .bind(&tenant_id)
+                            .fetch_all(pool)
+                            .await
+                            .unwrap_or_default();
+                        let contexts: Vec<String> = rows.into_iter().map(|r| r.get("content")).collect();
+                        context_str = contexts.join(" ");
+                    }
+                }
+
+                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Here is some context about our business: '{}'. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, context_str, customer_message);
+
                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                         prompt,
