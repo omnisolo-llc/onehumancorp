@@ -10,6 +10,11 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [loanOffer, setLoanOffer] = useState<{id: string, amount: number, fee: number} | null>(null);
+  const [loanAccepted, setLoanAccepted] = useState(false);
+  const [isAcceptingLoan, setIsAcceptingLoan] = useState(false);
+  const [showAdvancedFinance, setShowAdvancedFinance] = useState(false);
+
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -103,6 +108,28 @@ export default function Dashboard() {
   const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
 
   // Growth Loop: Milestone Modal State
+  useEffect(() => {
+    // Mocking fetching loan offer from an endpoint. Real app would do an API call to /api/finance/microloan/pending
+    setLoanOffer({ id: 'loan_123', amount: 500, fee: 15 });
+  }, []);
+
+  const handleAcceptLoan = async () => {
+    if (!loanOffer) return;
+    setIsAcceptingLoan(true);
+    try {
+      const token = localStorage.getItem('token') || 'test-token';
+      const res = await fetch('/api/finance/microloan/accept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ loan_id: loanOffer.id })
+      });
+      if (res.ok) setLoanAccepted(true);
+    } catch (e) {
+      console.error("Failed to accept loan", e);
+    }
+    setIsAcceptingLoan(false);
+  };
+
   const [showMilestoneModal, setShowMilestoneModal] = useState<boolean>(false);
   const [currentMilestone, setCurrentMilestone] = useState<any>(null);
 
@@ -436,6 +463,65 @@ export default function Dashboard() {
          </section>
 
          {/* Morning Briefing */}
+         {/* Predictive Cashflow Loan */}
+         {loanOffer && !loanAccepted && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(0, 102, 255, 0.4)' }}>
+               <div className="absolute top-0 right-0 bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                 Finance Dept.
+               </div>
+               <div className="flex items-center gap-3 mb-2">
+                 <div className="text-2xl">💰</div>
+                 <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Predictive Cashflow Alert</h2>
+               </div>
+               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+                 Hey {businessName || 'Carlos'}, it looks like you'll need ${loanOffer.amount} for supplies next week before your recent invoices clear.
+                 Tap below to get an instant advance for a flat ${loanOffer.fee} fee. No applications, no waiting.
+               </p>
+
+               {showAdvancedFinance && (
+                 <div className="mb-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500 font-mono">
+                   <strong>Advanced Settings:</strong> APR equivalent is ~15.2% annualized based on a Net-30 repayment schedule. Funding facilitated by Stripe Treasury.
+                 </div>
+               )}
+
+               <div className="flex flex-wrap items-center gap-4">
+                 <button
+                   onClick={handleAcceptLoan}
+                   disabled={isAcceptingLoan}
+                   className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                   style={{ background: 'linear-gradient(135deg, #0066FF 0%, #005ce6 100%)' }}
+                 >
+                   {isAcceptingLoan ? 'Processing...' : `1-Tap Accept (${loanOffer.amount})`}
+                 </button>
+                 <button onClick={() => setLoanOffer(null)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
+
+                 <div className="ml-auto flex items-center gap-2">
+                    <span className="text-xs font-medium" style={{ color: '#86868B' }}>Advanced Details</span>
+                    <button
+                        onClick={() => setShowAdvancedFinance(!showAdvancedFinance)}
+                        className={`w-8 h-5 rounded-full transition-colors duration-300 relative ${showAdvancedFinance ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    >
+                        <span className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${showAdvancedFinance ? 'translate-x-3' : 'translate-x-0'}`}></span>
+                    </button>
+                 </div>
+               </div>
+             </div>
+           </section>
+         )}
+
+         {loanAccepted && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-4 shadow-sm rounded-xl border transition-all" style={{ background: 'rgba(52, 199, 89, 0.1)', borderColor: 'rgba(52, 199, 89, 0.4)' }}>
+               <div className="flex items-center gap-3">
+                 <div className="text-xl">✅</div>
+                 <p className="text-green-800 font-inter text-sm font-semibold">
+                   Funds Disbursed! ${loanOffer?.amount} has been added to your Treasury wallet and will reflect in your bank account shortly.
+                 </p>
+               </div>
+             </div>
+           </section>
+         )}
          {!morningBriefingDismissed && (
            <section className="mb-6 animate-fade-in">
              <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
