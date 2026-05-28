@@ -110,7 +110,7 @@ rust_library(
 
 rust_test(
     name = "server_autodream_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_autodream",
     edition = "2024",
     env = {

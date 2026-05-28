@@ -6,7 +6,7 @@ sh_test(
     data = [
         "//release:all_release_artifacts",
     ],
-    size = "small",
+    size = "medium",
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
