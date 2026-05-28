@@ -357,6 +357,12 @@ async fn handle_check_milestones(
             reached: reached_types.contains(&"10th_order".to_string()),
         },
         Milestone {
+            id: "100th_order".to_string(),
+            title: "🎉 Milestone: 100th Order!".to_string(),
+            description: "You've successfully processed your 100th order on OHC.".to_string(),
+            reached: reached_types.contains(&"100th_order".to_string()),
+        },
+        Milestone {
             id: "100_visitors".to_string(),
             title: "🚀 100 Visitors Today!".to_string(),
             description: "Your storefront reached 100 visitors today!".to_string(),
@@ -405,6 +411,7 @@ async fn handle_get_milestone_card(
     let (title, sub, icon) = match milestone_id {
         "first_sale" => ("First Sale!", "Unlocked on OHC", "💰"),
         "10th_order" => ("10th Order!", "Business is booming", "📈"),
+        "100th_order" => ("100th Order!", "Business is booming", "📈"),
         "100_visitors" => ("100 Visitors!", "Traffic is soaring", "🚀"),
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };

@@ -4827,9 +4827,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
+                            if (title === '🎉 10th Order!' || title === '🎉 100th Order!' || title === '🎉 Milestone: 10th Order!' || title === '🎉 Milestone: 100th Order!') {
                                 const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
+                                const shareText = (title === '🎉 10th Order!' || title === '🎉 Milestone: 10th Order!') ?
+                                    encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId) :
+                                    encodeURIComponent('I just reached my 100th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
                                 htmlBody += '<div style="margin-top: 15px;">' +
                                     '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
                                     '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
@@ -5510,7 +5512,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                             // Set preview image and update share button
                                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                            const mid = metricsData.active_customers >= 10 ? '10th_order' : 'first_sale';
+                                            let mid = 'first_sale';
+                                            if (metricsData.active_customers >= 100) {
+                                                mid = '100th_order';
+                                            } else if (metricsData.active_customers >= 10) {
+                                                mid = '10th_order';
+                                            }
                                             document.getElementById('milestone-banner-img').src = `/api/v1/growth/milestone/card?tenant=${tenant}&milestone_id=${mid}`;
                                             document.getElementById('milestone-share-btn').onclick = () => shareMilestoneToX(mid);
                                         } else {
