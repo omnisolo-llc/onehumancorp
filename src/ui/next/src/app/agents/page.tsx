@@ -222,16 +222,16 @@ export default function AgentsPage() {
                         <button
                           onClick={() => handleDecision(req.id, false)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
                         >
-                          {actionLoading === req.id ? '...' : 'Reject'}
+                          {actionLoading === req.id ? '...' : 'Edit Draft'}
                         </button>
                         <button
                           onClick={() => handleDecision(req.id, true)}
                           disabled={actionLoading === req.id}
-                          className={`flex-1 py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
                         >
-                          {actionLoading === req.id ? '...' : 'Approve'}
+                          {actionLoading === req.id ? '...' : 'Approve & Send'}
                         </button>
                       </div>
                     </div>
