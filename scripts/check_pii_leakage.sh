@@ -5,7 +5,7 @@ LEAKS=$(find src -type f -name "*.rs" -exec grep -HnE "info\!|error\!|warn\!|deb
 if [ ! -z "$LEAKS" ]; then
     echo "ERROR: Potential PII leakage found in log statements without [REDACTED]!"
     echo "$LEAKS"
-    # return 1
+    exit 1
 else
     echo "✓ No PII leakage found in log statements."
 fi
