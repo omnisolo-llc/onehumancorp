@@ -75,8 +75,8 @@ impl ClaudePluginManager {
         self.loaded_plugins.push(tool);
     }
 
-    pub fn get_tools(&self) -> Vec<Tool> {
-        self.loaded_plugins.clone()
+    pub fn get_tools(self) -> Vec<Tool> {
+        self.loaded_plugins
     }
 }
 
