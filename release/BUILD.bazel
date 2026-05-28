@@ -24,7 +24,7 @@ pkg_files(
     name = "ohc_unix_files",
     srcs = [
         "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
+        "//src/server:server",
     ],
     renames = {
         "//src/agents/builtin:ohc-builtin-agent": "bin/ohc-builtin-agent",
@@ -42,7 +42,7 @@ pkg_files(
     name = "ohc_windows_files",
     srcs = [
         "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
+        "//src/server:server",
     ],
     renames = {
         "//src/agents/builtin:ohc-builtin-agent": "ohc-builtin-agent.exe",
@@ -123,7 +123,7 @@ pkg_rpm(
     architecture = "x86_64",
     data = [
         "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
+        "//src/server:server",
     ],
     release = "1",
     spec_file = "ohc.spec",

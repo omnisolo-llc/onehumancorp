@@ -14,7 +14,7 @@ One Human Corp application bundle
 %install
 mkdir -p "%{buildroot}/usr/local/bin"
 cp "../{ohc-builtin-agent}" "%{buildroot}/usr/local/bin/ohc-builtin-agent"
-cp "../{server}" "%{buildroot}/usr/local/bin/ohc-server"
+cp "../{server_lib}" "%{buildroot}/usr/local/bin/ohc-server"
 chmod 0755 "%{buildroot}/usr/local/bin/ohc-builtin-agent" "%{buildroot}/usr/local/bin/ohc-server"
 
 %files
