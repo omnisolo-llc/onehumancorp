@@ -10,6 +10,7 @@
     "@types/dompurify": "^3.0.5",
     "dompurify": "^3.4.5",
     "next": "^16.2.6",
+    "playwright": "^1.60.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "swagger-ui-react": "^5.32.6",
