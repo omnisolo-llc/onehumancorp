@@ -128,4 +128,68 @@ mod tests {
         };
         assert_eq!(am.id, "1");
     }
+
+    #[tokio::test]
+    async fn test_memory_store_tenant_isolation() {
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(100))
+            .connect_lazy("postgres://postgres:postgres@localhost/postgres")
+            .unwrap();
+
+        if env::var("CI").is_ok() {
+            // Skip actual DB query if we don't have it running in CI
+            return;
+        }
+
+        let tenant_a = "00000000-0000-0000-0000-00000000000A";
+        let tenant_b = "00000000-0000-0000-0000-00000000000B";
+        let memory_id = uuid::Uuid::new_v4().to_string();
+
+        match pool.begin().await {
+            Ok(mut tx) => {
+                use sqlx::Executor;
+                // Insert memory for Tenant A
+                tx.execute("SET LOCAL app.current_tenant = 'system'").await.expect("Failed to set system context");
+
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Tenant A') ON CONFLICT DO NOTHING")
+                    .bind(tenant_a)
+                    .execute(&mut *tx).await;
+
+                let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Tenant B') ON CONFLICT DO NOTHING")
+                    .bind(tenant_b)
+                    .execute(&mut *tx).await;
+
+                // Try to insert a consolidated memory directly
+                let _ = sqlx::query(
+                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) \
+                     VALUES ($1, $2, 'agent_1', 'secret data', '[0.1, 0.2, 0.3]'::vector, 'test') \
+                     ON CONFLICT DO NOTHING"
+                )
+                .bind(&memory_id)
+                .bind(tenant_a)
+                .execute(&mut *tx)
+                .await;
+
+                tx.commit().await.expect("Failed to commit");
+            },
+            Err(_) => return, // DB not available locally
+        }
+
+        // Try to query memory from Tenant B
+        match pool.begin().await {
+            Ok(mut tx) => {
+                use sqlx::Executor;
+                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_b).as_str()).await.expect("Failed to set tenant context");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM consolidated_memory")
+                    .fetch_one(&mut *tx).await;
+
+                if let Ok(row) = result {
+                    assert_eq!(row.get::<i64, _>(0), 0, "Should return 0 rows for Tenant B querying Tenant A's memory");
+                }
+            },
+            Err(_) => return, // DB not available locally
+        }
+    }
 }

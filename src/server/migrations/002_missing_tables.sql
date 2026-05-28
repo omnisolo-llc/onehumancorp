@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS swarm_truth_embeddings (
 
 CREATE TABLE IF NOT EXISTS shared_tasks_v4 (
     id VARCHAR PRIMARY KEY,
-    organization_id VARCHAR NOT NULL,
+    tenant_id VARCHAR NOT NULL,
     title VARCHAR NOT NULL,
     description TEXT,
     status VARCHAR NOT NULL DEFAULT 'PENDING',
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS hybrid_fs_sync_queue (
 
 CREATE TABLE IF NOT EXISTS shared_tasks_decomposition (
     id TEXT PRIMARY KEY,
-    organization_id TEXT NOT NULL,
+    tenant_id TEXT NOT NULL,
     mission_id TEXT,
     parent_plan_id TEXT,
     dependencies JSONB DEFAULT '[]',
@@ -311,7 +311,7 @@ CREATE TABLE IF NOT EXISTS meeting_transcripts (
     occurred_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 ALTER TABLE shared_tasks_v4 ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_shared_tasks_v4 ON shared_tasks_v4 USING (organization_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_shared_tasks_v4 ON shared_tasks_v4 USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE shared_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_shared_tasks ON shared_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));
@@ -335,7 +335,7 @@ ALTER TABLE hybrid_fs_sync_queue ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_hybrid_fs_sync_queue ON hybrid_fs_sync_queue USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE shared_tasks_decomposition ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting('app.current_tenant', true));
+CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (tenant_id::text = current_setting('app.current_tenant', true));
 
 ALTER TABLE department_tasks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY tenant_isolation_department_tasks ON department_tasks USING (tenant_id::text = current_setting('app.current_tenant', true));

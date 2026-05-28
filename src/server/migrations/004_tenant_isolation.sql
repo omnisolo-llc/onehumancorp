@@ -61,7 +61,7 @@ BEGIN
         ) THEN
             CREATE POLICY tenant_isolation_shared_tasks_decomposition
                 ON shared_tasks_decomposition
-                USING (organization_id::text = current_setting('app.current_tenant', true));
+                USING (tenant_id::text = current_setting('app.current_tenant', true));
         END IF;
     END IF;
 END

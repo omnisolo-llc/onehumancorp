@@ -45,7 +45,10 @@ impl VectorRepository {
         let emb_str = serde_json::to_string(&record.embedding).map_err(|e| format!("DB Error: {}", e))?;
 
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+                        VectorMemoryStore::Postgres(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&record.tenant_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
                 sqlx::query(
                     "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
                      VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
@@ -71,9 +74,11 @@ impl VectorRepository {
                 .bind(record.reliability_score)
                 .bind(record.owner_override)
                 .bind(&record.metadata)
-                .execute(pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 sqlx::query(
@@ -120,18 +125,19 @@ impl VectorRepository {
         let mut results = Vec::new();
 
         match &self.store {
-            VectorMemoryStore::Postgres(pool) => {
+                        VectorMemoryStore::Postgres(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(tenant_id).execute(&mut *tx).await.map_err(|e| e.to_string())?;
+
                 let rows = sqlx::query(
                     "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
                      FROM consolidated_memory \
-                     WHERE tenant_id = $1 \
-                     ORDER BY embedding <=> $2::vector \
-                     LIMIT $3"
+                     ORDER BY embedding <=> $1::vector \
+                     LIMIT $2"
                 )
-                .bind(tenant_id)
-                .bind(emb_str)
+                .bind(&emb_str)
                 .bind(limit)
-                .fetch_all(pool)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
@@ -170,14 +176,15 @@ impl VectorRepository {
                     });
                 }
 
-                if !ids_to_update.is_empty() {
+                                if !ids_to_update.is_empty() {
                     let _ = sqlx::query(
                         "UPDATE consolidated_memory SET last_referenced_at = CURRENT_TIMESTAMP, reference_count = reference_count + 1 WHERE id = ANY($1)"
                     )
                     .bind(&ids_to_update)
-                    .execute(pool)
+                    .execute(&mut *tx)
                     .await;
                 }
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let has_vec_extension = sqlx::query("SELECT vec_distance_cosine('[1.0]', '[1.0]')")

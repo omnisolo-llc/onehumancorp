@@ -14,44 +14,51 @@ impl TaskRepository {
 
     pub async fn create_task(&self, task: Task) -> Result<Task, String> {
         match &self.db.store {
-            DbStore::Postgres => {
+                        DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::common::auth_utils::set_org_context(&mut *tx, &task.tenant_id).await.map_err(|e| e.to_string())?;
+
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
-                        status, assigned_agent_role, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        id, tenant_id, parent_task_id, title, description,
+                        status, assigned_agent_id, payload, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.parent_task_id)
                 .bind(&task.title)
                 .bind(&task.description)
                 .bind(&task.status)
-                .bind(&task.assigned_agent_role)
+                .bind(&task.assigned_agent_id)
+                .bind(&task.payload)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     r#"
                     INSERT INTO tasks (
-                        id, organization_id, parent_task_id, title, description,
-                        status, assigned_agent_role, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        id, tenant_id, parent_task_id, title, description,
+                        status, assigned_agent_id, payload, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task.id)
-                .bind(&task.organization_id)
+                .bind(&task.tenant_id)
                 .bind(&task.parent_task_id)
                 .bind(&task.title)
                 .bind(&task.description)
                 .bind(&task.status)
-                .bind(&task.assigned_agent_role)
+                .bind(&task.assigned_agent_id)
+                .bind(&task.payload)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
                 .execute(sqlite_pool)
@@ -62,32 +69,33 @@ impl TaskRepository {
         Ok(task)
     }
 
-    pub async fn get_tasks_by_org(&self, organization_id: &str) -> Result<Vec<Task>, String> {
+    pub async fn get_tasks_by_org(&self, tenant_id: &str) -> Result<Vec<Task>, String> {
         let tasks = match &self.db.store {
-            DbStore::Postgres => {
+                        DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
-                           status, assigned_agent_role, created_at, updated_at
+                    SELECT id, tenant_id, parent_task_id, title, description,
+                           status, assigned_agent_id, payload, created_at, updated_at
                     FROM tasks
-                    WHERE organization_id = $1
                     "#
                 )
-                .bind(organization_id)
-                .fetch_all(&self.db.pool)
+                .fetch_all(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query_as::<_, Task>(
                     r#"
-                    SELECT id, organization_id, parent_task_id, title, description,
-                           status, assigned_agent_role, created_at, updated_at
+                    SELECT id, tenant_id, parent_task_id, title, description,
+                           status, assigned_agent_id, payload, created_at, updated_at
                     FROM tasks
-                    WHERE organization_id = ?
+                    WHERE tenant_id = ?
                     "#
                 )
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_all(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?
@@ -96,28 +104,32 @@ impl TaskRepository {
         Ok(tasks)
     }
 
-    pub async fn update_task_status(&self, organization_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
+    pub async fn update_task_status(&self, tenant_id: &str, task_id: &str, new_status: &str) -> Result<(), String> {
         let now = Utc::now();
         match &self.db.store {
-            DbStore::Postgres => {
+                        DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
+                crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+
                 let result = sqlx::query(
                     r#"
                     UPDATE tasks
                     SET status = $1, updated_at = $2
-                    WHERE id = $3 AND organization_id = $4
+                    WHERE id = $3
                     RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
-                .bind(organization_id)
-                .fetch_optional(&self.db.pool)
+                .fetch_optional(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
 
+                tx.commit().await.map_err(|e| e.to_string())?;
+
                 if result.is_none() {
-                    return Err("Task not found or does not belong to organization".to_string());
+                    return Err("Task not found or does not belong to tenant".to_string());
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -125,20 +137,20 @@ impl TaskRepository {
                     r#"
                     UPDATE tasks
                     SET status = ?, updated_at = ?
-                    WHERE id = ? AND organization_id = ?
+                    WHERE id = ? AND tenant_id = ?
                     RETURNING id
                     "#
                 )
                 .bind(new_status)
                 .bind(now)
                 .bind(task_id)
-                .bind(organization_id)
+                .bind(tenant_id)
                 .fetch_optional(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
 
                 if result.is_none() {
-                    return Err("Task not found or does not belong to organization".to_string());
+                    return Err("Task not found or does not belong to tenant".to_string());
                 }
             }
         }
@@ -161,12 +173,13 @@ mod tests {
             r#"
             CREATE TABLE tasks (
                 id TEXT PRIMARY KEY,
-                organization_id TEXT NOT NULL,
+                tenant_id TEXT NOT NULL,
                 parent_task_id TEXT,
                 title VARCHAR(255) NOT NULL,
                 description TEXT,
                 status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-                assigned_agent_role VARCHAR(100),
+                assigned_agent_id VARCHAR(100),
+                payload TEXT,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
@@ -196,12 +209,13 @@ mod tests {
 
         let task = Task {
             id: "task_1".to_string(),
-            organization_id: org_id.clone(),
+            tenant_id: org_id.clone(),
             parent_task_id: None,
             title: "Test Task".to_string(),
             description: Some("Description".to_string()),
             status: "PENDING".to_string(),
-            assigned_agent_role: Some("Developer".to_string()),
+            assigned_agent_id: Some("Developer".to_string()),
+            payload: Some("{}".to_string()),
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };
@@ -226,12 +240,13 @@ mod tests {
 
         let task = Task {
             id: "task_1".to_string(),
-            organization_id: org_id.clone(),
+            tenant_id: org_id.clone(),
             parent_task_id: None,
             title: "Test Task".to_string(),
             description: None,
             status: "PENDING".to_string(),
-            assigned_agent_role: None,
+            assigned_agent_id: None,
+            payload: None,
             created_at: Some(Utc::now()),
             updated_at: Some(Utc::now()),
         };

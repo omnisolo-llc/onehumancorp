@@ -48,7 +48,7 @@ BEGIN
     EXECUTE format('ALTER TABLE IF EXISTS shared_tasks_decomposition ENABLE ROW LEVEL SECURITY');
     EXECUTE format('ALTER TABLE IF EXISTS shared_tasks_decomposition FORCE ROW LEVEL SECURITY');
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_shared_tasks_decomposition' AND tablename = 'shared_tasks_decomposition') THEN
-        EXECUTE format('CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (organization_id::text = current_setting(''app.current_tenant'', true))');
+        EXECUTE format('CREATE POLICY tenant_isolation_shared_tasks_decomposition ON shared_tasks_decomposition USING (tenant_id::text = current_setting(''app.current_tenant'', true))');
     END IF;
 END
 $$;
