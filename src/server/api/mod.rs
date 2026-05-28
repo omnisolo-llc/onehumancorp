@@ -11,3 +11,4 @@ pub mod onboarding;
 pub mod growth;
 pub mod telemetry;
 pub mod syndication_handler;
+pub mod booking;
