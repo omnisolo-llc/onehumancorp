@@ -42,7 +42,7 @@ export default function Dashboard() {
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
-  const [referralLink, setReferralLink] = useState<string>("");
+  const [referralLink, setReferralLink] = useState<string>("https://ohc.store/join?ref=my-store");
 
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
@@ -558,7 +558,19 @@ export default function Dashboard() {
 
          {/* Business Snapshot */}
          <section>
-            <h2 className="text-xl font-semibold mb-4 font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Snapshot</h2>
+                <a
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just made $${todaysSales.toFixed(2)} today selling online with One Human Corp! 🚀 Start your own business in seconds: ${referralLink}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-100 transition-colors flex items-center gap-2 whitespace-nowrap"
+                  title="Share your success to earn $50 credit"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                  Share My Success
+                </a>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                 {/* Metric Card */}
