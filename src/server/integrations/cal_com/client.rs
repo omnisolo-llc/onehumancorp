@@ -26,7 +26,12 @@ impl CalComClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok(format!("https://cal.com/ohc-tenant/{}", event_type))
+                    let json_resp: serde_json::Value = resp.json().await.map_err(|e| format!("JSON parsing error: {}", e))?;
+                    if let Some(slug) = json_resp.get("event_types").and_then(|arr| arr.as_array()).and_then(|arr| arr.first()).and_then(|e| e.get("slug")).and_then(|s| s.as_str()) {
+                         Ok(format!("https://cal.com/ohc-tenant/{}", slug))
+                    } else {
+                         Ok(format!("https://cal.com/ohc-tenant/{}", event_type)) // fallback
+                    }
                 } else {
                     Err(format!("Cal.com API error: {}", resp.status()))
                 }

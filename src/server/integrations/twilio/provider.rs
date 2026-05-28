@@ -43,7 +43,7 @@ impl TwilioProvider {
     }
 
     pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        // Mock checking opt-out status
+        // In a real app, query the DB for user communication preferences
         if self.is_opted_out(to).await {
             return Err("User opted out".to_string());
         }

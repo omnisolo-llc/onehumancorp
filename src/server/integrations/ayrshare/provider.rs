@@ -38,4 +38,8 @@ impl AyrshareProvider {
     pub async fn post_message(&self, message: &str, platforms: Vec<&str>) -> Result<(), String> {
         self._client.post_message(message, platforms).await
     }
+
+    pub async fn get_messages(&self) -> Result<Vec<serde_json::Value>, String> {
+        self._client.get_messages().await
+    }
 }

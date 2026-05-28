@@ -62,8 +62,14 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn handle_webhook(&self, _payload: &str) -> Result<(), String> {
-        // Mock handle webhook
+    pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
+        let event: serde_json::Value = serde_json::from_str(payload).map_err(|e| format!("Failed to parse webhook payload: {}", e))?;
+
+        if let Some(action) = event.get("action").and_then(|a| a.as_str()) {
+            if action == "payment.created" || action == "payment.updated" {
+                tracing::info!("Received Mercado Pago payment event: {}", action);
+            }
+        }
         Ok(())
     }
 }

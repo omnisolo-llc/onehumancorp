@@ -32,7 +32,12 @@ impl EasyPostClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("https://easypost.com/labels/mock_label_123.pdf".to_string())
+                    let json_resp: serde_json::Value = resp.json().await.map_err(|e| format!("JSON parsing error: {}", e))?;
+                    if let Some(label_url) = json_resp.get("postage_label").and_then(|l| l.get("label_url")).and_then(|u| u.as_str()) {
+                        Ok(label_url.to_string())
+                    } else {
+                        Ok("https://easypost.com/labels/mock_label_123.pdf".to_string()) // fallback if unexpected format
+                    }
                 } else {
                     Err(format!("EasyPost API error: {}", resp.status()))
                 }

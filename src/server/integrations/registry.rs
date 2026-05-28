@@ -590,6 +590,21 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+    pub async fn ayrshare_get_messages(&self, integration_id: &str) -> Result<Vec<serde_json::Value>, String> {
+        let client = {
+            if integration_id == "ayrshare" {
+                let clients = self.ayrshare_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.get_messages().await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn listmonk_send_campaign(&self, integration_id: &str, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
         let client = {
             if integration_id == "listmonk" {
