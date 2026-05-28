@@ -4609,9 +4609,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.getElementById('soft-paywall-modal').classList.remove('open');
                         }
 
-                        function claimTrialExtension() {
+                        async function claimTrialExtension() {
                             const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+
+                            try {
+                                await fetch('/api/v1/growth/trial/extend', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ platform: 'twitter' })
+                                });
+                            } catch (e) {
+                                console.error('Failed to register trial extension', e);
+                            }
+
                             localStorage.setItem('has_pro', 'true');
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');

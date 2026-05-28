@@ -93,7 +93,39 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/trial/extend", post(handle_trial_extend))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtendRequest {
+    pub platform: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrialExtendResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+async fn handle_trial_extend(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<TrialExtendRequest>,
+) -> impl IntoResponse {
+    let payload = serde_json::to_string(&serde_json::json!({ "platform": req.platform })).unwrap_or_default();
+
+    let msg = crate::hub::HubEvent {
+        r#type: "growth.trial_extended".to_string(),
+        payload,
+        occurred_at: chrono::Utc::now(),
+    };
+
+    state.hub.append_recent_event(msg);
+
+    Json(TrialExtendResponse {
+        success: true,
+        message: "Trial extended successfully".to_string(),
+    })
 }
 
 
