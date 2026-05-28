@@ -15,13 +15,13 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays Instagram DM Sales Agent integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Instagram DM Sales Agent' })).toBeVisible();
+    await expect(page.locator('h3').filter({ hasText: 'Instagram DM Sales Agent' })).toBeVisible();
     await expect(page.getByText('Let AI read and autonomously reply to Instagram DMs on behalf of your business.')).toBeVisible();
     await expect(page.getByText('Enable AI Instagram Assistant')).toBeVisible();
   });
 
   test('can interact with Instagram DM Sales Agent advanced mode', async ({ page }) => {
-    const card = page.locator('div.card.glass').filter({ hasText: 'Instagram DM Sales Agent' });
+    const card = page.locator('div.card.glass').filter({ hasText: 'Instagram DM Sales Agent' }).first();
     const toggle = card.locator('input[type="checkbox"]');
 
     // Initially advanced mode is hidden
