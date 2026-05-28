@@ -285,8 +285,14 @@ mod tests {
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
             .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
             .layer(axum::extract::Extension(Claims {
+                sub: "test_sub".to_string(),
+                exp: 0,
+                iat: 0,
                 organization_id: Some("test_org".to_string()),
-                ..Default::default()
+                username: "test_user".to_string(),
+                email: "test_email".to_string(),
+                roles: vec![],
+                jti: "test_jti".to_string(),
             }))
             .with_state(transport);
 
@@ -354,8 +360,14 @@ mod tests {
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
             .layer(axum::extract::Extension(Claims {
+                sub: "test_sub".to_string(),
+                exp: 0,
+                iat: 0,
                 organization_id: Some("test_org".to_string()),
-                ..Default::default()
+                username: "test_user".to_string(),
+                email: "test_email".to_string(),
+                roles: vec![],
+                jti: "test_jti".to_string(),
             }))
             .with_state(transport);
 
@@ -401,8 +413,14 @@ mod tests {
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
             .layer(axum::extract::Extension(Claims {
+                sub: "test_sub".to_string(),
+                exp: 0,
+                iat: 0,
                 organization_id: Some("test_org".to_string()),
-                ..Default::default()
+                username: "test_user".to_string(),
+                email: "test_email".to_string(),
+                roles: vec![],
+                jti: "test_jti".to_string(),
             }))
             .with_state(transport);
 
