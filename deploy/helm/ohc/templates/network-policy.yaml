@@ -427,3 +427,32 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: spire-server
+---
+# Zero Trust SPIRE Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-trust
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server

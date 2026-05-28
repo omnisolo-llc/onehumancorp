@@ -124,7 +124,7 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull pgvector/pgvector:pg16
+          docker pull postgres:16
           docker pull valkey/valkey:8-alpine
 
       - name: Test Playwright E2E target
