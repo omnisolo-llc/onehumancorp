@@ -7,12 +7,12 @@ SERVER_RS_SRCS = [
     "billing.rs",
     "build.rs",
     "chaos.rs",
-    "orchestration/queue/queue.rs",
-    "orchestration/queue/sqlite_queue.rs",
-    "orchestration/queue/redis_queue.rs",
-    "orchestration/queue/pg_queue.rs",
-    "orchestration/queue/mod.rs",
-    "orchestration/worker_pool.rs",
+
+
+
+
+
+
     "crypto.rs",
     "db.rs",
     "hub.rs",
@@ -151,6 +151,7 @@ SERVER_RS_SRCS = [
     "//src/server/orchestration/hybrid_sync:daemon_test.rs",
     "//src/server/orchestration/hybrid_sync:mod.rs",
     "//src/server/orchestration/queue:mod.rs",
+    "//src/server/orchestration:worker_pool.rs",
     "//src/server/orchestration/queue:pg_queue.rs",
     "//src/server/orchestration/queue:queue.rs",
     "//src/server/orchestration/queue:queue_test.rs",
