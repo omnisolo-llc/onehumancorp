@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   return NextResponse.json({
-    "bio-input-tooltip": "Tell us what you sell and who your customers are. Keep it simple!",
+    "bio-input-tooltip": "Describe what you sell and who your customers are. Keep it simple.",
     "generate-btn-tooltip": "Click here to have our AI build your ready-to-launch store.",
     "launch-btn-tooltip": "Make your store live on the internet so customers can visit.",
     "team-activity-tooltip": "See exactly what your AI helpers are doing right now.",
