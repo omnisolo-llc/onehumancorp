@@ -109,10 +109,6 @@ Chart.lock
 !/CHANGELOG.md
 !/RELEASE_NOTES.md
 
-# Golang is not allowed in this project
-*.go
-
-
 # Rust build artifacts
 /target/
 /src/ui/tauri/gen/
@@ -129,7 +125,6 @@ site/
 playwright-report/
 debian-binary
 /*.diff
-/srcs/
 /scratch/
 *.db
 
