@@ -27,7 +27,7 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -51,7 +51,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -70,7 +70,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -79,7 +79,7 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_username(&self, username: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by username
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE username = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -97,7 +97,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -106,7 +106,7 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_email(&self, email: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by email
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE email = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -124,7 +124,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -133,7 +133,7 @@ impl UserRepository for PgUserRepository {
 
     async fn get_by_oidc_subject(&self, sub: &str, org_id: &str) -> Result<User, String> {
         // Similar to get_by_id but query by oidc_subject
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users WHERE oidc_subject = $1";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -151,7 +151,7 @@ impl UserRepository for PgUserRepository {
             password_hash: row.get("password_hash"),
             roles,
             active: row.get("active"),
-            organization_id: row.get("organization_id"),
+            organization_id: row.get("tenant_id"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
             oidc_subject: row.get("oidc_subject"),
@@ -159,7 +159,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn list_users(&self, org_id: &str) -> Result<Vec<User>, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at FROM users ORDER BY created_at";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
@@ -179,7 +179,7 @@ impl UserRepository for PgUserRepository {
                 password_hash: row.get("password_hash"),
                 roles,
                 active: row.get("active"),
-                organization_id: row.get("organization_id"),
+                organization_id: row.get("tenant_id"),
                 created_at: row.get("created_at"),
                 updated_at: row.get("updated_at"),
                 oidc_subject: row.get("oidc_subject"),
@@ -193,7 +193,7 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            organization_id=$7, oidc_subject=$8, updated_at=$9
+            tenant_id=$7, oidc_subject=$8, updated_at=$9
             WHERE id=$1 RETURNING id
             "#;
 
