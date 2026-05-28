@@ -507,6 +507,8 @@ SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/integrations/alipay:server_integrations_alipay_unit_test",
     "//src/server/integrations/mercadopago:server_integrations_mercadopago_unit_test",
     "//src/server/integrations/meta:server_integrations_meta_unit_test",
+    "//src/server/integrations/resend:server_integrations_resend_unit_test",
+    "//src/server/integrations/tiktok:server_integrations_tiktok_unit_test",
     "//src/server/integrations/stripe:server_integrations_stripe_unit_test",
     "//src/server/interop:server_interop_unit_test",
     "//src/server/oidc:server_oidc_unit_test",

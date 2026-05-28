@@ -55,6 +55,7 @@ export default function InboxPage() {
     whatsapp: true,
     instagram: true,
     facebook: true,
+    tiktok: true,
     sms: true,
   });
 
