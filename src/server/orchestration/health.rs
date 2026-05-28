@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use crate::hub::Hub;
+use crate::__bazel_package::hub::Hub;
 use crate::orchestration::mesh::TeammateMesh;
 
 pub async fn run_health_monitor(

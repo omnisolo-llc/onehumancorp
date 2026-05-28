@@ -5,7 +5,7 @@ mod test;
 #[cfg(test)]
 mod parity_test;
 
-use crate::tasks::SharedTask;
+use crate::__bazel_package::SharedTask;
 use async_trait::async_trait;
 use std::sync::Arc;
 use crate::orchestration::mesh::TeammateMesh;

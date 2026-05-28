@@ -1,4 +1,4 @@
-use crate::tasks::SharedTask;
+use crate::__bazel_package::SharedTask;
 use crate::db::DB;
 use async_trait::async_trait;
 use std::sync::Arc;
