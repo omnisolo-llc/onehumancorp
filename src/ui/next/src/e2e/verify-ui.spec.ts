@@ -5,8 +5,16 @@ test('Verify onboarding UI', async ({ page }) => {
   await page.waitForTimeout(1000);
   await page.screenshot({ path: 'onboarding-step1.png' });
 
-  const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
+  const businessNameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+  await businessNameInput.fill('Handyman Services');
+  await page.locator('button:has-text("Next")').click();
+
+  const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
   await descriptionInput.fill('I am a freelance handyman in Miami');
+  await page.locator('button:has-text("Next")').click();
+
+  const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+  await locationInput.fill('Miami, FL');
 
   await page.route('**/api/onboarding/intake', route => route.fulfill({
     status: 200,
