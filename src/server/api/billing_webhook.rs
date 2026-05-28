@@ -147,6 +147,29 @@ pub async fn stripe_webhook_handler(
                 StatusCode::BAD_REQUEST.into_response()
             }
         },
+        "charge.dispute.created" => {
+            let obj = &payload.data.object;
+            let dispute_id = obj.get("id").and_then(|id| id.as_str()).unwrap_or("unknown");
+            let transaction_id = obj.get("charge").and_then(|id| id.as_str()).unwrap_or("unknown");
+
+            let tenant_id_opt = obj.get("metadata")
+                .and_then(|m| m.get("tenant_id"))
+                .and_then(|id| id.as_str())
+                .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
+
+            if let Some(tenant_id) = tenant_id_opt {
+                let tenant_id_owned = tenant_id.to_string();
+                let txn_id_owned = transaction_id.to_string();
+                let dispute_id_owned = dispute_id.to_string();
+                let db_clone = webhook_state.db.clone();
+
+                tokio::spawn(async move {
+                    let orchestrator = crate::services::billing::fraud_shield::FraudShieldOrchestrator::new(db_clone);
+                    orchestrator.handle_charge_dispute(&tenant_id_owned, &txn_id_owned, &dispute_id_owned).await;
+                });
+            }
+            StatusCode::OK.into_response()
+        },
         "invoice.payment_failed" => {
             let obj = &payload.data.object;
             let tenant_id_opt = obj.get("customer")

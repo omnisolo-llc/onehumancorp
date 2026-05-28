@@ -5,6 +5,8 @@ exports_files(
         "auditor.rs",
         "mod.rs",
         "service.rs",
+        "fraud_shield.rs",
+        "fraud_shield_test.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -16,6 +18,8 @@ rust_library(
         "auditor.rs",
         "mod.rs",
         "service.rs",
+        "fraud_shield.rs",
+        "fraud_shield_test.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
