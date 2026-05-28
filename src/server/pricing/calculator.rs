@@ -122,6 +122,14 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
     (output_tokens as f64) / cost
 }
 
+pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
+    if days_elapsed == 0 {
+        return 0.0;
+    }
+    let projected = (current_cost / days_elapsed as f64) * total_days as f64;
+    (projected * 10000.0).round() / 10000.0
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -208,5 +216,13 @@ mod tests {
 
         let efficiency = calculate_efficiency(cost, output_tokens);
         assert_eq!(efficiency, 25.0); // 250 / 10
+    }
+
+    #[test]
+    fn test_calculate_projected_monthly_cost() {
+        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
+        assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
     }
 }
