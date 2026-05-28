@@ -1,7 +1,15 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
+use tracing::Instrument;
+use ::server_telemetry::{
+    record_bubblewrap_spawn,
+    record_bubblewrap_execution_latency,
+    record_bubblewrap_violation,
+    record_harness_execution_latency,
+    record_harness_command_duration,
+    record_harness_io_bytes,
+};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
@@ -27,16 +35,22 @@ impl LocalShellTask {
         // The task_id and agent_id should be dynamic in reality, but for context we use defaults if not available here
         let task_id = "unknown_task";
         let agent_id = "unknown_agent";
+        let tenant_id = "unknown_tenant";
 
         record_bubblewrap_spawn(agent_id, task_id);
         let start = Instant::now();
 
-        let output = tokio::process::Command::new("bash")
-            .arg("-c")
-            .arg(&wrapped_cmd)
-            .output()
-            .await
-            .map_err(|e| format!("Failed to spawn process: {}", e))?;
+        let output_result = async {
+            tokio::process::Command::new("bash")
+                .arg("-c")
+                .arg(&wrapped_cmd)
+                .output()
+                .await
+        }
+        .instrument(tracing::info_span!("harness_execute_command", command = %cmd, tenant_id = %tenant_id))
+        .await;
+
+        let output = output_result.map_err(|e| format!("Failed to spawn process: {}", e))?;
 
         let exit_code = output.status.code().unwrap_or(-1);
 
@@ -45,6 +59,12 @@ impl LocalShellTask {
 
         let latency_seconds = start.elapsed().as_secs_f64();
         record_harness_execution_latency(latency_seconds);
+
+        let command_prefix = cmd.split_whitespace().next().unwrap_or("unknown");
+        record_harness_command_duration(tenant_id, command_prefix, exit_code, latency_seconds);
+
+        record_harness_io_bytes(tenant_id, "stdout", output.stdout.len() as u64);
+        record_harness_io_bytes(tenant_id, "stderr", output.stderr.len() as u64);
 
         if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");

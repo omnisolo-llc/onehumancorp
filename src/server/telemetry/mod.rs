@@ -36,6 +36,26 @@ pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
     })
 }
 
+pub fn get_harness_command_duration_histogram() -> &'static Histogram<f64> {
+    HARNESS_COMMAND_DURATION.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .f64_histogram("ohc_harness_command_duration_seconds")
+            .with_description("Duration of executed commands in the harness")
+            .build()
+    })
+}
+
+pub fn get_harness_io_bytes_total_counter() -> &'static Counter<u64> {
+    HARNESS_IO_BYTES_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.harness");
+        meter
+            .u64_counter("ohc_harness_io_bytes_total")
+            .with_description("Total I/O bytes from harness commands")
+            .build()
+    })
+}
+
 pub fn get_llm_network_latency_histogram() -> &'static Histogram<f64> {
     LLM_NETWORK_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
@@ -115,6 +135,29 @@ pub fn record_token_usage(agent_id: &str, role: &str, model: &str, token_type: &
             opentelemetry::KeyValue::new("role", role.to_string()),
             opentelemetry::KeyValue::new("model", model.to_string()),
             opentelemetry::KeyValue::new("type", token_type.to_string()),
+        ],
+    );
+}
+
+pub fn record_harness_command_duration(tenant_id: &str, command_prefix: &str, exit_code: i32, duration_seconds: f64) {
+    let histogram = get_harness_command_duration_histogram();
+    histogram.record(
+        duration_seconds,
+        &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            opentelemetry::KeyValue::new("command_prefix", command_prefix.to_string()),
+            opentelemetry::KeyValue::new("exit_code", exit_code.to_string()),
+        ],
+    );
+}
+
+pub fn record_harness_io_bytes(tenant_id: &str, stream_type: &str, bytes: u64) {
+    let counter = get_harness_io_bytes_total_counter();
+    counter.add(
+        bytes,
+        &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            opentelemetry::KeyValue::new("stream_type", stream_type.to_string()),
         ],
     );
 }
@@ -209,6 +252,8 @@ pub fn record_swarm_task_completed(mission_id: &str) {
 static HARNESS_INIT_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_DB_IO_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static HARNESS_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static HARNESS_COMMAND_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static HARNESS_IO_BYTES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static SYNC_DAEMON_BATCH_SIZE_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static AGENT_EXECUTION_TRACES_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
