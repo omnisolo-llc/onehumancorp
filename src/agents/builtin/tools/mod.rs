@@ -144,6 +144,29 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
     ];
 
+    // Instantiate the Ruflo 32+ Claude Code Plugins
+    let mut claude_plugins = crate::claude_plugins::ClaudePluginManager::new();
+
+    // Example: Registering a default known plugin to demonstrate functionality
+    claude_plugins.load_plugin(
+        crate::claude_plugins::ClaudePluginConfig {
+            plugin_name: "claude_echo_plugin".to_string(),
+            command: "echo".to_string(),
+            sub_args: vec![],
+        },
+        serde_json::json!({
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"}
+            }
+        }),
+        "A mock Claude plugin that echoes back the input.".to_string()
+    );
+
+    tools.extend(claude_plugins.get_tools());
+
+
+
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
         tools.push(anthropic_memory::transcript_search_tool(accessor));
