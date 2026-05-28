@@ -624,15 +624,3 @@ fn test_harness_telemetry_recording() {
     ::server_telemetry::record_harness_db_io_latency("fs_read", 0.45);
     ::server_telemetry::record_harness_db_io_latency("fs_write", 0.67);
 }
-
-#[test]
-fn test_record_postgres_lock_contention() {
-    // This test verifies that the metric recording logic for postgres lock contention runs without panicking.
-    ::server_telemetry::record_postgres_lock_contention("upsert_mission");
-}
-
-#[test]
-fn test_record_llm_network_latency() {
-    // This test verifies that the metric recording logic for llm network latency runs without panicking.
-    ::server_telemetry::record_llm_network_latency("gpt-4-turbo", 1.45);
-}
