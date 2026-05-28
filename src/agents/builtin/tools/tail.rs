@@ -31,6 +31,12 @@ impl ToolExecutor for TailExecutor {
             .map_err(|e| format!("tail: {}: {}", path, e)).map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
 
         let lines_to_read = args["lines"].as_u64().unwrap_or(10) as usize;
+
+        // Just-in-Time (JIT) Retrieval Mechanic: limit to 1000 lines
+        if lines_to_read > 1000 {
+            return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Cannot read more than 1000 lines at once.".to_string()));
+        }
+
         if lines_to_read == 0 {
             return Ok(String::new());
         }
@@ -157,6 +163,24 @@ mod tests {
             assert!(msg.contains("path traversal"));
         } else {
             panic!("Expected LlmRecoverable error");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_tail_jit_retrieval_limit() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("jit_test.txt");
+        fs::write(&file_path, "dummy content").await.unwrap();
+
+        let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) };
+        let args = json!({ "path": "jit_test.txt", "lines": 1001 });
+
+        let result = executor.execute(args).await;
+        assert!(result.is_err());
+        if let Err(ToolError::LlmRecoverable(msg)) = result {
+            assert!(msg.contains("JIT Retrieval Error: Cannot read more than 1000 lines at once."));
+        } else {
+            panic!("Expected JIT Retrieval Error");
         }
     }
 
