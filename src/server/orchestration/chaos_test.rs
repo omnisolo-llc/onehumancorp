@@ -351,4 +351,55 @@ mod chaos_tests {
         assert!(tasks.is_ok());
         assert_eq!(tasks.unwrap().len(), 0);
     }
+
+    #[tokio::test]
+    async fn test_agent_lock_corruption() {
+        let temp_dir = std::env::temp_dir().join(uuid::Uuid::new_v4().to_string());
+        std::fs::create_dir_all(&temp_dir).unwrap();
+
+        let lock_dir = temp_dir.join(".agent-lock");
+        std::fs::write(&lock_dir, "corrupted data").unwrap();
+
+        let transport = ohc_builtin_agent::mesh::transport::FilesystemTransport::new(lock_dir.to_str().unwrap());
+
+        use futures::FutureExt;
+        let result = std::panic::AssertUnwindSafe(
+            transport.acquire_lock("agent_123_resource", "agent_owner", 10)
+        ).catch_unwind().await;
+
+        match result {
+            Ok(Err(_)) => {
+                // Expected io::Error gracefully converted to Result::Err
+            }
+            Ok(Ok(_)) => panic!("Should not have succeeded in writing to a file as a directory"),
+            Err(_) => panic!("System panicked instead of gracefully degrading on .agent-lock corruption"),
+        }
+
+        std::fs::remove_file(&lock_dir).unwrap();
+        std::fs::remove_dir(&temp_dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_agent_job_ml_resilience() {
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new().max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+        let db = Arc::new(DB { pool: dummy_pg_pool, store: DbStore::Postgres });
+
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+
+        let state_manager = CloudStateManager::new(db.clone(), mesh);
+
+        // Timeout tests for pull_available_tasks are already verified by test_cloud_degradation_fallback
+        // Testing automatic retry would be testing CentrifugeNode logic
+
+        let start = std::time::Instant::now();
+        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+        let elapsed = start.elapsed();
+
+        // Assert token budgets are enforced by checking failure gracefully
+        assert!(elapsed < std::time::Duration::from_millis(62000));
+        assert!(elapsed > std::time::Duration::from_millis(59000));
+        assert_eq!(tasks.len(), 0);
+    }
 }

@@ -235,10 +235,14 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
-                .bind(limit)
-                .fetch_all(&self.db.pool)
-                .await?;
+            let rows = if let crate::db::DbStore::Sqlite(pool) = &self.db.store {
+                sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT ?")
+                    .bind(limit)
+                    .fetch_all(pool)
+                    .await?
+            } else {
+                vec![]
+            };
 
             for row in rows {
                 use sqlx::Row;
@@ -277,14 +281,28 @@ impl AutoDreamWorker {
 
     async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
         // Fetch sessions that aren't compressed yet
-        let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
-            .fetch_all(&db.pool)
-            .await?;
+        let mut sessions: Vec<(String, String)> = Vec::new();
+        if db.is_sqlite() {
+            if let crate::db::DbStore::Sqlite(pool) = &db.store {
+                let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
+                    .fetch_all(pool)
+                    .await?;
+                for row in rows {
+                    use sqlx::Row;
+                    sessions.push((row.get("session_id"), row.get("context_data")));
+                }
+            }
+        } else {
+            let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
+                .fetch_all(&db.pool)
+                .await?;
+            for row in rows {
+                use sqlx::Row;
+                sessions.push((row.get("session_id"), row.get("context_data")));
+            }
+        };
 
-        for row in rows {
-            use sqlx::Row;
-            let session_id: String = row.get("session_id");
-            let mut context_data: String = row.get("context_data");
+        for (session_id, mut context_data) in sessions {
             if context_data.starts_with("gz_b64:") {
                 if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
@@ -292,27 +310,51 @@ impl AutoDreamWorker {
             }
 
             if let Ok(compressed) = crate::pricing::compression::compress_lossless(&context_data) {
-                sqlx::query("UPDATE agent_session_data SET context_data = $1 WHERE session_id = $2")
-                    .bind(compressed)
-                    .bind(&session_id)
-                    .execute(&db.pool)
-                    .await?;
+                if db.is_sqlite() {
+                    if let crate::db::DbStore::Sqlite(pool) = &db.store {
+                        sqlx::query("UPDATE agent_session_data SET context_data = ? WHERE session_id = ?")
+                            .bind(compressed)
+                            .bind(&session_id)
+                            .execute(pool)
+                            .await?;
+                    }
+                } else {
+                    sqlx::query("UPDATE agent_session_data SET context_data = $1 WHERE session_id = $2")
+                        .bind(compressed)
+                        .bind(&session_id)
+                        .execute(&db.pool)
+                        .await?;
+                }
             }
         }
         Ok(())
     }
 
     async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
-        let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
-            .fetch_all(&db.pool)
-            .await?;
+        let mut sessions: Vec<(String, String, String)> = Vec::new();
+        if db.is_sqlite() {
+            if let crate::db::DbStore::Sqlite(pool) = &db.store {
+                let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+                    .fetch_all(pool)
+                    .await?;
+                for row in rows {
+                    use sqlx::Row;
+                    sessions.push((row.get("session_id"), row.get("agent_id"), row.get("context_data")));
+                }
+            }
+        } else {
+            let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
+                .fetch_all(&db.pool)
+                .await?;
+            for row in rows {
+                use sqlx::Row;
+                sessions.push((row.get("session_id"), row.get("agent_id"), row.get("context_data")));
+            }
+        };
 
         let client = crate::minimax::LocalLLMClient::new();
 
-        for row in rows {
-            let session_id: String = row.get("session_id");
-            let _agent_id: String = row.get("agent_id");
-            let mut context_data: String = row.get("context_data");
+        for (session_id, _agent_id, mut context_data) in sessions {
             if context_data.starts_with("gz_b64:") {
                 if let Ok(decompressed) = crate::pricing::compression::decompress_lossless(&context_data) {
                     context_data = decompressed;
