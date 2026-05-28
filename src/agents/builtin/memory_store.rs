@@ -18,6 +18,20 @@ pub struct EmbeddingRecord {
     pub metadata: Option<String>,
 }
 
+#[async_trait]
+pub trait ConflictResolver: Send + Sync {
+    async fn merge_conflicts(&self, old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String>;
+}
+
+pub struct MockConflictResolver;
+
+#[async_trait]
+impl ConflictResolver for MockConflictResolver {
+    async fn merge_conflicts(&self, _old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String> {
+        Ok((new_content.to_string(), vec![0.0; 1536]))
+    }
+}
+
 pub enum VectorMemoryStore {
     Postgres(sqlx::PgPool),
     Sqlite(sqlx::SqlitePool),
@@ -380,7 +394,7 @@ impl VectorRepository {
 
     /// Automatically detects and resolves conflicts based on semantic similarity.
     /// It uses explicit owner override, reliability score, and recency to determine the winner.
-    pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
+    pub async fn auto_resolve_conflicts(&self, resolver: &dyn ConflictResolver) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
         let mut resolved_count = 0;
         let mut deleted_ids = std::collections::HashSet::new();
@@ -390,9 +404,32 @@ impl VectorRepository {
                 continue;
             }
             let (winner, loser) = Self::determine_conflict_winner(&a, &b);
-            self.resolve_conflict(winner, loser).await?;
-            deleted_ids.insert(loser.id.clone());
-            resolved_count += 1;
+            let (old, new) = if a.created_at < b.created_at { (&a, &b) } else { (&b, &a) };
+
+            match resolver.merge_conflicts(&old.content, &new.content).await {
+                Ok((merged_content, merged_embedding)) => {
+                    let mut updated_winner = winner.clone();
+                    updated_winner.content = merged_content;
+                    updated_winner.embedding = merged_embedding;
+
+                    self.delete(&loser.id).await?;
+                    updated_winner.reference_count += loser.reference_count + 1;
+                    updated_winner.last_referenced_at = chrono::Utc::now();
+                    if loser.owner_override && !updated_winner.owner_override {
+                        updated_winner.owner_override = true;
+                    }
+                    self.upsert(&updated_winner).await?;
+
+                    deleted_ids.insert(loser.id.clone());
+                    resolved_count += 1;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to merge conflicts: {}, falling back to static resolve", e);
+                    self.resolve_conflict(winner, loser).await?;
+                    deleted_ids.insert(loser.id.clone());
+                    resolved_count += 1;
+                }
+            }
         }
 
         Ok(resolved_count)
@@ -435,7 +472,7 @@ impl VectorRepository {
                         b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                     FROM consolidated_memory a
                     JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                    WHERE a.embedding <=> b.embedding < 0.05
+                    WHERE a.embedding <=> b.embedding < 0.10
                     LIMIT 10
                 ";
                 let rows = sqlx::query(query)
@@ -497,7 +534,7 @@ impl VectorRepository {
                             b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
                         FROM consolidated_memory a
                         JOIN consolidated_memory b ON a.tenant_id = b.tenant_id AND a.id < b.id
-                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.05
+                        WHERE vec_distance_cosine(a.embedding, b.embedding) < 0.10
                         LIMIT 10
                     ";
                     let rows = sqlx::query(query)
@@ -606,7 +643,7 @@ impl VectorRepository {
                                 // Ensure a consistent ordering to avoid duplicate pairs in different orders
                                 let (record_a, record_b) = if a.id < b.id { (a, b) } else { (b, a) };
                                 let distance = cosine_distance(&record_a.embedding, &record_b.embedding);
-                                if distance < 0.05 {
+                                if distance < 0.10 {
                                     conflicts.push((record_a.clone(), record_b.clone()));
                                     match_count += 1;
                                     if match_count >= 10 {
@@ -1136,7 +1173,7 @@ mod get_conflicts_tests {
         repo.upsert(&r1).await.unwrap();
         repo.upsert(&r2).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&MockConflictResolver).await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, owner_override FROM consolidated_memory";
@@ -1354,7 +1391,7 @@ mod get_conflicts_tests {
         repo.upsert(&r5).await.unwrap();
         repo.upsert(&r6).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&MockConflictResolver).await.unwrap();
         assert_eq!(resolved, 3); // 3 conflicts resolved
 
         let query = "SELECT id, reference_count FROM consolidated_memory";
@@ -1553,7 +1590,7 @@ mod get_conflicts_tests {
         repo.upsert(&r1).await.unwrap();
         repo.upsert(&r2).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&MockConflictResolver).await.unwrap();
         assert_eq!(resolved, 1);
 
         let query = "SELECT id, reference_count FROM consolidated_memory WHERE tenant_id = 'org4'";
@@ -2390,7 +2427,7 @@ mod e2e_consolidation_tests {
         let mut v1 = vec![0.0; 10];
         v1[0] = 1.0;
         let mut v2 = vec![0.0; 10];
-        v2[0] = 0.99; // < 0.05 distance to trigger conflict
+        v2[0] = 0.99; // < 0.10 distance to trigger conflict
 
         let record_a = EmbeddingRecord {
             id: "conflict_a".to_string(),
@@ -2426,7 +2463,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&record_b).await.unwrap();
 
         // Auto resolve conflicts
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&MockConflictResolver).await.unwrap();
         assert_eq!(resolved, 1, "Should have resolved 1 conflict pair");
 
         // Verify winner and loser
@@ -2612,7 +2649,7 @@ mod e2e_consolidation_tests {
         repo.upsert(&record_a).await.unwrap();
         repo.upsert(&record_b).await.unwrap();
 
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&MockConflictResolver).await.unwrap();
         assert_eq!(resolved, 1, "Should resolve 1 conflict");
 
         // The fallback logic selects the one with the smaller (or larger) ID depending on order,
