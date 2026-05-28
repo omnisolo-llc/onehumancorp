@@ -553,8 +553,6 @@ impl AgentServiceImpl {
 
         AgentRunConfig {
             enable_progressive_skills: false,
-            enable_sona_neural_patterns: false,
-            sona_pattern_matcher: None,
             progressive_skills_dir: None,
             max_retries: 2,
             enable_single_agent_maximization: false,
@@ -605,6 +603,7 @@ impl AgentServiceImpl {
             // Long-term memory store for cross-department context sharing
             long_term_memory,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
         }
     }
@@ -969,8 +968,6 @@ impl AgentService for AgentServiceImpl {
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
                 enable_progressive_skills: false,
-            enable_sona_neural_patterns: false,
-            sona_pattern_matcher: None,
                 progressive_skills_dir: None,
                 max_retries: 2,
                 enable_single_agent_maximization: false,
@@ -1027,6 +1024,7 @@ impl AgentService for AgentServiceImpl {
                 max_rewind_attempts: 3,
                 long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
             };
 
