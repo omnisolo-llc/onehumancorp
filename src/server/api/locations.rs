@@ -42,7 +42,7 @@ pub async fn handle_create_location(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
+    if let Err(e) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
@@ -72,7 +72,7 @@ pub async fn handle_create_location(
 
     if let Ok(products) = products {
         for product in products {
-            if let Err(_) = sqlx::query!(
+            if let Err(e) = sqlx::query!(
                 "INSERT INTO inventory_ledgers (node_id, tenant_id, product_id, available_qty, reserved_qty) VALUES ($1, $2, $3, 0, 0)",
                 node_id, tenant_id, product.id
             )
@@ -85,7 +85,7 @@ pub async fn handle_create_location(
         return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch products").into_response();
     }
 
-    if let Err(_) = tx.commit().await {
+    if let Err(e) = tx.commit().await {
         return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to commit transaction").into_response();
     }
 
@@ -127,7 +127,7 @@ pub async fn handle_get_inventory(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
+    if let Err(e) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
@@ -207,7 +207,7 @@ pub async fn handle_sync_offline_sales(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
+    if let Err(e) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
@@ -215,7 +215,7 @@ pub async fn handle_sync_offline_sales(
     }
 
     for sale in payload.sales {
-        if let Err(_) = sqlx::query!(
+        if let Err(e) = sqlx::query!(
             "UPDATE inventory_ledgers SET available_qty = available_qty - $1 WHERE tenant_id = $2 AND node_id = $3 AND product_id = $4",
             sale.qty, tenant_id, node_id, sale.product_id
         )
@@ -225,7 +225,7 @@ pub async fn handle_sync_offline_sales(
         }
     }
 
-    if let Err(_) = tx.commit().await {
+    if let Err(e) = tx.commit().await {
         return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to commit offline sales sync").into_response();
     }
 
