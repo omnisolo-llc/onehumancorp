@@ -15,7 +15,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
   });
 
   afterEach(() => {
@@ -23,15 +23,23 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock first load API (which is called by useEffect)
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
 
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
@@ -50,8 +58,11 @@ describe('OnboardingWizard', () => {
       json: async () => ({ message: "Success!" })
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
@@ -95,13 +106,22 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
+    // Mock initial load
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
+    await waitFor(() => {
+        expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
 
@@ -124,13 +144,22 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
+    // Mock initial load
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    await act(async () => { render(<OnboardingWizard />); });
 
+    await waitFor(() => {
+        expect(screen.getByText("Style & Team")).toBeInTheDocument();
+    });
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
     await act(async () => {
@@ -150,7 +179,13 @@ describe('OnboardingWizard', () => {
       startResult: { message: "Your business has been successfully launched." }
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    // Mock initial load
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({})
+    });
+
+    await act(async () => { render(<OnboardingWizard />); });
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
