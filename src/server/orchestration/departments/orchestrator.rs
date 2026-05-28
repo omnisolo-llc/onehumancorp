@@ -156,6 +156,31 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn start_mesh_listener(self: Arc<Self>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        let orchestrator_clone = self.clone();
+
+        let handler = Box::new(move |msg: ohc_builtin_agent::mesh::transport::Message| {
+            if let Ok(event) = serde_json::from_slice::<DepartmentEvent>(&msg.payload) {
+                let orch = orchestrator_clone.clone();
+                tokio::spawn(async move {
+                    let subscriptions = orch.event_subscriptions.read().await;
+                    if let Some(dep_types) = subscriptions.get(&event.event_type) {
+                        let departments = orch.departments.read().await;
+                        for dep_type in dep_types {
+                            if let Some(dep) = departments.get(dep_type) {
+                                let fut = dep.read().await;
+                                let _ = fut.handle_event(&event).await;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        self.mesh.subscribe("department_event:>", handler).await
+    }
+
+
     pub async fn dispatch_event(&self, event: DepartmentEvent) -> Result<(), String> {
         let topic = format!("department_event:{}", event.event_type);
         let payload = serde_json::to_vec(&event).map_err(|e| e.to_string())?;

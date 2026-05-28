@@ -1879,6 +1879,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     dept_orchestrator.register_department(cs_agent).await;
     dept_orchestrator.register_department(mkt_agent).await;
 
+    if let Err(e) = dept_orchestrator.clone().start_mesh_listener().await {
+        tracing::error!("Failed to start department mesh listener: {}", e);
+    }
+
+
     let handoff_manager = crate::orchestration::handoff::HandoffManager::new(
         handoff_mesh.clone(),
         db.clone(),

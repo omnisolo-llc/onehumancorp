@@ -102,7 +102,7 @@ export default function TeamPage() {
         <div className="pt-12 pb-6 px-6 bg-white/65 backdrop-blur-[30px] border-b border-white/40 sticky top-0 z-10 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold font-outfit text-gray-900 tracking-tight">Your Team</h1>
-            <p className="text-gray-500 text-sm mt-1">Invisible specialized AI teams</p>
+            <p className="text-gray-500 text-sm mt-1">{approvals.length > 0 ? `${approvals.length} Actions Required` : "All Clear"}</p>
           </div>
           <button
             onClick={() => window.location.href = '/team/chat'}
