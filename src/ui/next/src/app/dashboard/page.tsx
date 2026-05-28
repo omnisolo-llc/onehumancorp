@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
+  const [milestoneDismissed, setMilestoneDismissed] = useState<boolean>(typeof localStorage !== 'undefined' ? localStorage.getItem('milestone_dismissed') === 'true' : false);
+  const [totalOrders, setTotalOrders] = useState<number>(typeof localStorage !== 'undefined' ? parseInt(localStorage.getItem('total_orders') || '0', 10) : 0);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
   // Growth Loop: Trial Extension State
@@ -240,6 +242,14 @@ export default function Dashboard() {
     setCampaignSuccess(true);
   };
 
+  const shareMilestone = () => {
+    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just hit my 10th order on my new store! Build your dream business on One Human Corp: ohc://join?ref=' + tenant)}`, '_blank');
+    alert('Thanks for sharing!');
+    localStorage.setItem('milestone_dismissed', 'true');
+    setMilestoneDismissed(true);
+  };
+
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
@@ -434,6 +444,28 @@ export default function Dashboard() {
                </div>
            </div>
          </section>
+
+         {/* Success Milestone Alert */}
+         {(totalOrders >= 10 && !milestoneDismissed) && (
+           <section className="mb-6 animate-fade-in">
+             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
+               <div className="flex items-center gap-3 mb-2">
+                 <div className="text-2xl">🎉</div>
+                 <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>10th Order Milestone Reached!</h2>
+               </div>
+               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
+                 You are in the top 10% of new merchants. Share your success!
+               </p>
+               <div className="flex gap-4">
+                 <button onClick={() => { localStorage.setItem('milestone_dismissed', 'true'); setMilestoneDismissed(true); }} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
+                 <button onClick={shareMilestone} className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: '#1DA1F2' }}>
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                    Share Milestone on X
+                 </button>
+               </div>
+             </div>
+           </section>
+         )}
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
