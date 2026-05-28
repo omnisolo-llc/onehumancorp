@@ -4354,7 +4354,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
+                                let state = { step: currentStep };
+
+                                const existingState = localStorage.getItem('ohc_wizard_state');
+                                if (existingState) {
+                                    try {
+                                        const parsed = JSON.parse(existingState);
+                                        state = { ...parsed, ...state };
+                                    } catch(e) {}
+                                }
+
                                 Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
                                     const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
@@ -4410,17 +4419,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 console.error('Failed to load state from server', e);
                             }
 
-                            if (!state) {
-                                const saved = localStorage.getItem('ohc_wizard_state');
-                                if (saved) {
-                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
-                                }
+                            const saved = localStorage.getItem('ohc_wizard_state');
+                            if (saved) {
+                                try {
+                                    const localState = JSON.parse(saved);
+                                    if (localState) {
+                                        state = { ...localState, ...state };
+                                    }
+                                } catch (e) { console.error('Failed to parse wizard state', e); }
                             }
 
                             if (state) {
                                 if (state.step) currentStep = state.step;
                                 inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
                                             input.checked = state[key];
@@ -5112,46 +5124,57 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            let hasError = false;
+
+                            // Reset previous errors
+                            document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
+                                input.style.border = "";
+                            });
+
                             if (stepId === 3 && currentStep === 2) {
-                                let valid = false;
-                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
-                                });
+                                let valid = onboardingState.business_type ? true : false;
+                                const input = document.getElementById('step-2-business-type');
+                                if (input && input.value.trim().length >= 3) valid = true;
+
                                 if (!valid) {
-                                    alert('Please select a business type');
-                                    return false;
+                                    if(input) input.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 4 && currentStep === 3) {
-                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
-                                    return false;
+                                const input1 = document.getElementById('step-3-business-name');
+                                const input2 = document.getElementById('step-3-business-name-2');
+                                if ((!input1 || input1.value.trim().length < 3) && (!input2 || input2.value.trim().length < 3)) {
+                                    if(input1) input1.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
-                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                const nameInput = document.getElementById('step-5-product-name');
+                                const priceInput = document.getElementById('step-5-product-price');
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
-                                    return false;
+                                    if(nameInput) nameInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
-                                    return false;
+                                    if(priceInput) priceInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
-                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                const emailInput = document.getElementById('step-7-user-email');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
-                                    return false;
+                                    if(emailInput) emailInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
+                                }
+                                const pwdInput = document.getElementById('step-7-user-password');
+                                if (!pwdInput || pwdInput.value.trim().length < 6) {
+                                    if(pwdInput) pwdInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
-                            return true;
+                            return !hasError;
                         }
 
 
@@ -5159,20 +5182,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const prevStep = currentStep;
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
-                                // Enhanced Input Validation - only validate when moving forward
-                                let hasError = false;
                                 if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
+                                    if (!validateInputs(stepId)) return;
                                 }
-                                if (hasError) return;
 
                                 try {
                                     const stateData = { step: stepId };
