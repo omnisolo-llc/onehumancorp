@@ -2,6 +2,8 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-backend
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
@@ -99,6 +101,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-core
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
@@ -154,6 +158,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-chatwoot
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
@@ -209,6 +215,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-powersync
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
@@ -264,6 +272,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-redis
   labels:
     {{- include "ohc.labels" . | nindent 4 }}
@@ -304,6 +314,8 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  annotations:
+    spiffe.io/spire-managed-identity: "true"
   name: {{ include "ohc.fullname" . }}-cnpg
   labels:
     {{- include "ohc.labels" . | nindent 4 }}

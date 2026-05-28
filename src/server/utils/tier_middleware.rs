@@ -82,7 +82,7 @@ mod tests {
                 let mut conn = client.get_multiplexed_async_connection().await.unwrap();
                 let _: () = conn.set("tenant:test_tenant:actions_used", 101).await.unwrap();
 
-                let app = setup_test_router(limiter).await;
+                let app = setup_test_router(limiter.clone()).await;
 
                 // We use tower::ServiceExt's call method via tower's oneshot on a service,
                 // avoiding axum's internal details. But since we had import errors for oneshot,
@@ -105,7 +105,9 @@ mod tests {
                 // Because we didn't send a valid Claims extension (no auth middleware here to set it),
                 // it defaults to "system" tenant. If "system" has no limits hit, it might return 200,
                 // or 402 if we hit the limit. We can't strictly assert 402 without setting the "system" usage too.
-                let _: () = conn.set("tenant:system:actions_used", 101).await.unwrap();
+                let _ = limiter.set_tenant_tier("system", PlanTier::Free).await;
+                let month_key = chrono::Utc::now().format("%Y-%m").to_string();
+                let _: () = conn.set(format!("tenant:system:actions_used:{}", month_key), 101).await.unwrap();
                 let res2 = client.get(&format!("http://{}/api/v1/protected/action", addr))
                     .send()
                     .await
