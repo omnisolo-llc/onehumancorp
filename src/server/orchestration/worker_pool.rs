@@ -132,8 +132,8 @@ impl WorkerPool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::msgbus::Message;
-    use prost::Message as ProstMessage;
+    use ohc_builtin_agent_core::types::Message;
+    use prost::Message;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 

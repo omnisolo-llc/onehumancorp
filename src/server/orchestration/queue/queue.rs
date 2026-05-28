@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Job {
