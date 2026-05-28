@@ -552,6 +552,7 @@ impl AgentServiceImpl {
         };
 
         AgentRunConfig {
+            playwright_script_path: req.runtime_config.as_ref().map(|rc| rc.playwright_script_path.clone()).unwrap_or_default(),
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             max_retries: 2,
@@ -967,6 +968,7 @@ impl AgentService for AgentServiceImpl {
 
             let llm = self.resolve_llm(&sub_req.llm_provider, &sub_req.model, "");
             let run_cfg = AgentRunConfig {
+                playwright_script_path: sub_req.runtime_config.as_ref().map(|rc| rc.playwright_script_path.clone()).unwrap_or_default(),
                 enable_progressive_skills: false,
                 progressive_skills_dir: None,
                 max_retries: 2,

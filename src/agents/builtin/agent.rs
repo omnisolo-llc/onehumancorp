@@ -123,6 +123,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_visual_verification: bool,
     pub enable_hnsw_memory: bool,
     pub visual_verification_command: String,
+    pub playwright_script_path: String,
     pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
     pub state_scratchpad_path: Option<String>,
@@ -180,6 +181,7 @@ enable_llmcompiler_plan_and_execute: false,
             enable_visual_verification: false,
             enable_hnsw_memory: false,
             visual_verification_command: String::new(),
+            playwright_script_path: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
             state_scratchpad_path: None,
@@ -2143,8 +2145,15 @@ impl Agent {
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
                 }
-                if final_cfg.enable_visual_verification && !final_cfg.visual_verification_command.is_empty() {
-                    verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                if final_cfg.enable_visual_verification {
+                    if !final_cfg.playwright_script_path.is_empty() {
+                        verification_manager.add_visual(Arc::new(crate::verification_loops::PlaywrightVisualVerifier {
+                            script_path: final_cfg.playwright_script_path.clone(),
+                            workspace_path: final_cfg.workspace_path.clone()
+                        }));
+                    } else if !final_cfg.visual_verification_command.is_empty() {
+                        verification_manager.add_visual(Arc::new(BashVisualVerifier { command: final_cfg.visual_verification_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
+                    }
                 }
                 if final_cfg.enable_llm_judge {
                     verification_manager.add_inferential(Arc::new(crate::verification_loops::LlmJudgeSensor { llm: self.llm.clone() }));
