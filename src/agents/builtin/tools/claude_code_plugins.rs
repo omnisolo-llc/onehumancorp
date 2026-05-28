@@ -1,6 +1,6 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::process::Command;
@@ -33,7 +33,10 @@ impl ToolExecutor for ClaudeCodePluginExecutor {
             .map_err(|e| ToolError::LlmRecoverable(format!("Failed to serialize args: {}", e)))?;
 
         // Simple template replacement
-        let command_str = self.manifest.execute_command.replace("{{args}}", &format!("'{}'", args_str.replace("'", "'\\''")));
+        let command_str = self
+            .manifest
+            .execute_command
+            .replace("{{args}}", &format!("'{}'", args_str.replace("'", "'\\''")));
 
         let mut cmd = Command::new("bash");
         cmd.arg("-c").arg(&command_str);
@@ -42,14 +45,18 @@ impl ToolExecutor for ClaudeCodePluginExecutor {
             cmd.current_dir(wd);
         }
 
-        let output = cmd.output().await
-            .map_err(|e| ToolError::Transient(format!("Failed to execute plugin command: {}", e)))?;
+        let output = cmd.output().await.map_err(|e| {
+            ToolError::Transient(format!("Failed to execute plugin command: {}", e))
+        })?;
 
         if output.status.success() {
             Ok(String::from_utf8_lossy(&output.stdout).to_string())
         } else {
             let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-            Err(ToolError::LlmRecoverable(format!("Plugin execution failed: {}", stderr)))
+            Err(ToolError::LlmRecoverable(format!(
+                "Plugin execution failed: {}",
+                stderr
+            )))
         }
     }
 }
@@ -115,13 +122,19 @@ mod tests {
             execute_command: "echo {{args}}".to_string(),
         };
 
-        fs::write(&plugin_path, serde_json::to_string(&manifest).unwrap()).await.unwrap();
+        fs::write(&plugin_path, serde_json::to_string(&manifest).unwrap())
+            .await
+            .unwrap();
 
         let tools = load_claude_code_plugins(dir.path(), None).await;
         assert_eq!(tools.len(), 1);
         assert_eq!(tools[0].name, "TestPlugin");
 
-        let result = tools[0].execute.execute(json!({"msg": "hello"})).await.unwrap();
+        let result = tools[0]
+            .execute
+            .execute(json!({"msg": "hello"}))
+            .await
+            .unwrap();
         assert!(result.contains("hello"));
     }
 }
