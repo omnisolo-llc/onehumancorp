@@ -19,6 +19,22 @@
   "links": [],
   "panels": [
     {
+      "type": "text",
+      "title": "OHC Aesthetics",
+      "id": 4,
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
@@ -68,7 +84,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 0
+        "y": 2
       },
       "id": 1,
       "options": {
@@ -143,7 +159,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 0
+        "y": 2
       },
       "id": 2,
       "options": {
@@ -218,7 +234,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 8
+        "y": 10
       },
       "id": 3,
       "options": {

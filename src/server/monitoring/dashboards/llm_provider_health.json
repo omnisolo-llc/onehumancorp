@@ -16,12 +16,28 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetic Injector",
+      "title": "OHC Aesthetics",
+      "id": 1,
       "gridPos": {
         "h": 2,
         "w": 24,
         "x": 0,
         "y": 0
+      },
+      "options": {
+        "mode": "html",
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
+      },
+      "transparent": true
+    },
+    {
+      "type": "text",
+      "title": "OHC Aesthetic Injector",
+      "gridPos": {
+        "h": 2,
+        "w": 24,
+        "x": 0,
+        "y": 2
       },
       "options": {
         "mode": "html",
@@ -36,7 +52,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 2
+        "y": 4
       },
       "datasource": "Prometheus",
       "targets": [
@@ -55,7 +71,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 2
+        "y": 4
       },
       "datasource": "Prometheus",
       "targets": [
@@ -74,7 +90,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 12
       },
       "datasource": "Prometheus",
       "targets": [
@@ -93,7 +109,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 20
       },
       "datasource": "Prometheus",
       "targets": [
