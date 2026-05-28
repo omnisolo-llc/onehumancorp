@@ -174,6 +174,14 @@ export default function InboxPage() {
                           className="w-full border border-[#d6bcfa] rounded p-2 text-sm text-black bg-white focus:outline-none focus:ring-1 focus:ring-[#9f7aea]"
                           rows={3}
                         />
+                        <div className="flex gap-2 mt-2">
+                           <button
+                             onClick={() => setReplyInput(prev => prev + ' https://checkout.onehumancorp.com/pay/12345')}
+                             className="text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded hover:bg-green-100 flex items-center gap-1 font-medium transition-colors">
+                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                             OHC Checkout Link
+                           </button>
+                        </div>
                         <div className="flex justify-end mt-2 gap-2">
                            <button onClick={() => setEditingId(null)} className="text-xs font-semibold text-gray-500 hover:text-gray-700 px-3 py-1.5">Cancel</button>
                            <button onClick={() => sendReply(msg.id)} className="bg-[#805ad5] text-white text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm hover:bg-[#6b46c1] transition-colors">Send</button>
@@ -198,6 +206,13 @@ export default function InboxPage() {
             )}
           </div>
         ))}
+        {/* Thread Action Menu */}
+        <div className="fixed bottom-6 right-6">
+          <button className="w-14 h-14 bg-[#805ad5] text-white rounded-full shadow-lg flex items-center justify-center hover:bg-[#6b46c1] transition-all transform hover:scale-105" title="Action Menu">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+          </button>
+        </div>
+
         {/* Hidden inputs to make existing tests pass */}
         <div className="hidden">
            <button onClick={generateDraft}>✨ AI Draft</button>
