@@ -900,7 +900,7 @@ pub async fn insert_autodream_memory(
 
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
-        let res = match &self.store {
+        let res: Result<(), Box<dyn std::error::Error>> = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     "UPDATE agent_missions
@@ -917,30 +917,24 @@ pub async fn insert_autodream_memory(
                 .map_err(|e| e.into())
             },
             DbStore::Postgres => {
-                match self.pool.begin().await {
-                    Ok(mut tx) => {
-                        let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
-                        let query_res = sqlx::query(
-                            "UPDATE agent_missions
-                             SET status = 'blocked',
-                                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                                 updated_at = CURRENT_TIMESTAMP
-                             WHERE id = $2"
-                        )
-                        .bind(blockers)
-                        .bind(mission_id)
-                        .execute(&mut *tx)
-                        .await;
-
-                        match query_res {
-                            Ok(_) => {
-                                tx.commit().await.map_err(|e| e.into())
-                            },
-                            Err(e) => Err(e.into())
-                        }
-                    },
-                    Err(e) => Err(e.into())
-                }
+                let perform_update = async {
+                    let mut tx = self.pool.begin().await?;
+                    let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
+                    sqlx::query(
+                        "UPDATE agent_missions
+                         SET status = 'blocked',
+                             mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                             updated_at = CURRENT_TIMESTAMP
+                         WHERE id = $2"
+                    )
+                    .bind(blockers)
+                    .bind(mission_id)
+                    .execute(&mut *tx)
+                    .await?;
+                    tx.commit().await?;
+                    Ok(())
+                };
+                perform_update.await
             }
         };
 
@@ -949,7 +943,7 @@ pub async fn insert_autodream_memory(
             let fallback_path = "MISSION_BLOCKERS_FALLBACK.log";
             let log_entry = format!(
                 "[{}] MISSION_ID: {}, BLOCKERS: {}, DB_ERROR: {}\n",
-                chrono::Utc::now().to_rfc3339(),
+                Utc::now().to_rfc3339(),
                 mission_id,
                 blockers,
                 e
