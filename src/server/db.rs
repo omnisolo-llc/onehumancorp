@@ -571,6 +571,7 @@ impl DB {
                         occurred_at TEXT DEFAULT CURRENT_TIMESTAMP,
                         task_id TEXT,
                         transitioned_at TEXT,
+                        parent_plan_id TEXT,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );

@@ -7,3 +7,5 @@ filegroup(
         "//src/server/db:__pkg__",
     ],
 )
+
+exports_files(["019_kairos_phase1.sql"])

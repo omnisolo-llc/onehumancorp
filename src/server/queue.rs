@@ -796,11 +796,17 @@ pub struct SharedTaskModel {
 
 pub struct TaskQueueService {
     pool: sqlx::PgPool,
+    db: Option<std::sync::Arc<crate::db::DB>>,
 }
 
 impl TaskQueueService {
     pub fn new(pool: sqlx::PgPool) -> Self {
-        TaskQueueService { pool }
+        TaskQueueService { pool, db: None }
+    }
+
+    pub fn with_db(mut self, db: std::sync::Arc<crate::db::DB>) -> Self {
+        self.db = Some(db);
+        self
     }
 
     pub async fn push_task(&self, task: SharedTaskModel) -> Result<(), sqlx::Error> {
@@ -829,6 +835,53 @@ impl TaskQueueService {
     }
 
     pub async fn claim_task(&self, agent_id: &str) -> Result<Option<SharedTaskModel>, sqlx::Error> {
+        let is_sqlite = self.db.as_ref().map(|db| db.is_sqlite()).unwrap_or(false);
+
+        if is_sqlite {
+            if let Some(db) = &self.db {
+                if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+                    let mut tx = sqlite_pool.begin().await?;
+                    let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = ? WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = ?) AND NOT EXISTS (SELECT 1 FROM json_each(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id = dep_id.value WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
+                        .bind(agent_id)
+                        .bind(agent_id)
+                        .fetch_optional(&mut *tx)
+                        .await?;
+                    tx.commit().await?;
+
+                    if let Some(row) = row {
+                        let payload_str: String = row.get("payload");
+                        let payload: serde_json::Value = serde_json::from_str(&payload_str).unwrap_or_else(|_| serde_json::json!({}));
+                        let deps_str: String = row.get("dependencies");
+                        let dependencies: serde_json::Value = serde_json::from_str(&deps_str).unwrap_or_else(|_| serde_json::json!([]));
+
+                        let created_str: String = row.get("created_at");
+                        let dt_created = chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
+                        let updated_str: String = row.get("updated_at");
+                        let dt_updated = chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&Utc)).unwrap_or_else(|_| Utc::now());
+
+                        return Ok(Some(SharedTaskModel {
+                            id: row.get("id"),
+                            tenant_id: row.get("tenant_id"),
+                            parent_id: row.try_get("parent_id").ok(),
+                            epic_id: row.try_get("epic_id").ok(),
+                            title: row.get("title"),
+                            status: row.get("status"),
+                            assigned_agent: row.try_get("assigned_agent").ok(),
+                            payload,
+                            dependencies,
+                            created_at: dt_created,
+                            updated_at: dt_updated,
+                            action_risk: row.try_get("action_risk").ok(),
+                            approval_status: row.try_get("approval_status").ok(),
+                            proposed_content: row.try_get("proposed_content").ok(),
+                        }));
+                    } else {
+                        return Ok(None);
+                    }
+                }
+            }
+        }
+
         let mut tx = self.pool.begin().await?;
         sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
         let row = sqlx::query("UPDATE shared_tasks SET status = 'IN_PROGRESS', assigned_agent = $1 WHERE id = (SELECT st.id FROM shared_tasks st WHERE st.status = 'PENDING' AND (st.approval_status IS NULL OR st.approval_status != 'PENDING') AND (st.assigned_agent IS NULL OR st.assigned_agent = $1) AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(st.dependencies) AS dep_id JOIN shared_tasks parent ON parent.id::text = dep_id WHERE parent.status != 'COMPLETED') ORDER BY st.created_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_id, epic_id, title, status, assigned_agent, payload, dependencies::text AS dependencies, created_at, updated_at, action_risk, approval_status, proposed_content")
@@ -1289,7 +1342,8 @@ mod tests {
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-            let service = TaskQueueService::new(pool.clone());
+            let db = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+            let service = TaskQueueService::new(pool.clone()).with_db(db);
 
             // Initialize schema for test
             sqlx::query("CREATE TABLE IF NOT EXISTS shared_tasks (id VARCHAR PRIMARY KEY, parent_id VARCHAR, epic_id VARCHAR, title VARCHAR NOT NULL, status VARCHAR NOT NULL, assigned_agent VARCHAR, payload JSONB, tenant_id VARCHAR, dependencies JSONB DEFAULT '[]', created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)")
@@ -1427,7 +1481,8 @@ mod tests {
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-            let service = TaskQueueService::new(pool.clone());
+            let db = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+            let service = TaskQueueService::new(pool.clone()).with_db(db);
 
             let task_id = uuid::Uuid::new_v4().to_string();
             let task = SharedTaskModel {
@@ -1480,7 +1535,8 @@ mod tests {
                 .connect_lazy(&db_url)
                 .unwrap();
             if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
-            let service = TaskQueueService::new(pool.clone());
+            let db = std::sync::Arc::new(crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+            let service = TaskQueueService::new(pool.clone()).with_db(db);
 
             let task_id_parent = uuid::Uuid::new_v4().to_string();
             let task_id_child = uuid::Uuid::new_v4().to_string();

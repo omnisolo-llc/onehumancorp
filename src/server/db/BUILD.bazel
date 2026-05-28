@@ -3,6 +3,7 @@ filegroup(
     name = "embedsrcs",
     srcs = [
         "//src/server/migrations:migrations",
+        "//src/server/migrations:019_kairos_phase1.sql",
     ],
     visibility = ["//visibility:public"],
 )
