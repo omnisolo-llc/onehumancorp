@@ -97,6 +97,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     let (host, ip) = validate_url_and_get_ip(&disc_url).await?;
     let client = reqwest::Client::builder()
         .resolve(&host, std::net::SocketAddr::new(ip, if disc_url.starts_with("https") { 443 } else { 80 }))
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -111,6 +112,7 @@ async fn fetch_jwks(issuer_url: &str) -> Result<Vec<JWK>, String> {
     let (jwks_host, jwks_ip) = validate_url_and_get_ip(&disc.jwks_uri).await?;
     let jwks_client = reqwest::Client::builder()
         .resolve(&jwks_host, std::net::SocketAddr::new(jwks_ip, if disc.jwks_uri.starts_with("https") { 443 } else { 80 }))
+        .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -207,7 +209,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
-        organization_id: None,
+        organization_id: raw.get("organization_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),

@@ -41,6 +41,9 @@ while true; do
                 echo -e "${PURPLE}✗ sqlite3 is not installed. Please install it to perform the DB Health Check.${RESET}"
             elif [ -f "$HOME/.ohc-local-data/standalone.db" ]; then
                 echo -e "${GREEN}✓ Standalone DB found. Checking tables...${RESET}"
+                # Harden local storage permissions during health check as an added safety measure
+                chmod 700 "$HOME/.ohc-local-data" 2>/dev/null || true
+                chmod 600 "$HOME/.ohc-local-data/standalone.db" 2>/dev/null || true
                 sqlite3 "$HOME/.ohc-local-data/standalone.db" ".tables" || echo -e "${PURPLE}DB Check failed with exit status $?.${RESET}"
             else
                 echo -e "${PURPLE}✗ standalone.db not found in $HOME/.ohc-local-data/.${RESET}"
