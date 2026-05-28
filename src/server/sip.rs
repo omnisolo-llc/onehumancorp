@@ -65,7 +65,12 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("DELETE FROM agent_missions WHERE status = 'STUCK' AND tenant_id = $1")
+                    .bind(&self.org_id)
+                    .execute(&mut *tx)
+                    .await?;
+
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1 AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -517,7 +522,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_prune_stale_missions_marks_stuck_as_failed() {
+    async fn test_prune_stale_missions_deletes_stuck() {
         // Just verify it doesn't crash on execution with a valid pool.
         let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .max_connections(1)
