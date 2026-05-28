@@ -14,10 +14,25 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
+        .route("/track", post(track_onboarding_step_handler))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)
+}
+
+#[derive(serde::Deserialize)]
+pub struct TrackRequest {
+    pub step: String,
+}
+
+async fn track_onboarding_step_handler(
+    headers: axum::http::HeaderMap,
+    Json(payload): Json<TrackRequest>,
+) -> axum::http::StatusCode {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    crate::telemetry::record_onboarding_step_reached(tenant_id, &payload.step);
+    axum::http::StatusCode::OK
 }
 
 #[derive(serde::Deserialize)]
@@ -27,10 +42,18 @@ pub struct IntakeRequest {
 
 async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<IntakeRequest>,
 ) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode> {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    crate::telemetry::record_onboarding_step_reached(tenant_id, "intake_started");
+
+    let start = std::time::Instant::now();
     match agent.process_intake(&payload.description).await {
-        Ok(data) => Ok(Json(data)),
+        Ok(data) => {
+            crate::telemetry::track_onboarding_step(tenant_id, "intake_completed", start.elapsed().as_millis() as u64);
+            Ok(Json(data))
+        },
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -72,10 +95,18 @@ async fn save_draft(
 
 async fn start_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<StartOnboardingRequest>,
 ) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+    let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
+    crate::telemetry::record_onboarding_step_reached(tenant_id, "start_triggered");
+
+    let start = std::time::Instant::now();
     match agent.start_onboarding(payload).await {
-        Ok(res) => Ok(Json(res)),
+        Ok(res) => {
+            crate::telemetry::track_onboarding_step(tenant_id, "provisioning_completed", start.elapsed().as_millis() as u64);
+            Ok(Json(res))
+        },
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
 }

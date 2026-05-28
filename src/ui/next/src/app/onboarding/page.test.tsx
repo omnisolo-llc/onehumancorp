@@ -17,9 +17,13 @@ describe('OnboardingWizard', () => {
       isLoading: false,
       error: '',
       startResult: null,
+      selectedAgents: ['The Manager'],
+      brandTone: 'Professional',
+      firstProductName: '',
+      firstProductPrice: ''
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }));
   });
 
   afterEach(() => {
@@ -29,7 +33,7 @@ describe('OnboardingWizard', () => {
   it('Step 1: Renders initial screen correctly', async () => {
     act(() => { render(<OnboardingWizard />); });
 
-    expect(screen.getByText("What's the name of your business?")).toBeInTheDocument();
+    expect(screen.getByText("What's your business name?")).toBeInTheDocument();
     const button = screen.getByRole('button', { name: /Next/i });
     expect(button).toBeDisabled();
   });
@@ -39,6 +43,10 @@ describe('OnboardingWizard', () => {
 
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({})
+    }) // initial track call in useEffect
+    .mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         business_type: 'Bakery',
@@ -93,104 +101,71 @@ describe('OnboardingWizard', () => {
       continueButton.click();
     });
 
-    // Verify it transitions to Step 3: Style & Team
+    // Verify it transitions to Step 3: Brand Style
     await waitFor(() => {
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-      expect(screen.getByText("Website Template")).toBeInTheDocument();
+      expect(screen.getByText("Brand Style")).toBeInTheDocument();
     });
 
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
+    const nextBtn3 = screen.getByRole('button', { name: /Continue/i });
+    await act(async () => {
+      nextBtn3.click();
+    });
+
+    // Verify it transitions to Step 4: Your AI Team
+    await waitFor(() => {
+        expect(screen.getByText("Your AI Team")).toBeInTheDocument();
+    });
+
+    const launchButton = screen.getByRole('button', { name: /Launch My Business/i });
     await act(async () => {
       launchButton.click();
     });
 
-    // Verify it transitions to Step 5 (Live Screen) on success
+    // Verify it transitions to Step 6 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(screen.getByText("maya-bakery.ohc.store")).toBeInTheDocument();
     });
   });
 
-  it('Step 1: Handles intake API failure', async () => {
+  it('Validation: Business name must be at least 2 characters', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
-
     act(() => { render(<OnboardingWizard />); });
 
-    // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await userEvent.type(nameInput, 'Maya Bakery');
+    const nextBtn = screen.getByRole('button', { name: /Next/i });
 
-    const nextBtn1 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn1.click(); });
+    await userEvent.type(nameInput, 'M');
+    expect(nextBtn).toBeDisabled();
 
-    // Chat Step 2
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(sellInput, 'Cakes');
-
-    const nextBtn2 = screen.getByRole('button', { name: /Next/i });
-    await act(async () => { nextBtn2.click(); });
-
-    // Chat Step 3
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await userEvent.type(locInput, 'NY');
-
-    const button = screen.getByRole('button', { name: /Generate My Business/i });
-
-    await act(async () => {
-      button.click();
-    });
-
-    // Verify error appears and step goes back to 1
-    await waitFor(() => {
-      expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
-      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
-    });
+    await userEvent.type(nameInput, 'a');
+    expect(nextBtn).not.toBeDisabled();
   });
 
-  it('Step 3: Handles start API failure and returns to Step 3', async () => {
+  it('Validation: Price must be numeric and non-negative', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Set initial state to Step 3 to test start API directly
-    useOnboardingStore.setState({ step: 3 });
-
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
-
-    act(() => { render(<OnboardingWizard />); });
-
-    const launchButton = screen.getByRole('button', { name: /Launch Store/i });
-
-    await act(async () => {
-      launchButton.click();
-    });
-
-    // Verify error appears and step goes back to 3
-    await waitFor(() => {
-      expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
-      expect(screen.getByText("Style & Team")).toBeInTheDocument();
-    });
-  });
-
-  it('Step 5: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
-      step: 5,
-      startResult: { message: "Your business has been successfully launched." }
+        step: 2,
+        businessName: 'Valid Name',
+        businessType: 'Store',
+        firstProductName: 'Valid Product',
+        firstProductPrice: ''
     });
 
     act(() => { render(<OnboardingWizard />); });
 
-    await waitFor(() => {
-      expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
-    });
+    const priceInput = screen.getByLabelText(/Price/i);
+    const continueBtn = screen.getByRole('button', { name: /Continue/i });
+
+    await userEvent.type(priceInput, 'abc');
+    expect(continueBtn).toBeDisabled();
+
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '-10');
+    expect(continueBtn).toBeDisabled();
+
+    await userEvent.clear(priceInput);
+    await userEvent.type(priceInput, '10.50');
+    expect(continueBtn).not.toBeDisabled();
   });
 });

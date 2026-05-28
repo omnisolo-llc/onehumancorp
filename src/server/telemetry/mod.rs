@@ -1045,6 +1045,28 @@ pub async fn record_email_send_cost(
 }
 
 static ONBOARDING_DURATION_HISTOGRAM: OnceLock<Histogram<u64>> = OnceLock::new();
+static ONBOARDING_STEP_REACHED: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_onboarding_step_reached_counter() -> &'static Counter<u64> {
+    ONBOARDING_STEP_REACHED.get_or_init(|| {
+        let meter = global::meter("ohc.onboarding");
+        meter
+            .u64_counter("ohc_onboarding_step_reached_total")
+            .with_description("Total number of times an onboarding step was reached")
+            .build()
+    })
+}
+
+pub fn record_onboarding_step_reached(tenant_id: &str, step: &str) {
+    let counter = get_onboarding_step_reached_counter();
+    counter.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("tenant_id", tenant_id.to_string()),
+            opentelemetry::KeyValue::new("step", step.to_string()),
+        ],
+    );
+}
 
 pub fn get_onboarding_duration_histogram() -> &'static Histogram<u64> {
     ONBOARDING_DURATION_HISTOGRAM.get_or_init(|| {
