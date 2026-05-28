@@ -1,8 +1,10 @@
 use axum::{
     extract::{State, Json},
-    routing::{post, get},
+    routing::{post, get, options},
     Router,
 };
+use axum::http::{Method, HeaderName};
+use tower_http::cors::{Any, CorsLayer};
 use std::sync::Arc;
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
@@ -11,10 +13,19 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
     let r = Router::new()
         .route("/start", post(start_onboarding))
         .route("/intake", post(process_intake_handler))
-        .route("/state", get(get_state).post(save_state))
+        .route("/state", get(get_state).post(save_state).options(|| async { axum::http::StatusCode::OK }))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
-        .with_state(agent);
+        .with_state(agent)
+        .layer(CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+            .allow_headers(vec![
+                axum::http::header::CONTENT_TYPE,
+                HeaderName::from_static("x-tenant-id"),
+                HeaderName::from_static("x-user-id"),
+            ])
+        );
 
     // Convert to accept MeshTransport state
     Router::new().merge(r)

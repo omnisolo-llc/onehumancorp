@@ -25,7 +25,83 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const state = await res.json();
+          if (state.step !== undefined) setStep(state.step);
+          if (state.chatStep !== undefined) setChatStep(state.chatStep);
+          if (state.businessName !== undefined) setBusinessName(state.businessName);
+          if (state.whatYouSell !== undefined) setWhatYouSell(state.whatYouSell);
+          if (state.location !== undefined) setLocation(state.location);
+          if (state.businessType !== undefined) setBusinessType(state.businessType);
+          if (state.categories !== undefined) setCategories(state.categories);
+          if (state.websiteTemplate !== undefined) setWebsiteTemplate(state.websiteTemplate);
+          if (state.firstProductName !== undefined) setFirstProductName(state.firstProductName);
+          if (state.firstProductPrice !== undefined) setFirstProductPrice(state.firstProductPrice);
+        }
+      } catch (err) {
+        console.error("Failed to load onboarding state", err);
+      }
+    };
+
+    fetchState();
   }, []);
+
+  const saveTimer = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+
+    saveTimer.current = setTimeout(async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            chatStep,
+            businessName,
+            whatYouSell,
+            location,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error("Failed to save onboarding state", err);
+      }
+    }, 1000);
+
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -122,7 +198,7 @@ export default function OnboardingWizard() {
   if (!isLoaded) return null;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div id="setup-screen" className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
