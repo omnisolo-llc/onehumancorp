@@ -160,6 +160,10 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify Seasonal Promo generator creates campaign immediately without mock timeouts', async ({ page }) => {
     await page.goto('/seasonal-promo');
+    // E2E test requires has_pro to be true to avoid paywall and enable button
+    await page.evaluate(() => localStorage.setItem('has_pro', 'true'));
+    await page.goto('/seasonal-promo');
+
     const occasionInput = page.locator('input#promo-occasion');
     await occasionInput.fill('Spring Sale');
     const discountInput = page.locator('input#promo-discount');

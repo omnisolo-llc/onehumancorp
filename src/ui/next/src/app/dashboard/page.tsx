@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [unreviewedOrders, setUnreviewedOrders] = useState<number>(0);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
@@ -212,6 +213,7 @@ export default function Dashboard() {
                 setTodaysSales(metricsData.total_sales);
                 setActiveCustomers(metricsData.active_customers);
                 setPendingOrders(metricsData.pending_orders);
+                setUnreviewedOrders(metricsData.unreviewed_orders || 0);
             }
 
             if (invitesRes.ok) {
@@ -652,12 +654,12 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have {unreviewedOrders} recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                        ✓ Campaign sent to <span id="review-emails-sent">{unreviewedOrders}</span> customers!
                     </div>
                 ) : (
                     <button
@@ -718,7 +720,7 @@ export default function Dashboard() {
             <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Promoters</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>12 top customers</strong> who haven't joined your VIP referral program. Ask them to refer their friends using an AI-generated email campaign.</p>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>{unreviewedOrders} top customers</strong> who haven't joined your VIP referral program. Ask them to refer their friends using an AI-generated email campaign.</p>
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
                             <div className="flex items-center gap-3">
@@ -727,7 +729,7 @@ export default function Dashboard() {
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-semibold text-gray-900">VIP Referral Invite</h4>
-                                    <p className="text-xs text-gray-500">12 top customers</p>
+                                    <p className="text-xs text-gray-500">{unreviewedOrders} top customers</p>
                                 </div>
                             </div>
                             <button
@@ -1700,7 +1702,7 @@ export default function Dashboard() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">AI Referral Invite</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              {customerReferralSent ? "Campaign successfully sent to your top 12 customers!" : "Review the AI-generated referral invite. This will be emailed to your top 12 customers."}
+              {customerReferralSent ? `Campaign successfully sent to your top ${unreviewedOrders} customers!` : `Review the AI-generated referral invite. This will be emailed to your top ${unreviewedOrders} customers.`}
             </p>
 
             <div className="space-y-4">
@@ -1731,7 +1733,7 @@ export default function Dashboard() {
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
-                            Send Campaign to 12 Customers
+                            Send Campaign to {unreviewedOrders} Customers
                         </button>
                     )}
                 </>
