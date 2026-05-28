@@ -190,6 +190,7 @@ tauri_mobile_package(
     package_type = "apk",
     target_compatible_with = select({
         "//:linux": [],
+        "@platforms//os:android": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
@@ -204,6 +205,7 @@ tauri_mobile_package(
     package_type = "aab",
     target_compatible_with = select({
         "//:linux": [],
+        "@platforms//os:android": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
     visibility = ["//visibility:public"],
