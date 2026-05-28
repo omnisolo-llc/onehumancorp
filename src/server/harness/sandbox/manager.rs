@@ -93,6 +93,6 @@ impl SandboxAdapter for SandboxManager {
     }
 
     fn annotate_error(&self, err: String, stdout: String) -> String {
-        format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
+        format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}\n<sandbox_violations>{}</sandbox_violations>", err, stdout, err)
     }
 }

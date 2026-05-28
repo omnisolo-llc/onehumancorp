@@ -61,6 +61,9 @@ impl ASTParser {
              if text.starts_with("$[") && text.ends_with("]") {
                   return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
              }
+             if text.contains(".git/hooks") || text.contains(".git/objects") || text.contains(".git/refs") || text.contains(".git/HEAD") || text.contains(".git/config") {
+                  return Err("Dangerous pattern detected: git internal path mutation".to_string());
+             }
         }
 
 
@@ -116,5 +119,17 @@ mod tests {
         let res = parser.parse_for_security("echo $[1+1]");
         assert!(res.is_err());
         assert_eq!(res.unwrap_err(), "Dangerous pattern detected: $[] legacy expansion");
+    }
+
+    #[test]
+    fn test_block_git_hooks() {
+        let mut parser = ASTParser::new();
+        let res = parser.parse_for_security("echo 'malicious' > .git/hooks/pre-commit");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: git internal path mutation");
+
+        let res = parser.parse_for_security("rm -rf .git/objects/00");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: git internal path mutation");
     }
 }

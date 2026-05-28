@@ -79,6 +79,7 @@ mod tests {
         let err = result.unwrap_err();
         assert!(err.contains("SANDBOX_FAILURE"));
         assert!(err.contains("Command execution denied by sandbox policy"));
+        assert!(err.contains("<sandbox_violations>Command execution denied by sandbox policy</sandbox_violations>"));
     }
 
     #[tokio::test]
