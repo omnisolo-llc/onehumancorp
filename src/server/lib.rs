@@ -14,6 +14,10 @@ static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> =
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
     let mut m = HashMap::new();
+    let initial_tooltips = crate::services::docs::service::get_tooltips();
+    for t in initial_tooltips {
+        m.insert(t.element_id.clone() + "-tooltip", t.plain_language_description.clone());
+    }
     m.insert("bio-input-tooltip".to_string(), "Describe what you sell, your target audience, and the vibe of your brand.".to_string());
     m.insert("generate-btn-tooltip".to_string(), "Our AI agents will analyze your description and build a ready-to-launch store for you.".to_string());
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
@@ -88,6 +92,7 @@ pub mod services {
     pub mod scheduler;
     pub mod agent;
     pub mod autodream;
+    pub use ::server_services_docs as docs;
     pub mod booking;
 }
 
@@ -2264,15 +2269,42 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             ::server_utils::tier_middleware::tier_middleware,
         ))
         .with_state(mesh_transport)
-        .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
-            { "title": "My Store", "desc": "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price." },
-            { "title": "Payments", "desc": "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business." },
-            { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
-            { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
-            { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
-        ])) }))
+        .route("/api/help", axum::routing::get(|| async {
+            let articles = crate::services::docs::service::get_articles();
+            let mut topics_order = Vec::new();
+            let mut topics_map = std::collections::HashMap::new();
+
+            for a in articles {
+                if !topics_map.contains_key(&a.topic) {
+                    let icon = match a.topic.as_str() {
+                        "Getting Started" => "🚀",
+                        "My Store" => "🛍️",
+                        "Payments" => "💳",
+                        "AI Agents" => "🤖",
+                        "Marketing" => "📢",
+                        "Account & Billing" => "⚙️",
+                        _ => "📄"
+                    };
+                    topics_map.insert(a.topic.clone(), serde_json::json!({
+                        "id": a.id.split('-').next().unwrap_or(""),
+                        "title": a.topic,
+                        "desc": a.title,
+                        "icon": icon
+                    }));
+                    topics_order.push(a.topic.clone());
+                }
+            }
+
+            let mut results: Vec<_> = topics_order.into_iter().map(|topic| topics_map.remove(&topic).unwrap()).collect();
+            results.push(serde_json::json!({
+                "id": "api-docs",
+                "title": "API Documentation (Advanced)",
+                "desc": "See the technical details for connecting custom software to your store.",
+                "icon": "💻",
+                "link": "/api-docs"
+            }));
+            axum::Json(results)
+        }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
             let m = registry.read().unwrap();
@@ -2285,42 +2317,34 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }
             axum::Json(serde_json::json!({"success": true}))
         }))
-        .route("/api/videos", axum::routing::get(|| async { axum::Json(serde_json::json!([
-            { "id": 1, "title": "How to add a product", "duration": "1:20" },
-            { "id": 2, "title": "Setting up payments", "duration": "1:15" },
-            { "id": 3, "title": "Managing inventory", "duration": "0:50" },
-            { "id": 4, "title": "Adding team members", "duration": "1:05" },
-            { "id": 5, "title": "Reviewing orders", "duration": "1:10" },
-            { "id": 6, "title": "Connecting social media", "duration": "1:25" },
-            { "id": 7, "title": "Using the builder", "duration": "1:30" },
-            { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
-            { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
-        ])) }))
+        .route("/api/videos", axum::routing::get(|| async {
+            let videos = crate::services::docs::service::get_video_tutorials();
+            let json_videos: Vec<_> = videos.iter().map(|v| serde_json::json!({
+                "id": v.id,
+                "title": v.title,
+                "duration": v.duration
+            })).collect();
+            axum::Json(json_videos)
+        }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
-            let help_articles = vec![
-                ("getting started", "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers."),
-                ("store", "To set up your storefront, go to the 'My Store' tab and add your products. It's easy! Just upload a photo, write a simple description, and set a price."),
-                ("payment", "When a customer buys something, the money goes straight to your account. We handle all the technical details so you can focus on your business."),
-                ("ai agent", "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab."),
-                ("marketing", "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers."),
-                ("billing", "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees."),
-                ("api", "Interactive API reference for integrations."),
-            ];
+            let articles = crate::services::docs::service::get_articles();
 
             let query = req.message.to_lowercase();
             let mut reply = "I am your AI Help Agent! I specialize in answering questions about OHC features and helping you grow your small business. Check out our Getting Started guide.".to_string();
             let link_title = "Read the full article →";
-            let mut link_url = "/help";
+            let mut link_url = "/help".to_string();
 
-            for (kw, desc) in help_articles {
-                if query.contains(kw) {
-                    reply = format!("Based on our help center: {}", desc);
-                    if kw == "api" {
-                        link_url = "/api-docs";
-                    }
+            for a in articles {
+                if query.contains(&a.topic.to_lowercase()) || query.contains(a.id.split('-').next().unwrap_or(a.id.as_str())) {
+                    reply = format!("Based on our help center: {}", a.content_markdown);
+                    link_url = "/help".to_string();
                     break;
                 }
+            }
+
+            if query.contains("api") {
+                reply = "Based on our help center: Interactive API reference for integrations.".to_string();
+                link_url = "/api-docs".to_string();
             }
 
             axum::Json(serde_json::json!({
@@ -2449,7 +2473,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .add_service(GrowthServiceServer::with_interceptor(growth_service, spiffe_interceptor))
         .add_service(::server_ohc::app::dashboard_service_server::DashboardServiceServer::with_interceptor(dashboard_service, spiffe_interceptor))
         .add_service(::server_ohc::orchestration::agent_manager_service_server::AgentManagerServiceServer::with_interceptor(crate::services::agent::service::MyAgentManagerService::new(hub.clone()), spiffe_interceptor))
-        .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor))
+        .add_service(BillingServiceServer::with_interceptor(billing_service, spiffe_interceptor.clone()))
+        .add_service(::docs_proto::ohc::docs::v1::docs_service_server::DocsServiceServer::with_interceptor(crate::services::docs::service::MyDocsService::new(), spiffe_interceptor))
         .serve(addr)
         .await?;
 
@@ -3821,6 +3846,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <h2>Product Data Access</h2>
                             <p>Read Product List</p>
                             <p>Manage your custom software connections here.</p>
+                        </div>
+
+                        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
+                            <h3 style="margin-bottom: 16px;">Advanced Integration</h3>
+                            <p style="color: var(--text-secondary); margin-bottom: 16px;">For developers building custom integrations with OneHumanCorp.</p>
+                            <button class="secondary" onclick="showScreen('api-docs-screen')">View Advanced API Reference</button>
                         </div>
                     </div>
 
@@ -5774,7 +5805,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
+                                if(data.link) {
+                                    let screenId = data.link.startsWith('/') ? data.link.substring(1) + '-screen' : data.link;
+                                    aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;' + screenId + '&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
+                                }
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
@@ -5819,16 +5853,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function endWalkthrough() { currentTour = null; currentStepIndex = 0; document.getElementById('walkthrough-overlay').style.display = 'none'; document.getElementById('walkthrough-bubble').style.display = 'none'; }
 
                         // Scribe: Help Center & Videos Logic
-                        const helpTopics = [
-                            { id: 'getting-started', title: 'Getting Started', desc: 'Welcome to One Human Corp. Learn the basics.', icon: '🚀' },
-                            { id: 'my-store', title: 'My Store', desc: 'How to add products, photos, and descriptions.', icon: '🛍️' },
-                            { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
-                            { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
-                            { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
-                        ];
-
-                        function renderHelpCenter() {
+                        async function renderHelpCenter() {
                             const container = document.getElementById('help-categories-container');
                             if(!container) return; container.innerHTML = '';
 
@@ -5844,13 +5869,24 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             `;
                             container.appendChild(toursDiv);
 
-                            helpTopics.forEach(topic => {
-                                const card = document.createElement('div');
-                                card.className = 'help-category-card';
-                                card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
-                                card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
-                                container.appendChild(card);
-                            });
+                            try {
+                                const res = await fetch('/api/help');
+                                const helpTopics = await res.json();
+                                helpTopics.forEach(topic => {
+                                    const card = document.createElement('div');
+                                    card.className = 'help-category-card';
+                                    card.innerHTML = `<div style="font-size: 24px; margin-bottom: 12px;">${topic.icon || '📄'}</div><h3>${topic.title}</h3><p>${topic.desc}</p>`;
+                                    if (topic.link) {
+                                        let screenId = topic.link.startsWith('/') ? topic.link.substring(1) + '-screen' : topic.link;
+                                        card.onclick = () => showScreen(screenId);
+                                    } else {
+                                        card.onclick = () => { document.getElementById('ai-chat-input').value = 'Tell me about ' + topic.title.toLowerCase(); document.getElementById('ai-chat-widget').style.display = 'flex'; submitHelpQuery(); };
+                                    }
+                                    container.appendChild(card);
+                                });
+                            } catch (e) {
+                                console.error(e);
+                            }
                         }
 
                         function filterHelpCenter() {
