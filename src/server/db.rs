@@ -820,7 +820,44 @@ impl DB {
         Ok(())
     }
 
-pub async fn insert_autodream_memory(
+
+    pub async fn insert_consolidated_memory(
+        &self,
+        id: &str,
+        org_id: &str,
+        agent_id: &str,
+        content: &str,
+        embedding: &str,
+        source_type: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn insert_autodream_memory(
         &self,
         id: &str,
         org_id: &str,
@@ -1028,6 +1065,23 @@ mod autodream_db_tests {
         let result = db.get_completed_tasks().await;
         // Since test db is likely unmigrated/empty, we expect either an Ok(empty) or an Error
         assert!(result.is_ok() || result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_insert_consolidated_memory() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db = DB::new().await.unwrap();
+        let res = db.insert_consolidated_memory(
+            "test-mem-id",
+            "org1",
+            "agent1",
+            "test content",
+            "[0.1, 0.2, 0.3]",
+            "TEST_TYPE",
+        ).await;
+        assert!(res.is_ok());
     }
 
     #[tokio::test]
