@@ -163,6 +163,163 @@
           }
         }
       }
+    },
+    {
+      "type": "timeseries",
+      "title": "Swarm Throughput",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(swarm_task_completed[5m])) by (mode)",
+          "legendFormat": "Throughput ({{mode}})",
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "heatmap",
+      "title": "Entity Latency (orders, bookings, customers, products)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_swarm_job_latency_by_entity_seconds_sum[5m])) by (entity) / sum(rate(ohc_swarm_job_latency_by_entity_seconds_count[5m])) by (entity)",
+          "legendFormat": "{{entity}} Latency",
+          "refId": "A"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "calculate": false,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Oranges"
+        }
+      }
+    },
+    {
+      "type": "heatmap",
+      "title": "Contention Heatmap (SQLite vs Postgres)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_sqlite_lock_contention_total[5m])) by (entity)",
+          "legendFormat": "SQLite Contention ({{entity}})",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_postgres_lock_contention_total[5m])) by (entity)",
+          "legendFormat": "Postgres Contention ({{entity}})",
+          "refId": "B"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "calculate": false,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Reds"
+        }
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Cost Analytics Breakdown (Agent vs API Call)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(ohc_agent_cost[5m])) by (entity)",
+          "legendFormat": "Agent Cost ({{entity}})",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(ohc_api_call_cost[5m])) by (entity)",
+          "legendFormat": "API Call Cost ({{entity}})",
+          "refId": "B"
+        }
+      ],
+      "transparent": true,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "lineWidth": 1,
+            "fillOpacity": 80
+          }
+        }
+      }
     }
   ]
 }
