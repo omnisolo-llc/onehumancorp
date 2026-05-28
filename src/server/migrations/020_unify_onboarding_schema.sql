@@ -37,3 +37,16 @@ BEGIN
         UPDATE bookings SET organization_id = tenant_id WHERE organization_id IS NULL;
     END IF;
 END $$;
+
+-- Ensure agents table has required columns for OnboardingAgent
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS is_default BOOLEAN DEFAULT FALSE;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS organization_id TEXT;
+
+-- Sync agents data
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='agents' AND column_name='tenant_id') THEN
+        UPDATE agents SET organization_id = tenant_id WHERE organization_id IS NULL;
+    END IF;
+END $$;
