@@ -2231,6 +2231,27 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 move |headers: axum::http::HeaderMap, payload: axum::Json<HttpMetricsRequest>| async move { http_metrics_handler(db, store, headers, payload).await }
             }),
         )
+        .route(
+            "/api/v1/sync/offline",
+            axum::routing::post({
+                let db = db.clone();
+                move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
+                    let deltas = payload.get("deltas").and_then(|d| d.as_array());
+                    if let Some(arr) = deltas {
+                        let mut sync_deltas = vec![];
+                        for item in arr {
+                            if let Ok(delta) = serde_json::from_value::<crate::sync::SyncDelta>(item.clone()) {
+                                sync_deltas.push(delta);
+                            }
+                        }
+                        let sync_service = crate::sync::CloudSyncService::new(db);
+                        use crate::sync::SyncDeltas;
+                        let _ = sync_service.sync_deltas(sync_deltas).await;
+                    }
+                    axum::Json(serde_json::json!({ "success": true }))
+                }
+            }),
+        )
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/broadcast", axum::routing::post(api::mesh_handler::broadcast_handler).with_state(mesh_transport.clone()))
         .route("/api/mesh/v2/direct", axum::routing::post(api::mesh_handler::direct_handler).with_state(mesh_transport.clone()))
@@ -3097,10 +3118,81 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             });
                         });
+
+                        // Offline Sync Mesh Initialization
+                        document.addEventListener("DOMContentLoaded", () => {
+                            const syncOfflineData = async () => {
+                                let queue = [];
+                                try {
+                                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                                } catch(e) {}
+
+                                if (queue.length > 0) {
+                                    try {
+                                        const response = await fetch('/api/v1/sync/offline', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ deltas: queue })
+                                        });
+                                        if (response.ok) {
+                                            localStorage.removeItem('ohc_offline_queue');
+                                            const qDashboard = document.getElementById('queue-dashboard');
+                                            if (qDashboard) {
+                                                qDashboard.classList.remove('block');
+                                                qDashboard.classList.add('hidden');
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error('Failed to sync offline data', e);
+                                    }
+                                }
+                            };
+
+                            window.addEventListener('online', () => {
+                                const indicator = document.getElementById('network-status-indicator');
+                                if (indicator) {
+                                    indicator.classList.remove('block');
+                                    indicator.classList.add('hidden');
+                                }
+                                syncOfflineData();
+                            });
+
+                            window.addEventListener('offline', () => {
+                                const indicator = document.getElementById('network-status-indicator');
+                                if (indicator) {
+                                    indicator.classList.remove('hidden');
+                                    indicator.classList.add('block');
+                                }
+                            });
+
+                            // Check initial status
+                            if (!navigator.onLine) {
+                                const indicator = document.getElementById('network-status-indicator');
+                                if (indicator) {
+                                    indicator.classList.remove('hidden');
+                                    indicator.classList.add('block');
+                                }
+                            }
+                        });
                     </script>
                 </head>
 
                 <body>
+                    <!-- Top Navigation Bar Additions for Offline Sync Mesh -->
+                    <div id="network-status-indicator" class="hidden" style="position: fixed; top: 16px; right: 16px; z-index: 10000; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255, 193, 7, 0.5); box-shadow: 0 4px 12px rgba(0,0,0,0.05);" onclick="document.getElementById('offline-bottom-sheet').classList.toggle('hidden')">
+                            <div style="width: 10px; height: 10px; border-radius: 50%; background-color: #FFC107; box-shadow: 0 0 8px #FFC107;"></div>
+                            <span style="font-size: 13px; font-weight: 600; color: #1a1a1a;">Offline</span>
+                        </div>
+                    </div>
+
+                    <div id="offline-bottom-sheet" class="hidden" style="position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-top: 1px solid rgba(0,0,0,0.1); padding: 24px; z-index: 10001; border-top-left-radius: 24px; border-top-right-radius: 24px; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div style="width: 40px; height: 4px; background: rgba(0,0,0,0.2); border-radius: 2px; margin-bottom: 16px;" onclick="document.getElementById('offline-bottom-sheet').classList.add('hidden')"></div>
+                        <h3 style="margin: 0 0 8px 0; font-family: 'Outfit', sans-serif; color: #1a1a1a;">Working Offline</h3>
+                        <p style="margin: 0; font-size: 14px; color: #666; max-width: 300px;">Your changes are saved safely on your phone and will sync when you have service.</p>
+                        <button style="margin-top: 16px; width: 100%; max-width: 300px; padding: 12px; border-radius: 12px; border: none; background: #f0f0f0; font-weight: 600; color: #333;" onclick="document.getElementById('offline-bottom-sheet').classList.add('hidden')">Got it</button>
+                    </div>
+
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
                         <a onclick="showScreen('team-screen')" id="nav-agents">Your Team</a>
@@ -3133,6 +3225,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- Dashboard Screen -->
                     <div id="dashboard-screen" class="screen">
                         <h1>Dashboard</h1>
+
+                        <!-- Offline Queue Dashboard Indicator (hidden by default) -->
+                        <div id="queue-dashboard" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);"></div>
 
                         <!-- Milestone Viral Share Loop Banner -->
                         <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">
