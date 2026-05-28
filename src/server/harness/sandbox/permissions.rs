@@ -83,7 +83,7 @@ mod tests {
             disabled_commands: vec!["curl".to_string()],
             disabled_patterns: vec![r"(?i)\bwget\b".to_string()],
             read_only_paths: vec![],
-            blocked_domains: vec![],
+            blocked_domains: vec![], seccomp_fd: None, socat_socket_path: None, socat_proxy_port: None,
         };
         evaluator.update_policy(policy);
 
