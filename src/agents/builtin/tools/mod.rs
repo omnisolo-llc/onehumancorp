@@ -142,11 +142,7 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
-        ];
-    // Inject goose (Agentic AI) MCP extensions dynamically
-    let mut goose_tools = goose_wrapper::load_goose_tools(Arc::new(ohc_builtin_agent_core::goose::GooseMcpLoader::new()));
-    tools.append(&mut goose_tools);
-
+    ];
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
@@ -155,4 +151,3 @@ pub fn all_tools(
 
     tools
 }
-pub mod goose_wrapper;

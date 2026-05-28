@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -75,7 +75,17 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}-${{ matrix.name }}
-          repository-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
