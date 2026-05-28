@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -778,6 +779,13 @@ impl DB {
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "tasks".to_string()));
                 }
+                let tasks_rows = sqlx::query("SELECT id, tenant_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                for row in tasks_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "tasks".to_string()));
+                }
 let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
@@ -798,6 +806,13 @@ let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHE
                 }
 
                                 let tasks_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                for row in tasks_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "tasks".to_string()));
+                }
+                let tasks_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 for row in tasks_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
