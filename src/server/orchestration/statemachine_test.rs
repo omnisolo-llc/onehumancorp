@@ -1,5 +1,5 @@
 use super::statemachine_v2::{StateMachine, State, Repository};
-use super::locks::StandaloneLock;
+use crate::orchestration::locks::StandaloneLock;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
