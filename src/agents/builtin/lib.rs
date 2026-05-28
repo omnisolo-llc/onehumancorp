@@ -1,3 +1,4 @@
+pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
 //
@@ -68,3 +69,4 @@ pub mod gpt_researcher;
 pub mod deerflow_subagents;
 
 pub mod tool_executor_engine;
+pub mod ruflo_plugins;
