@@ -530,22 +530,31 @@ async fn advisory_insights_handler(
         }
     };
 
-    // Gather context from DB
-    let (business_name, industry): (String, String) = sqlx::query_as(
-        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-    )
-    .bind(&tenant_id)
-    .fetch_optional(&db.pool)
-    .await
-    .unwrap_or(None)
-    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+    // Gather context from DB and get order counts in parallel
+    let (context_res, active_orders_res) = tokio::join!(
+        async {
+            sqlx::query_as::<_, (String, String)>(
+                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+            )
+            .bind(&tenant_id)
+            .fetch_optional(&db.pool)
+            .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
+            )
+            .bind(&tenant_id)
+            .fetch_one(&db.pool)
+            .await
+        }
+    );
 
-    // Get order counts
-    let active_orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
-        .bind(&tenant_id)
-        .fetch_one(&db.pool)
-        .await
-        .unwrap_or(0);
+    let (business_name, industry) = context_res
+        .unwrap_or(None)
+        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
+
+    let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
