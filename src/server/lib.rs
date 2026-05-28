@@ -4513,7 +4513,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             <p><strong>${escapeHtml(block.content.title)}</strong></p>
                                             <p>${escapeHtml(block.content.offer)}</p>
                                             <button class="secondary" style="width:100%; margin-bottom:8px;">Share to WhatsApp</button>
-                                            <a href="ohc://join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
+                                            <a href="https://ohc.store/join?ref=storefront-referral" style="font-size:12px; color:var(--text-secondary); text-decoration:none;">⚡ Powered by OHC</a>
                                         </div>`;
                                     }
                                 }
@@ -4530,7 +4530,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             footer.style.border = 'none';
                             footer.style.boxShadow = 'none';
                             const tenant = localStorage.getItem('tenant_id') || 'storefront';
-                            footer.innerHTML = `<a href="ohc://join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
+                            footer.innerHTML = `<a href="https://ohc.store/join?ref=${tenant}" style="color: var(--text-primary); text-decoration: none; font-weight: bold;">⚡ Powered by OHC</a>`;
                             container.appendChild(footer);
                         }
 
