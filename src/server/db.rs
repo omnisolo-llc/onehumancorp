@@ -845,13 +845,20 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                // Formatting embedding explicitly to match vector literal for pgvector JSON compatibility,
+                // e.g., using proper bracket notation explicitly if not passed already.
+                let formatted_embedding = if embedding.starts_with('[') && embedding.ends_with(']') {
+                    embedding.to_string()
+                } else {
+                    format!("[{}]", embedding)
+                };
                 sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
                     .bind(task_id)
                     .bind(content)
-                    .bind(embedding)
+                    .bind(formatted_embedding)
                     .bind(source_type)
                     .execute(&self.pool)
                     .await?;
@@ -884,13 +891,18 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
+                let formatted_embedding = if embedding.starts_with('[') && embedding.ends_with(']') {
+                    embedding.to_string()
+                } else {
+                    format!("[{}]", embedding)
+                };
                 sqlx::query("INSERT INTO knowledge_embeddings (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
                     .bind(uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4()))
                     .bind(org_id)
                     .bind(agent_id)
                     .bind(task_id)
                     .bind(content)
-                    .bind(embedding)
+                    .bind(formatted_embedding)
                     .bind(source_type)
                     .execute(&self.pool)
                     .await?;
