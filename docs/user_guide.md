@@ -171,45 +171,6 @@ Snapshots let you capture the current state of your organisation and restore it 
 ---
 
 ## Health Status
-
-The platform exposes machine-readable health endpoints:
-
-- **Liveness**: `GET /healthz` — returns `200 OK` when the server is running
-- **Readiness**: `GET /readyz` — returns `200 OK` when the server is ready to serve traffic
-
-Your Kubernetes or load-balancer operator can use these endpoints for automatic traffic management.
-
----
-
-## FAQ
-
-**Q: What AI models are supported?**
-A: The platform supports any model referenced in the billing catalog. Current defaults include `gpt-4o`, `gpt-4o-mini`, `gpt-3.5-turbo`, `gemini-pro`, and `claude-3-sonnet`.
-
-**Q: Is my data stored persistently?**
-A: When deployed with the Helm chart (Redis + CloudNative PG), all data is persisted. In the Docker Compose dev stack the backend uses in-memory storage by default.
-
-**Q: How do I reset demo data?**
-A: Call `POST /api/dev/seed` with `{"scenario":"launch-readiness"}` to reload the seeded demo scenario.
-
-**Q: Who can approve a critical-risk action?**
-A: Any user with the `approver` platform role. Reach out to your administrator to have this role assigned.
-
-**Q: How do I add a new integration?**
-A: Integrations are registered at server startup via the `integrations.Registry`. Contact your platform administrator or DevOps team to add a new integration.
-
-## Implementation Details
-- **Architecture**: The Dashboard UI is built with React/Vite/Next.js aesthetics, fetching data from the Rust backend via REST and Server-Sent Events (SSE).
-- **Deployment**: Deployed via the OHC Kubernetes Operator. The dashboard acts as the primary control plane for the `HoldingCompany` CRD.
-- **State Management**: The UI is fully real-time. Actions like "Hire Agent" or "Send Message" immediately update the append-only `events.jsonl` Postgres log, which the LangGraph checkpointers use to resume agent states.
-
-## Edge Cases
-- **Browser Disconnects**: If the SSE connection to the backend drops, the UI will automatically attempt exponential backoff reconnection and refetch missed events.
-- **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI virtualizes the transcript list to prevent DOM bloat and memory leaks in the browser.
-- **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the backend enforces a transactional lock; the second manager receives a "State Changed" conflict error.
-
-</div>
-## Health Status
 The platform provides simple ways to check if everything is running smoothly. Contact your platform administrator if you encounter any issues.
 
 ---
@@ -240,4 +201,5 @@ A: Integrations are managed by your platform administrator. Contact them to add 
 - **Browser Disconnects**: If the connection drops, the UI will automatically attempt to reconnect and fetch missed events.
 - **High-Volume Meetings**: In Virtual Meeting Rooms with rapid agent interactions, the UI manages the transcript list to prevent slowdowns.
 - **Concurrent Approvals**: If two managers attempt to approve the same critical action simultaneously, the system enforces a lock; the second manager receives a conflict error.
+</div>
 </div>
