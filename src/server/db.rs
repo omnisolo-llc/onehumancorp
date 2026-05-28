@@ -900,7 +900,7 @@ pub async fn insert_autodream_memory(
 
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
+        let res = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     "UPDATE agent_missions
@@ -912,25 +912,57 @@ pub async fn insert_autodream_memory(
                 .bind(blockers)
                 .bind(mission_id)
                 .execute(sqlite_pool)
-                .await?;
+                .await
+                .map(|_| ())
+                .map_err(|e| e.into())
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
+                match self.pool.begin().await {
+                    Ok(mut tx) => {
+                        let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
+                        let query_res = sqlx::query(
+                            "UPDATE agent_missions
+                             SET status = 'blocked',
+                                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                                 updated_at = CURRENT_TIMESTAMP
+                             WHERE id = $2"
+                        )
+                        .bind(blockers)
+                        .bind(mission_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                        match query_res {
+                            Ok(_) => {
+                                tx.commit().await.map_err(|e| e.into())
+                            },
+                            Err(e) => Err(e.into())
+                        }
+                    },
+                    Err(e) => Err(e.into())
+                }
             }
+        };
+
+        if let Err(e) = res {
+            tracing::error!("Failed to hand off mission {} to database: {}. Falling back to local file.", mission_id, e);
+            let fallback_path = "MISSION_BLOCKERS_FALLBACK.log";
+            let log_entry = format!(
+                "[{}] MISSION_ID: {}, BLOCKERS: {}, DB_ERROR: {}\n",
+                chrono::Utc::now().to_rfc3339(),
+                mission_id,
+                blockers,
+                e
+            );
+
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(fallback_path)?;
+            file.write_all(log_entry.as_bytes())?;
         }
+
         Ok(())
     }
 
@@ -1263,6 +1295,34 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mission_fallback() {
+        let database_url = "postgres://nonexistent:password@localhost:5432/nonexistent";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(database_url)
+            .unwrap();
+        let db = DB { pool, store: DbStore::Postgres };
+
+        let mission_id = "test_mission_fallback";
+        let blockers = "test blockers";
+        let fallback_path = "MISSION_BLOCKERS_FALLBACK.log";
+
+        // Ensure fallback file is gone
+        let _ = std::fs::remove_file(fallback_path);
+
+        let result = db.handoff_mission(mission_id, blockers).await;
+        assert!(result.is_ok());
+
+        assert!(std::path::Path::new(fallback_path).exists());
+        let content = std::fs::read_to_string(fallback_path).unwrap();
+        assert!(content.contains(mission_id));
+        assert!(content.contains(blockers));
+
+        // Cleanup
+        let _ = std::fs::remove_file(fallback_path);
     }
 
     #[tokio::test]
