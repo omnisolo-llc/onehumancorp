@@ -338,6 +338,11 @@ impl AgentServiceImpl {
         let model = self.resolve_model_for_request(&provider, req_model);
 
         match provider.as_str() {
+            "agentic_seek" => {
+                Arc::new(crate::agentic_seek::AgenticSeekProvider::new(
+                    &std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_else(|_| "http://localhost:11434/api/chat".to_string())
+                ))
+            }
             "anthropic" => {
                 let key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
                 Arc::new(AnthropicClient::new(key))

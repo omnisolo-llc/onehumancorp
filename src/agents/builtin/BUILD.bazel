@@ -46,6 +46,7 @@ rust_library(
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",
+        "agentic_seek.rs",
         "auth.rs",
         "autogen.rs",
         "checkpointer.rs",
