@@ -73,18 +73,42 @@ impl OnboardingAgent {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
+        use sqlx::Row;
+        // Fetch existing state manually because SQLite doesn't have a json merge operator `||`
+        let existing_row = sqlx::query(
+            "SELECT state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
+        )
+        .bind(tenant_id)
+        .bind(user_id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let final_state_json = if let Some(record) = existing_row {
+            let mut existing: serde_json::Value = record.get("state_json");
+            // Merge existing and new json
+            if let (Some(existing_obj), Some(new_obj)) = (existing.as_object_mut(), state_json.as_object()) {
+                for (k, v) in new_obj {
+                    existing_obj.insert(k.clone(), v.clone());
+                }
+            }
+            existing
+        } else {
+            state_json.clone()
+        };
+
         sqlx::query(
             "INSERT INTO onboarding_state (tenant_id, user_id, current_step, state_json) \
              VALUES ($1, $2, $3, $4) \
              ON CONFLICT (tenant_id, user_id) DO UPDATE \
-             SET state_json = onboarding_state.state_json || EXCLUDED.state_json, \
+             SET state_json = EXCLUDED.state_json, \
                  current_step = EXCLUDED.current_step, \
                  updated_at = CURRENT_TIMESTAMP"
         )
         .bind(tenant_id)
         .bind(user_id)
         .bind(current_step)
-        .bind(state_json)
+        .bind(final_state_json)
         .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -94,15 +118,16 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    pub async fn get_onboarding_state(&self, tenant_id: &str) -> Result<serde_json::Value, String> {
+    pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         use sqlx::Row;
         let row = sqlx::query(
-            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1"
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(tenant_id)
+        .bind(user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -2516,6 +2541,49 @@ mod tests {
         assert_eq!(users[0].get::<String, _>("email"), "admin@test.com");
         assert_eq!(users[0].get::<String, _>("username"), "Admin User");
         assert!(users[0].get::<String, _>("roles").contains("admin"));
+    }
+
+    #[tokio::test]
+    async fn test_save_and_get_onboarding_state() {
+        let db = match setup_test_db().await {
+            Some(db) => db,
+            None => return,
+        };
+        let (tx, _) = tokio::sync::mpsc::channel(10);
+        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let agent = OnboardingAgent::new(db.clone(), hub);
+
+        let tenant_id = "test-tenant-123";
+        let user_id = "test-user-123";
+
+        // Initial save
+        let initial_state = serde_json::json!({
+            "businessName": "Initial Name",
+            "businessType": "Bakery"
+        });
+
+        let res = agent.save_onboarding_state(tenant_id, user_id, 1, &initial_state).await;
+        assert!(res.is_ok());
+
+        // Get state
+        let fetched_state = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
+        assert_eq!(fetched_state.get("businessName").unwrap(), "Initial Name");
+        assert_eq!(fetched_state.get("businessType").unwrap(), "Bakery");
+        assert_eq!(fetched_state.get("step").unwrap().as_i64().unwrap(), 1);
+
+        // Update state with partial data
+        let update_state = serde_json::json!({
+            "businessName": "Updated Name"
+        });
+
+        let res2 = agent.save_onboarding_state(tenant_id, user_id, 2, &update_state).await;
+        assert!(res2.is_ok());
+
+        // Get updated state and verify merge
+        let final_state = agent.get_onboarding_state(tenant_id, user_id).await.unwrap();
+        assert_eq!(final_state.get("businessName").unwrap(), "Updated Name"); // Should be updated
+        assert_eq!(final_state.get("businessType").unwrap(), "Bakery"); // Should remain from previous
+        assert_eq!(final_state.get("step").unwrap().as_i64().unwrap(), 2);
     }
 
     #[tokio::test]
