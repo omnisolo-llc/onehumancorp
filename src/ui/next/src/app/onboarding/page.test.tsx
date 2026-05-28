@@ -178,6 +178,46 @@ describe('OnboardingWizard', () => {
     });
   });
 
+  it('Advances steps via Enter key press', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock intake success for the final step
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        business_type: 'Bakery',
+        business_name: 'Maya Bakery',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20' }]
+      })
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    // Chat Step 1: Type name and hit Enter
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await userEvent.type(nameInput, 'Maya Bakery{enter}');
+
+    // Chat Step 2: Ensure we moved to step 2, type sell info and hit Enter
+    await waitFor(() => {
+      expect(screen.getByText("What do you sell?")).toBeInTheDocument();
+    });
+    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(sellInput, 'Cakes{enter}');
+
+    // Chat Step 3: Ensure we moved to step 3, type location and hit Enter
+    await waitFor(() => {
+      expect(screen.getByText("Where are you located?")).toBeInTheDocument();
+    });
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    await userEvent.type(locInput, 'NY{enter}');
+
+    // Verify it transitions to Step 2: Review Details
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+    });
+  });
+
   it('Step 5: Shows Live Screen with correct links', async () => {
     useOnboardingStore.setState({
       step: 5,
