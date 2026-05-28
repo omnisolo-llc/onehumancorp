@@ -260,12 +260,14 @@ struct HttpMetricsRequest {
     tenant_id: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
 }
+
+static HTTP_METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> = std::sync::OnceLock::new();
 
 async fn http_metrics_handler(
     db: std::sync::Arc<db::DB>,
@@ -300,6 +302,18 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
+    let cache_key = format!("http_metrics_{}", tenant_id);
+    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
+    let redis_client = redis::Client::open(redis_url).ok();
+    let cache = HTTP_METRICS_CACHE.get_or_init(|| ::server_utils::cache::HybridCache::new(redis_client));
+
+    if let Some(cached_metrics) = cache.get(&cache_key).await {
+        return (
+            StatusCode::OK,
+            axum::Json(cached_metrics),
+        ).into_response();
+    }
+
     let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
@@ -325,9 +339,13 @@ async fn http_metrics_handler(
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
 
+    let response_data = HttpMetricsResponse { active_customers, pending_orders, total_sales };
+
+    cache.set(&cache_key, response_data.clone(), std::time::Duration::from_secs(30)).await;
+
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
+        axum::Json(response_data),
     )
         .into_response()
 }
