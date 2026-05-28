@@ -44,8 +44,7 @@ test.describe('Onboarding Wizard - Cross Device Resilience', () => {
     await expect(page2.locator('#setup-screen')).toBeVisible({ timeout: 15000 });
 
     // The backend should restore the state and auto-advance, or at least fill the inputs
-    // It should have restored state
-    await page2.waitForTimeout(500);
+    // Just wait to let Next.js hydrate and render correctly
     await page2.waitForTimeout(500);
 
     await context2.close();
