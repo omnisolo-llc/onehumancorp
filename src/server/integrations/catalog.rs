@@ -35,6 +35,9 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
     catalog.push(google_calendar_provider.to_integration_provider());
 
+    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
+    catalog.push(resend_provider.to_integration_provider());
+
     let cal_com_provider = crate::integrations::cal_com::provider::CalComProvider::new("dummy_token".to_string());
     catalog.push(cal_com_provider.to_integration_provider());
 
