@@ -16,6 +16,8 @@ export default function OnboardingWizard() {
     websiteTemplate, setWebsiteTemplate,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
+    selectedAIAgents, setSelectedAIAgents,
+    logoStyle, setLogoStyle,
     isLoading, setIsLoading,
     error, setError,
     startResult, setStartResult
@@ -132,7 +134,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 1 && (
-            <div className="flex flex-col flex-1 justify-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <div className="w-16 h-16 bg-[#eef2ff] dark:bg-[#0066FF]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-8 h-8 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -144,7 +146,7 @@ export default function OnboardingWizard() {
               </p>
 
               {chatStep === 1 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What's the name of your business?</h2>
                   <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                     Our AI will instantly generate your storefront, products, and back-office agents.
@@ -175,7 +177,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 2 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                   <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -208,7 +210,7 @@ export default function OnboardingWizard() {
               )}
 
               {chatStep === 3 && (
-                <div className="flex flex-col flex-1 animate-fade-in">
+                <div className="flex flex-col flex-1 animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                   <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
@@ -244,7 +246,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 2 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
@@ -316,16 +318,16 @@ export default function OnboardingWizard() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
+            <div className="flex flex-col flex-1 animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
+                Pick your storefront vibe, team, and logo style. We'll automatically build everything.
               </p>
 
-              <div className="space-y-4 flex-1">
+              <div className="space-y-4 flex-1 overflow-y-auto pr-2">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -335,7 +337,51 @@ export default function OnboardingWizard() {
                         onClick={() => setWebsiteTemplate(template)}
                         className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
-                        <div className="font-semibold">{template}</div>
+                        <div className="font-semibold text-sm">{template}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Logo Style</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['Minimalist', 'Abstract', 'Typographic', 'Playful'].map(style => (
+                      <div
+                        key={style}
+                        onClick={() => setLogoStyle(style)}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${logoStyle === style ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                      >
+                        <div className="font-semibold text-sm">{style}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">AI Agent Team</label>
+                  <div className="flex flex-col gap-3">
+                    {[
+                      { id: 'customer-support', name: 'Customer Support', icon: '💬', desc: 'Answers questions & helps users 24/7' },
+                      { id: 'marketing', name: 'Marketing', icon: '📈', desc: 'Writes copy & creates campaigns' },
+                      { id: 'inventory', name: 'Inventory Manager', icon: '📦', desc: 'Tracks stock & prices' },
+                    ].map(agent => (
+                      <div
+                        key={agent.id}
+                        onClick={() => {
+                          if (selectedAIAgents.includes(agent.id)) {
+                            setSelectedAIAgents(selectedAIAgents.filter(a => a !== agent.id));
+                          } else {
+                            setSelectedAIAgents([...selectedAIAgents, agent.id]);
+                          }
+                        }}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all flex items-center gap-3 ${selectedAIAgents.includes(agent.id) ? 'border-[#0066FF] bg-[#0066FF]/10' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500'}`}
+                      >
+                         <div className="text-2xl">{agent.icon}</div>
+                         <div className="flex flex-col">
+                            <div className={`font-semibold text-sm ${selectedAIAgents.includes(agent.id) ? 'text-[#0066FF]' : 'text-[#1D1D1F] dark:text-white'}`}>{agent.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-[#A1A1A6]">{agent.desc}</div>
+                         </div>
                       </div>
                     ))}
                   </div>
@@ -355,7 +401,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 4 && (
-             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
                  <div className="absolute inset-0 border-4 border-[#0066FF] rounded-full border-t-transparent animate-spin"></div>
@@ -371,7 +417,7 @@ export default function OnboardingWizard() {
           )}
 
           {step === 5 && startResult && (
-            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
+            <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in" style={{ animation: 'fadeIn 250ms cubic-bezier(0.4, 0, 0.2, 1)' }}>
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />

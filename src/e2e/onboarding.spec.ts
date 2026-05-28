@@ -42,6 +42,11 @@ test.describe('Onboarding Wizard', () => {
 
     // Step 3 - Style
     await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
+
+    // Select new options added
+    await page.getByText('Abstract', { exact: true }).click();
+    await page.getByText('Inventory Manager', { exact: true }).click();
+
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
     // Simplified Mobile First Onboarding - wait for it to generate
@@ -101,6 +106,11 @@ test.describe('Onboarding Wizard', () => {
 
     // Step 3 - Style
     await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
+
+    // Select new options added
+    await page.getByText('Playful', { exact: true }).click();
+    await page.getByText('Marketing', { exact: true }).click(); // toggle off
+
     await page.getByRole('button', { name: /Launch Store/i }).click();
 
     // Simplified Mobile First Onboarding - wait for it to generate

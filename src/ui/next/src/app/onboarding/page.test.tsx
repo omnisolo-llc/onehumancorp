@@ -14,6 +14,8 @@ describe('OnboardingWizard', () => {
       whatYouSell: '',
       location: '',
       businessDescription: '',
+      selectedAIAgents: ['customer-support', 'marketing'],
+      logoStyle: 'Minimalist',
       isLoading: false,
       error: '',
       startResult: null,
@@ -97,6 +99,19 @@ describe('OnboardingWizard', () => {
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
+      expect(screen.getByText("Logo Style")).toBeInTheDocument();
+      expect(screen.getByText("AI Agent Team")).toBeInTheDocument();
+    });
+
+    // Test interacting with new elements
+    const logoStyleDiv = screen.getByText("Abstract");
+    await act(async () => {
+      logoStyleDiv.click();
+    });
+
+    const marketingAgentDiv = screen.getByText("Marketing");
+    await act(async () => {
+       marketingAgentDiv.click(); // Should toggle off
     });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });

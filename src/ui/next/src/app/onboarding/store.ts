@@ -13,6 +13,8 @@ interface OnboardingState {
   websiteTemplate: string;
   firstProductName: string;
   firstProductPrice: string;
+  selectedAIAgents: string[];
+  logoStyle: string;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -27,6 +29,8 @@ interface OnboardingState {
   setWebsiteTemplate: (template: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setSelectedAIAgents: (agents: string[]) => void;
+  setLogoStyle: (style: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
@@ -46,6 +50,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       websiteTemplate: 'Modern',
       firstProductName: '',
       firstProductPrice: '',
+      selectedAIAgents: ['customer-support', 'marketing'], // Default selected
+      logoStyle: 'Minimalist',
       isLoading: false,
       error: '',
       startResult: null,
@@ -60,6 +66,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setSelectedAIAgents: (selectedAIAgents) => set({ selectedAIAgents }),
+      setLogoStyle: (logoStyle) => set({ logoStyle }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),

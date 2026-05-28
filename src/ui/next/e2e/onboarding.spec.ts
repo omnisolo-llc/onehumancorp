@@ -9,8 +9,11 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
     // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('Custom vegan cakes');
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await page.getByPlaceholder('e.g. Portland, OR').fill('Portland, OR');
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
@@ -24,7 +27,7 @@ test.describe('Onboarding Wizard Flow', () => {
     }));
 
     // Click Generate
-    await page.locator('button:has-text("Generate My Business")').click();
+    await page.getByRole('button', { name: /Generate My Business/i }).click();
 
     // 2. Wait for Review Details Step
     await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
@@ -37,6 +40,8 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Select Template and Launch
     await page.locator('text="Classic"').click();
+    await page.getByText('Abstract', { exact: true }).click();
+    await page.getByText('Inventory Manager', { exact: true }).click();
     await page.locator('button:has-text("Launch Store")').click();
 
     // 4. Loading screen
