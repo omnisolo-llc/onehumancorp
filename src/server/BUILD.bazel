@@ -461,6 +461,7 @@ SERVER_LIB_TEST_GROUPS = {
         "db::",
         "scheduler::",
         "settings::",
+        "autodream_sync::tests::test_autodream_sync_service_sqlite",
         "autodream_pipeline::pipeline::tests::test_chunk_content",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks_with_cache",
