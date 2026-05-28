@@ -416,7 +416,7 @@ export default function ApprovalInbox({
                     onClick={() => onApprove(req.id)}
                     className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    Approve
+                    Approve & Send
                   </button>
                 </div>
               </div>
