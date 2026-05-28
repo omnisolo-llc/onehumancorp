@@ -175,6 +175,9 @@ export default function CheckoutPage() {
               >
                 Continue to Dashboard
               </button>
+              <div className="mt-4 text-center">
+                <a href="ohc://join?ref=checkout_referral_modal" className="text-xs text-gray-400 hover:text-gray-600 font-semibold tracking-wider uppercase transition-colors">⚡ Powered by OHC</a>
+              </div>
             </div>
           </div>
         </div>
