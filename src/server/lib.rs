@@ -2133,7 +2133,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
-                |req: axum::extract::Request, next: axum::middleware::Next| async move {
+                |mut req: axum::extract::Request, next: axum::middleware::Next| async move {
                     use axum::response::IntoResponse;
                     let store = std::sync::Arc::new(crate::auth::Store::new());
                 let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
@@ -2293,7 +2293,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                  }
              }
         }).layer(
-            axum::middleware::from_fn(|req: axum::extract::Request, next: axum::middleware::Next| async move {
+            axum::middleware::from_fn(|mut req: axum::extract::Request, next: axum::middleware::Next| async move {
                 use axum::response::IntoResponse;
                 let store = std::sync::Arc::new(crate::auth::Store::new());
                 let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
