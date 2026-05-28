@@ -545,19 +545,27 @@ impl DepartmentOrchestrator {
         results
     }
 
-    pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
+    pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool, updated_content: Option<String>) -> Result<(), String> {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();
 
         let opt_department = match &self.db.store {
             DbStore::Postgres => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
-                    .bind(new_status)
-                    .bind(now)
-                    .bind(request_id)
-                    .bind(tenant_id)
-                    .fetch_optional(&self.db.pool)
-                    .await;
+                let query = if let Some(ref content) = updated_content {
+                    sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2, description = $5 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                        .bind(content)
+                } else {
+                    sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4 RETURNING department")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                };
+                let row = query.fetch_optional(&self.db.pool).await;
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;
@@ -568,13 +576,21 @@ impl DepartmentOrchestrator {
                 }
             }
             DbStore::Sqlite(pool) => {
-                let row = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
-                    .bind(new_status)
-                    .bind(now)
-                    .bind(request_id)
-                    .bind(tenant_id)
-                    .fetch_optional(pool)
-                    .await;
+                let query = if let Some(ref content) = updated_content {
+                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ?, description = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(content)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                } else {
+                    sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ? RETURNING department")
+                        .bind(new_status)
+                        .bind(now)
+                        .bind(request_id)
+                        .bind(tenant_id)
+                };
+                let row = query.fetch_optional(pool).await;
                 match row {
                     Ok(Some(r)) => {
                         use sqlx::Row;

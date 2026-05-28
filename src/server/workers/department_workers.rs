@@ -238,9 +238,33 @@ impl OperationsWorker {
                                 let task_id = Uuid::new_v4().to_string();
                             let description = format!("Inventory for {} is low ({} remaining). Average daily sales: {:.1}. Will run out in {:.1} days.", product_name, inventory_count, daily_sales, days_until_empty);
 
+                            let memory_context = match &db.store {
+                                crate::db::DbStore::Postgres => {
+                                    let rows = sqlx::query("SELECT content FROM agent_memories WHERE tenant_id = $1 LIMIT 3")
+                                        .bind(&tenant_id)
+                                        .fetch_all(&db.pool)
+                                        .await
+                                        .unwrap_or(vec![]);
+                                    rows.into_iter().filter_map(|r| r.try_get::<String, _>("content").ok()).collect::<Vec<_>>().join("\n")
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let rows = sqlx::query("SELECT content FROM agent_memories WHERE tenant_id = ? LIMIT 3")
+                                        .bind(&tenant_id)
+                                        .fetch_all(pool)
+                                        .await
+                                        .unwrap_or(vec![]);
+                                    rows.into_iter().filter_map(|r| r.try_get::<String, _>("content").ok()).collect::<Vec<_>>().join("\n")
+                                }
+                            };
+                            let memory_prompt_addon = if !memory_context.is_empty() {
+                                format!(" Context from memories: {}", memory_context)
+                            } else {
+                                "".to_string()
+                            };
+
                             let mut drafted_msg = String::new();
                             if let (Some(s_name), Some(s_contact)) = (&supplier_name, &supplier_contact) {
-                                let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.", s_name, s_contact, product_name, inventory_count, daily_sales);
+                                let prompt = format!("Draft a concise restock message to our supplier '{}' at '{}' for the product '{}'. Currently we have {} left and are selling at a rate of {:.1} per day. Ask to order more to cover the next month.{}", s_name, s_contact, product_name, inventory_count, daily_sales, memory_prompt_addon);
                                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                                         prompt,
@@ -749,6 +773,30 @@ impl CustomerSuccessWorker {
                 }
             };
 
+            let memory_context = match &db.store {
+                crate::db::DbStore::Postgres => {
+                    let rows = sqlx::query("SELECT content FROM agent_memories WHERE tenant_id = $1 LIMIT 3")
+                        .bind(&tenant_id)
+                        .fetch_all(&db.pool)
+                        .await
+                        .unwrap_or(vec![]);
+                    rows.into_iter().filter_map(|r| r.try_get::<String, _>("content").ok()).collect::<Vec<_>>().join("\n")
+                },
+                crate::db::DbStore::Sqlite(pool) => {
+                    let rows = sqlx::query("SELECT content FROM agent_memories WHERE tenant_id = ? LIMIT 3")
+                        .bind(&tenant_id)
+                        .fetch_all(pool)
+                        .await
+                        .unwrap_or(vec![]);
+                    rows.into_iter().filter_map(|r| r.try_get::<String, _>("content").ok()).collect::<Vec<_>>().join("\n")
+                }
+            };
+            let memory_prompt_addon = if !memory_context.is_empty() {
+                format!(" Context from memories: {}", memory_context)
+            } else {
+                "".to_string()
+            };
+
             // Draft confirmation message
             let (title, mut drafted_msg) = if event_type == "OrderProcessed" {
                 ("Draft Confirmation".to_string(), format!("Hi! Your order from {} has been processed and is being prepared for shipment. Thank you!", tenant_name))
@@ -758,7 +806,7 @@ impl CustomerSuccessWorker {
 
             if event_type == "CustomerMessageReceived" {
                 let customer_message = payload.get("message").and_then(|m| m.as_str()).unwrap_or("");
-                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.", tenant_name, tenant_industry, customer_message);
+                let prompt = format!("You are the customer success ambassador for '{}', a '{}' business. Draft a helpful and polite reply to this customer message: '{}'. Keep it concise and professional.{}", tenant_name, tenant_industry, customer_message, memory_prompt_addon);
                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
                     let reason_req = ::server_ohc::orchestration::ReasonRequest {
                         prompt,

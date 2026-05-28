@@ -11,6 +11,8 @@ export default function AgentsPage() {
   const [approvals, setApprovals] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<string>('');
 
   const fetchFeed = async () => {
     setFeedLoading(true);
@@ -45,19 +47,22 @@ export default function AgentsPage() {
     fetchFeed();
   }, []);
 
-  const handleDecision = async (id: string, approved: boolean) => {
+  const handleDecision = async (id: string, approved: boolean, updatedContent?: string) => {
     setActionLoading(id);
     try {
+      const payload = { approved, updatedContent };
       const res = await fetch(`/api/agents/approvals/${id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ approved }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         // Remove the processed approval from the list
         setApprovals(prev => prev.filter(req => req.id !== id));
+        setEditingId(null);
+        setEditDraft('');
         fetchFeed(); // Refresh the activity feed
       } else {
         console.error('Failed to process approval');
@@ -215,25 +220,72 @@ export default function AgentsPage() {
                         </span>
                         <span className="text-xs text-gray-400 font-medium">Draft For Review</span>
                       </div>
-                      <p className="text-gray-800 text-sm font-medium mb-5 leading-relaxed">
-                        {req.description}
-                      </p>
+                      {editingId === req.id ? (
+                        <div className="mb-5">
+                          <textarea
+                            className="w-full min-h-[88px] p-3 text-sm text-gray-800 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-y"
+                            value={editDraft}
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            placeholder="Edit draft response..."
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-gray-800 text-sm font-medium mb-5 leading-relaxed">
+                          {req.description}
+                        </p>
+                      )}
 
                       <div className="flex gap-3 mt-auto">
-                        <button
-                          onClick={() => handleDecision(req.id, false)}
-                          disabled={actionLoading === req.id}
-                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-                        >
-                          {actionLoading === req.id ? '...' : 'Edit Draft'}
-                        </button>
-                        <button
-                          onClick={() => handleDecision(req.id, true)}
-                          disabled={actionLoading === req.id}
-                          className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
-                        >
-                          {actionLoading === req.id ? '...' : 'Approve & Send'}
-                        </button>
+                        {editingId === req.id ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditDraft('');
+                              }}
+                              disabled={actionLoading === req.id}
+                              className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => handleDecision(req.id, true, editDraft)}
+                              disabled={actionLoading === req.id}
+                              className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                            >
+                              {actionLoading === req.id ? '...' : 'Save & Send'}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingId(req.id);
+                                // Assuming description contains the draft text or we initialize to empty
+                                setEditDraft(req.description || '');
+                              }}
+                              disabled={actionLoading === req.id}
+                              className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors ${actionLoading === req.id ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                            >
+                              {actionLoading === req.id ? '...' : 'Edit Draft'}
+                            </button>
+                            <button
+                              onClick={() => handleDecision(req.id, true)}
+                              disabled={actionLoading === req.id}
+                              className={`flex-1 min-h-[44px] min-w-[44px] py-3 rounded-xl font-semibold text-sm transition-colors shadow-sm ${actionLoading === req.id ? 'bg-indigo-400 text-white cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                            >
+                              {actionLoading === req.id ? '...' : 'Approve & Send'}
+                            </button>
+                            <button
+                              onClick={() => handleDecision(req.id, false)}
+                              disabled={actionLoading === req.id}
+                              className={`min-h-[44px] min-w-[44px] p-3 rounded-xl font-semibold text-sm transition-colors bg-red-50 hover:bg-red-100 text-red-600`}
+                              title="Reject"
+                            >
+                              {actionLoading === req.id ? '...' : 'X'}
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   ))}

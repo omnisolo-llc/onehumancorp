@@ -27,6 +27,8 @@ pub struct PaginationQuery {
 #[derive(Deserialize)]
 pub struct DecisionRequest {
     pub approved: bool,
+    #[serde(rename = "updatedContent")]
+    pub updated_content: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -110,7 +112,7 @@ async fn decide_approval(
         None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved).await {
+    match orchestrator.decide_approval(&id, &tenant_id, payload.approved, payload.updated_content).await {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
     }
