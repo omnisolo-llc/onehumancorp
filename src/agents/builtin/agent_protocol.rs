@@ -65,7 +65,7 @@ impl AgentProtocolServer {
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
         let cfg = crate::agent::AgentRunConfig::default();
 
-        match self.runner.run_async(&cfg, &initial_message).await {
+        match self.runner.run_async(&initial_message).await {
             Ok(result) => {
                 let resp = StepResponse {
                     task_id: task_id.to_string(),
