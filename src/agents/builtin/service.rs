@@ -694,9 +694,11 @@ impl AgentServiceImpl {
                 ));
             }
 
-            let mut mcp_tools =
-                ohc_builtin_agent_tools::mcp_dynamic::load_mcp_server_tools(&toolset.mcp_servers)
-                    .await;
+            let mut goose_registry = crate::goose::GooseMcpRegistry::new();
+            for server in &toolset.mcp_servers {
+                goose_registry.register_extension(server.clone());
+            }
+            let mut mcp_tools = goose_registry.load_all_extensions().await;
             tools.append(&mut mcp_tools);
         }
 

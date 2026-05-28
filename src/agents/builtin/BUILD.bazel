@@ -53,6 +53,7 @@ rust_library(
         "consolidation_worker.rs",
         "deerflow_subagents.rs",
         "departments.rs",
+        "goose.rs",
         "gpt_researcher.rs",
         "guardrails.rs",
         "harness.rs",
