@@ -223,4 +223,83 @@ mod tests {
 
         assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
     }
+
+    #[tokio::test]
+    async fn test_get_department_status() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+
+        let tenant_id = "test-tenant-status-123".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        use crate::orchestration::departments::types::{ApprovalRequest, DepartmentType, ApprovalStatus, ActionRisk};
+
+        let req1 = ApprovalRequest {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            department: DepartmentType::Operations,
+            description: "Task 1".to_string(),
+            status: ApprovalStatus::PendingApproval,
+            action_risk: ActionRisk::DraftForReview,
+            payload: None,
+        };
+        orchestrator.add_approval_request(req1).await;
+
+        let req2 = ApprovalRequest {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            department: DepartmentType::Operations,
+            description: "Task 2".to_string(),
+            status: ApprovalStatus::Approved,
+            action_risk: ActionRisk::AutoExecute,
+            payload: None,
+        };
+        orchestrator.add_approval_request(req2).await;
+
+        let req3 = ApprovalRequest {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            department: DepartmentType::CustomerSuccess,
+            description: "Task 3".to_string(),
+            status: ApprovalStatus::PendingApproval,
+            action_risk: ActionRisk::DraftForReview,
+            payload: None,
+        };
+        orchestrator.add_approval_request(req3).await;
+
+        let statuses = orchestrator.get_department_status(&tenant_id).await;
+
+        let ops = statuses.iter().find(|s| s.department == DepartmentType::Operations).unwrap();
+        assert_eq!(ops.pending_approvals, 1);
+        assert_eq!(ops.completed_actions, 1);
+
+        let cs = statuses.iter().find(|s| s.department == DepartmentType::CustomerSuccess).unwrap();
+        assert_eq!(cs.pending_approvals, 1);
+        assert_eq!(cs.completed_actions, 0);
+
+        let sales = statuses.iter().find(|s| s.department == DepartmentType::Sales).unwrap();
+        assert_eq!(sales.pending_approvals, 0);
+        assert_eq!(sales.completed_actions, 0);
+    }
 }

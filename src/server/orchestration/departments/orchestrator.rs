@@ -300,6 +300,76 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn get_department_status(&self, tenant_id: &str) -> Vec<crate::orchestration::departments::types::DepartmentDashboardStatus> {
+        let mut results = HashMap::new();
+        for dep in vec![
+            DepartmentType::Operations,
+            DepartmentType::Marketing,
+            DepartmentType::Sales,
+            DepartmentType::CustomerSuccess,
+            DepartmentType::Finance,
+            DepartmentType::Legal,
+            DepartmentType::BusinessAdvisory,
+        ] {
+            results.insert(dep, crate::orchestration::departments::types::DepartmentDashboardStatus {
+                department: dep,
+                pending_approvals: 0,
+                completed_actions: 0,
+            });
+        }
+
+        match &self.db.store {
+            DbStore::Postgres => {
+                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = $1 GROUP BY department, status")
+                    .bind(tenant_id)
+                    .fetch_all(&self.db.pool)
+                    .await {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let count: i64 = row.get("count");
+
+                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
+                            if let Some(status) = results.get_mut(&dep) {
+                                if status_str == "PENDING_APPROVAL" {
+                                    status.pending_approvals += count;
+                                } else {
+                                    status.completed_actions += count;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            DbStore::Sqlite(pool) => {
+                if let Ok(rows) = sqlx::query("SELECT department, status, COUNT(*) as count FROM agent_approvals WHERE tenant_id = ? GROUP BY department, status")
+                    .bind(tenant_id)
+                    .fetch_all(pool)
+                    .await {
+                    use sqlx::Row;
+                    for row in rows {
+                        let dep_str: String = row.get("department");
+                        let status_str: String = row.get("status");
+                        let count: i64 = row.get("count");
+
+                        if let Ok(dep) = DepartmentType::from_str(&dep_str) {
+                            if let Some(status) = results.get_mut(&dep) {
+                                if status_str == "PENDING_APPROVAL" {
+                                    status.pending_approvals += count;
+                                } else {
+                                    status.completed_actions += count;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        results.into_values().collect()
+    }
+
     pub async fn add_approval_request(&self, req: ApprovalRequest) {
         let now = Utc::now();
         let status_str = match req.status {

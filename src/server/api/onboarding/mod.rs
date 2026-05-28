@@ -40,7 +40,8 @@ async fn get_draft(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    match agent.get_onboarding_state(tenant_id).await {
+    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => {
             // For now, extract the bio field if we store it as a general state document
             // If there's no state or bio, returning an empty json is fine
@@ -101,7 +102,8 @@ async fn get_state(
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
     let tenant_id = headers.get("X-Tenant-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_tenant");
-    match agent.get_onboarding_state(tenant_id).await {
+    let user_id = headers.get("X-User-ID").and_then(|v| v.to_str().ok()).unwrap_or("default_user");
+    match agent.get_onboarding_state(tenant_id, user_id).await {
         Ok(state) => Ok(Json(state)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
