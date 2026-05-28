@@ -38,7 +38,11 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
 
     Router::new()
         .route("/sync", post(move || async move {
-            match worker_sync.consolidate_epoch().await {
+            let start = std::time::Instant::now();
+            let res = worker_sync.consolidate_epoch().await;
+            let elapsed = start.elapsed().as_secs_f64();
+            crate::telemetry::record_autodream_sync_duration(elapsed, crate::telemetry::get_deployment_mode());
+            match res {
                 Ok(_) => Json(SyncResponse { status: "success".to_string() }).into_response(),
                 Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
             }
@@ -61,7 +65,13 @@ pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) ->
                 }
             };
 
-            match worker_query.search_memories(&embedding, limit).await {
+            let start = std::time::Instant::now();
+            let res = worker_query.search_memories(&embedding, limit).await;
+            let elapsed = start.elapsed().as_secs_f64();
+            crate::telemetry::record_autodream_query_duration(elapsed, crate::telemetry::get_deployment_mode());
+            crate::telemetry::record_hybrid_rag_latency(elapsed, crate::telemetry::get_deployment_mode());
+
+            match res {
                 Ok(results) => {
                     let res = results.into_iter().map(|r| SearchResult {
                         id: r.id,

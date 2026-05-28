@@ -26,6 +26,46 @@ static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+static AUTODREAM_SYNC_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static AUTODREAM_QUERY_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static MESH_BROADCAST_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+static HYBRID_RAG_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
+
+pub fn get_autodream_sync_duration_histogram() -> &'static Histogram<f64> {
+    AUTODREAM_SYNC_DURATION.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.f64_histogram("ohc_autodream_sync_duration_seconds")
+            .with_description("AutoDream sync duration in seconds")
+            .build()
+    })
+}
+
+pub fn get_autodream_query_duration_histogram() -> &'static Histogram<f64> {
+    AUTODREAM_QUERY_DURATION.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.f64_histogram("ohc_autodream_query_duration_seconds")
+            .with_description("AutoDream query duration in seconds")
+            .build()
+    })
+}
+
+pub fn get_hybrid_rag_latency_histogram() -> &'static Histogram<f64> {
+    HYBRID_RAG_LATENCY.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.f64_histogram("ohc_hybrid_rag_latency")
+            .with_description("Hybrid RAG latency in seconds")
+            .build()
+    })
+}
+
+pub fn get_mesh_broadcast_total_counter() -> &'static Counter<u64> {
+    MESH_BROADCAST_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_mesh_broadcast_total")
+            .with_description("Total number of Teammate Mesh broadcasts")
+            .build()
+    })
+}
 
 pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
     POSTGRES_LOCK_CONTENTION.get_or_init(|| {
@@ -1134,6 +1174,27 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
         ],
     );
 }
+
+pub fn record_autodream_sync_duration(duration: f64, deployment_mode: &str) {
+    let histogram = get_autodream_sync_duration_histogram();
+    histogram.record(duration, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
+pub fn record_autodream_query_duration(duration: f64, deployment_mode: &str) {
+    let histogram = get_autodream_query_duration_histogram();
+    histogram.record(duration, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
+pub fn record_hybrid_rag_latency(duration: f64, deployment_mode: &str) {
+    let histogram = get_hybrid_rag_latency_histogram();
+    histogram.record(duration, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
+pub fn record_mesh_broadcast(deployment_mode: &str) {
+    let counter = get_mesh_broadcast_total_counter();
+    counter.add(1, &[opentelemetry::KeyValue::new("deployment_mode", deployment_mode.to_string())]);
+}
+
 #[cfg(test)]
 mod additional_tests {
     use super::*;

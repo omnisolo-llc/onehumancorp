@@ -5,7 +5,7 @@ use axum::{
 };
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
-use futures::{sink::SinkExt, stream::StreamExt};
+use futures::{sink::SinkExt, stream::StreamExt, stream};
 use tokio::sync::mpsc;
 use serde::Deserialize;
 use prost::Message as ProstMessage;
@@ -64,7 +64,10 @@ pub async fn orchestration_broadcast_handler(
     }
 
     match transport.publish(&payload.topic, payload.message.into()).await {
-        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Ok(_) => {
+            crate::telemetry::record_mesh_broadcast(crate::telemetry::get_deployment_mode());
+            axum::response::Json(serde_json::json!({ "success": true })).into_response()
+        },
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
@@ -90,12 +93,45 @@ pub async fn broadcast_handler(
     }
 
     match transport.publish(&payload.topic, payload.message.into()).await {
-        Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
+        Ok(_) => {
+            crate::telemetry::record_mesh_broadcast(crate::telemetry::get_deployment_mode());
+            axum::response::Json(serde_json::json!({ "success": true })).into_response()
+        },
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
             (axum::http::StatusCode::INTERNAL_SERVER_ERROR, axum::response::Json(error_res)).into_response()
         }
     }
+}
+
+pub async fn stream_handler(
+    State(transport): State<Arc<dyn MeshTransport>>,
+) -> axum::response::sse::Sse<impl tokio_stream::Stream<Item = Result<axum::response::sse::Event, std::convert::Infallible>>> {
+    let (tx, rx) = mpsc::unbounded_channel();
+
+    let handler = Box::new(move |msg: MeshMessage| {
+        let _ = tx.send(msg);
+    });
+
+    let cancel = transport.subscribe("swarm-events", handler).await.unwrap_or_else(|_| Box::new(|| {}));
+
+    let stream = tokio_stream::wrappers::UnboundedReceiverStream::new(rx)
+        .map(|msg| {
+            let json = serde_json::to_string(&msg).unwrap_or_default();
+            Ok(axum::response::sse::Event::default().data(json))
+        });
+
+    let stream = stream::unfold((stream, cancel), |(mut stream, cancel)| async move {
+        match stream.next().await {
+            Some(item) => Some((item, (stream, cancel))),
+            None => {
+                cancel();
+                None
+            }
+        }
+    });
+
+    axum::response::sse::Sse::new(stream)
 }
 
 pub async fn direct_handler(
@@ -266,6 +302,34 @@ mod tests {
             }
         }
         assert!(found, "Did not receive the srv_test message");
+    }
+
+    #[tokio::test]
+    async fn test_stream_handler() {
+        let transport: Arc<dyn MeshTransport> = Arc::new(InProcessTransport::new());
+
+        let app = Router::new()
+            .route("/api/v1/stream", get(stream_handler))
+            .with_state(transport);
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        tokio::spawn(async move {
+            axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .await
+            .unwrap();
+        });
+
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/api/v1/stream", addr);
+        let res = client.get(&url).send().await.unwrap();
+
+        assert_eq!(res.status(), 200);
+        assert_eq!(res.headers().get("content-type").unwrap(), "text/event-stream");
     }
 
     #[tokio::test]
