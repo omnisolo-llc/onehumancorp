@@ -114,7 +114,7 @@ rust_library(
 
 rust_test(
     name = "server_storage_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_storage",
     edition = "2024",
     env = {
