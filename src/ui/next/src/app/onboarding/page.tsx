@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import debounce from 'lodash/debounce';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -24,8 +25,57 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    setIsLoaded(true);
-  }, []);
+    const loadState = async () => {
+      try {
+        const res = await fetch('/api/onboarding/state');
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.chatStep) setChatStep(data.chatStep);
+            if (data.businessDescription !== undefined) setBusinessDescription(data.businessDescription);
+            if (data.businessName !== undefined) setBusinessName(data.businessName);
+            if (data.whatYouSell !== undefined) setWhatYouSell(data.whatYouSell);
+            if (data.location !== undefined) setLocation(data.location);
+            if (data.businessType !== undefined) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate !== undefined) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName !== undefined) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice !== undefined) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load state', e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadState();
+  }, [setStep, setChatStep, setBusinessDescription, setBusinessName, setWhatYouSell, setLocation, setBusinessType, setCategories, setWebsiteTemplate, setFirstProductName, setFirstProductPrice]);
+
+  const debouncedSaveState = useCallback(
+    debounce(async (stateToSave: any) => {
+      try {
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(stateToSave)
+        });
+      } catch (e) {
+        console.error('Failed to save state', e);
+      }
+    }, 500),
+    []
+  );
+
+  useEffect(() => {
+    if (isLoaded) {
+      debouncedSaveState({
+        step, chatStep, businessDescription, businessName, whatYouSell, location,
+        businessType, categories, websiteTemplate, firstProductName, firstProductPrice
+      });
+    }
+  }, [step, chatStep, businessDescription, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded, debouncedSaveState]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -157,7 +207,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -165,7 +215,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
+                      disabled={businessName.trim().length < 2}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -198,7 +248,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
+                      disabled={whatYouSell.trim().length < 2}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -224,7 +274,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -232,7 +282,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={handleIntake}
-                      disabled={!location.trim() || isLoading}
+                      disabled={location.trim().length < 2 || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
@@ -306,7 +356,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={businessName.trim().length < 2 || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !/^\d+(\.\d{1,2})?$/.test(firstProductPrice)}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
