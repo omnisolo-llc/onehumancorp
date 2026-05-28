@@ -30,11 +30,12 @@ interface OnboardingState {
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
+  syncState: (newState: Partial<OnboardingState>) => void;
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       step: 1,
       chatStep: 1,
       businessDescription: '',
@@ -63,9 +64,65 @@ export const useOnboardingStore = create<OnboardingState>()(
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),
+      syncState: (newState) => set((state) => ({ ...state, ...newState })),
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Fire and forget fetch state from backend
+          fetch('/api/onboarding/state', {
+            headers: {
+              'X-Tenant-ID': typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'storefront' : 'storefront',
+              'X-User-ID': typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user'
+            }
+          })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && Object.keys(data).length > 0) {
+              state.syncState(data);
+            }
+          })
+          .catch(console.error);
+        }
+      }
     }
   )
+);
+
+// Subscribe to state changes and push to backend
+useOnboardingStore.subscribe(
+  (state, prevState) => {
+    // Basic debounce logic or just simple diff check to avoid loop.
+    // In a real app we'd debounce this.
+    const hasChanged = state.step !== prevState.step ||
+                       state.chatStep !== prevState.chatStep ||
+                       state.businessName !== prevState.businessName ||
+                       state.businessType !== prevState.businessType ||
+                       state.whatYouSell !== prevState.whatYouSell ||
+                       state.location !== prevState.location;
+
+    if (hasChanged) {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'storefront' : 'storefront',
+          'X-User-ID': typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user'
+        },
+        body: JSON.stringify({
+          step: state.step,
+          chatStep: state.chatStep,
+          businessName: state.businessName,
+          businessType: state.businessType,
+          whatYouSell: state.whatYouSell,
+          location: state.location,
+          categories: state.categories,
+          websiteTemplate: state.websiteTemplate,
+          firstProductName: state.firstProductName,
+          firstProductPrice: state.firstProductPrice,
+        })
+      })?.catch?.(console.error);
+    }
+  }
 );
