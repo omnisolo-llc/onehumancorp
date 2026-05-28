@@ -1234,13 +1234,14 @@ pub async fn start_builtin_agent(
     transport: std::sync::Arc<dyn crate::mesh::transport::MeshTransport>,
     svc: std::sync::Arc<AgentServiceImpl>,
 ) {
-    let handler = {
+    let handler_legacy = {
         let transport = transport.clone();
         let svc = svc.clone();
         Box::new(move |msg: crate::mesh::transport::Message| {
+            // Support legacy run task format
             use prost::Message;
             if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&msg.payload[..]) {
-                tracing::info!("Received job from mesh: {}", req.task_id);
+                tracing::info!("Received legacy job from mesh: {}", req.task_id);
                 let svc = svc.clone();
                 let transport = transport.clone();
                 tokio::spawn(async move {
@@ -1271,13 +1272,122 @@ pub async fn start_builtin_agent(
         }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
     };
 
-    if let Err(e) = transport.subscribe("agent_jobs", handler).await {
+    let handler_interop = {
+        let transport = transport.clone();
+        let svc = svc.clone();
+        Box::new(move |msg: crate::mesh::transport::Message| {
+            // Support new Interop Protocol JobDispatch format
+            if msg.action.starts_with("system:job_dispatch:") {
+                use prost::Message;
+                if let Ok(dispatch) = crate::proto::interop::JobDispatch::decode(&msg.payload[..]) {
+                    // Send ACK
+                    let ack = crate::proto::interop::JobAck {
+                        job_id: dispatch.job_id.clone(),
+                        node_id: "builtin_agent".to_string(),
+                        timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                    };
+                    let mut buf = Vec::new();
+                    if ack.encode(&mut buf).is_ok() {
+                        let ack_topic = format!("system:job_ack:{}", dispatch.job_id);
+                        let transport_clone = transport.clone();
+                        tokio::spawn(async move {
+                            let _ = transport_clone.publish(&ack_topic, crate::mesh::transport::Message {
+                                agent_id: "builtin_agent".to_string(),
+                                action: ack_topic.clone(),
+                                status: "ok".to_string(),
+                                payload: buf,
+                                msg_id: uuid::Uuid::new_v4().to_string(),
+                            }).await;
+                        });
+                    }
+
+                    if dispatch.action_name == "run_task" {
+                        if let Ok(req) = crate::proto::agent_service::RunTaskRequest::decode(&dispatch.payload[..]) {
+                            tracing::info!("Received job from mesh via InteropProtocol: {}", req.task_id);
+                            let svc = svc.clone();
+                            let transport = transport.clone();
+                            let job_id = dispatch.job_id.clone();
+                            let tenant_id = dispatch.tenant_id.clone();
+
+                            tokio::spawn(async move {
+                                match svc.run_task(tonic::Request::new(req)).await {
+                                    Ok(resp) => {
+                                        let mut stream = resp.into_inner();
+                                        use tokio_stream::StreamExt;
+                                        let mut final_result = String::new();
+                                        let mut final_error = String::new();
+
+                                        while let Some(Ok(evt)) = stream.next().await {
+                                            if evt.r#type == crate::proto::agent_service::EventType::TaskComplete as i32 {
+                                                final_result = evt.content.clone();
+                                            } else if evt.r#type == crate::proto::agent_service::EventType::TaskError as i32 {
+                                                final_error = evt.error.clone();
+                                            }
+                                        }
+
+                                        let status_update = crate::proto::interop::JobStatusUpdate {
+                                            job_id: job_id.clone(),
+                                            tenant_id: tenant_id.clone(),
+                                            status: if final_error.is_empty() { "COMPLETED".to_string() } else { "FAILED".to_string() },
+                                            details_payload: if final_error.is_empty() { final_result.into_bytes() } else { final_error.into_bytes() },
+                                            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                                        };
+
+                                        let mut buf = Vec::new();
+                                        if status_update.encode(&mut buf).is_ok() {
+                                            let topic = format!("system:job_status:{}", job_id);
+                                            let _ = transport.publish(&topic, crate::mesh::transport::Message {
+                                                agent_id: "builtin_agent".to_string(),
+                                                action: topic.clone(),
+                                                status: "ok".to_string(),
+                                                payload: buf,
+                                                msg_id: uuid::Uuid::new_v4().to_string(),
+                                            }).await;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        tracing::error!("Error running task from mesh: {}", e);
+                                        let status_update = crate::proto::interop::JobStatusUpdate {
+                                            job_id: job_id.clone(),
+                                            tenant_id: tenant_id.clone(),
+                                            status: "FAILED".to_string(),
+                                            details_payload: e.to_string().into_bytes(),
+                                            timestamp_ms: chrono::Utc::now().timestamp_millis(),
+                                        };
+
+                                        let mut buf = Vec::new();
+                                        if status_update.encode(&mut buf).is_ok() {
+                                            let topic = format!("system:job_status:{}", job_id);
+                                            let _ = transport.publish(&topic, crate::mesh::transport::Message {
+                                                agent_id: "builtin_agent".to_string(),
+                                                action: topic.clone(),
+                                                status: "ok".to_string(),
+                                                payload: buf,
+                                                msg_id: uuid::Uuid::new_v4().to_string(),
+                                            }).await;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }) as Box<dyn Fn(crate::mesh::transport::Message) + Send + Sync>
+    };
+
+    if let Err(e) = transport.subscribe("agent_jobs", handler_legacy).await {
         tracing::error!("Failed to subscribe to 'agent_jobs' on mesh transport: {}", e);
     } else {
         tracing::info!("Subscribed to mesh channel 'agent_jobs'");
     }
 
-    let handler_tasks = {
+    if let Err(e) = transport.subscribe("system:job_dispatch:*", handler_interop).await {
+        tracing::error!("Failed to subscribe to 'system:job_dispatch:*' on mesh transport: {}", e);
+    } else {
+        tracing::info!("Subscribed to mesh channel 'system:job_dispatch:*'");
+    }
+let handler_tasks = {
         let svc = svc.clone();
         let transport = transport.clone();
         Box::new(move |msg: crate::mesh::transport::Message| {

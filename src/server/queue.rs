@@ -697,7 +697,7 @@ impl QueueManager {
     pub async fn start_polling<F, Fut>(&self, worker_id: &str, interval: Duration, handler: F, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>)
     where
         F: Fn(SubAgentJob) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
+        Fut: std::future::Future<Output = Result<bool, String>> + Send + 'static,
     {
         let mut interval = tokio::time::interval(interval);
         
@@ -735,14 +735,24 @@ impl QueueManager {
                                 attempts += 1;
                                 let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler(job.clone())).await;
                                 let handler_res = match handle_res {
-                                    Ok(Ok(())) => Ok(()),
+                                    Ok(Ok(b)) => Ok(b),
                                     Ok(Err(e)) => Err(e),
                                     Err(_) => Err("Timeout executing job".to_string()),
                                 };
                                 match handler_res {
-                                    Ok(_) => {
+                                    Ok(true) => {
                                         tracing::info!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id, &job.tenant_id).await;
+                                    }
+                                    Ok(false) => {
+                                        tracing::info!("Job dispatched, waiting for async completion: {}", job.id);
+                                        let mut tx = self.pool.begin().await.unwrap();
+                                        let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'DISPATCHED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
+                                            .bind(&job.id)
+                                            .bind(&job.tenant_id)
+                                            .execute(&mut *tx)
+                                            .await;
+                                        let _ = tx.commit().await;
                                     }
                                     Err(e) => {
                                         tracing::error!("Job handler failed: {}, error: {}", job.id, e);
