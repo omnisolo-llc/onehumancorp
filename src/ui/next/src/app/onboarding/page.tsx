@@ -23,9 +23,91 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
+  // Debounce helper
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+
+  // Load state on mount
   useEffect(() => {
-    setIsLoaded(true);
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.whatYouSell) setWhatYouSell(data.whatYouSell);
+            if (data.location) setLocation(data.location);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.step) setStep(data.step);
+            if (data.chatStep) setChatStep(data.chatStep);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load draft state", err);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadState();
   }, []);
+
+
+  // Save state on change
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+
+    debounceTimer.current = setTimeout(async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            businessName,
+            whatYouSell,
+            location,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+            step,
+            chatStep,
+          })
+        });
+      } catch (err) {
+        console.error("Failed to save draft state", err);
+      }
+    }, 1000);
+
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, [businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, step, chatStep, isLoaded]);
+
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -123,7 +205,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -235,7 +317,7 @@ export default function OnboardingWizard() {
                       disabled={!location.trim() || isLoading}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isLoading ? 'Analyzing...' : 'Generate My Business'}
+                      {isLoading ? 'Analyzing...' : 'Generate Draft'}
                     </button>
                   </div>
                 </div>
