@@ -8,7 +8,9 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-            { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
+    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
+    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
@@ -20,15 +22,15 @@ export default function Integrations() {
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);
 
   const handleConnect = (id: string) => {
-    if (id === 'cal_com') {
-      alert('Connecting to Cal.com...');
+    if (id === 'calendly') {
+      alert("Connecting Calendly via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
       router.push("/dashboard");
     }
-    if (id === 'ayrshare') {
-      alert('Connecting to Ayrshare...');
+    if (id === 'manychat') {
+      alert("Connecting Manychat via OAuth...");
       setIntegrations(prev => prev.map(integration =>
         integration.id === id ? { ...integration, status: "connected" } : integration
       ));
@@ -43,7 +45,6 @@ export default function Integrations() {
       <div className="bg-gradient-to-r from-gray-900 to-black text-white px-6 py-8 shadow-md">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
-            <button onClick={() => router.push('/dashboard')} className="text-gray-400 hover:text-white mb-4 text-sm font-semibold transition-colors">&lt; Back to Dashboard</button>
             <div className="flex items-center gap-2 mb-2">
               <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-black text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wide">Premium</span>
             </div>
