@@ -940,7 +940,7 @@ pub async fn insert_autodream_memory(
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
-                    .bind(threshold.to_rfc3339())
+                    .bind(threshold)
                     .execute(sqlite_pool)
                     .await?.rows_affected()
             },
