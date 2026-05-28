@@ -17,6 +17,11 @@ while IFS= read -r -d '' path; do
     .empty_commit_trigger*|*/.empty_commit_trigger*|get_business_context_code|get_business_context_code.rs|*/get_business_context_code|*/get_business_context_code.rs|bazelisk-linux-amd64|*/bazelisk-linux-amd64)
       report "forbidden generated artifact is tracked: $path"
       ;;
+    cleanup_padding.json|replies.json|*.png)
+      if [[ "$path" != */* ]]; then
+        report "root-level scratch artifact is tracked: $path"
+      fi
+      ;;
   esac
 
   case "$path" in
