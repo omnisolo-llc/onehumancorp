@@ -19,10 +19,82 @@ export default function OnboardingWizard() {
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
+  // Cross-device state sync: Fetch state from backend on mount
   useEffect(() => {
     setIsLoaded(true);
-  }, []);
+
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            // Restore state if valid
+            if (data.step) setStep(data.step);
+            if (data.businessDescription) setBusinessDescription(data.businessDescription);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load onboarding state from backend:", err);
+      } finally {
+        setInitialLoadComplete(true);
+      }
+    };
+
+    fetchState();
+  }, [setStep, setBusinessDescription, setBusinessName, setBusinessType, setCategories, setWebsiteTemplate, setFirstProductName, setFirstProductPrice]);
+
+  // Debounced save state to backend whenever form state changes
+  useEffect(() => {
+    if (!isLoaded || !initialLoadComplete) return;
+
+    const handler = setTimeout(async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            businessDescription,
+            businessName,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice,
+          })
+        });
+      } catch (err) {
+        console.error("Failed to save onboarding state:", err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(handler);
+  }, [step, businessDescription, businessName, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded, initialLoadComplete]);
 
   const handleIntake = async () => {
     setIsLoading(true);
