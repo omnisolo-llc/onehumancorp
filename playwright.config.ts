@@ -30,7 +30,7 @@ export default defineConfig({
   outputDir: './test-results/screenshots',
   timeout: Number.isFinite(timeout) ? timeout : 60000,
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:18789',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     actionTimeout: Number.isFinite(actionTimeout) ? actionTimeout : 0,
     trace: 'on-first-retry',
     screenshot: 'on',

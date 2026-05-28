@@ -268,10 +268,15 @@ impl DB {
                     .execute(&self.pool)
                     .await?;
 
+                let _ = sqlx::query("ALTER TABLE tenants ADD COLUMN business_address TEXT").execute(&self.pool).await;
+                let _ = sqlx::query("ALTER TABLE orders ADD COLUMN customer_address TEXT").execute(&self.pool).await;
+
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
                 migrator.run(&self.pool).await?;
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let _ = sqlx::query("ALTER TABLE tenants ADD COLUMN business_address TEXT").execute(sqlite_pool).await;
+                let _ = sqlx::query("ALTER TABLE orders ADD COLUMN customer_address TEXT").execute(sqlite_pool).await;
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
@@ -377,7 +382,7 @@ impl DB {
                         tenant_id TEXT PRIMARY KEY,
                         owner_id TEXT,
                         business_name TEXT,
-                        tier TEXT,
+                        tier TEXT, business_address TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -411,7 +416,40 @@ impl DB {
                         tenant_id TEXT,
                         customer_id TEXT,
                         total_amount REAL,
-                        status TEXT,
+                        status TEXT, customer_address TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS fulfillment_profiles (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        enable_local_delivery BOOLEAN,
+                        enable_pickup BOOLEAN,
+                        enable_shipping BOOLEAN,
+                        local_delivery_radius_miles REAL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS fulfillment_methods (
+                        id TEXT PRIMARY KEY,
+                        order_id TEXT,
+                        type TEXT,
+                        cost REAL,
+                        provider TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        _sync_status TEXT DEFAULT 'pending',
+                        version INTEGER DEFAULT 1
+                    );
+                    CREATE TABLE IF NOT EXISTS shipping_labels (
+                        id TEXT PRIMARY KEY,
+                        order_id TEXT,
+                        tracking_number TEXT,
+                        label_url TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -436,7 +474,7 @@ impl DB {
                         service_id TEXT,
                         start_time TEXT,
                         end_time TEXT,
-                        status TEXT,
+                        status TEXT, customer_address TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
@@ -654,7 +692,7 @@ impl DB {
                         source TEXT,
                         content TEXT,
                         draft_reply TEXT,
-                        status TEXT,
+                        status TEXT, customer_address TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
