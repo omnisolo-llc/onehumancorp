@@ -1,4 +1,3 @@
-pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
 //
 // Configuration via environment variables:
@@ -65,5 +64,3 @@ pub mod swarm_topology;
 pub mod sona_patterns;
 pub mod gpt_researcher;
 pub mod deerflow_subagents;
-
-pub mod tool_executor_engine;
