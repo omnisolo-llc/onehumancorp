@@ -482,35 +482,11 @@ impl AutoDreamWorker {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
+                        db.insert_autodream_memory(&mem_id, "system", "system_agent", "fs-task", &content, &emb_str, "TASK_SUMMARY").await?;
 
-                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
-                            id: mem_id,
-                            tenant_id: "system".to_string(),
-                            agent_id: "system_agent".to_string(),
-                            content: content.clone(),
-                            embedding: embedding_vec,
-                            source_type: "TASK_SUMMARY".to_string(),
-                            created_at: chrono::Utc::now(),
-                            last_referenced_at: chrono::Utc::now(),
-                            reference_count: 0,
-                            reliability_score: 50,
-                            owner_override: false,
-                            metadata: None,
-                        };
-
-                        let repository = match &db.store {
-                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
-                        };
-
-                        if let Err(e) = repository.upsert(&record).await {
-                            debug!("AutoDreamWorker: failed to upsert agent-task memory {:?}: {}", path, e);
-                        } else {
-                            let path_clone = path.clone();
-                            tokio::fs::remove_file(path).await?;
-                            debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
-                        }
+                        let path_clone = path.clone();
+                        tokio::fs::remove_file(path).await?;
+                        debug!("AutoDreamWorker: consolidated memory from {:?}", path_clone);
                     }
                     Err(e) => {
                         debug!("AutoDreamWorker: failed to embed agent-task memory {:?}: {}", path, e);
@@ -589,6 +565,55 @@ mod tests {
         let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter, &worker.cache).await;
         // Should return Ok(()) if directory doesn't exist
         assert!(res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_consolidate_agent_task_memories_with_file() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let database_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(&database_url)
+            .unwrap();
+
+        let db = Arc::new(DB { pool: pool.clone(), store: crate::db::DbStore::Postgres });
+        let worker = AutoDreamWorker::new(db.clone());
+
+        // Create a dummy memory dir and file
+        let memory_dir = std::path::Path::new(".agent-task/memory");
+        if !memory_dir.exists() {
+            tokio::fs::create_dir_all(memory_dir).await.unwrap();
+        }
+
+        let dummy_file_path = memory_dir.join("dummy_task.yml");
+        tokio::fs::write(&dummy_file_path, "dummy task content to be embedded").await.unwrap();
+
+        // Ensure we use cache to avoid LLM call in test
+        worker.cache.set("dummy task content to be embedded", "[0.5, 0.5]");
+
+        let res = AutoDreamWorker::consolidate_agent_task_memories(&db, &worker.embedded_counter, &worker.cache).await;
+        assert!(res.is_ok());
+
+        // Verify the file was removed
+        assert!(!dummy_file_path.exists());
+
+        // Verify DB insert
+        let count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM autodream_memories WHERE source_type = 'TASK_SUMMARY' AND content = 'dummy task content to be embedded'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+
+        assert!(count.0 > 0);
+
+        // Cleanup
+        sqlx::query("DELETE FROM autodream_memories WHERE source_type = 'TASK_SUMMARY' AND content = 'dummy task content to be embedded'")
+            .execute(&pool)
+            .await
+            .unwrap();
     }
 }
 
