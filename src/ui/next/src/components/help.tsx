@@ -120,6 +120,7 @@ export function HelpWidget() {
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
+  const [activeVideo, setActiveVideo] = useState<{id: number, title: string, duration: string} | null>(null);
 
   useEffect(() => {
     fetch("/api/videos")
@@ -273,7 +274,7 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -306,6 +307,39 @@ export function HelpWidget() {
                 </WithTooltip>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-black rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-800 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start">
+              <h3 className="text-white font-bold text-sm line-clamp-2 drop-shadow-md">{activeVideo.title}</h3>
+              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-black/40 rounded-full p-1.5 transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Fake Video Player area */}
+            <div className="flex-1 flex items-center justify-center relative bg-gray-900">
+               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg animate-pulse">
+                  <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+               </div>
+            </div>
+
+            {/* Controls */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10 flex flex-col gap-2">
+              <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 w-1/3"></div>
+              </div>
+              <div className="flex justify-between text-white/80 text-[10px] font-medium">
+                <span>0:00</span>
+                <span>{activeVideo.duration}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
