@@ -65,7 +65,7 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'STUCK' OR ((status = 'PENDING' OR status = 'BURSTING') AND updated_at < $1)) AND tenant_id = $2")
                     .bind(stuck_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
@@ -565,13 +565,13 @@ mod tests {
             .await
             .unwrap();
 
-            let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
+            let recent_stuck_time = chrono::Utc::now() - chrono::Duration::minutes(5);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stuck_mission_id")
                 .bind("STUCK")
                 .bind("{}")
                 .bind("test_org")
-                .bind(old_time.naive_utc())
+                .bind(recent_stuck_time.naive_utc())
                 .execute(&mut *tx)
                 .await
                 .unwrap();
