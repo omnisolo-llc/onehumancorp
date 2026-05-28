@@ -5,12 +5,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-    paths-ignore:
-      - '**.md'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.head.label || github.ref_name }}
+  group: ${{ github.workflow }}-${{ github.sha }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
@@ -26,7 +24,7 @@ defaults:
 jobs:
   bazel-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
 
@@ -46,6 +44,19 @@ jobs:
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ github.job }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -53,11 +64,68 @@ jobs:
             build --color=yes
             build --show_timestamps
             test --sandbox_add_mount_pair=/var/run/docker.sock
+            test --test_output=errors
+            test --test_summary=terse
+            test --test_timeout=300,600,900,1800
 
-      - name: Test all targets
+      - name: Test fast targets
         run: |
           bazelisk test \
-            --test_output=errors \
-            --test_summary=terse \
-            --test_timeout=300,600,900,1800 \
+            --build_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
+            --test_tag_filters=-e2e,-requires-docker,-local,-no-sandbox \
             //...
+
+  bazel-test-e2e:
+    name: Bazel Playwright E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "/usr/local/share/powershell"
+          sudo rm -rf "/opt/hostedtoolcache/CodeQL"
+          docker image prune --all --force
+          sudo rm -rf /usr/lib/jvm
+          sudo rm -rf /usr/local/graalvm
+          sudo rm -rf /usr/local/julia
+          sudo rm -rf /usr/local/rust
+
+      - name: Set up Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}-${{ github.job }}
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          bazelrc: |
+            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            build --config=buildbuddy
+            build --build_metadata=ROLE=CI
+            build --color=yes
+            build --show_timestamps
+            test --sandbox_add_mount_pair=/var/run/docker.sock
+            test --test_output=errors
+            test --test_summary=terse
+            test --test_timeout=300,600,900,1800
+
+      - name: Pull E2E Docker images
+        run: |
+          docker pull pgvector/pgvector:pg16
+          docker pull valkey/valkey:8-alpine
+
+      - name: Test Playwright E2E target
+        run: bazelisk test //src/e2e:playwright

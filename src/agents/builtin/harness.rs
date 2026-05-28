@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;
 use sqlx::Row;
+use ::server_harness::sandbox::{SandboxManager, SandboxAdapter};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Policy {
@@ -79,9 +80,15 @@ impl IsolationStrategy for AssistantClassIsolationStrategy {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
         }
 
+        let sandbox_manager = SandboxManager::new(None);
+        let wrapped_cmd = match sandbox_manager.wrap_command(command).await {
+            Ok(cmd) => cmd,
+            Err(e) => return Err(e),
+        };
+
         let mut child = tokio::process::Command::new("bash")
             .arg("-c")
-            .arg(command)
+            .arg(&wrapped_cmd)
             .current_dir(worktree)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
@@ -192,9 +199,15 @@ impl IsolationStrategy for ProcessIsolationStrategy {
             let _ = t.send(output_msg.to_string().as_bytes()).await;
         }
 
+        let sandbox_manager = SandboxManager::new(None);
+        let wrapped_cmd = match sandbox_manager.wrap_command(command).await {
+            Ok(cmd) => cmd,
+            Err(e) => return Err(e),
+        };
+
         let mut child = tokio::process::Command::new("bash")
             .arg("-c")
-            .arg(command)
+            .arg(&wrapped_cmd)
             .current_dir(worktree)
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())

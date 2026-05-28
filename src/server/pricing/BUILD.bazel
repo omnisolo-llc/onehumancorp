@@ -8,6 +8,7 @@ rust_library(
         "calculator.rs",
         "compression.rs",
         "mod.rs",
+        "payment_routing.rs",
         "prompt_caching.rs",
         "rate_limit.rs",
     ],
