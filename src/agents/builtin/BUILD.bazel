@@ -86,6 +86,7 @@ rust_library(
         "tool_executor_engine.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
+        "scalable_multi_agent.rs",
     ],
     crate_name = "ohc_builtin_agent",
     edition = "2024",
@@ -218,6 +219,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "gpt_researcher",
     "local_provider",
     "sona_patterns",
+    "scalable_multi_agent",
 ]
 
 rust_test(

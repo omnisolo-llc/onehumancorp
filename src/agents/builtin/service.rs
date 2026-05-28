@@ -82,6 +82,7 @@ pub struct AgentServiceImpl {
     /// Optional LLM client override for testing.
     llm_override: Option<Arc<dyn LlmClient>>,
     pub worker_handle: Option<tokio::task::JoinHandle<()>>,
+    pub cloud_deployment: std::sync::Arc<crate::scalable_multi_agent::AgentCloudDeployment>,
 }
 
 
@@ -165,6 +166,7 @@ impl AgentServiceImpl {
             llm_override: None,
             anthropic_memory: None,
             worker_handle: None,
+            cloud_deployment: std::sync::Arc::new(crate::scalable_multi_agent::AgentCloudDeployment::new()),
         }
     }
 
@@ -711,6 +713,8 @@ impl AgentServiceImpl {
         let run_cfg = self.build_run_config(&req, &req.department, &llm).await;
         
         let observation_store = Arc::new(dashmap::DashMap::new());
+        let agent_placeholder = std::sync::Arc::new(crate::agent::Agent::new(llm.clone(), vec![]));
+        self.cloud_deployment.deploy_agent("task-0".to_string(), agent_placeholder.clone()).await;
         let tools = self
             .build_tools(
                 req.toolset_config.as_ref(),
@@ -779,6 +783,8 @@ impl AgentService for AgentServiceImpl {
             mem.as_anthropic_accessor()
         } else { None };
         let observation_store = Arc::new(dashmap::DashMap::new());
+        let agent_placeholder = std::sync::Arc::new(crate::agent::Agent::new(llm.clone(), vec![]));
+        self.cloud_deployment.deploy_agent("task-0".to_string(), agent_placeholder.clone()).await;
         let tools = self
             .build_tools(
                 task_req.toolset_config.as_ref(),
@@ -1033,6 +1039,8 @@ impl AgentService for AgentServiceImpl {
             let observation_store = Arc::new(dashmap::DashMap::new());
 
             let working_dir = if sub_req.working_dir.is_empty() { Some(Self::workspace_path()) } else { Some(std::path::PathBuf::from(&sub_req.working_dir)) };
+        let agent_placeholder = std::sync::Arc::new(crate::agent::Agent::new(llm.clone(), vec![]));
+        self.cloud_deployment.deploy_agent("task-0".to_string(), agent_placeholder.clone()).await;
             let tools = self
                 .build_tools(
                     sub_req.toolset_config.as_ref(),
