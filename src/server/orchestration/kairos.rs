@@ -200,7 +200,7 @@ impl KairosOrchestrator {
                     r#"
                     SELECT t.id, t.mission_id, t.title, t.status, t.dependencies::text, t.assigned_agent_id
                     FROM swarm_tasks t
-                    WHERE t.status = 'PENDING'
+                    WHERE t.status = 'PENDING' AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                     AND NOT EXISTS (
                         SELECT 1 FROM jsonb_array_elements_text(t.dependencies) AS dep_id
                         JOIN swarm_tasks parent ON parent.id::text = dep_id
@@ -269,7 +269,7 @@ impl KairosOrchestrator {
                     WHERE id = (
                         SELECT t.id
                         FROM swarm_tasks t
-                        WHERE t.status = 'PENDING'
+                        WHERE t.status = 'PENDING' AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                         AND NOT EXISTS (
                             SELECT 1 FROM json_each(t.dependencies) AS dep_id
                             JOIN swarm_tasks parent ON parent.id = dep_id.value
@@ -477,7 +477,7 @@ impl KairosOrchestrator {
                     r#"
                     SELECT t.id, t.organization_id, t.parent_plan_id, t.title, t.description, t.status, t.assigned_agent_id, t.dependencies::text, t.created_at, t.updated_at
                     FROM shared_tasks t
-                    WHERE t.status = 'PENDING' AND t.organization_id = $1
+                    WHERE t.status = 'PENDING' AND t.organization_id = $1 AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                     AND NOT EXISTS (
                         SELECT 1 FROM jsonb_array_elements_text(t.dependencies::jsonb) AS dep_id
                         JOIN shared_tasks parent ON parent.id::text = dep_id
@@ -550,7 +550,7 @@ impl KairosOrchestrator {
                     WHERE id = (
                         SELECT t.id
                         FROM shared_tasks t
-                        WHERE t.status = 'PENDING' AND t.organization_id = ?
+                        WHERE t.status = 'PENDING' AND t.organization_id = ? AND (t.approval_status IS NULL OR t.approval_status != 'PENDING')
                         AND NOT EXISTS (
                             SELECT 1 FROM json_each(t.dependencies) AS dep_id
                             JOIN shared_tasks parent ON parent.id = dep_id.value
