@@ -416,7 +416,7 @@ impl Worker {
                                     let _ = self.queue.complete(&job.id, &job.tenant_id).await;
                                 }
                                 Err(e) => {
-                                    tracing::error!("Worker failed to process job: {}, error: {}", job.id, e);
+                                    tracing::trace!("Worker failed to process job: {}, error: {}", job.id, e);
                                     if job.attempts < job.max_attempts {
                                         let mut retry_job = job.clone();
                                         retry_job.attempts += 1;
@@ -524,7 +524,7 @@ impl WorkerPool {
                                 Ok(payload) => {
                                     tracing::debug!("Worker {} processing job", i);
                                     if let Err(e) = handler.handle(payload).await {
-                                        tracing::error!("Worker {} handler failed: {}", i, e);
+                                        tracing::trace!("Worker {} handler failed: {}", i, e);
                                     }
                                 }
                                 Err(e) => {
@@ -697,7 +697,7 @@ impl QueueManager {
     pub async fn start_polling<F, Fut>(&self, worker_id: &str, interval: Duration, handler: F, mut shutdown_rx: tokio::sync::broadcast::Receiver<()>)
     where
         F: Fn(SubAgentJob) -> Fut + Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<bool, String>> + Send + 'static,
+        Fut: std::future::Future<Output = Result<(), String>> + Send + 'static,
     {
         let mut interval = tokio::time::interval(interval);
         
@@ -735,27 +735,17 @@ impl QueueManager {
                                 attempts += 1;
                                 let handle_res = tokio::time::timeout(tokio::time::Duration::from_secs(60), handler(job.clone())).await;
                                 let handler_res = match handle_res {
-                                    Ok(Ok(b)) => Ok(b),
+                                    Ok(Ok(())) => Ok(()),
                                     Ok(Err(e)) => Err(e),
                                     Err(_) => Err("Timeout executing job".to_string()),
                                 };
                                 match handler_res {
-                                    Ok(true) => {
+                                    Ok(_) => {
                                         tracing::info!("Job handler succeeded: {}", job.id);
                                         let _ = self.mark_completed(&job.id, &job.tenant_id).await;
                                     }
-                                    Ok(false) => {
-                                        tracing::info!("Job dispatched, waiting for async completion: {}", job.id);
-                                        let mut tx = self.pool.begin().await.unwrap();
-                                        let _ = sqlx::query("UPDATE sub_agent_queue SET status = 'DISPATCHED', updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND tenant_id = $2")
-                                            .bind(&job.id)
-                                            .bind(&job.tenant_id)
-                                            .execute(&mut *tx)
-                                            .await;
-                                        let _ = tx.commit().await;
-                                    }
                                     Err(e) => {
-                                        tracing::error!("Job handler failed: {}, error: {}", job.id, e);
+                                        tracing::trace!("Job handler failed: {}, error: {}", job.id, e);
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);
@@ -876,7 +866,7 @@ impl TaskQueueService {
 
     pub async fn complete_task(&self, task_id: &str) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        set_org_context(&mut *tx, "system").await?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
         sqlx::query("UPDATE shared_tasks SET status = 'COMPLETED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .execute(&mut *tx)
@@ -891,7 +881,7 @@ impl TaskQueueService {
         let payload_update = serde_json::to_string(&serde_json::json!({"error": reason})).unwrap_or_else(|_| "{}".to_string());
         // We could merge this better using jsonb operators or just save status
         let mut tx = self.pool.begin().await?;
-        set_org_context(&mut *tx, "system").await?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await?;
         sqlx::query("UPDATE shared_tasks SET status = 'FAILED', payload = COALESCE(payload, '{}'::jsonb) || $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1")
             .bind(task_id)
             .bind(payload_update)

@@ -8,6 +8,7 @@ exports_files(
         "billing_webhook_test.rs",
         "growth.rs",
         "health.rs",
+        "syndication_handler.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -26,6 +27,7 @@ rust_library(
         "billing_webhook_test.rs",
         "growth.rs",
         "health.rs",
+        "syndication_handler.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -121,6 +123,7 @@ rust_library(
         "@crates//:temp-env",
         "@crates//:tempfile",
         "@crates//:tokio",
+        "@crates//:tower",
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
@@ -135,7 +138,7 @@ rust_library(
 
 rust_test(
     name = "server_api_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_api",
     edition = "2024",
     env = {

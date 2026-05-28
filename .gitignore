@@ -13,9 +13,17 @@
 
 # AI likes to create temporary files, which we don't want to commit
 /*.py
+/*.rs
+/*.png
 /*.txt
 /*.sh
+/get_business_context_code*
+/.empty_commit_trigger*
+/cleanup_padding.json
+/replies.json
 /bazelisk
+/bazelisk-*
+**/bazelisk-linux-amd64
 /CLAUDE_OHC.md
 /test-results
 /code_review_response.md

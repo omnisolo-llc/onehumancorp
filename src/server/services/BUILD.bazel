@@ -16,6 +16,9 @@ rust_library(
         "booking.rs",
         "mod.rs",
         "wizard.rs",
+        "//src/server/services/syndication:mod.rs",
+        "//src/server/services/syndication:mesh.rs",
+        "//src/server/services/syndication:adapter.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
@@ -170,7 +173,7 @@ rust_library(
 
 rust_test(
     name = "server_services_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_services",
     edition = "2024",
     env = {

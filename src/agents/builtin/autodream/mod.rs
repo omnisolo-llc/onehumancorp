@@ -118,29 +118,6 @@ impl AutoDreamWorker {
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
-             if db.is_sqlite() {
-                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             } else {
-                 sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                     .bind(&format!("session-summary-{}", id))
-                     .bind("system")
-                     .bind("system_agent")
-                     .bind(&id)
-                     .bind(&summary)
-                     .bind(&embedding)
-                     .bind("SESSION_SUMMARY")
-                     .execute(&db.pool)
-                     .await?;
-             }
         }
         
         Ok(())
@@ -189,7 +166,7 @@ impl AutoDreamWorker {
             let source_type = format!("TASK_{}", table.to_uppercase());
             
             // Insert into the proper KAIROS knowledge_embeddings table
-            db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            db.insert_autodream_memory(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
@@ -214,7 +191,7 @@ impl AutoDreamWorker {
 
         if self.db.is_sqlite() {
             // For SQLite, we might just return the latest ones since there is no vector similarity built-in natively
-            let rows = sqlx::query("SELECT id, content FROM knowledge_embeddings ORDER BY created_at DESC LIMIT $1")
+            let rows = sqlx::query("SELECT id, content FROM autodream_memories ORDER BY updated_at DESC LIMIT $1")
                 .bind(limit)
                 .fetch_all(&self.db.pool)
                 .await?;
@@ -230,7 +207,7 @@ impl AutoDreamWorker {
         } else {
             // For PostgreSQL pgvector
             let query = format!(
-                "SELECT id, content, 1 - (embedding <=> '{}'::vector) AS similarity_score FROM knowledge_embeddings ORDER BY embedding <=> '{}'::vector LIMIT $1",
+                "SELECT id, content, 1 - (embedding <-> '{}'::vector) AS similarity_score FROM autodream_memories ORDER BY embedding <-> '{}'::vector LIMIT $1",
                 embedding, embedding
             );
 
@@ -306,29 +283,6 @@ impl AutoDreamWorker {
                     
                     db.insert_autodream_memory(&mem_id, "system", "system_agent", &session_id, &context_data, &emb_str, "SESSION_DATA").await?;
                     
-                    if db.is_sqlite() {
-                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    } else {
-                        sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                            .bind(&mem_id)
-                            .bind("system")
-                            .bind("system_agent")
-                            .bind(&session_id)
-                            .bind(&context_data)
-                            .bind(&emb_str)
-                            .bind("SESSION_DATA")
-                            .execute(&db.pool)
-                            .await?;
-                    }
 
                     sqlx::query("DELETE FROM agent_session_data WHERE session_id = $1")
                         .bind(&session_id)
@@ -367,30 +321,6 @@ impl AutoDreamWorker {
                         let mem_id = uuid::Uuid::new_v4().to_string();
                         
                         db.insert_autodream_memory(&mem_id, "system", "fs-agent", "fs-task", &content, &emb_str, "FS_MEMORY").await?;
-
-                        if db.is_sqlite() {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        } else {
-                            sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
-                                .bind(&mem_id)
-                                .bind("system")
-                                .bind("fs-agent")
-                                .bind("fs-task")
-                                .bind(&content)
-                                .bind(&emb_str)
-                                .bind("FS_MEMORY")
-                                .execute(&db.pool)
-                                .await?;
-                        }
 
                         tokio::fs::remove_file(path).await?;
                     }

@@ -19,6 +19,6 @@ export async function GET() {
     "checkout-pay-now-tooltip": "Click here to securely finish your purchase and process your payment.",
     "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
     "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
-    "todays-sales-tooltip": "This shows how much money you made today. It updates every time a customer buys something!"
+    "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan."
   });
 }

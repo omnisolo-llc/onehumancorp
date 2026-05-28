@@ -8,12 +8,16 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   BAZEL_BUILD_FLAGS: "--remote_download_minimal"
+  # Git Bash on Windows rewrites Bazel labels like //release:target to
+  # /release:target unless MSYS path conversion is disabled.
+  MSYS2_ARG_CONV_EXCL: "*"
+  MSYS_NO_PATHCONV: "1"
 
 permissions:
   contents: read
@@ -75,7 +79,17 @@ jobs:
         with:
           bazelisk-cache: true
           disk-cache: ${{ github.workflow }}-${{ matrix.name }}
-          repository-cache: true
+          repository-cache: |
+            - MODULE.bazel
+            - MODULE.bazel.lock
+            - WORKSPACE
+            - Cargo.lock
+            - package-lock.json
+            - pnpm-lock.yaml
+            - src/server/Cargo.lock
+            - src/ui/next/package-lock.json
+          external-cache: true
+          cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
             common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
             build --config=buildbuddy
@@ -129,6 +143,14 @@ jobs:
         if: matrix.name == 'linux-x86_64'
         run: |
           bazelisk build //deploy:server_web_image_tar --config=linux_x86_64 --output_groups=+tarball $BAZEL_BUILD_FLAGS
+
+      - name: Build Windows portable release archive
+        if: matrix.name == 'windows-x86_64'
+        run: |
+          bazelisk build \
+            //release:all_release_artifacts \
+            --config=windows_x86_64 \
+            $BAZEL_BUILD_FLAGS
 
       - name: Build Tauri Android Bazel targets
         if: matrix.name == 'android'

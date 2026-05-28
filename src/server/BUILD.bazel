@@ -37,6 +37,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:billing_webhook_test.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
+    "//src/server/api:syndication_handler.rs",
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:mod.rs",
@@ -224,6 +225,8 @@ SERVER_RS_SRCS = [
     "//src/server/tools/hybridfsmcp:mod.rs",
     "//src/server/tools/hybridfsmcp:provider.rs",
     "//src/server/tools/hybridfsmcp:server.rs",
+    "sync/mod.rs",
+    "sync/service.rs",
     "//src/server/tools/hybridfsmcp:tests.rs",
     "//src/server/tools/kvmcp:mod.rs",
     "//src/server/tools/kvmcp:server.rs",
@@ -383,6 +386,7 @@ rust_library(
         "@crates//:tokio-stream",
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
+        "@crates//:tower",
         "@crates//:tracing",
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",
@@ -483,6 +487,12 @@ SERVER_LIB_TEST_GROUPS = {
     ],
 }
 
+SERVER_LIB_TEST_SIZES = {
+    "agents": "small",
+    "core": "medium",
+    "interop": "small",
+}
+
 SERVER_LIB_SUBCRATE_TESTS = [
     "//src/server/agents:server_agents_unit_test",
     "//src/server/api:server_api_unit_test",
@@ -525,7 +535,7 @@ SERVER_LIB_SPLIT_TESTS = [
 [
     rust_test(
         name = "server_lib_%s_unit_test" % group,
-        size = "large",
+        size = SERVER_LIB_TEST_SIZES[group],
         args = filters,
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
@@ -611,7 +621,7 @@ test_suite(
 
 rust_test(
     name = "queue_test",
-    size = "large",
+    size = "small",
     srcs = ["queue_test.rs"],
     edition = "2024",
     target_compatible_with = select({
@@ -630,7 +640,7 @@ rust_test(
 
 rust_test(
     name = "telemetry_test",
-    size = "large",
+    size = "small",
     srcs = ["telemetry_test.rs"],
     data = ["//deploy/scripts:ohc-standalone.sh"] + SERVER_RS_SRCS,
     edition = "2024",
