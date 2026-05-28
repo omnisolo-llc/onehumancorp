@@ -96,7 +96,7 @@ test.describe('Website Builder Full E2E', () => {
     // Wait to avoid rate limiting or overlap, then press enter. The generation should trigger.
     await page.waitForTimeout(500);
     await textarea.press('Enter');
-    await expect(page.getByText('AI Architect')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Designing your custom storefront...')).toBeVisible({ timeout: 15000 });
   });
 
   test('nextjs builder workflow generates and publishes successfully to the real database', async ({ page }) => {
