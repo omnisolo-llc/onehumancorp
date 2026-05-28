@@ -107,7 +107,7 @@ describe('OnboardingWizard', () => {
     // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
-      expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
+      expect(screen.getByText("maya-bakery.ohc.store")).toBeInTheDocument();
     });
   });
 
