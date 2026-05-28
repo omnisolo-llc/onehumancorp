@@ -2261,6 +2261,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
+        .layer(axum::middleware::from_fn(crate::utils::gzip_middleware::gzip_middleware))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
