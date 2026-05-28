@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package ohc.finance;
+
+option go_package = "github.com/onehumancorp/mono/src/proto/ohc/finance;financepb";
+
+message CapitalOffer {
+    string id = 1;
+    string tenant_id = 2;
+    float offer_amount = 3;
+    float fee_percentage = 4;
+    float repayment_rate = 5;
+    string status = 6;
+    int64 expires_at_unix = 7;
+}
+
+message CapitalAdvance {
+    string id = 1;
+    string tenant_id = 2;
+    string offer_id = 3;
+    float total_amount = 4;
+    float amount_repaid = 5;
+    float remaining_balance = 6;
+    string status = 7;
+}
+
+message LedgerEntry {
+    string id = 1;
+    string tenant_id = 2;
+    float amount = 3;
+    int64 timestamp_unix = 4;
+}
+
+message RiskProfile {
+    string id = 1;
+    string tenant_id = 2;
+    float availability_score = 3;
+    float max_eligible_amount = 4;
+    int64 last_calculated_unix = 5;
+}
+
+message GetOffersRequest {
+    string tenant_id = 1;
+}
+
+message GetOffersResponse {
+    repeated CapitalOffer offers = 1;
+}
+
+message AcceptOfferRequest {
+    string tenant_id = 1;
+    string offer_id = 2;
+}
+
+message AcceptOfferResponse {
+    bool success = 1;
+    CapitalAdvance advance = 2;
+}
+
+message GetAdvancesRequest {
+    string tenant_id = 1;
+}
+
+message GetAdvancesResponse {
+    repeated CapitalAdvance advances = 1;
+}
+
+service FinanceService {
+    rpc GetOffers(GetOffersRequest) returns (GetOffersResponse);
+    rpc AcceptOffer(AcceptOfferRequest) returns (AcceptOfferResponse);
+    rpc GetAdvances(GetAdvancesRequest) returns (GetAdvancesResponse);
+}

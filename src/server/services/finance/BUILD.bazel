@@ -1,0 +1,42 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+exports_files(
+    [
+        "mod.rs",
+        "service.rs",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+rust_library(
+    name = "server_services_finance",
+    srcs = [
+        "mod.rs",
+        "service.rs",
+    ],
+    crate_root = "mod.rs",
+    edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+
+        "//src/server:server_lib",
+        "//src/proto:finance_tonic",
+        "//src/server/auth:server_auth",
+        "@crates//:chrono",
+        "@crates//:serde",
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:tokio",
+        "@crates//:tonic",
+        "@crates//:tracing",
+        "@crates//:uuid",
+    ],
+)
+
+rust_test(
+    name = "server_services_finance_test",
+    crate = ":server_services_finance",
+)
