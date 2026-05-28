@@ -8,13 +8,14 @@ pub struct IntakeData {
     pub business_name: String,
     pub business_type: String,
     pub categories: Vec<String>,
-    pub initial_products: Vec<IntakeProduct>,
+    pub initial_items: Vec<IntakeItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct IntakeProduct {
+pub struct IntakeItem {
     pub name: String,
     pub price: String,
+    pub item_type: String, // "physical" or "booking"
 }
 
 #[derive(Clone)]
@@ -37,18 +38,19 @@ impl OnboardingAgent {
 
         let prompt = format!(
             "Extract structured business information from the following user description.
-            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_products (array of objects with 'name' and 'price' as string).
+            The goal is to generate a unified storefront supporting both products and bookings.
+            Return ONLY a valid JSON object with fields: business_name, business_type, categories (array), initial_items (array of objects with 'name', 'price' as string, and 'item_type' as 'physical' or 'booking').
 
             Description: \"{}\"
 
             Example JSON:
             {{
               \"business_name\": \"Maya's Cakes\",
-              \"business_type\": \"Bakery\",
-              \"categories\": [\"food\", \"physical\"],
-              \"initial_products\": [
-                {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\"}},
-                {{\"name\": \"Vanilla Cupcake\", \"price\": \"3.50\"}}
+              \"business_type\": \"Bakery & Classes\",
+              \"categories\": [\"food\", \"physical\", \"services\"],
+              \"initial_items\": [
+                {{\"name\": \"Chocolate Cake\", \"price\": \"25.00\", \"item_type\": \"physical\"}},
+                {{\"name\": \"Baking Class\", \"price\": \"120.00\", \"item_type\": \"booking\"}}
               ]
             }}",
             input
@@ -145,7 +147,13 @@ impl OnboardingAgent {
         let agent_clone_product = self.clone();
         let product_future = tokio::task::spawn(async move {
             if !req_first_product_name.is_empty() {
-                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, &business_type_clone).await
+                // Determine item_type from categories or business_type
+                let item_type = if business_type_clone.to_lowercase().contains("service") || business_type_clone.to_lowercase().contains("class") {
+                    "booking"
+                } else {
+                    "physical"
+                };
+                agent_clone_product.create_product(&org_id_clone1, &req_first_product_name, &req_first_product_price, &req_price_type, item_type).await
             } else {
                 // If it's a "born live" conversational intake, we might have multiple products
                 // but for now we follow the legacy pattern or seed based on type
@@ -261,8 +269,8 @@ impl OnboardingAgent {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, organization_id, oidc_subject, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             "#
         )
         .bind(&user_id)
@@ -271,6 +279,7 @@ impl OnboardingAgent {
         .bind(&password_hash)
         .bind(&roles_json)
         .bind(true)
+        .bind(&org_id)
         .bind(&org_id)
         .bind(&oidc_subject)
         .bind(now)
@@ -331,21 +340,20 @@ impl OnboardingAgent {
         })
     }
 
-    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, business_type: &str) -> Result<(), String> {
+    async fn create_product(&self, org_id: &str, name: &str, price_str: &str, price_type: &str, item_type: &str) -> Result<(), String> {
         let price_cents = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
-        let strategy = match business_type {
-            "Service Business" => "booking",
-            _ => "physical",
-        };
 
         let id = format!("prod-{}", uuid::Uuid::new_v4());
-        sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+        sqlx::query("INSERT INTO products (id, tenant_id, organization_id, title, name, description, price_cents, fulfillment_strategy, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)")
             .bind(&id)
             .bind(org_id)
+            .bind(org_id)
+            .bind(name)
             .bind(name)
             .bind("Added during onboarding")
             .bind(price_cents)
-            .bind(strategy)
+            .bind(item_type)
+            .bind(item_type)
             .bind(json!({"price_type": price_type}))
             .execute(&self.db.pool)
             .await
@@ -2374,12 +2382,15 @@ impl OnboardingAgent {
 
             let hub = self.hub.clone();
             futures.push(tokio::spawn(async move {
-                sqlx::query("INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+                sqlx::query("INSERT INTO products (id, tenant_id, organization_id, title, name, description, price_cents, fulfillment_strategy, type, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)")
                     .bind(&id)
                     .bind(&org_id)
+                    .bind(&org_id)
+                    .bind(&name)
                     .bind(&name)
                     .bind(&desc)
                     .bind(price)
+                    .bind(&strategy)
                     .bind(&strategy)
                     .bind(json!({}))
                     .execute(&pool)
@@ -2425,10 +2436,11 @@ impl OnboardingAgent {
 
         for (name, role, role_id) in default_agents {
             let id = format!("{}-{}", org_id, role_id.to_lowercase());
-            sqlx::query("INSERT INTO agents (id, name, role, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
+            sqlx::query("INSERT INTO agents (id, name, role, tenant_id, organization_id, status, provider_type, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, role = EXCLUDED.role, status = EXCLUDED.status")
                 .bind(id)
                 .bind(name)
                 .bind(role)
+                .bind(org_id)
                 .bind(org_id)
                 .bind("IDLE")
                 .bind("builtin")
@@ -2573,7 +2585,7 @@ mod tests {
         let org_id_service = res_service.organization_id;
 
         use sqlx::Row;
-        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_service = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_service)
             .fetch_one(&db.pool)
             .await
@@ -2609,7 +2621,7 @@ mod tests {
         let res_food = agent.start_onboarding(req_food).await.unwrap();
         let org_id_food = res_food.organization_id;
 
-        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE organization_id = $1")
+        let row_food = sqlx::query("SELECT state_json FROM onboarding_state WHERE tenant_id = $1")
             .bind(&org_id_food)
             .fetch_one(&db.pool)
             .await
