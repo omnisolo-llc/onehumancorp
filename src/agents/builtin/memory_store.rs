@@ -383,10 +383,15 @@ impl VectorRepository {
     pub async fn auto_resolve_conflicts(&self) -> Result<usize, String> {
         let conflicts = self.get_conflicting_pairs().await?;
         let mut resolved_count = 0;
+        let mut deleted_ids = std::collections::HashSet::new();
 
         for (a, b) in conflicts {
+            if deleted_ids.contains(&a.id) || deleted_ids.contains(&b.id) {
+                continue;
+            }
             let (winner, loser) = Self::determine_conflict_winner(&a, &b);
             self.resolve_conflict(winner, loser).await?;
+            deleted_ids.insert(loser.id.clone());
             resolved_count += 1;
         }
 
