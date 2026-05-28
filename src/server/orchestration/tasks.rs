@@ -123,7 +123,7 @@ impl TaskDecompositionService {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+                ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
                 // Use FOR UPDATE SKIP LOCKED
                 let row_opt = sqlx::query(
