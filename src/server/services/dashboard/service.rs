@@ -67,8 +67,7 @@ impl DashboardService for MyDashboardService {
         let org_id_agents = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
-        let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
-            tokio::spawn(async move {
+        let agents_task = tokio::spawn(async move {
                 let cache_key = format!("hub:agents:{}:{}", org_id_agents, mobile_optimized);
                 let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(hub_agents.redis_client.clone()));
 
@@ -79,19 +78,19 @@ impl DashboardService for MyDashboardService {
                 let agents = hub1.get_agents().await.to_vec();
                 cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(agents)
-            }),
-            tokio::spawn(async move {
+        });
+        let meetings_task = tokio::spawn(async move {
                 Ok::<_, String>(hub2.get_meetings().await)
-            }),
-            tokio::spawn(async move {
+        });
+        let cost_task = tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
                     cost_auditor.get_total_tokens(),
                     cost_auditor.get_agent_costs_snapshot(),
                 ))
-            }),
-            tokio::spawn(async move {
+        });
+        let products_task = tokio::spawn(async move {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
                 let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
@@ -101,9 +100,9 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, COALESCE(currency, 'USD') as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, '' as description, COALESCE(price_cents, 0) as price_cents, '' as fulfillment_strategy, '' as currency, '{}' as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 } else {
-                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, COALESCE(currency, 'USD') as currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
+                    "SELECT id, organization_id, name, description, COALESCE(price_cents, 0) as price_cents, fulfillment_strategy, currency, COALESCE(metadata, '{}') as metadata FROM products WHERE organization_id = $1 LIMIT 10"
                 };
                 use sqlx::Row;
                 let mut results = Vec::new();
@@ -164,8 +163,8 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(results)
-            }),
-            tokio::spawn(async move {
+        });
+        let orders_task = tokio::spawn(async move {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
                 let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
@@ -175,7 +174,7 @@ impl DashboardService for MyDashboardService {
                 }
 
                 let q = if mobile_optimized {
-                    "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
+                    "SELECT id, '' as tenant_id, COALESCE(total_amount, 0) as total_amount, '' as status FROM orders WHERE tenant_id = $1 LIMIT 10"
                 } else {
                     "SELECT id, tenant_id, COALESCE(total_amount, 0) as total_amount, status FROM orders WHERE tenant_id = $1 LIMIT 10"
                 };
@@ -218,8 +217,8 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(results)
-            }),
-            tokio::spawn(async move {
+        });
+        let org_task = tokio::spawn(async move {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
                 let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
@@ -272,8 +271,9 @@ impl DashboardService for MyDashboardService {
 
                 cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
                 Ok::<_, String>(org)
-            })
-        );
+        });
+
+        let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(agents_task, meetings_task, cost_task, products_task, orders_task, org_task);
 
         let agents = agents_res
             .map_err(|e| Status::internal(e.to_string()))?
