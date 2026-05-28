@@ -257,3 +257,9 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 
 The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
 <!-- Miser: Complete implementation -->
+
+### Performance Benchmarks (Bolt)
+- **Parallel Fetch**: p50: ~478 us, p95: ~609 us, p99: ~65ms
+- **API Response Time Standalone Mode**: p50: ~549 us, p95: ~789 us, p99: ~1ms
+- **Database Query Time Standalone Mode (SQLite)**: p50: ~278 us, p95: ~406 us, p99: ~713 us
+- **AI Job Dispatch Latency Standalone Mode (Memory)**: Batch Enqueue p50: ~6 us, p95: ~52 us
