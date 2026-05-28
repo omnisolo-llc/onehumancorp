@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [showAgentsModal, setShowAgentsModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -388,6 +390,21 @@ export default function Dashboard() {
       </header>
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+        <div className="grid grid-cols-2 gap-4 my-4">
+          <button
+            onClick={() => setShowAgentsModal(true)}
+            className="w-full bg-[#0066FF] text-white p-3 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          >
+            Manage AI Assistants
+          </button>
+          <button
+            onClick={() => setShowSettingsModal(true)}
+            className="w-full bg-[#0066FF] text-white p-3 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+          >
+            Settings
+          </button>
+        </div>
 
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
@@ -1889,6 +1906,38 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAgentsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="mac-glass-container w-full max-w-md rounded-[16px] p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setShowAgentsModal(false)} className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center">
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Agents</h2>
+            <div className="text-left text-gray-700">
+              <p>Marketing Pro</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="mac-glass-container w-full max-w-md rounded-[16px] p-8 shadow-2xl relative overflow-hidden font-inter border border-blue-100 text-center">
+            <div className="flex justify-end mb-2">
+              <button onClick={() => setShowSettingsModal(false)} className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center">
+                <span className="text-xl leading-none">&times;</span>
+              </button>
+            </div>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Settings</h2>
+            <div className="text-left text-gray-700">
+              <p>Enable Email Notifications</p>
             </div>
           </div>
         </div>
