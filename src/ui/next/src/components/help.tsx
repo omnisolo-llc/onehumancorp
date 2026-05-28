@@ -98,6 +98,7 @@ export function HelpWidget() {
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"center" | "chat" | "videos" | "whatsnew">("center");
+  const [activeVideo, setActiveVideo] = useState<{id: number, title: string} | null>(null);
   const [chatMessages, setChatMessages] = useState<{role: "bot" | "user", text: string, linkUrl?: string, linkTitle?: string}[]>([
     { role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
   ]);
@@ -273,7 +274,7 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -309,6 +310,42 @@ export function HelpWidget() {
           </div>
         </div>
       )}
+
+      {/* Video Player Modal */}
+      {activeVideo && (
+        <div className="fixed inset-0 z-[100] bg-black/90 flex flex-col items-center justify-center animate-fade-in" style={{ animation: "fade-in 0.2s ease-out forwards" }}>
+          <button
+            onClick={() => setActiveVideo(null)}
+            className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors"
+          >
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+
+          <div className="w-full max-w-[400px] px-4 flex flex-col gap-4">
+            <h3 className="text-white font-bold text-lg text-center">{activeVideo.title}</h3>
+
+            <div className="w-full aspect-[9/16] bg-black rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative flex items-center justify-center">
+              {/* Mock video player for demo purposes since we don't have real video URLs yet */}
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-purple-900/40 flex items-center justify-center">
+                <svg className="w-16 h-16 text-white/50 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+                <div className="h-full bg-blue-500 w-1/3"></div>
+              </div>
+            </div>
+
+            <p className="text-white/60 text-sm text-center">Video player initialized.</p>
+          </div>
+        </div>
+      )}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes fade-in {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+      `}} />
     </>
   );
 }
