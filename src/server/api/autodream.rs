@@ -28,6 +28,12 @@ pub struct QueryResponse {
 }
 
 #[derive(Serialize)]
+pub struct StatsResponse {
+    pub density: String,
+    pub clusters: String,
+}
+
+#[derive(Serialize)]
 pub struct SyncResponse {
     pub status: String,
 }
@@ -35,11 +41,23 @@ pub struct SyncResponse {
 pub fn router<S: Clone + Send + Sync + 'static>(worker: Arc<AutoDreamWorker>) -> Router<S> {
     let worker_sync = worker.clone();
     let worker_query = worker.clone();
+    let worker_stats = worker.clone();
 
     Router::new()
         .route("/sync", post(move || async move {
             match worker_sync.consolidate_epoch().await {
                 Ok(_) => Json(SyncResponse { status: "success".to_string() }).into_response(),
+                Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
+            }
+        }))
+        .route("/stats", get(move || async move {
+            match worker_stats.db.get_consolidated_memory_stats().await {
+                Ok((count, density)) => {
+                    Json(StatsResponse {
+                        density: format!("{:.1} MB", density),
+                        clusters: format!("{} Active", count)
+                    }).into_response()
+                },
                 Err(e) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response(),
             }
         }))

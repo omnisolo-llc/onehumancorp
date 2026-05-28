@@ -135,6 +135,10 @@ impl AutoDreamPipeline {
                     }
                 }
             }
+
+            if let Err(e) = self.db.mark_task_auto_dreamed(&task_id, "shared_tasks").await {
+                tracing::error!("AutoDreamPipeline: Failed to mark task {} as auto dreamed: {}", task_id, e);
+            }
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
 

@@ -12,7 +12,7 @@ use opentelemetry::metrics::Counter;
 use opentelemetry::trace::Tracer;
 
 pub struct AutoDreamWorker {
-    db: Arc<DB>,
+    pub db: Arc<DB>,
     embedded_counter: Counter<u64>,
     cache: Arc<crate::pricing::cache::LocalEmbeddingCache>,
 }
