@@ -3133,7 +3133,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Dashboard Screen -->
-                    <div id="dashboard-screen" class="screen">
+                    <div id="dashboard-screen" class="screen glass">
                         <h1>Dashboard</h1>
 
                         <!-- Milestone Viral Share Loop Banner -->
@@ -3569,7 +3569,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Agents Page (Your Team) -->
-                    <div id="team-screen" class="screen">
+                    <div id="team-screen" class="screen glass">
                         <h1 class="outfit">Agents</h1>
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
@@ -3825,7 +3825,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Settings Screen -->
-                    <div id="settings-screen" class="screen">
+                    <div id="settings-screen" class="screen glass">
                         <h1>Settings</h1>
                         <h2>General</h2>
                         <label><input type="checkbox"> Enable Email Notifications</label>
@@ -3895,7 +3895,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Pricing Page -->
-                    <div id="pricing-screen" class="screen">
+                    <div id="pricing-screen" class="screen glass">
                         <h1>Pricing Plans</h1>
                         <p>Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
                         <button class="secondary">Annual billing 20% Discount</button>
@@ -3965,7 +3965,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- My Plan Page -->
-                    <div id="my-plan-screen" class="screen">
+                    <div id="my-plan-screen" class="screen glass">
                         <h1>My Plan</h1>
                         <p id="my-plan-name">Plan: Free</p>
                         <p>Status: Active</p>
@@ -3986,7 +3986,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Cost Dashboard -->
-                    <div id="cost-dashboard-screen" class="screen">
+                    <div id="cost-dashboard-screen" class="screen glass">
                         <h1>Cost Transparency Dashboard</h1>
                         <p>Keep track of your total usage across your One Human Corp setup.</p>
                         <div class="card glass">
@@ -4021,14 +4021,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Advisory Dashboard Screen -->
-                    <div id="advisory-dashboard-screen" class="screen">
+                    <div id="advisory-dashboard-screen" class="screen glass">
                         <h1>Advisory</h1>
                         <p id="advisory-dashboard-summary">Loading insights...</p>
                         <button onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                     </div>
 
                      <!-- Checkout Page -->
-                     <div id="checkout-screen" class="screen">
+                     <div id="checkout-screen" class="screen glass">
                          <h1>Checkout</h1>
                          <p>Please enter your payment details below.</p>
                          <div class="card glass">
@@ -4039,7 +4039,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Diagnostics Page -->
-                     <div id="diagnostics-screen" class="screen">
+                     <div id="diagnostics-screen" class="screen glass">
                          <h1>Diagnostics</h1>
                          <p>System Status: All systems operational</p>
                          <p>API Server: healthy</p>
@@ -4076,7 +4076,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Services Page -->
-                     <div id="services-screen" class="screen">
+                     <div id="services-screen" class="screen glass">
                          <h1>Service Manager</h1>
                          <div class="service-item card glass">
                              <h2>Web Server</h2>
@@ -4099,7 +4099,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                      <!-- Scaling Page -->
-                     <div id="scaling-screen" class="screen">
+                     <div id="scaling-screen" class="screen glass">
                          <h1>Scaling Configuration</h1>
                          <p>Current Scale: 3 instances</p>
                          <p>3 instance replicas active</p>
@@ -5908,7 +5908,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Help Center Screen -->
-                    <div id="help-screen" class="screen">
+                    <div id="help-screen" class="screen glass">
                         <h1>Help Center</h1>
                         <p>Find answers, watch tutorials, and learn how to grow your business.</p>
                         <div style="margin-bottom: 24px; display: flex; gap: 12px;">
@@ -5924,7 +5924,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- Changelog Screen -->
-                    <div id="changelog-screen" class="screen">
+                    <div id="changelog-screen" class="screen glass">
                         <h1>What's New</h1>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
@@ -5946,7 +5946,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
 
                     <!-- API Docs Screen -->
-                    <div id="api-docs-screen" class="screen" style="padding: 0;">
+                    <div id="api-docs-screen" class="screen glass" style="padding: 0;">
                         <div id="swagger-ui"></div>
                     </div>
                 </body>

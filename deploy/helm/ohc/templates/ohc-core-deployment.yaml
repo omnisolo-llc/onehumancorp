@@ -16,6 +16,8 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-ohc-core
+      annotations:
+        spiffe.io/spiffe-id: "true"
     spec:
       securityContext:
         runAsNonRoot: true

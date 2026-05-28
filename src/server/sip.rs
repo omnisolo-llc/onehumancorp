@@ -53,7 +53,7 @@ impl SipDB {
     }
 
     pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
-        let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
+
         let fail_threshold = Utc::now() - age_threshold;
         
         let mut attempt = 0;
@@ -65,20 +65,14 @@ impl SipDB {
                 let mut tx = self.pool.begin().await?;
 
                 // Backlog Management: Sanitize and prioritize the agent_missions queue, ensuring no "stuck" missions persist in either mode.
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
-                    .bind(stuck_threshold)
+                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'RUNNING' OR status = 'BURSTING' OR status = 'STUCK') AND updated_at < $1 AND tenant_id = $2")
+                    .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
 
                 // Prioritize backlog by bumping updated_at for oldest pending missions
                 sqlx::query("UPDATE agent_missions SET updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT id FROM agent_missions WHERE status = 'PENDING' AND tenant_id = $1 ORDER BY created_at ASC LIMIT 10) RETURNING id")
-                    .bind(&self.org_id)
-                    .execute(&mut *tx)
-                    .await?;
-
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE (status = 'PENDING' OR status = 'BURSTING') AND created_at < $1 AND tenant_id = $2")
-                    .bind(fail_threshold)
                     .bind(&self.org_id)
                     .execute(&mut *tx)
                     .await?;
@@ -565,19 +559,18 @@ mod tests {
             .await
             .unwrap();
 
-            let old_time = chrono::Utc::now() - chrono::Duration::hours(2);
+            let very_old_time = chrono::Utc::now() - chrono::Duration::hours(48);
             sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stuck_mission_id")
                 .bind("STUCK")
                 .bind("{}")
                 .bind("test_org")
-                .bind(old_time.naive_utc())
+                .bind(very_old_time.naive_utc())
                 .execute(&mut *tx)
                 .await
                 .unwrap();
 
-            let very_old_time = chrono::Utc::now() - chrono::Duration::hours(48);
-            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
+            sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id, updated_at) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
                 .bind("stale_pending_mission_id")
                 .bind("PENDING")
                 .bind("{}")

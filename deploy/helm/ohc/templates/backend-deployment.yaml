@@ -17,6 +17,8 @@ spec:
     metadata:
       labels:
         app: {{ .Release.Name }}-backend
+      annotations:
+        spiffe.io/spiffe-id: "true"
     spec:
       containers:
         - name: backend
