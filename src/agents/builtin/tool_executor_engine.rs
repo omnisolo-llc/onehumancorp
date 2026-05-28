@@ -14,6 +14,7 @@ impl ToolExecutionEngine {
         max_retries: usize,
     ) -> Result<String, ToolError> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
+        // Note: Upgrading this to strict compliance with Stripe rules.
         let mut retry_count = 0;
 
         loop {
