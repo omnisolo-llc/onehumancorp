@@ -6,6 +6,7 @@ use ::server_ohc::orchestration::{sync_service_client::SyncServiceClient, PowerS
 use tonic::transport::Channel;
 use tonic::Request;
 use tonic::metadata::MetadataValue;
+use ::server_telemetry::{record_sync_latency, record_sync_payload_size};
 
 pub struct PowerSyncOrchestrator {
     db: Arc<DB>,
@@ -75,6 +76,11 @@ impl PowerSyncOrchestrator {
 
         let payload_str = serde_json::to_string(&payload_items).map_err(|e| e.to_string())?;
 
+        let payload_size = payload_str.len() as f32;
+        let pg_pool = &self.db.pool;
+        let mode = if self.cloud_url.is_empty() { "Standalone" } else { "Cloud" };
+        let _ = record_sync_payload_size(pg_pool, payload_size, mode).await;
+
         // Connect to gRPC client
         let endpoint = if self.cloud_url.starts_with("http") {
             self.cloud_url.clone()
@@ -94,7 +100,12 @@ impl PowerSyncOrchestrator {
         let spiffe_id = format!("spiffe://onehumancorp.io/{}/system", "system");
         req.metadata_mut().insert("x-spiffe-id", MetadataValue::try_from(spiffe_id.as_str()).unwrap());
 
+        let start = std::time::Instant::now();
+
         let res = client.power_sync_push(req).await.map_err(|e| e.to_string())?;
+
+        let latency = start.elapsed().as_secs_f32();
+        let _ = record_sync_latency(pg_pool, latency, mode).await;
 
         if res.into_inner().status == "ok" {
             // Update _sync_status to synced
