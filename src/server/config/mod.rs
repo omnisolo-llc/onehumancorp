@@ -132,10 +132,16 @@ impl ModeEnforcer for StandaloneModeEnforcer {
                 format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, key)
             } else {
                 let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+                if fallback_key.trim().is_empty() {
+                    panic!("OHC_SQLITE_KEY must not be empty in Standalone Mode");
+                }
                 format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
             }
         } else {
             let fallback_key = std::env::var("OHC_SQLITE_KEY").expect("OHC_SQLITE_KEY must be set in Standalone Mode to ensure secure, encrypted SQLite storage.");
+            if fallback_key.trim().is_empty() {
+                panic!("OHC_SQLITE_KEY must not be empty in Standalone Mode");
+            }
             format!("{}?cipher=sqlcipher&key={}", base_sqlite_url, fallback_key)
         };
         cfg.database_url = Some(sqlite_url.clone());

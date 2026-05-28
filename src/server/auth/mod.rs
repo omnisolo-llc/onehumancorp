@@ -477,6 +477,9 @@ impl Store {
                 };
                 if oidc_cfg.enabled {
                     let claims = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await?;
+                    if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                        return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                    }
                     if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                         return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                     }
@@ -524,6 +527,9 @@ impl Store {
                         }
                     };
                     if let Ok(claims) = crate::oidc::validate_oidc_token(_token, &oidc_cfg).await {
+                        if ::server_config::get().multitenant && claims.organization_id.clone().unwrap_or_default().trim().is_empty() {
+                            return Err("Invalid token: organization_id is required in cloud mode".to_string());
+                        }
                         if ::server_config::get().multitenant && claims.organization_id.as_deref() == Some("system") {
                             return Err("Invalid token: 'system' organization cannot be used in multitenant mode".to_string());
                         }
