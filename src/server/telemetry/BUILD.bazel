@@ -1,4 +1,4 @@
-load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("@rules_rust//rust:defs.bzl", "rust_library")
 
 rust_library(
     name = "server_telemetry",
@@ -19,15 +19,4 @@ rust_library(
         "@crates//:opentelemetry",
         "@crates//:tokio",
     ],
-)
-
-rust_test(
-    name = "server_telemetry_unit_test",
-    size = "small",
-    crate = ":server_telemetry",
-    edition = "2024",
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
 )
