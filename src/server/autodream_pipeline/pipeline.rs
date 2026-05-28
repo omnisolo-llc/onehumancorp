@@ -64,12 +64,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in autodream_memories
+        // Find tasks that are COMPLETED but not yet auto_dreamed
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN autodream_memories m ON t.id = m.task_id
-            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            WHERE t.status = 'COMPLETED' AND t.auto_dreamed = FALSE
             LIMIT 100
         ";
 
@@ -77,6 +76,11 @@ impl AutoDreamPipeline {
             .fetch_all(&self.db.pool)
             .await
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+        let repository = match &self.db.store {
+            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(self.db.pool.clone()),
+            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+        };
 
         for row in tasks {
             let task_id: String = row.get("id");
@@ -116,16 +120,24 @@ impl AutoDreamPipeline {
                 match embedding_res {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
+                        let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        self.db.insert_autodream_memory(
-                            &mem_id,
-                            &tenant_id,
-                            agent_id.as_deref().unwrap_or("system"),
-                            &task_id,
-                            &chunk,
-                            &emb_str,
-                            "TASK_SUMMARY"
-                        ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
+                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
+                            id: mem_id,
+                            tenant_id: tenant_id.clone(),
+                            agent_id: agent_id.as_deref().unwrap_or("system").to_string(),
+                            content: chunk.clone(),
+                            embedding: embedding_vec,
+                            source_type: "TASK_SUMMARY".to_string(),
+                            created_at: chrono::Utc::now(),
+                            last_referenced_at: chrono::Utc::now(),
+                            reference_count: 0,
+                            reliability_score: 50,
+                            owner_override: false,
+                            metadata: Some(format!("{{\"task_id\": \"{}\"}}", task_id)),
+                        };
+
+                        repository.upsert(&record).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
                         if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
                             tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
@@ -136,6 +148,11 @@ impl AutoDreamPipeline {
                     }
                 }
             }
+
+            if let Err(e) = self.db.mark_task_auto_dreamed(&task_id, "shared_tasks").await {
+                tracing::error!("AutoDreamPipeline: Failed to mark task as auto_dreamed {}: {}", task_id, e);
+            }
+
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
 
@@ -209,6 +226,7 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id_1 = "test-task-cache-1";
@@ -232,9 +250,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id IN ($1, $2)")
-            .bind(task_id_1)
-            .bind(task_id_2)
+        let count: (i64,) = sqlx::query_as(if pipeline.db.is_sqlite() { "SELECT count(*) FROM consolidated_memory WHERE CAST(metadata AS TEXT) LIKE '%test-task-cache-1%' OR CAST(metadata AS TEXT) LIKE '%test-task-cache-2%'" } else { "SELECT count(*) FROM consolidated_memory WHERE metadata::text LIKE '%test-task-cache-1%' OR metadata::text LIKE '%test-task-cache-2%'" })
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -264,6 +280,7 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
@@ -277,8 +294,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
-            .bind(task_id)
+        let count: (i64,) = sqlx::query_as(if pipeline.db.is_sqlite() { "SELECT count(*) FROM consolidated_memory WHERE CAST(metadata AS TEXT) LIKE '%test-task-1%'" } else { "SELECT count(*) FROM consolidated_memory WHERE metadata::text LIKE '%test-task-1%'" })
             .fetch_one(&pool)
             .await
             .unwrap();
