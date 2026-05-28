@@ -43,6 +43,7 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 
 rust_test(
     name = "server_harness_test",
+    size = "small",
     crate = ":server_harness",
     target_compatible_with = select({
         "@platforms//os:linux": [],
