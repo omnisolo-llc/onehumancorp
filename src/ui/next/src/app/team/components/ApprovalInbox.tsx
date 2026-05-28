@@ -136,12 +136,12 @@ export default function ApprovalInbox({
                 <div className="flex items-center gap-2 mb-3">
                   <span
                     className={`px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                      req.action_risk.toLowerCase() === "high"
+                      req.action_risk?.toLowerCase() === "high"
                         ? "bg-orange-100 text-orange-700"
                         : "bg-blue-100 text-blue-700"
                     }`}
                   >
-                    {req.action_risk} Risk
+                    {req.action_risk ? req.action_risk.charAt(0).toUpperCase() + req.action_risk.slice(1).toLowerCase() : 'Unknown'} Risk
                   </span>
                   <span className="text-xs text-gray-400 font-medium">
                     {req.status}
