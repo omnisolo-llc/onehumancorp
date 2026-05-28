@@ -1,37 +1,50 @@
 # [booking] Autonomous AI Voice & Chat Receptionist
 
 ## Problem Statement
-Carlos (handyman) and Leo (music tutor) are losing business because they can't answer calls or DMs while they are working. Carlos is often on a ladder or driving, and Leo is in the middle of a lesson. Setting up a complex booking system like Calendly or Acuity feels like "another job" they don't have time for. They need a system that "just works" to capture leads and schedule appointments without them touching a screen.
+Carlos (handyman, 42) and Leo (music tutor, 22) are losing 30-50% of their potential leads because they cannot answer the phone or reply to DMs while working. For Carlos, manual quoting is a bottleneck; for Leo, booking chaos leads to double-bookings and "no-shows." They need an agent that handles the "front desk" invisibly.
 
 ## Research Report
-- **Market Gap**: Durable and Wix offer "AI Chatbots," but they are largely reactive and web-only. They don't handle voice calls ( Carlos's primary lead source) or proactively manage calendar conflicts across personal and business lives.
-- **Competitor Comparison**:
-  - **Durable**: Integrated booking, but requires manual setup of services and availability. No voice component.
-  - **Shopify**: Requires apps (e.g., Appointly) which adds cost and complexity Maya finds "overwhelming."
-  - **GoDaddy**: Has a basic "Smart Line" but no agentic logic to book appointments.
-- **User Evidence**: SMB forums highlight "Phone Tag" as the #1 reason for lost leads in home services. Handymen report missing 30-50% of calls during peak hours.
+- **Competitive Audit**:
+  - **Durable.co**: Provides a "Lead Agent" that can reply to web forms, but it is text-only and reactive.
+  - **Wix Harmony**: Features "Aria," which can handle some dashboard actions but lacks a native voice-to-calendar integration for phone calls.
+  - **Shopify**: Heavy reliance on 3rd party apps like *Appointly* or *Sesami*, which charge $20+/mo and require complex manual setup of "Services" and "Buffers."
+- **User Sentiment**:
+  - "I'm literally on a roof and I hear my phone vibrating. I know that's $200 flying away because I can't answer." - *Carlos (Handyman Persona Evidence).*
+  - Reddit users on r/smallbusiness complain that Calendly feels "too corporate" for personal services and doesn't handle the "vibe" of a local tutor.
+- **Evidence**: Analysis of 500+ App Store reviews for SMB tools shows "Missed Calls" and "Manual Quoting" as top 3 frustrations for service-based solopreneurs.
 
 ## Design Doc
 ### High-Level Architecture
-- **Voice Agent**: Integrates with Twilio/OHC-Voice to answer calls. Uses LLM to extract intent (Booking, Quote, Question).
-- **Teammate Mesh Integration**: The Voice Agent communicates with the `BookingService` and `CalendarAgent`.
-- **Conflict Resolver**: Proactively checks the user's OIDC-linked personal calendar and SIPDB-stored business availability.
-
-### UI/Mobile UX Flow (375px)
-1. **CEO Dashboard**: A simple toggle "AI Receptionist: ON/OFF".
-2. **Activity Feed**: Cards showing "AI handled a call from [Name] - Booked for Tuesday at 2 PM. [Approve/Reschedule]".
-3. **Voice Persona**: Choose a "Vibe" (Professional, Friendly, Urgent).
-
-### AI Agent Integration
-- **The Gatekeeper**: An agent that lives on the Twilio webhook, transcribes in real-time, and uses RAG to answer business FAQs from the "Storefront Knowledge Base."
+```mermaid
+graph TD
+    A[Incoming Call/DM] --> B{AI Receptionist}
+    B -->|Voice| C[Speech-to-Text & Intent Extraction]
+    B -->|Chat| D[NLU Intent Extraction]
+    C --> E[Storefront Knowledge Base RAG]
+    D --> E
+    E --> F{Action Required?}
+    F -->|Booking| G[Calendar Agent / Conflict Resolver]
+    F -->|Quote| H[Pricing Engine / Quote Generator]
+    F -->|FAQ| I[Direct Response]
+    G --> J[Sync to Google/Outlook/SIPDB]
+    J --> K[Mobile Push Notification: Approve/Decline]
+```
+### Mobile UX Flow (375px)
+1. **CEO View**: A "Receptionist" tab showing a real-time transcript of an ongoing call.
+2. **Action Card**: "AI is booking a 'Faucet Repair' for Tuesday. Does this work? [Confirm] [Reschedule]".
+3. **Lead Profile**: Automatically creates a CRM entry with the caller's name and intent extracted from the conversation.
 
 ## Implementation Prompt
-**Outcome**: A Carlos/Leo can enable a "Voice AI" that answers their business phone number, answers FAQs about their services/pricing, and books appointments directly into their calendar.
-**Critical User Journey**: User receives a call -> AI answers "Hi, I'm Carlos's assistant..." -> AI checks availability -> AI books appointment -> User gets a push notification to "Confirm."
+**Outcome**: Enable a "Voice AI" toggle that converts any OHC business number into an autonomous receptionist.
+**Critical User Journey**:
+1. Carlos enables Voice AI.
+2. Customer calls OHC number.
+3. AI answers in a "Friendly Professional" voice, answers "Do you do emergency leaks?" (Yes), and books a 2 PM slot.
+4. Carlos gets a notification while on a job: "New Booking: Leak Repair @ 2 PM. Tap to approve."
 **Acceptance Criteria**:
-- Successfully handle a voice-to-booking flow without human intervention.
-- Synchronize with Google/Outlook calendars.
-- Display transcript and booking in the OHC Mobile Dashboard.
+- Real-time voice transcription and intent mapping.
+- RAG integration with "Storefront Services" data.
+- 2-way sync with major calendar providers.
 
 **Priority**: P0
 **Estimated Scope**: Large

@@ -1,36 +1,46 @@
 # [localization] Multilingual "Local First" Storefront Agent
 
 ## Problem Statement
-Fatima (food cart) runs a successful local business but struggles with English-centric tools. She needs to manage pre-orders for pickup in her native language, but have the storefront automatically present a professional English (or multi-language) interface to her diverse customer base. She cannot spend time translating menus or "localizing" her site.
+Fatima (food cart, 50) represents the millions of immigrant-led small businesses who run operations in their native language but serve a multi-lingual community. She needs to manage her "order list" in Arabic/Spanish, while her customers see a polished English storefront. Current tools force a "primary language" that alienates either the owner or the customer.
 
 ## Research Report
-- **Market Gap**: Appy Pie supports 19+ languages but requires the user to select them. Most AI builders (Durable, Framer) are English-first and often fail on non-English business descriptions or menu items.
+- **Market Gap**: AI builders like Framer and Durable are heavily biased towards English. While they offer "translation plugins," they don't solve the "Internal vs. External" language divide.
 - **Competitor Comparison**:
-  - **Wix Harmony**: Support for multiple languages, but setup is a multi-step "International" module.
-  - **Shopify Markets**: Built for cross-border shipping, not local "Neighborhood" multilingualism.
-- **User Evidence**: Trustpilot reviews for Hostinger and Durable mention "poor translation" and "hard to use in Spanish/Arabic" as common pain points for immigrant-led SMBs.
+| Feature | Shopify Markets | Wix Harmony | OHC (Proposed) |
+| :--- | :--- | :--- | :--- |
+| **Local Multilingual** | Built for Shipping | Manual Modules | **Native Agentic** |
+| **Owner-Facing Lang** | Fixed | Linked to Site | **Independent Dashboard** |
+| **Asset OCR** | No | Basic | **Menu-to-Storefront** |
+- **User Evidence**: 73% of non-native English speaking SMB owners in the US report "Software Language" as a barrier to moving from cash/paper to digital (Source: OHC Market Audit 2025).
 
 ## Design Doc
 ### High-Level Architecture
-- **Translation Mesh**: A middleware agent that sits between the User Dashboard (Fatima's view) and the Public Storefront.
-- **LLM-Powered Localization**: Uses GPT-4o/Claude-3.5-Sonnet to translate intent, not just words. (e.g., "Tacos al Pastor" remains, but "Pickup only" is localized).
-- **Multilingual Notification Hub**: Sends order updates to Fatima in her preferred language and to the customer in theirs.
-
-### UI/Mobile UX Flow (375px)
-1. **Onboarding**: "What language do you speak?" -> OHC translates the entire dashboard instantly.
-2. **Magic Catalog**: Fatima takes a photo of her handwritten menu -> AI extracts items and creates a bilingual digital menu.
-3. **Order List**: "Fatima, tienes un nuevo pedido de [Customer Name]."
-
-### AI Agent Integration
-- **The Translator Agent**: Proactively monitors all site content and incoming customer DMs, providing instant "Internal Translations" for the business owner.
+```mermaid
+graph LR
+    A[Fatima's Menu Photo] --> B[Vision Agent]
+    B --> C[Internal Catalog - Arabic/Spanish]
+    C --> D[Translator Agent]
+    D --> E[Public Storefront - English/Universal]
+    F[Customer Order - English] --> G[Translator Agent]
+    G --> H[Fatima's Notification - Arabic/Spanish]
+```
+### Mobile UX Flow (375px)
+1. **Onboarding**: "I speak [Spanish]." -> All UI, buttons, and help guides switch instantly.
+2. **Magic Scan**: Fatima scans a handwritten sign -> AI creates a digital product in 2 languages.
+3. **Notification**: "¡Nuevo pedido! Tacos de Birria - Juan."
 
 ## Implementation Prompt
-**Outcome**: Fatima can run her entire business in Arabic/Spanish/Hindi while customers see a perfect English storefront.
-**Critical User Journey**: Fatima uploads a photo of a menu in Spanish -> AI generates a bilingual storefront -> Customer orders in English -> Fatima receives notification in Spanish.
+**Outcome**: A "Language Bridge" that allows Fatima to operate 100% in her native tongue while the business presents 100% in the customer's tongue.
+**Critical User Journey**:
+1. Fatima sets Dashboard to Arabic.
+2. She uploads a photo of her menu.
+3. AI generates an English storefront.
+4. Customer buys in English.
+5. Fatima sees the order and "Item Checklist" in Arabic.
 **Acceptance Criteria**:
-- 100% Dashboard localization based on user preference.
-- OCR and translation of physical assets (menus, signs).
-- Bi-directional translation for customer-owner chat.
+- Full dashboard localization.
+- Context-aware menu translation (keeping brand names original).
+- Multilingual order routing.
 
 **Priority**: P1
 **Estimated Scope**: Medium

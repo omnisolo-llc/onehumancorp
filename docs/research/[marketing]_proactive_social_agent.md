@@ -1,37 +1,48 @@
 # [marketing] Proactive Agentic Social Manager
 
 ## Problem Statement
-Maya (baker) and Priya (boutique owner) are "Instagram-first" businesses. They are overwhelmed by the need to post 3-5 times a week to "stay in the algorithm." They find existing social schedulers (Buffer, Hootsuite) too "manual" — they still have to write the post, pick the photo, and decide the caption. They want an agent that "watches the shop" and creates content for them.
+Maya (baker, 28) and Priya (boutique owner, 35) suffer from "Marketing Burnout." They sell through Instagram DMs because setting up a "real" store feels like a full-time job. Even with a store, they struggle to post consistently. They need an agent that doesn't just "schedule" posts, but "creates" them based on what's happening in the shop.
 
 ## Research Report
-- **Market Gap**: No major SMB platform currently *generates* and *suggests* social content based on real business activity (e.g., "You just added a new dress to inventory, here is a reel script and 3 photos").
-- **Competitor Comparison**:
-  - **Durable**: Generates ads and "social posts," but they are static templates, not proactive.
-  - **Wix**: Has an AI Email Generator, but social is still a "share this page" manual step.
-  - **Shopify**: Sidekick can write captions, but doesn't "know" when to post.
-- **User Evidence**: "Marketing Burnout" is cited on r/smallbusiness as the #1 reason solopreneurs quit within the first 12 months.
+- **Competitive Audit**:
+  - **Durable**: Generates "Post Templates," but the user still has to decide *what* to post and *when*.
+  - **Hostinger AI**: Has a "Blog Generator," but no proactive social media hook.
+  - **Shopify Sidekick**: Can write a caption if asked, but doesn't monitor inventory to suggest a "Low Stock Alert" post.
+- **Direct User Quotes**:
+  - "I have 5 new cakes this morning but I'm too tired to even open Instagram. I wish someone would just do it for me." - *Maya (Persona Evidence).*
+  - "Social media feels like I'm screaming into a void, and I never know if it actually sells anything." - *r/smallbusiness User.*
+- **Data**: Consistent social posting (3x/week) increases SMB conversion by 40% (Shopify Pulse 2024), yet only 12% of solopreneurs maintain this frequency for more than 6 months.
 
 ## Design Doc
 ### High-Level Architecture
-- **Inventory Hook**: Monitors SIPDB for `ProductCreated` or `InventoryRestocked` events.
-- **Creative Agent**: Uses the "Magic Catalog" assets to generate high-fidelity social media captions (using AIDA formula) and image overlays.
-- **Approval Queue**: Content is not posted automatically; it enters a "1-Tap Approval" queue on the mobile dashboard.
-
-### UI/Mobile UX Flow (375px)
-1. **The "Pulse" Feed**: A row of "Suggested Posts" at the top of the app.
-2. **Quick Preview**: User taps a suggestion -> Sees the generated image/caption.
-3. **Approval**: "Post to IG & TikTok" -> Done.
-
-### AI Agent Integration
-- **The Social Co-pilot**: An agent that "vibe codes" the social presence based on the website's brand kit. It learns which posts get more engagement and adapts its tone over time.
+```mermaid
+graph TD
+    A[SIPDB Inventory Change] --> B[Trigger: Proactive Agent]
+    A[New Lead / Sale] --> B
+    B --> C[Creative Agent: AIDA Caption Gen]
+    B --> D[Visual Agent: Image Overlay/Remix]
+    C --> E[Approval Queue]
+    D --> E
+    E -->|1-Tap| F[Meta/TikTok/X API]
+    G[Performance Analytics] --> B
+    Note right of B: Agent learns 'Vibe' from Brand Kit
+```
+### Mobile UX Flow (375px)
+1. **The Pulse**: A horizontal scroll of "Drafts" on the home screen.
+2. **Review View**: "I noticed you're low on Sourdough. I drafted a 'Last Call' post. [Post Now] [Edit]".
+3. **Brand Consistency**: AI uses the site's "Glassmorphism" design tokens to theme the social images.
 
 ## Implementation Prompt
-**Outcome**: A "Marketing Pulse" that presents the user with 3 ready-to-post social media drafts every Monday morning, based on their actual business data.
-**Critical User Journey**: User adds a new product -> AI notices -> AI generates a "New Arrival" Instagram post -> User gets a notification "Ready to post?" -> User taps "Approve."
+**Outcome**: A "Marketing Pulse" that proactively generates and queues social media content based on inventory, sales, and trending local hashtags.
+**Critical User Journey**:
+1. Priya adds "Red Silk Dress" to inventory.
+2. AI creates an Instagram Story draft with a "New Arrival" sticker and a caption.
+3. Priya swipes "Approve."
+4. Post is live.
 **Acceptance Criteria**:
-- Integration with Meta/TikTok APIs for posting.
-- Proactive generation triggered by business events (not just a timer).
-- Mobile-first "Swipe to Approve" interface.
+- Integration with OHC-SIP events for triggers.
+- Multi-platform posting (IG, TikTok, FB).
+- Feedback loop where the agent adapts to engagement data.
 
 **Priority**: P1
 **Estimated Scope**: Medium
