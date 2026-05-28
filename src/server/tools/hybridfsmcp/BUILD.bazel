@@ -117,4 +117,8 @@ rust_library(
 rust_test(
     name = "server_tools_hybridfsmcp_test",
     crate = ":server_tools_hybridfsmcp",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

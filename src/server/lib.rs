@@ -1,3 +1,5 @@
+#![allow(ambiguous_glob_reexports)]
+#![allow(ambiguous_glob_imports)]
 pub use ::server_harness as harness;
 pub mod api;
 

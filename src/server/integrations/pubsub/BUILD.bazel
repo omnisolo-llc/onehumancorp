@@ -25,4 +25,8 @@ rust_test(
     deps = [
         "@crates//:tokio",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

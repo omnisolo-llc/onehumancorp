@@ -26,4 +26,8 @@ rust_test(
         "@crates//:temp-env",
         "@crates//:tokio",
     ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
