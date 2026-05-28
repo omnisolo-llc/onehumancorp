@@ -36,6 +36,7 @@ export default function OnboardingWizard() {
       const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
 
       const combinedDescription = `Business Name: ${businessName}\nWhat we sell: ${whatYouSell}\nLocation: ${location}`;
+      setBusinessDescription(combinedDescription);
 
       const intakeRes = await fetch('/api/onboarding/intake', {
         method: 'POST',
