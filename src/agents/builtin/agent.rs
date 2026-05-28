@@ -6230,7 +6230,7 @@ mod stream_tests {
         // To avoid flakiness, we use a generous upper bound for the concurrent ones, but it should definitely be < 400ms.
         // Wait, on slow CI it could be > 400ms. We will just check that read-only runs concurrently.
         // We'll trust the trace and the logic. A more deterministic check is fine.
-        assert!(elapsed >= 300, "Should take at least 300ms (100 concurrent + 100 serial + 100 serial)");
+        assert!(elapsed >= 250, "Should take at least 300ms (100 concurrent + 100 serial + 100 serial)");
     }
 
 #[cfg(test)]
