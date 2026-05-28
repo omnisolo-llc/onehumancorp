@@ -110,6 +110,8 @@ pub struct AgentRunConfig {
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
     pub enable_progressive_skills: bool,
+    pub enable_sona_neural_patterns: bool,
+    pub sona_pattern_matcher: Option<std::sync::Arc<tokio::sync::RwLock<crate::sona_patterns::PatternMatcher>>>,
     pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
     pub observation_masking_threshold: usize,
@@ -166,6 +168,8 @@ impl Default for AgentRunConfig {
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
             enable_progressive_skills: false,
+            enable_sona_neural_patterns: false,
+            sona_pattern_matcher: None,
             progressive_skills_dir: None,
             enable_observation_masking: true,
             observation_masking_threshold: 3,
@@ -1674,6 +1678,16 @@ impl Agent {
             final_cfg.max_retries = 2;
         }
 
+        // Ruflo Unique Harness Innovations: SONA neural patterns (Self-learning trajectory patterns)
+        if final_cfg.enable_sona_neural_patterns {
+            if let Some(matcher) = &final_cfg.sona_pattern_matcher {
+                let matcher_lock = matcher.read().await;
+                if let Some(pattern) = matcher_lock.find_best_match(initial_message) {
+                    let sona_suggestion = format!("\n[SONA Neural Pattern Match] Based on previous successful trajectories for similar tasks, consider prioritizing these tools: {}.", pattern.successful_tools.join(", "));
+                    final_cfg.server_system_message.push_str(&sona_suggestion);
+                }
+            }
+        }
         // DeerFlow Unique Harness Innovations: Progressive skills
         if final_cfg.enable_progressive_skills {
             if let Some(ref dir) = final_cfg.progressive_skills_dir {
@@ -2593,7 +2607,7 @@ impl Agent {
                                 session_id: thread_id.clone(),
                                 messages_json: msgs_json,
                                 current_step: iteration as usize,
-                                active_tools: vec![],
+                                active_tools: vec![], memory_size_bytes: Some(messages.len()),
                             };
                             let _ = hm.hibernate(thread_id, &state).await;
                         }
@@ -4636,7 +4650,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("FAIL: The answer is incomplete."),
+                    message: crate::types::Message::assistant(r#"{"status": "REJECT", "reason": "The answer is incomplete.", "confidence": 0.9}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -4648,7 +4662,7 @@ mod tests {
                     response_id: Some("mock-id".to_string()),
                 },
                 ChatResponse {
-                    message: crate::types::Message::assistant("PASS"),
+                    message: crate::types::Message::assistant(r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 1.0}"#),
                     usage: Usage::default(),
                     stop_reason: "stop".to_string(),
                     response_id: Some("mock-id".to_string()),
@@ -6433,4 +6447,45 @@ async fn test_stripe_retry_limit() {
         let lock = agent.native_env.read().await;
         let val = lock.get_variable::<u64>("agent_secret").unwrap();
         assert_eq!(*val, 42);
+    }
+
+    #[tokio::test]
+    async fn test_progressive_skills_mechanic() {
+        use crate::types::{ChatRequest, ChatResponse, Usage, Message};
+        struct SpyLlmClient {
+            system_prompt: std::sync::Mutex<String>,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for SpyLlmClient {
+            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                *self.system_prompt.lock().unwrap() = req.system;
+                Ok(ChatResponse {
+                    message: Message::assistant("Got it"),
+                    usage: Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("id".to_string()),
+                })
+            }
+        }
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let skills_dir = temp_dir.path().join("skills");
+        std::fs::create_dir(&skills_dir).unwrap();
+        std::fs::write(skills_dir.join("test_skill.md"), "# Secret Skill\nKeywords: analyze\n\nALWAYS perform deep analysis.").unwrap();
+
+        let client = Arc::new(SpyLlmClient { system_prompt: std::sync::Mutex::new(String::new()) });
+        let agent = Agent::new(client.clone(), vec![]);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.enable_progressive_skills = true;
+        cfg.progressive_skills_dir = Some(skills_dir.to_string_lossy().to_string());
+        cfg.developer_instructions = "Base Instructions".to_string();
+
+        let mut on_event = |_| {};
+        let _ = agent.run(&cfg, "Please analyze this data", &mut on_event).await;
+
+        let prompt = client.system_prompt.lock().unwrap().clone();
+        assert!(prompt.contains("Base Instructions"));
+        assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
+        assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
