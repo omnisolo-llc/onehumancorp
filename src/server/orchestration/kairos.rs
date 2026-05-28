@@ -60,7 +60,7 @@ use tokio::sync::broadcast;
 use redis::AsyncCommands;
 
 #[async_trait]
-pub trait KairosTeammateMesh: Send + Sync {
+pub trait TeammateMesh: Send + Sync {
     async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String>;
     async fn subscribe(&self, channel: &str) -> Result<tokio::sync::mpsc::Receiver<Vec<u8>>, String>;
 }
@@ -78,7 +78,7 @@ impl MemoryMesh {
 }
 
 #[async_trait]
-impl KairosTeammateMesh for MemoryMesh {
+impl TeammateMesh for MemoryMesh {
     async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String> {
         if let Some(tx) = self.subs.get(channel) {
             let _ = tx.send(message);
@@ -125,7 +125,7 @@ impl RedisMesh {
 }
 
 #[async_trait]
-impl KairosTeammateMesh for RedisMesh {
+impl TeammateMesh for RedisMesh {
     async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String> {
         let mut conn = self.publish_conn.lock().await;
         let _: () = conn.publish(channel, message).await.map_err(|e| e.to_string())?;
