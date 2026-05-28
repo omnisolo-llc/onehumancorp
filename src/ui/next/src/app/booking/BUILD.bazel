@@ -1,0 +1,9 @@
+load("//bazel:repositories.bzl", "next_page")
+
+next_page(
+    name = "booking",
+    srcs = ["page.tsx", "page.test.tsx"],
+    deps = [
+        "//src/ui/next/src/components",
+    ],
+)
