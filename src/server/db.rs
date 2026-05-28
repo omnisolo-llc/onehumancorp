@@ -1236,9 +1236,8 @@ mod e2e_tenant_isolation_tests {
         }
 
         let database_url = "postgres://postgres:postgres@localhost:5432/test";
-        let _pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
+        let pool1 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1246,12 +1245,12 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect(database_url)
+            .await
             .unwrap();
 
-        let _pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
-            .acquire_timeout(std::time::Duration::from_millis(50))
+        let pool2 = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .acquire_timeout(std::time::Duration::from_millis(500))
             .before_acquire(|conn, _meta| {
                 Box::pin(async move {
                     use sqlx::Executor;
@@ -1259,11 +1258,68 @@ mod e2e_tenant_isolation_tests {
                     Ok(true)
                 })
             })
-            .connect_lazy(database_url)
+            .connect(database_url)
+            .await
             .unwrap();
 
-        // This verifies tenant access doesn't bleed across pools
-        // (RLS logic inherently evaluated by postgres)
+        // Setup test table with RLS
+        sqlx::query("CREATE TABLE IF NOT EXISTS test_rls_isolation (id TEXT, tenant_id TEXT, data TEXT);")
+            .execute(&pool1)
+            .await
+            .unwrap();
+        sqlx::query("ALTER TABLE test_rls_isolation ENABLE ROW LEVEL SECURITY;")
+            .execute(&pool1)
+            .await
+            .unwrap();
+        sqlx::query("DROP POLICY IF EXISTS test_rls_policy ON test_rls_isolation;")
+            .execute(&pool1)
+            .await
+            .unwrap();
+        sqlx::query("CREATE POLICY test_rls_policy ON test_rls_isolation USING (tenant_id::text = current_setting('app.current_tenant', true));")
+            .execute(&pool1)
+            .await
+            .unwrap();
+
+        sqlx::query("ALTER TABLE test_rls_isolation FORCE ROW LEVEL SECURITY;")
+            .execute(&pool1)
+            .await
+            .unwrap();
+
+        sqlx::query("DELETE FROM test_rls_isolation;").execute(&pool1).await.unwrap();
+        sqlx::query("DELETE FROM test_rls_isolation;").execute(&pool2).await.unwrap();
+
+        sqlx::query("INSERT INTO test_rls_isolation (id, tenant_id, data) VALUES ('1', 'tenant_1', 'data1');")
+            .execute(&pool1)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO test_rls_isolation (id, tenant_id, data) VALUES ('2', 'tenant_2', 'data2');")
+            .execute(&pool2)
+            .await
+            .unwrap();
+
+        let rows1 = sqlx::query("SELECT * FROM test_rls_isolation")
+            .fetch_all(&pool1)
+            .await
+            .unwrap();
+        assert_eq!(rows1.len(), 1);
+        use sqlx::Row;
+        let id: String = rows1[0].get("id");
+        assert_eq!(id, "1");
+
+        let rows2 = sqlx::query("SELECT * FROM test_rls_isolation")
+            .fetch_all(&pool2)
+            .await
+            .unwrap();
+        assert_eq!(rows2.len(), 1);
+        let id2: String = rows2[0].get("id");
+        assert_eq!(id2, "2");
+
+        let no_rows = sqlx::query("SELECT * FROM test_rls_isolation WHERE tenant_id = 'tenant_2'")
+            .fetch_all(&pool1)
+            .await
+            .unwrap();
+        assert_eq!(no_rows.len(), 0);
     }
 
     #[tokio::test]
