@@ -72,7 +72,7 @@ export default function OnboardingWizard() {
           }
         });
 
-        if (res.ok) {
+        if (res && res.ok) {
           const data = await res.json();
           if (data && Object.keys(data).length > 0) {
             if (data.step && data.step > 1) setStep(data.step);
