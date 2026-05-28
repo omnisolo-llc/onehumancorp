@@ -456,6 +456,37 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: AI Upsell Recommendations */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>AI Upsell Recommendations</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 rounded-full border border-yellow-100">
+                        <span className="text-xs font-medium text-yellow-600">Pro Feature</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'linear-gradient(to right, #ffffff, #fcfbf8)', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1">
+                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost your Average Order Value</h3>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI analyze your products and automatically suggest high-converting cross-sells and upsells at checkout to maximize your revenue per customer.</p>
+                    <Link
+                        href="/ai-upsell"
+                        className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 w-max"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+                        Generate Upsell Strategy
+                    </Link>
+                </div>
+                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
+                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
+                   <div className="relative w-20 h-20 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
+                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                   </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
          {!hasPro && (
            <section className="mb-6 animate-fade-in">
