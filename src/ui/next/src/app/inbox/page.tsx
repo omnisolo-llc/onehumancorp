@@ -10,6 +10,7 @@ type Message = {
   content: string;
   date: string;
   draft?: string;
+  isAutoReplied?: boolean;
 };
 
 export default function InboxPage() {
@@ -51,6 +52,7 @@ export default function InboxPage() {
 
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [channelError, setChannelError] = useState<string | null>(null);
+  const [autoResponder, setAutoResponder] = useState(false);
   const [twilioChannels, setTwilioChannels] = useState({
     whatsapp: true,
     instagram: true,
@@ -85,6 +87,37 @@ export default function InboxPage() {
     setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const simulateIncoming = () => {
+    const incomingId = Date.now();
+    setMessages(prev => [...prev, {
+      id: incomingId,
+      sender: 'New Customer',
+      source: 'Instagram',
+      icon: '📸',
+      content: 'Hi! Do you have gluten-free options?',
+      date: 'Just now'
+    }]);
+
+    setTimeout(() => {
+      if (autoResponder) {
+         setMessages(prev => [...prev, {
+           id: Date.now() + 1,
+           sender: 'Me',
+           source: 'Me',
+           icon: '🤖',
+           content: 'Hello! Yes, we have a variety of gluten-free options including cookies and cakes. Let me know what you are looking for!',
+           date: 'Just now',
+           isAutoReplied: true
+         }]);
+      } else {
+         setMessages(prev => prev.map(m => m.id === incomingId ? {
+           ...m,
+           draft: 'Hello! Yes, we have a variety of gluten-free options including cookies and cakes. Let me know what you are looking for!'
+         } : m));
+      }
+    }, 1500);
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -93,6 +126,9 @@ export default function InboxPage() {
         </Link>
         <h1 className="text-2xl font-bold">Customer Inbox</h1>
         <div className="ml-auto flex items-center gap-2">
+          <button onClick={simulateIncoming} title="Simulate Incoming Message" className="p-2 bg-blue-50 border border-blue-200 hover:bg-blue-100 rounded text-sm font-semibold text-blue-700">
+            📥
+          </button>
           <button
             onClick={() => setShowSettingsModal(true)}
             className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
@@ -111,7 +147,7 @@ export default function InboxPage() {
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-white w-full max-w-sm rounded-2xl p-6 shadow-2xl relative font-inter">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Channel Settings</h2>
+              <h2 className="text-xl font-bold text-gray-900">Settings</h2>
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="text-gray-400 hover:text-gray-600 p-1"
@@ -120,26 +156,43 @@ export default function InboxPage() {
               </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
-
-            {channelError && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                {channelError}
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Agent Settings</h3>
+              <p className="text-sm text-gray-500 mb-3">Automatically send AI replies to new messages when confident. If disabled, AI will only generate drafts for review.</p>
+              <div className="flex items-center justify-between p-3 rounded-xl border border-[#d6bcfa] bg-[#f9f5ff]">
+                <span className="text-sm font-semibold text-[#553c9a]">AI Auto-Responder</span>
+                <button
+                  onClick={() => setAutoResponder(!autoResponder)}
+                  className={`w-12 h-6 rounded-full transition-colors relative ${autoResponder ? 'bg-[#805ad5]' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${autoResponder ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                </button>
               </div>
-            )}
+            </div>
 
-            <div className="space-y-3">
-              {Object.entries(twilioChannels).map(([key, value]) => (
-                <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
-                  <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
-                  <button
-                    onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
-                    className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
-                  >
-                    <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
-                  </button>
+            <div className="mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Channel Settings</h3>
+              <p className="text-sm text-gray-500 mb-4">Enable or disable specific channels without losing message history.</p>
+
+              {channelError && (
+                <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                  {channelError}
                 </div>
-              ))}
+              )}
+
+              <div className="space-y-3">
+                {Object.entries(twilioChannels).map(([key, value]) => (
+                  <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 bg-gray-50">
+                    <span className="text-sm font-semibold text-gray-800 capitalize">{key}</span>
+                    <button
+                      onClick={() => toggleChannel(key as keyof typeof twilioChannels)}
+                      className={`w-12 h-6 rounded-full transition-colors relative ${value ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                    >
+                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${value ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -152,8 +205,14 @@ export default function InboxPage() {
               {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
+              {msg.isAutoReplied && (
+                <span className="text-[10px] text-[#553c9a] bg-[#e9d8fd] px-2 py-0.5 rounded-full ml-2 uppercase font-bold tracking-wide flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  Auto-Replied
+                </span>
+              )}
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
+            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? (msg.isAutoReplied ? 'bg-[#f9f5ff] border border-[#d6bcfa]' : 'bg-blue-100') : 'bg-gray-50 border border-gray-100'}`}>
               <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
             </div>
 
