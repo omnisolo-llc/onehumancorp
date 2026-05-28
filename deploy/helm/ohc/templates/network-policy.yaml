@@ -47,6 +47,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
     {{- if .Values.cnpg.enabled }}
     - to:
         - namespaceSelector:
@@ -71,6 +82,17 @@ spec:
         - protocol: TCP
           port: 6379
     {{- end }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.ohcCore.networkPolicy.enabled }}
@@ -115,6 +137,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.chatwoot.enabled }}
@@ -159,6 +192,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.powersync.enabled }}
@@ -203,6 +247,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/1
+            except:
+              - 10.0.0.0/8
+        - ipBlock:
+            cidr: 128.0.0.0/1
+            except:
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.169.254/32
 {{- end }}
 ---
 {{- if .Values.redis.enabled }}
