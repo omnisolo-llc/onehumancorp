@@ -242,7 +242,9 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    const referralLink = `ohc://join?ref=${tenant}`;
+    const shareCardUrl = `https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('One Human Corp')}&description=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today.')}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + shareCardUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
