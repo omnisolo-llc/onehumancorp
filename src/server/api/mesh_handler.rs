@@ -1,10 +1,11 @@
 use axum::{
-    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, State, Query},
+    extract::{ws::{Message as WsMessage, WebSocket, WebSocketUpgrade}, State, Query, Extension},
     response::IntoResponse,
     http::HeaderMap,
 };
 use std::sync::Arc;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message as MeshMessage};
+use ::server_common::Claims;
 use futures::{sink::SinkExt, stream::StreamExt};
 use tokio::sync::mpsc;
 use serde::Deserialize;
@@ -19,9 +20,22 @@ pub struct ConnectQuery {
 pub async fn mesh_ws_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let channel = if !org_id.is_empty() {
+        format!("{}:{}", org_id, query.channel)
+    } else {
+        query.channel.clone()
+    };
+
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, channel))
 }
 
 #[derive(serde::Deserialize)]
@@ -57,13 +71,26 @@ fn check_spiffe_auth(headers: &HeaderMap) -> Result<String, axum::response::Resp
 pub async fn orchestration_broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let topic = if !org_id.is_empty() {
+        format!("{}:{}", org_id, payload.topic)
+    } else {
+        payload.topic.clone()
+    };
+
+    match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -75,21 +102,47 @@ pub async fn orchestration_broadcast_handler(
 pub async fn orchestration_tasks_stream_handler(
     ws: WebSocketUpgrade,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     Query(query): Query<ConnectQuery>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(move |socket| handle_socket(socket, transport, query.channel))
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let channel = if !org_id.is_empty() {
+        format!("{}:{}", org_id, query.channel)
+    } else {
+        query.channel.clone()
+    };
+
+    ws.on_upgrade(move |socket| handle_socket(socket, transport, channel))
 }
 
 pub async fn broadcast_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     axum::Json(payload): axum::Json<BroadcastRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    match transport.publish(&payload.topic, payload.message.into()).await {
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let topic = if !org_id.is_empty() {
+        format!("{}:{}", org_id, payload.topic)
+    } else {
+        payload.topic.clone()
+    };
+
+    match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
             let error_res = serde_json::json!({ "error": e.to_string() });
@@ -101,13 +154,24 @@ pub async fn broadcast_handler(
 pub async fn direct_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     axum::Json(payload): axum::Json<DirectRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    let topic = format!("mesh:direct:{}", payload.target_agent_id);
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let mut topic = format!("mesh:direct:{}", payload.target_agent_id);
+    if !org_id.is_empty() {
+        topic = format!("{}:{}", org_id, topic);
+    }
+
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -120,13 +184,24 @@ pub async fn direct_handler(
 pub async fn mailbox_handler(
     headers: HeaderMap,
     State(transport): State<Arc<dyn MeshTransport>>,
+    Extension(claims): Extension<Claims>,
     axum::Json(payload): axum::Json<MailboxRequest>,
 ) -> impl IntoResponse {
     if let Err(err_response) = check_spiffe_auth(&headers) {
         return err_response;
     }
 
-    let topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    let org_id = claims.organization_id.clone().unwrap_or_default();
+    if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" && org_id.is_empty() {
+        let error_res = serde_json::json!({ "error": "unauthorized: missing organization_id in multitenant mode" });
+        return (axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response();
+    }
+
+    let mut topic = format!("mesh:mailbox:{}", payload.mailbox_id);
+    if !org_id.is_empty() {
+        topic = format!("{}:{}", org_id, topic);
+    }
+
     match transport.publish(&topic, payload.message.into()).await {
         Ok(_) => axum::response::Json(serde_json::json!({ "success": true })).into_response(),
         Err(e) => {
@@ -209,6 +284,10 @@ mod tests {
         let app = Router::new()
             .route("/api/v1/mesh/connect", get(mesh_ws_handler))
             .route("/api/mesh/v2/broadcast", axum::routing::post(broadcast_handler))
+            .layer(axum::extract::Extension(Claims {
+                organization_id: Some("test_org".to_string()),
+                ..Default::default()
+            }))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -274,6 +353,10 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/direct", axum::routing::post(direct_handler))
+            .layer(axum::extract::Extension(Claims {
+                organization_id: Some("test_org".to_string()),
+                ..Default::default()
+            }))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -317,6 +400,10 @@ mod tests {
 
         let app = Router::new()
             .route("/api/mesh/v2/mailbox", axum::routing::post(mailbox_handler))
+            .layer(axum::extract::Extension(Claims {
+                organization_id: Some("test_org".to_string()),
+                ..Default::default()
+            }))
             .with_state(transport);
 
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
