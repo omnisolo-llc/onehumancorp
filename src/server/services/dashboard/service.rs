@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Arc<Vec<::server_ohc::orchestration::MeetingRoom>>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -64,7 +65,9 @@ impl DashboardService for MyDashboardService {
         let hub_orders = self.hub.clone();
         let hub_org = self.hub.clone();
         let hub_agents = self.hub.clone();
+        let hub_meetings = self.hub.clone();
         let org_id_agents = req.organization_id.clone();
+        let org_id_meetings = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
@@ -81,7 +84,16 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let cache_key = format!("hub:meetings:{}:{}", org_id_meetings, mobile_optimized);
+                let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(hub_meetings.redis_client.clone()));
+
+                if let Some(meetings) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(meetings);
+                }
+
+                let meetings = hub2.get_meetings().await;
+                cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(meetings)
             }),
             tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
