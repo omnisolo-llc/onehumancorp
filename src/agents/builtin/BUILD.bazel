@@ -70,6 +70,7 @@ rust_library(
         "observability.rs",
         "observation_masking.rs",
         "output_parser.rs",
+        "plan_and_execute.rs",
         "plane.rs",
         "progressive_skills.rs",
         "proto.rs",

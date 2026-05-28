@@ -48,6 +48,7 @@ pub mod provider;
 pub mod registry;
 pub mod plane;
 pub mod checkpointer;
+pub mod plan_and_execute;
 pub mod harness;
 pub mod langgraph;
 pub mod codex_runner;
