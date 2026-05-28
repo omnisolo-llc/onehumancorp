@@ -24,6 +24,12 @@ pub trait TeammateMesh: Send + Sync {
 
     async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String>;
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_tasks(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
+
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String>;
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String>;
 }
 
 
@@ -38,6 +44,76 @@ impl LocalTeammateMesh {
             hub,
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
+    }
+}
+
+#[async_trait]
+impl TeammateMesh for LocalTeammateMesh {
+    async fn publish(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        let msg = TeammateMeshEvent {
+            agent_id: "sys".to_string(),
+            action: topic.to_string(),
+            status: "ok".to_string(),
+            payload,
+            msg_id: uuid::Uuid::new_v4().to_string(),
+        };
+        MeshTransport::publish(self, topic, msg).await
+    }
+
+    async fn publish_with_ack(&self, topic: &str, payload: Vec<u8>) -> Result<(), String> {
+        self.publish(topic, payload).await
+    }
+
+    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        MeshTransport::subscribe(self, topic, handler).await
+    }
+
+    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+        MeshTransport::acquire_lock(self, resource, owner, ttl_seconds).await
+    }
+
+    async fn release_lock(&self, resource: &str, owner: &str) -> Result<(), String> {
+        MeshTransport::release_lock(self, resource, owner).await
+    }
+
+    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
+        MeshTransport::register_presence(self, agent_id, status, ttl_seconds).await
+    }
+
+    async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
+        MeshTransport::get_active_agents(self).await
+    }
+
+    async fn ping(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    async fn start_health_responder(&self) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        Ok(Box::new(|| {}))
+    }
+
+    async fn publish_state_handoff(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("system:state_handoff", payload).await
+    }
+
+    async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("system:state_handoff", handler).await
+    }
+
+    async fn publish_tasks(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:tasks", payload).await
+    }
+
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("mesh:tasks", handler).await
+    }
+
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:coordination", payload).await
+    }
+
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("mesh:coordination", handler).await
     }
 }
 
@@ -263,6 +339,22 @@ impl TeammateMesh for CentrifugeNode {
     async fn subscribe_state_handoff(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
         self.subscribe("system:state_handoff", handler).await
     }
+
+    async fn publish_tasks(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:tasks", payload).await
+    }
+
+    async fn subscribe_tasks(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("mesh:tasks", handler).await
+    }
+
+    async fn publish_coordination(&self, payload: Vec<u8>) -> Result<(), String> {
+        self.publish("mesh:coordination", payload).await
+    }
+
+    async fn subscribe_coordination(&self, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe("mesh:coordination", handler).await
+    }
 }
 
 #[cfg(test)]
@@ -440,6 +532,45 @@ mod tests {
 
         let mesh_res = super::get_mesh_transport(&db_store).await;
         assert!(mesh_res.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_mesh_tasks_and_coordination() {
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+        let db_url = std::env::var("DATABASE_URL").unwrap();
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy(&db_url)
+            .unwrap();
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+
+        let mesh = LocalTeammateMesh::new(hub.clone());
+
+        let tasks_received = Arc::new(AtomicBool::new(false));
+        let tasks_received_clone = tasks_received.clone();
+        let _cancel1 = TeammateMesh::subscribe_tasks(&mesh, Box::new(move |msg| {
+            if msg.payload == b"task_data" {
+                tasks_received_clone.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        let coord_received = Arc::new(AtomicBool::new(false));
+        let coord_received_clone = coord_received.clone();
+        let _cancel2 = TeammateMesh::subscribe_coordination(&mesh, Box::new(move |msg| {
+            if msg.payload == b"coord_data" {
+                coord_received_clone.store(true, Ordering::SeqCst);
+            }
+        })).await.unwrap();
+
+        TeammateMesh::publish_tasks(&mesh, b"task_data".to_vec()).await.unwrap();
+        TeammateMesh::publish_coordination(&mesh, b"coord_data".to_vec()).await.unwrap();
+
+        sleep(Duration::from_millis(50)).await;
+
+        assert!(tasks_received.load(Ordering::SeqCst), "Should receive task message");
+        assert!(coord_received.load(Ordering::SeqCst), "Should receive coordination message");
     }
 }
 
