@@ -186,17 +186,10 @@ jobs:
             build --show_timestamps
 
       - name: Build Tauri CLI with Bazel
-        if: matrix.name != 'linux-arm64'
         run: |
           bazelisk build @crates//:tauri-cli__cargo-tauri
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
           echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
-
-      - name: Install Tauri CLI with Cargo
-        if: matrix.name == 'linux-arm64'
-        run: |
-          cargo install tauri-cli --version 2.11.2 --locked --bin cargo-tauri
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Prepare release version and updater signing
         env:

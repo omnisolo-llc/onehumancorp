@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
