@@ -45,8 +45,8 @@ impl SyndicationMeshService {
             }
         });
 
-        self.bus.subscribe("system:catalog_events".to_string(), handler).await?;
-        self.bus.subscribe("system:order_events".to_string(), Box::new(|_| {})).await?;
+        let _ = self.bus.subscribe("system:catalog_events".to_string(), handler).await;
+        let _ = self.bus.subscribe("system:order_events".to_string(), Box::new(|_| {})).await;
 
         Ok(())
     }

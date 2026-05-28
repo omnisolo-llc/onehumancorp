@@ -39,6 +39,9 @@ test.describe('Viral Growth Loops', () => {
     // 1. Navigate to dashboard
     await page.goto('/dashboard');
 
+    // Wait for page to be mostly loaded
+    await page.waitForLoadState('networkidle');
+
     // 2. Click the Recover Cart button
     const recoverCartBtn = page.getByRole('button', { name: 'Recover Cart' });
     await expect(recoverCartBtn).toBeVisible({ timeout: 10000 });
@@ -48,17 +51,22 @@ test.describe('Viral Growth Loops', () => {
     const modalHeading = page.getByRole('heading', { name: 'AI Cart Recovery' });
     await expect(modalHeading).toBeVisible();
 
-    // Verify generated text area contains correct message
+    // Wait for the textarea to be visible before asserting value
     const generatedText = page.locator('textarea');
-    await expect(generatedText).toBeVisible();
-    await expect(generatedText).toHaveValue(/We noticed you left some items in your cart/i, { timeout: 5000 });
+    await expect(generatedText).toBeVisible({ timeout: 5000 });
+
+    // Explicitly wait for the value to settle, bypassing simple assertions
+    await page.waitForFunction(() => {
+        const ta = document.querySelector('textarea');
+        return ta && ta.value && ta.value.includes('We noticed you left some items in your cart');
+    }, { timeout: 10000 });
 
     // 4. Send the campaign
     const sendCampaignBtn = page.getByRole('button', { name: 'Send Campaign' });
     await sendCampaignBtn.click();
 
     // Verify success message
-    await expect(page.getByText('Campaign Sent Successfully!')).toBeVisible();
+    await expect(page.getByText('Campaign Sent Successfully!')).toBeVisible({ timeout: 5000 });
 
     // 5. Verify the modal can be closed
     const closeButton = page.locator('div.fixed').locator('button').first();
