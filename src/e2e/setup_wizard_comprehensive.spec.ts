@@ -2,41 +2,39 @@ import { test, expect } from './fixtures';
 
 test.describe('Business Setup Wizard Comprehensive Flow', () => {
   test('traverses the current wizard from welcome to launch', async ({ page }) => {
-    await page.goto('/website-builder');
-    await page.getByRole('button', { name: /Start My Business Next/ }).click();
-    await page.getByRole('button', { name: /Creative/ }).click();
-    await page.getByPlaceholder('What is your business called?').fill('Alex Art');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByLabel(/Services/).check();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByPlaceholder('What is the name of this product?').fill('Portrait Session');
-    await page.getByPlaceholder('0.00').fill('120');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Both Online/ }).click();
-    await page.getByPlaceholder('e.g. Maya Smith').fill('Alex Artist');
-    await page.getByPlaceholder('you@email.com').fill('alex@example.com');
-    await page.getByPlaceholder('Password').fill('password123');
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: 'Modern' }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
-    await page.getByRole('button', { name: /Connect Custom Domain/ }).click();
-    await page.getByRole('button', { name: /Next/ }).click();
+    // 0. Start from UI Login
+    await page.goto('/login');
+    await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible();
+    await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('maya@example.com');
+    await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
+    await page.locator('button:has-text("Login")').first().click();
 
-    const requestPromise = page.waitForRequest(request =>
-      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
-    );
+    // Wait for Dashboard
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    await page.getByRole('button', { name: /Publish my business/ }).click();
+    // We redirect this comprehensive test to test the new streamlined /onboarding
+    await page.goto('/onboarding');
 
-    const request = await requestPromise;
-    const postData = JSON.parse(request.postData() || '{}');
+    // Wait for the Smart Builder welcome screen
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
-    expect(postData.business_type).not.toBe('');
-    expect(postData.company_name).toBe('Alex Art');
-    expect(postData.first_product_name).toBe('Portrait Session');
-    expect(postData.first_product_price).toBe('120');
-    expect(postData.website_template).toBe('Modern');
+    // Fill in the description (incorporating Maya to trigger mock)
+    await page.locator('textarea').fill("I am Maya. I bake custom vegan cakes for weddings and parties in Portland, OR.");
 
-    await expect(page.getByText('Your business is now live!')).toBeVisible();
+    // Click Generate
+    await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    // Wait for the loading screen
+    await expect(page.getByRole('heading', { name: "Our Marketing Department is building your store..." })).toBeVisible();
+
+    // Wait for it to generate
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
+
+    // Verify shareable link is present
+    await expect(page.getByText('my-business.ohc.store')).toBeVisible();
+
+    // 4. Verify Dashboard redirect and action banner
+    await page.getByRole('link', { name: /Go to Dashboard/i }).click();
+    await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
   });
 });

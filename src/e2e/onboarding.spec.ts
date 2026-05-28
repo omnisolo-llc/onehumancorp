@@ -18,34 +18,19 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    // Wait for the Smart Builder welcome screen
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
     // Fill in the description (incorporating Maya to trigger mock)
-    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-
-    // Step 1 - Chat 2
-    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('Custom vegan cakes');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-
-    // Step 1 - Chat 3
-    await expect(page.getByRole('heading', { name: 'Where are you located?' })).toBeVisible();
-    await page.getByPlaceholder('e.g. Portland, OR').fill('Portland, OR');
+    await page.getByPlaceholder("e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50.").fill("I am Maya. I bake custom vegan cakes for weddings and parties in Portland, OR.");
 
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
-    // Step 2 - Review
-    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
-    await page.getByRole('button', { name: /Continue/i }).click();
+    // Wait for the loading screen
+    await expect(page.getByRole('heading', { name: "Our Marketing Department is building your store..." })).toBeVisible();
 
-    // Step 3 - Style
-    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
-    await page.getByRole('button', { name: /Launch Store/i }).click();
-
-    // Simplified Mobile First Onboarding - wait for it to generate
-    // Step 2 is automatic, so wait for Step 3 directly
+    // Wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // Verify shareable link is present
@@ -77,33 +62,19 @@ test.describe('Onboarding Wizard', () => {
     await page.goto('/onboarding');
 
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
-    await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
+    // Wait for the Smart Builder welcome screen
+    await expect(page.getByRole('heading', { name: "Tell us about your business" })).toBeVisible();
 
     // Fill in the description (incorporating Carlos to trigger mock)
-    await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-
-    // Step 1 - Chat 2
-    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
-    await page.getByPlaceholder('e.g. I bake custom vegan cakes for weddings and parties...').fill('Handyman services');
-    await page.getByRole('button', { name: 'Next', exact: true }).click();
-
-    // Step 1 - Chat 3
-    await expect(page.getByRole('heading', { name: 'Where are you located?' })).toBeVisible();
-    await page.getByPlaceholder('e.g. Portland, OR').fill('Miami, FL');
+    await page.getByPlaceholder("e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50.").fill("I am Carlos. I offer plumbing and handyman services in Miami, FL.");
 
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
 
-    // Step 2 - Review
-    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
-    await page.getByRole('button', { name: /Continue/i }).click();
+    // Wait for the loading screen
+    await expect(page.getByRole('heading', { name: "Our Marketing Department is building your store..." })).toBeVisible();
 
-    // Step 3 - Style
-    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
-    await page.getByRole('button', { name: /Launch Store/i }).click();
-
-    // Simplified Mobile First Onboarding - wait for it to generate
+    // Wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
 
     // 4. Verify Dashboard redirect and action banner

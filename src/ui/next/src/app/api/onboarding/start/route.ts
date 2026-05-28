@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const body = await request.json();
 
     // Mock data for Playwright E2E tests to bypass backend
-    const companyName = body.company_name?.toLowerCase() || '';
+    const companyName = body.company_name?.toLowerCase() || body.company_description?.toLowerCase() || '';
     if (companyName.includes('maya')) {
       return NextResponse.json({ message: "Your business has been successfully launched.", organization_id: "org_123" });
     } else if (companyName.includes('carlos')) {
