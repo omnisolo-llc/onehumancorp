@@ -156,7 +156,8 @@ export default function StorefrontBuilderPage() {
                   seo_metadata: {
                     "@context": "https://schema.org",
                     "@type": "LocalBusiness",
-                    "name": bio
+                    "name": bio,
+                    "og:image": `https://ohc.store/api/v1/growth/storefront/og-card?tenant=${encodeURIComponent(tenantId)}&product_name=${encodeURIComponent('Home')}`
                   }
               }]
           }
