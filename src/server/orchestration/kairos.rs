@@ -54,45 +54,21 @@ pub struct SharedTask {
     pub updated_at: Option<chrono::DateTime<Utc>>,
 }
 
-use opentelemetry::global;
-use opentelemetry::KeyValue;
-use opentelemetry::metrics::{Counter, Histogram};
-use std::time::Instant;
-
 pub struct KairosOrchestrator {
     pub db: Arc<DB>,
     pub sqlite_mutex: Mutex<()>,
-    transitions_total: Counter<u64>,
-    transition_duration: Histogram<f64>,
 }
 
 impl KairosOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        let meter = global::meter("orchestration.kairos");
-        let transitions_total = meter.u64_counter("ohc_kairos_transitions_total").build();
-        let transition_duration = meter.f64_histogram("ohc_kairos_transition_duration_seconds").build();
-
         Self {
             db,
             sqlite_mutex: Mutex::new(()),
-            transitions_total,
-            transition_duration,
-        }
-    }
-
-    fn get_mode(&self) -> &'static str {
-        if std::env::var("OHC_MULTITENANT").unwrap_or_default() == "true" {
-            "cloud"
-        } else if std::env::var("OHC_HEADLESS").unwrap_or_default() == "true" {
-            "headless"
-        } else {
-            "standalone"
         }
     }
 
 
     pub async fn complete_task(&self, task_id: &str, task_type: &str, agent_id: &str) -> Result<(), KairosError> {
-        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -149,14 +125,6 @@ impl KairosOrchestrator {
                             .await
                             .map_err(KairosError::Database)?;
                     }
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "COMPLETED"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;
@@ -213,14 +181,6 @@ impl KairosOrchestrator {
                             .await
                             .map_err(KairosError::Database)?;
                     }
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "COMPLETED"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
                 }
 
                 tx.commit().await.map_err(KairosError::Database)?;
@@ -229,7 +189,6 @@ impl KairosOrchestrator {
         }
     }
     pub async fn claim_swarm_task(&self, agent_id: &str) -> Result<Option<SwarmTask>, KairosError> {
-        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -283,14 +242,6 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "IN_PROGRESS"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
 
                     Ok(Some(SwarmTask {
                         id: id_str,
@@ -359,15 +310,6 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "IN_PROGRESS"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
-
                     Ok(Some(task))
                 } else {
                     tx.commit().await.map_err(KairosError::Database)?;
@@ -379,7 +321,6 @@ impl KairosOrchestrator {
 
 
     pub async fn submit_for_approval(&self, task_id: &str, tenant_id: &str, proposed_content: &str, action_risk: &str) -> Result<(), KairosError> {
-        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -525,7 +466,6 @@ impl KairosOrchestrator {
     }
 
     pub async fn claim_shared_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTask>, KairosError> {
-        let start = Instant::now();
         let now = Utc::now();
         match &self.db.store {
             DbStore::Postgres => {
@@ -580,14 +520,6 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "IN_PROGRESS"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
 
                     Ok(Some(SharedTask {
                         id,
@@ -673,15 +605,6 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     tx.commit().await.map_err(KairosError::Database)?;
-
-                    self.transitions_total.add(1, &[
-                        KeyValue::new("mode", self.get_mode()),
-                        KeyValue::new("status", "IN_PROGRESS"),
-                    ]);
-                    self.transition_duration.record(start.elapsed().as_secs_f64(), &[
-                        KeyValue::new("mode", self.get_mode()),
-                    ]);
-
                     Ok(Some(task))
                 } else {
                     tx.commit().await.map_err(KairosError::Database)?;
