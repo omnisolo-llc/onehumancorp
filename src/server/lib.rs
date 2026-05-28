@@ -1753,6 +1753,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     
     // Start AutoDream worker
     let autodream_worker = Arc::new(autodream::AutoDreamWorker::new(db.clone()));
+    let autodream_sync_engine = Arc::new(crate::sync::autodream_sync_engine::AutoDreamSyncEngine::new(db.clone()));
+    autodream_sync_engine.start();
     autodream_worker.start();
 
     // Start Memory Consolidation Worker

@@ -543,6 +543,7 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
+                        synced_to_cloud BOOLEAN DEFAULT 0,
                         topic TEXT DEFAULT ''
                     );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -645,6 +646,7 @@ impl DB {
                         synced_to_cloud BOOLEAN DEFAULT 0,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
+                        synced_to_cloud BOOLEAN DEFAULT 0,
                         mission_log TEXT
                     );
 

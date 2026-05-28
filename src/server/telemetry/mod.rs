@@ -1186,3 +1186,34 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+static SYNC_COMPLETED_COUNT: OnceLock<Counter<u64>> = OnceLock::new();
+static SYNC_FAILED_COUNT: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_sync_completed_count() -> &'static Counter<u64> {
+    SYNC_COMPLETED_COUNT.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_sync_completed_count")
+            .with_description("Total number of successful autodream syncs")
+            .build()
+    })
+}
+
+pub fn get_sync_failed_count() -> &'static Counter<u64> {
+    SYNC_FAILED_COUNT.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter.u64_counter("ohc_sync_failed_count")
+            .with_description("Total number of failed autodream syncs")
+            .build()
+    })
+}
+
+pub fn record_sync_completed_count(count: u64) {
+    let counter = get_sync_completed_count();
+    counter.add(count, &[]);
+}
+
+pub fn record_sync_failed_count(count: u64) {
+    let counter = get_sync_failed_count();
+    counter.add(count, &[]);
+}
