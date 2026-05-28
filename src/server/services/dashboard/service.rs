@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::MeetingRoom>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -65,6 +66,7 @@ impl DashboardService for MyDashboardService {
         let hub_org = self.hub.clone();
         let hub_agents = self.hub.clone();
         let org_id_agents = req.organization_id.clone();
+        let org_id_meetings = req.organization_id.clone();
         let mobile_optimized = req.mobile_optimized;
 
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
@@ -81,7 +83,16 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let cache_key = format!("hub:meetings:{}", org_id_meetings);
+                let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(hub2.redis_client.clone()));
+
+                if let Some(meetings) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(meetings);
+                }
+
+                let meetings = (*hub2.get_meetings().await).clone();
+                cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(meetings)
             }),
             tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
@@ -347,7 +358,7 @@ impl DashboardService for MyDashboardService {
             });
         }
 
-        let mut final_meetings = Vec::new();
+        let mut final_meetings = out_meetings;
         let mut final_cost_summary = None;
         let mut final_statuses = Vec::new();
 
@@ -463,8 +474,6 @@ impl DashboardService for MyDashboardService {
                 projected_monthly_usd: 0.0,
                 agents: agent_summaries,
             });
-
-            final_meetings = out_meetings;
         }
 
         let org = if req.mobile_optimized {
@@ -695,9 +704,8 @@ mod tests {
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
             assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
         }
-        if !res_mobile.meetings.is_empty() {
-            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
-        }
+        assert!(!res_mobile.meetings.is_empty(), "Mobile optimization should still return meetings");
+        assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
         if !res_mobile.products.is_empty() {
             assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
             assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
@@ -774,5 +782,7 @@ mod tests {
 
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
+        assert_eq!(_res1.meetings.len(), _res2.meetings.len(), "Meetings should be cached and return the same data");
+        assert!(!_res1.meetings.is_empty(), "Meetings should not be empty");
     }
 }
