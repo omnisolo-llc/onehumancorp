@@ -29,6 +29,20 @@ message Order {
   int64 created_at_unix = 6;
 }
 
+message ProfitSummary {
+  int64 revenue_cents = 1;
+  int64 cogs_cents = 2;
+  int64 expense_cents = 3;
+  int64 fee_cents = 4;
+  int64 refund_cents = 5;
+  int64 profit_cents = 6;
+  string plain_language_summary = 7;
+  string biggest_cost_label = 8;
+  int64 biggest_cost_cents = 9;
+  uint32 entry_count = 10;
+  string updated_at = 11;
+}
+
 message DashboardSnapshot {
 
   ohc.organization.Organization organization = 1;
@@ -39,6 +53,7 @@ message DashboardSnapshot {
   string updated_at = 6;
   repeated ohc.organization.Product products = 7;
   repeated Order orders = 8;
+  ProfitSummary profit_summary = 9;
 }
 
 message GetDashboardRequest {

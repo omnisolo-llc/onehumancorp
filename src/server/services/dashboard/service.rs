@@ -1,14 +1,29 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 use ::server_ohc::app::*;
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
 use ::server_utils::cache::HybridCache;
+use std::sync::Arc;
 use std::sync::OnceLock;
+use tonic::{Request, Response, Status};
 
-static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> = OnceLock::new();
+static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Product>>> =
+    OnceLock::new();
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
-static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
-static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> =
+    OnceLock::new();
+static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> =
+    OnceLock::new();
+
+#[derive(Default)]
+struct ProfitRollup {
+    revenue_cents: i64,
+    cogs_cents: i64,
+    expense_cents: i64,
+    fee_cents: i64,
+    refund_cents: i64,
+    entry_count: i64,
+    biggest_cost_label: String,
+    biggest_cost_cents: i64,
+}
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -19,6 +34,217 @@ impl MyDashboardService {
     pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
         Self { db, hub }
     }
+
+    async fn build_profit_summary(
+        &self,
+        organization_id: &str,
+    ) -> ::server_ohc::app::ProfitSummary {
+        let mut rollup = match self.fetch_profit_rollup(organization_id).await {
+            Ok(rollup) => rollup,
+            Err(err) => {
+                tracing::warn!(
+                    organization_id,
+                    error = %err,
+                    "profit ledger unavailable; falling back to order revenue for dashboard brief"
+                );
+                ProfitRollup::default()
+            }
+        };
+
+        if rollup.entry_count == 0 {
+            rollup.revenue_cents = self
+                .fetch_order_revenue_cents(organization_id)
+                .await
+                .unwrap_or_default();
+        }
+
+        let profit_cents = rollup.revenue_cents
+            - rollup.cogs_cents
+            - rollup.expense_cents
+            - rollup.fee_cents
+            - rollup.refund_cents;
+
+        ::server_ohc::app::ProfitSummary {
+            revenue_cents: rollup.revenue_cents,
+            cogs_cents: rollup.cogs_cents,
+            expense_cents: rollup.expense_cents,
+            fee_cents: rollup.fee_cents,
+            refund_cents: rollup.refund_cents,
+            profit_cents,
+            plain_language_summary: plain_profit_summary(&rollup, profit_cents),
+            biggest_cost_label: rollup.biggest_cost_label,
+            biggest_cost_cents: rollup.biggest_cost_cents,
+            entry_count: rollup.entry_count.max(0) as u32,
+            updated_at: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    async fn fetch_profit_rollup(
+        &self,
+        organization_id: &str,
+    ) -> Result<ProfitRollup, sqlx::Error> {
+        use sqlx::Row;
+
+        let mut rollup = ProfitRollup::default();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query(
+                    "SELECT \
+                        COALESCE(SUM(CASE WHEN entry_type = 'revenue' THEN amount_cents ELSE 0 END), 0) AS revenue_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'cogs' THEN amount_cents ELSE 0 END), 0) AS cogs_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'expense' THEN amount_cents ELSE 0 END), 0) AS expense_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'fee' THEN amount_cents ELSE 0 END), 0) AS fee_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'refund' THEN amount_cents ELSE 0 END), 0) AS refund_cents, \
+                        COUNT(*) AS entry_count \
+                     FROM profit_ledger_entries \
+                     WHERE tenant_id = $1 AND occurred_at >= date_trunc('day', now())"
+                )
+                .bind(organization_id)
+                .fetch_one(&self.db.pool)
+                .await?;
+
+                rollup.revenue_cents = row.try_get("revenue_cents").unwrap_or_default();
+                rollup.cogs_cents = row.try_get("cogs_cents").unwrap_or_default();
+                rollup.expense_cents = row.try_get("expense_cents").unwrap_or_default();
+                rollup.fee_cents = row.try_get("fee_cents").unwrap_or_default();
+                rollup.refund_cents = row.try_get("refund_cents").unwrap_or_default();
+                rollup.entry_count = row.try_get("entry_count").unwrap_or_default();
+
+                if let Ok(Some(row)) = sqlx::query(
+                    "SELECT plain_language_label, amount_cents \
+                     FROM profit_ledger_entries \
+                     WHERE tenant_id = $1 \
+                       AND entry_type IN ('cogs', 'expense', 'fee', 'refund') \
+                       AND occurred_at >= date_trunc('day', now()) \
+                     ORDER BY amount_cents DESC \
+                     LIMIT 1",
+                )
+                .bind(organization_id)
+                .fetch_optional(&self.db.pool)
+                .await
+                {
+                    rollup.biggest_cost_label =
+                        row.try_get("plain_language_label").unwrap_or_default();
+                    rollup.biggest_cost_cents = row.try_get("amount_cents").unwrap_or_default();
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT \
+                        COALESCE(SUM(CASE WHEN entry_type = 'revenue' THEN amount_cents ELSE 0 END), 0) AS revenue_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'cogs' THEN amount_cents ELSE 0 END), 0) AS cogs_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'expense' THEN amount_cents ELSE 0 END), 0) AS expense_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'fee' THEN amount_cents ELSE 0 END), 0) AS fee_cents, \
+                        COALESCE(SUM(CASE WHEN entry_type = 'refund' THEN amount_cents ELSE 0 END), 0) AS refund_cents, \
+                        COUNT(*) AS entry_count \
+                     FROM profit_ledger_entries \
+                     WHERE tenant_id = ? AND occurred_at >= datetime('now', 'start of day')"
+                )
+                .bind(organization_id)
+                .fetch_one(pool)
+                .await?;
+
+                rollup.revenue_cents = row.try_get("revenue_cents").unwrap_or_default();
+                rollup.cogs_cents = row.try_get("cogs_cents").unwrap_or_default();
+                rollup.expense_cents = row.try_get("expense_cents").unwrap_or_default();
+                rollup.fee_cents = row.try_get("fee_cents").unwrap_or_default();
+                rollup.refund_cents = row.try_get("refund_cents").unwrap_or_default();
+                rollup.entry_count = row.try_get("entry_count").unwrap_or_default();
+
+                if let Ok(Some(row)) = sqlx::query(
+                    "SELECT plain_language_label, amount_cents \
+                     FROM profit_ledger_entries \
+                     WHERE tenant_id = ? \
+                       AND entry_type IN ('cogs', 'expense', 'fee', 'refund') \
+                       AND occurred_at >= datetime('now', 'start of day') \
+                     ORDER BY amount_cents DESC \
+                     LIMIT 1",
+                )
+                .bind(organization_id)
+                .fetch_optional(pool)
+                .await
+                {
+                    rollup.biggest_cost_label =
+                        row.try_get("plain_language_label").unwrap_or_default();
+                    rollup.biggest_cost_cents = row.try_get("amount_cents").unwrap_or_default();
+                }
+            }
+        }
+
+        Ok(rollup)
+    }
+
+    async fn fetch_order_revenue_cents(&self, organization_id: &str) -> Result<i64, sqlx::Error> {
+        use sqlx::Row;
+
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let row = sqlx::query(
+                    "SELECT COALESCE(SUM(total_amount), 0) AS revenue \
+                     FROM orders \
+                     WHERE tenant_id = $1 \
+                       AND lower(COALESCE(status, '')) NOT IN ('cancelled', 'canceled', 'refunded')"
+                )
+                .bind(organization_id)
+                .fetch_one(&self.db.pool)
+                .await?;
+                let revenue: f64 = row.try_get("revenue").unwrap_or_default();
+                Ok((revenue * 100.0).round() as i64)
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let row = sqlx::query(
+                    "SELECT COALESCE(SUM(total_amount), 0) AS revenue \
+                     FROM orders \
+                     WHERE tenant_id = ? \
+                       AND lower(COALESCE(status, '')) NOT IN ('cancelled', 'canceled', 'refunded')"
+                )
+                .bind(organization_id)
+                .fetch_one(pool)
+                .await?;
+                let revenue: f64 = row.try_get("revenue").unwrap_or_default();
+                Ok((revenue * 100.0).round() as i64)
+            }
+        }
+    }
+}
+
+fn format_cents(cents: i64) -> String {
+    let sign = if cents < 0 { "-" } else { "" };
+    let cents = cents.abs();
+    format!("{}${}.{:02}", sign, cents / 100, cents % 100)
+}
+
+fn plain_profit_summary(rollup: &ProfitRollup, profit_cents: i64) -> String {
+    if rollup.revenue_cents == 0 && rollup.entry_count == 0 {
+        return "No sales or costs are recorded for today yet.".to_string();
+    }
+
+    let tracked_costs =
+        rollup.cogs_cents + rollup.expense_cents + rollup.fee_cents + rollup.refund_cents;
+    if tracked_costs == 0 {
+        return format!(
+            "You brought in {} today. No costs have been matched yet, so your tracked profit is {}.",
+            format_cents(rollup.revenue_cents),
+            format_cents(profit_cents)
+        );
+    }
+
+    let cost_note = if rollup.biggest_cost_label.is_empty() {
+        format!("Your matched costs were {}.", format_cents(tracked_costs))
+    } else {
+        format!(
+            "Your biggest matched cost was {} at {}.",
+            rollup.biggest_cost_label,
+            format_cents(rollup.biggest_cost_cents)
+        )
+    };
+
+    format!(
+        "You brought in {} today and kept {} after matched costs. {}",
+        format_cents(rollup.revenue_cents),
+        format_cents(profit_cents),
+        cost_note
+    )
 }
 
 #[tonic::async_trait]
@@ -70,19 +296,24 @@ impl DashboardService for MyDashboardService {
         let (agents_res, meetings_res, cost_res, products_res, orders_res, org_res) = tokio::join!(
             tokio::spawn(async move {
                 let cache_key = format!("hub:agents:{}:{}", org_id_agents, mobile_optimized);
-                let cache = AGENTS_CACHE.get_or_init(|| HybridCache::new(hub_agents.redis_client.clone()));
+                let cache =
+                    AGENTS_CACHE.get_or_init(|| HybridCache::new(hub_agents.redis_client.clone()));
 
                 if let Some(agents) = cache.get(&cache_key).await {
                     return Ok::<_, String>(agents);
                 }
 
                 let agents = hub1.get_agents().await.to_vec();
-                cache.set(&cache_key, agents.clone(), std::time::Duration::from_secs(5)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        agents.clone(),
+                        std::time::Duration::from_secs(5),
+                    )
+                    .await;
                 Ok::<_, String>(agents)
             }),
-            tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
-            }),
+            tokio::spawn(async move { Ok::<_, String>(hub2.get_meetings().await) }),
             tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
@@ -94,7 +325,8 @@ impl DashboardService for MyDashboardService {
             tokio::spawn(async move {
                 let org_id = org_id1;
                 let cache_key = format!("hub:products:{}:{}", org_id, mobile_optimized);
-                let cache = PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
+                let cache =
+                    PRODUCTS_CACHE.get_or_init(|| HybridCache::new(hub_prod.redis_client.clone()));
 
                 if let Some(products) = cache.get(&cache_key).await {
                     return Ok::<_, String>(products);
@@ -119,14 +351,20 @@ impl DashboardService for MyDashboardService {
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: r
+                                        .try_get("currency")
+                                        .unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r
+                                        .try_get("fulfillment_strategy")
+                                        .unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
                                         "{}".to_string()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
-                                            Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                            Err(_) => r
+                                                .try_get::<String, _>("metadata")
+                                                .unwrap_or_else(|_| "{}".to_string()),
                                         }
                                     },
                                 };
@@ -145,14 +383,20 @@ impl DashboardService for MyDashboardService {
                                     name: r.try_get("name").unwrap_or_default(),
                                     description: r.try_get("description").unwrap_or_default(),
                                     price_cents: r.try_get("price_cents").unwrap_or_default(),
-                                    currency: r.try_get("currency").unwrap_or_else(|_| "USD".to_string()),
-                                    fulfillment_strategy: r.try_get("fulfillment_strategy").unwrap_or_default(),
+                                    currency: r
+                                        .try_get("currency")
+                                        .unwrap_or_else(|_| "USD".to_string()),
+                                    fulfillment_strategy: r
+                                        .try_get("fulfillment_strategy")
+                                        .unwrap_or_default(),
                                     metadata_json: if mobile_optimized {
                                         "{}".to_string()
                                     } else {
                                         match r.try_get::<serde_json::Value, _>("metadata") {
                                             Ok(v) => v.to_string(),
-                                            Err(_) => r.try_get::<String, _>("metadata").unwrap_or_else(|_| "{}".to_string())
+                                            Err(_) => r
+                                                .try_get::<String, _>("metadata")
+                                                .unwrap_or_else(|_| "{}".to_string()),
                                         }
                                     },
                                 };
@@ -162,13 +406,20 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(3600)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        results.clone(),
+                        std::time::Duration::from_secs(3600),
+                    )
+                    .await;
                 Ok::<_, String>(results)
             }),
             tokio::spawn(async move {
                 let org_id = org_id2;
                 let cache_key = format!("hub:orders:{}:{}", org_id, mobile_optimized);
-                let cache = ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
+                let cache =
+                    ORDERS_CACHE.get_or_init(|| HybridCache::new(hub_orders.redis_client.clone()));
 
                 if let Some(orders) = cache.get(&cache_key).await {
                     return Ok::<_, String>(orders);
@@ -216,13 +467,20 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, results.clone(), std::time::Duration::from_secs(5)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        results.clone(),
+                        std::time::Duration::from_secs(5),
+                    )
+                    .await;
                 Ok::<_, String>(results)
             }),
             tokio::spawn(async move {
                 let org_id = org_id3;
                 let cache_key = format!("hub:org:{}:{}", org_id, mobile_optimized);
-                let cache = ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
+                let cache =
+                    ORG_CACHE.get_or_init(|| HybridCache::new(hub_org.redis_client.clone()));
 
                 if let Some(org) = cache.get(&cache_key).await {
                     return Ok::<_, String>(org);
@@ -270,7 +528,13 @@ impl DashboardService for MyDashboardService {
                     }
                 }
 
-                cache.set(&cache_key, org.clone(), std::time::Duration::from_secs(3600)).await;
+                cache
+                    .set(
+                        &cache_key,
+                        org.clone(),
+                        std::time::Duration::from_secs(3600),
+                    )
+                    .await;
                 Ok::<_, String>(org)
             })
         );
@@ -281,10 +545,9 @@ impl DashboardService for MyDashboardService {
         let _meetings = meetings_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
-        let (total_cost, total_tokens, _agent_costs_data) =
-            cost_res
-                .map_err(|e| Status::internal(e.to_string()))?
-                .map_err(|e| Status::internal(e.to_string()))?;
+        let (total_cost, total_tokens, _agent_costs_data) = cost_res
+            .map_err(|e| Status::internal(e.to_string()))?
+            .map_err(|e| Status::internal(e.to_string()))?;
         let products = products_res
             .map_err(|e| Status::internal(e.to_string()))?
             .map_err(|e| Status::internal(e.to_string()))?;
@@ -451,7 +714,11 @@ impl DashboardService for MyDashboardService {
                     token_used: tokens_used,
                     roi,
                     efficiency,
-                    pct: if total_cost > 0.0 { (cost_usd / total_cost) as f32 } else { 0.0 },
+                    pct: if total_cost > 0.0 {
+                        (cost_usd / total_cost) as f32
+                    } else {
+                        0.0
+                    },
                     storage_usage_bytes: _storage,
                 });
             }
@@ -480,6 +747,8 @@ impl DashboardService for MyDashboardService {
             org
         };
 
+        let profit_summary = Some(self.build_profit_summary(&req.organization_id).await);
+
         Ok(Response::new(DashboardSnapshot {
             organization: org,
             agents: final_agents_payload,
@@ -489,6 +758,7 @@ impl DashboardService for MyDashboardService {
             updated_at: chrono::Utc::now().to_rfc3339(),
             products,
             orders,
+            profit_summary,
         }))
     }
 
@@ -603,16 +873,27 @@ impl DashboardService for MyDashboardService {
         }).await;
 
         match update_res {
-            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse { success: true })),
+            Ok(Ok(_)) => Ok(Response::new(UpdateOnboardingStateResponse {
+                success: true,
+            })),
             Ok(Err(e)) => {
-                tracing::warn!("DB error updating onboarding state: {}. Write operation queued locally for retry.", e);
+                tracing::warn!(
+                    "DB error updating onboarding state: {}. Write operation queued locally for retry.",
+                    e
+                );
                 // In a production-grade system, this would actually append to a persistent local buffer.
                 // For this mission, we simulate the success but mark it as locally queued in logs to satisfy the reliability requirement.
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                Ok(Response::new(UpdateOnboardingStateResponse {
+                    success: true,
+                }))
             }
             Err(_) => {
-                tracing::warn!("Timeout updating onboarding state. Write operation queued locally for retry.");
-                Ok(Response::new(UpdateOnboardingStateResponse { success: true }))
+                tracing::warn!(
+                    "Timeout updating onboarding state. Write operation queued locally for retry."
+                );
+                Ok(Response::new(UpdateOnboardingStateResponse {
+                    success: true,
+                }))
             }
         }
     }
@@ -621,30 +902,44 @@ impl DashboardService for MyDashboardService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ::server_auth::orchestration::AuthInfo;
     use ::server_ohc::app::GetDashboardRequest;
     use ::server_ohc::app::dashboard_service_server::DashboardService;
-    use ::server_auth::orchestration::AuthInfo;
-    use tonic::Request;
     use std::sync::Arc;
+    use tonic::Request;
     use uuid::Uuid;
 
     async fn setup_test_dashboard_service() -> MyDashboardService {
         let database_url = "sqlite::memory:";
         let pool = sqlx::sqlite::SqlitePoolOptions::new()
             .acquire_timeout(std::time::Duration::from_secs(1))
-            .connect(database_url).await.unwrap();
+            .connect(database_url)
+            .await
+            .unwrap();
 
         sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&pool).await.unwrap();
         sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&pool).await.unwrap();
-        sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("CREATE TABLE IF NOT EXISTS profit_ledger_entries (id TEXT, tenant_id TEXT, entry_type TEXT, amount_cents INTEGER, source_type TEXT, source_id TEXT, plain_language_label TEXT, occurred_at TEXT DEFAULT CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
 
         // Add dummy data for tests
         sqlx::query("INSERT INTO products (id, organization_id, title, type, price) VALUES ('prod_1', 'system', 'Test Product', 'physical', 100.0)").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 50.0, 'completed')").execute(&pool).await.unwrap();
         sqlx::query("INSERT INTO tenants (tenant_id, business_name, tier) VALUES ('system', 'System Org', 'free')").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO profit_ledger_entries (id, tenant_id, entry_type, amount_cents, source_type, source_id, plain_language_label, occurred_at) VALUES ('ledger_1', 'system', 'revenue', 12500, 'order', 'order_1', 'today sales', CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO profit_ledger_entries (id, tenant_id, entry_type, amount_cents, source_type, source_id, plain_language_label, occurred_at) VALUES ('ledger_2', 'system', 'cogs', 3200, 'inventory', 'flour_1', 'flour and butter', CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
+        sqlx::query("INSERT INTO profit_ledger_entries (id, tenant_id, entry_type, amount_cents, source_type, source_id, plain_language_label, occurred_at) VALUES ('ledger_3', 'system', 'fee', 450, 'payment_processor', 'stripe_1', 'card processing', CURRENT_TIMESTAMP)").execute(&pool).await.unwrap();
 
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-        let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
+        let db = Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
@@ -661,7 +956,11 @@ mod tests {
 
         // Add meetings
         let meeting_id = format!("meeting-{}", Uuid::new_v4());
-        hub.open_meeting(meeting_id.clone(), vec!["agent_1".to_string()], "Test Agenda".to_string());
+        hub.open_meeting(
+            meeting_id.clone(),
+            vec!["agent_1".to_string()],
+            "Test Agenda".to_string(),
+        );
         let _ = hub.clone().publish(::server_ohc::orchestration::Message {
             id: "msg_1".to_string(),
             from_agent: "agent_1".to_string(),
@@ -679,7 +978,10 @@ mod tests {
     async fn test_dashboard_mobile_payload_optimization() {
         let service = setup_test_dashboard_service().await;
 
-        let req_mobile = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: true };
+        let req_mobile = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: true,
+        };
         let mut request_mobile = Request::new(req_mobile);
         request_mobile.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -687,23 +989,52 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_mobile = service.get_dashboard(request_mobile).await.unwrap().into_inner();
-        assert_eq!(res_mobile.agents[0].name, "", "Mobile optimization should clear agent names");
+        let res_mobile = service
+            .get_dashboard(request_mobile)
+            .await
+            .unwrap()
+            .into_inner();
+        assert_eq!(
+            res_mobile.agents[0].name, "",
+            "Mobile optimization should clear agent names"
+        );
         if let Some(org) = res_mobile.organization {
-            assert_eq!(org.domain, "", "Mobile optimization should clear org domain");
-            assert!(org.members.is_empty(), "Mobile optimization should clear org members");
+            assert_eq!(
+                org.domain, "",
+                "Mobile optimization should clear org domain"
+            );
+            assert!(
+                org.members.is_empty(),
+                "Mobile optimization should clear org members"
+            );
             assert_eq!(org.ceo_id, "", "Mobile optimization should clear ceo_id");
-            assert_eq!(org.created_at_unix, 0, "Mobile optimization should clear created_at_unix");
+            assert_eq!(
+                org.created_at_unix, 0,
+                "Mobile optimization should clear created_at_unix"
+            );
         }
         if !res_mobile.meetings.is_empty() {
-            assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile optimization should clear meeting transcripts");
+            assert_eq!(
+                res_mobile.meetings[0].transcript.len(),
+                0,
+                "Mobile optimization should clear meeting transcripts"
+            );
         }
         if !res_mobile.products.is_empty() {
-            assert_eq!(res_mobile.products[0].currency, "", "Mobile optimization should clear product currency");
-            assert_eq!(res_mobile.products[0].fulfillment_strategy, "", "Mobile optimization should clear fulfillment_strategy");
+            assert_eq!(
+                res_mobile.products[0].currency, "",
+                "Mobile optimization should clear product currency"
+            );
+            assert_eq!(
+                res_mobile.products[0].fulfillment_strategy, "",
+                "Mobile optimization should clear fulfillment_strategy"
+            );
         }
         if !res_mobile.orders.is_empty() {
-            assert_eq!(res_mobile.orders[0].organization_id, "", "Mobile optimization should clear order organization_id");
+            assert_eq!(
+                res_mobile.orders[0].organization_id, "",
+                "Mobile optimization should clear order organization_id"
+            );
         }
     }
 
@@ -711,7 +1042,10 @@ mod tests {
     async fn test_dashboard_desktop_payload() {
         let service = setup_test_dashboard_service().await;
 
-        let req_desktop = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req_desktop = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request_desktop = Request::new(req_desktop);
         request_desktop.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -719,17 +1053,30 @@ mod tests {
             agent_id: "test".to_string(),
         });
 
-        let res_desktop = service.get_dashboard(request_desktop).await.unwrap().into_inner();
-        assert_ne!(res_desktop.agents[0].name, "", "Desktop should preserve agent names");
+        let res_desktop = service
+            .get_dashboard(request_desktop)
+            .await
+            .unwrap()
+            .into_inner();
+        assert_ne!(
+            res_desktop.agents[0].name, "",
+            "Desktop should preserve agent names"
+        );
         if !res_desktop.meetings.is_empty() {
-            assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop should preserve meeting transcripts");
+            assert!(
+                res_desktop.meetings[0].transcript.len() > 0,
+                "Desktop should preserve meeting transcripts"
+            );
         }
     }
 
     #[tokio::test]
     async fn test_dashboard_ai_token_efficiency() {
         let service = setup_test_dashboard_service().await;
-        let req = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request = Request::new(req);
         request.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -750,7 +1097,10 @@ mod tests {
     async fn test_dashboard_caching() {
         let service = setup_test_dashboard_service().await;
 
-        let req1 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req1 = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request1 = Request::new(req1);
         request1.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -761,7 +1111,10 @@ mod tests {
         let _res1 = service.get_dashboard(request1).await.unwrap().into_inner();
         let _elapsed1 = start1.elapsed();
 
-        let req2 = GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
+        let req2 = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: false,
+        };
         let mut request2 = Request::new(req2);
         request2.extensions_mut().insert(AuthInfo {
             spiffe_id: "test".to_string(),
@@ -774,5 +1127,89 @@ mod tests {
 
         // The second call might be faster, but we just verify it works properly via caching
         // without panicking.
+    }
+
+    #[tokio::test]
+    async fn test_dashboard_profit_summary_plain_language() {
+        let service = setup_test_dashboard_service().await;
+
+        let req = GetDashboardRequest {
+            organization_id: "system".to_string(),
+            mobile_optimized: true,
+        };
+        let mut request = Request::new(req);
+        request.extensions_mut().insert(AuthInfo {
+            spiffe_id: "test".to_string(),
+            org_id: "system".to_string(),
+            agent_id: "test".to_string(),
+        });
+
+        let res = service.get_dashboard(request).await.unwrap().into_inner();
+        let summary = res
+            .profit_summary
+            .expect("dashboard should include a profit summary");
+
+        assert_eq!(summary.revenue_cents, 12500);
+        assert_eq!(summary.cogs_cents, 3200);
+        assert_eq!(summary.fee_cents, 450);
+        assert_eq!(summary.profit_cents, 8850);
+        assert_eq!(summary.biggest_cost_label, "flour and butter");
+        assert!(
+            summary
+                .plain_language_summary
+                .contains("You brought in $125.00 today"),
+            "summary should explain revenue without accounting jargon: {}",
+            summary.plain_language_summary
+        );
+        assert!(
+            summary.plain_language_summary.contains("kept $88.50"),
+            "summary should explain actual money kept: {}",
+            summary.plain_language_summary
+        );
+    }
+
+    #[tokio::test]
+    async fn test_dashboard_profit_summary_falls_back_to_orders_without_ledger() {
+        let database_url = "sqlite::memory:";
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_secs(1))
+            .connect(database_url)
+            .await
+            .unwrap();
+
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO orders (id, tenant_id, total_amount, status) VALUES ('order_1', 'system', 42.50, 'completed')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
+        let db = Arc::new(crate::db::DB {
+            pool: pg_pool,
+            store: crate::db::DbStore::Sqlite(pool.clone()),
+        });
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let service = MyDashboardService::new(db, hub);
+
+        let summary = service.build_profit_summary("system").await;
+
+        assert_eq!(summary.revenue_cents, 4250);
+        assert_eq!(summary.profit_cents, 4250);
+        assert_eq!(summary.entry_count, 0);
+        assert!(
+            summary
+                .plain_language_summary
+                .contains("No costs have been matched yet"),
+            "summary should explain the order-only fallback in plain language: {}",
+            summary.plain_language_summary
+        );
     }
 }
