@@ -825,3 +825,14 @@ rust_test(
         "@crates//:tokio-tungstenite",
     ],
 )
+
+rust_test(
+    name = "daemon_test",
+    size = "small",
+    srcs = ["daemon_test.rs"],
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)

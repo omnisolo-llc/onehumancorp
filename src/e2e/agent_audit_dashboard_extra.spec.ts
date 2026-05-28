@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 
 test.describe('Agent Audit Dashboard E2E Extra Tests', () => {
   test('should display Cost Tracker correctly', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.locator('nav a:has-text("Inbox")').click();
     await page.click('button[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
     await expect(page.locator('text=Cost Tracker')).toBeVisible();
@@ -10,7 +10,7 @@ test.describe('Agent Audit Dashboard E2E Extra Tests', () => {
   });
 
   test('should display Operations correctly', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.locator('nav a:has-text("Inbox")').click();
     await page.click('button[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
     await expect(page.locator('text=Operations')).toBeVisible();
@@ -18,7 +18,7 @@ test.describe('Agent Audit Dashboard E2E Extra Tests', () => {
   });
 
   test('should display Marketing & Advertising correctly', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.locator('nav a:has-text("Inbox")').click();
     await page.click('button[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
     await expect(page.locator('text=Marketing & Advertising')).toBeVisible();
@@ -26,7 +26,7 @@ test.describe('Agent Audit Dashboard E2E Extra Tests', () => {
   });
 
   test('should display Violation Feed correctly', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.locator('nav a:has-text("Inbox")').click();
     await page.click('button[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
     await expect(page.locator('text=Violation Feed')).toBeVisible();
@@ -34,10 +34,10 @@ test.describe('Agent Audit Dashboard E2E Extra Tests', () => {
   });
 
   test('should go back to inbox', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('/dashboard');
     await page.locator('nav a:has-text("Inbox")').click();
     await page.click('button[aria-label="Agent Audit Dashboard"], [title="Agent Audit Dashboard"]');
     await page.locator('text=Back to Inbox').click();
-    await expect(page.locator('text=Unified Inbox')).toBeVisible();
+    await expect(page.locator('text=Customer Inbox')).toBeVisible();
   });
 });
