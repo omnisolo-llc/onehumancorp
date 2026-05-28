@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useOnboardingStore } from './store';
 
 export default function OnboardingWizard() {
@@ -18,14 +18,99 @@ export default function OnboardingWizard() {
     firstProductPrice, setFirstProductPrice,
     isLoading, setIsLoading,
     error, setError,
-    startResult, setStartResult
+    startResult, setStartResult,
+    setState
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
+  const stateRef = useRef(useOnboardingStore.getState());
 
   useEffect(() => {
-    setIsLoaded(true);
-  }, []);
+    stateRef.current = useOnboardingStore.getState();
+  }, [useOnboardingStore]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok && isMounted) {
+          const remoteState = await res.json();
+          // If remote state is further along, or our local state is empty/new, use remote
+          if (remoteState && Object.keys(remoteState).length > 0) {
+            const currentLocalStep = stateRef.current.step || 1;
+            const remoteStep = remoteState.step || 1;
+
+            if (remoteStep > currentLocalStep || (currentLocalStep === 1 && stateRef.current.businessName === '' && remoteState.businessName)) {
+              setState(remoteState);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load remote state', e);
+      } finally {
+        if (isMounted) setIsLoaded(true);
+      }
+    };
+
+    loadState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setState]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const saveState = setTimeout(async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        // Don't save loading/error states
+        const { isLoading, error, ...stateToSave } = useOnboardingStore.getState();
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify(stateToSave)
+        });
+      } catch (e) {
+        console.error('Failed to save remote state', e);
+      }
+    }, 1000); // 1s debounce
+
+    // Subscribe to state changes to trigger save
+    const unsubscribe = useOnboardingStore.subscribe(() => {
+      // Trigger the effect by just depending on the store in the effect would be heavy,
+      // so we use the store's subscribe method but we still need the effect dependency array to be correct.
+      // Actually, since we're inside the component, we can depend on the individual values.
+    });
+
+    return () => {
+      clearTimeout(saveState);
+      unsubscribe();
+    };
+  }, [
+    isLoaded, step, chatStep, businessDescription, businessName, whatYouSell,
+    location, businessType, categories, websiteTemplate, firstProductName,
+    firstProductPrice, startResult
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -157,7 +242,11 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
+                        autoComplete="organization"
+                        autoFocus
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -190,7 +279,9 @@ export default function OnboardingWizard() {
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        enterKeyHint="next"
+                        autoFocus
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -224,7 +315,16 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        enterKeyHint="go"
+                        autoCapitalize="words"
+                        autoComplete="address-level2"
+                        autoFocus
+                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            handleIntake();
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -260,7 +360,9 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
+                    className="w-full p-3 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
@@ -269,7 +371,9 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    enterKeyHint="next"
+                    autoCapitalize="words"
+                    className="w-full p-3 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div>
@@ -278,7 +382,8 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    enterKeyHint="next"
+                    className="w-full p-3 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -288,16 +393,20 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        enterKeyHint="next"
+                        autoCapitalize="words"
+                        className="w-full p-3 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                    <div>
                       <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Price</label>
                       <input
                         type="text"
+                        inputMode="decimal"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        enterKeyHint="done"
+                        className="w-full p-3 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] transition-all"
                       />
                    </div>
                 </div>
