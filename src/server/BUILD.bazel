@@ -42,6 +42,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:mod.rs",
     "//src/server/api:telemetry.rs",
+        "//src/server/api:sync_handler.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
     "//src/server/api/agents:hire.rs",

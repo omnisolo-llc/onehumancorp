@@ -287,7 +287,7 @@ async fn http_metrics_handler(
         auth_header
     };
 
-    let claims = match store.validate_token(token).await {
+    let claims = match store.validate_token(&token).await {
         Ok(claims) => claims,
         Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
     };
@@ -468,7 +468,7 @@ async fn http_login_handler(
         username: username.clone(),
         email: email.clone(),
         roles: roles.clone(),
-        session_id: None,
+                        session_id: Some("".to_string()),
         jti: uuid::Uuid::new_v4().to_string(),
     };
     // token issued above via store
@@ -509,7 +509,7 @@ async fn advisory_insights_handler(
         auth_header
     };
 
-    let claims = match store.validate_token(token).await {
+    let claims = match store.validate_token(&token).await {
         Ok(c) => c,
         Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
     };
@@ -583,7 +583,7 @@ async fn draft_reply_handler(
         auth_header
     };
 
-    let claims = match store.validate_token(token).await {
+    let claims = match store.validate_token(&token).await {
         Ok(claims) => claims,
         Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
     };
@@ -1798,6 +1798,14 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Ensure local database permissions are secure in standalone mode
     if std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true" {
+        if let crate::db::DbStore::Sqlite(sqlite_pool) = &db.store {
+            let pg_pool = db.pool.clone();
+            let cloud_url = std::env::var("OHC_CLOUD_URL").ok();
+            let hybrid_daemon = crate::orchestration::hybrid_sync::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), Some(pg_pool), cloud_url);
+            tokio::spawn(async move {
+                hybrid_daemon.run().await;
+            });
+        }
         // Initialize local tables required for standalone mode
         if let crate::db::DbStore::Sqlite(pool) = &db.store {
             let _ = sqlx::query(
@@ -2128,16 +2136,15 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
                     use axum::response::IntoResponse;
                     let store = std::sync::Arc::new(crate::auth::Store::new());
-                    let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok());
-                    let token = match auth_header {
-                        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
-                        _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
-                    };
-                    let claims = match store.validate_token(token).await {
+                let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
+                let token = match auth_header {
+                    Some(ref h) if h.to_lowercase().starts_with("bearer ") => h[7..].to_string(),
+                    _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                    let claims = match store.validate_token(&token).await {
                         Ok(c) => c,
                         Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
                     };
-                    let mut req = req;
                     req.extensions_mut().insert(claims);
                     next.run(req).await
                 }
@@ -2257,6 +2264,52 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/agents/webhook", api::agents::webhook::router(dept_orchestrator.clone()))
         .nest("/api/agents/mission", api::agents::mission::handoff::router(std::sync::Arc::new(crate::sip::SipDB::new(db.pool.clone(), "default".to_string()))))
         .route("/api/telemetry/sync", axum::routing::post(api::telemetry::sync_telemetry_handler))
+        .route("/api/sync/missions", axum::routing::post({
+             let db_pool = db.pool.clone();
+             move |req: axum::extract::Request| async move {
+                 let (parts, body) = req.into_parts();
+                 let claims = parts.extensions.get::<::server_common::Claims>().cloned().unwrap_or(crate::common::Claims {
+                     organization_id: None,
+                     roles: vec![],
+                     email: "".to_string(),
+                     sub: "".to_string(),
+                     exp: 0,
+                     iat: 0,
+                     username: "".to_string(),
+                     session_id: None,
+                     jti: "".to_string(),
+                 });
+                 let pool = db_pool.clone();
+                 let req = axum::extract::Request::from_parts(parts, body);
+                 // extract json
+                 let bytes = axum::body::to_bytes(req.into_body(), usize::MAX).await.unwrap_or_default();
+                 let payload: Result<api::sync_handler::SyncMissionsRequest, _> = serde_json::from_slice(&bytes);
+                 if let Ok(payload) = payload {
+                     use axum::response::IntoResponse;
+                     api::sync_handler::sync_missions_handler(axum::extract::State(pool), axum::extract::Extension(claims), axum::Json(payload)).await.into_response()
+                 } else {
+                     use axum::response::IntoResponse;
+                     (axum::http::StatusCode::BAD_REQUEST, "Bad Request").into_response()
+                 }
+             }
+        }).layer(
+            axum::middleware::from_fn(|req: axum::extract::Request, next: axum::middleware::Next| async move {
+                use axum::response::IntoResponse;
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                let auth_header = req.headers().get("authorization").and_then(|h| h.to_str().ok()).map(|s| s.to_string());
+                let token = match auth_header {
+                    Some(ref h) if h.to_lowercase().starts_with("bearer ") => h[7..].to_string(),
+                    _ => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                let mut req = req;
+                let claims = match store.validate_token(&token).await {
+                    Ok(c) => c,
+                    Err(_) => return (axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
+                };
+                req.extensions_mut().insert(claims);
+                next.run(req).await
+            })
+        ))
         .route_layer(axum::middleware::from_fn_with_state(
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,

@@ -10,4 +10,5 @@ pub mod agents;
 pub mod onboarding;
 pub mod growth;
 pub mod telemetry;
+pub mod sync_handler;
 pub mod syndication_handler;

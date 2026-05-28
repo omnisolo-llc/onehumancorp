@@ -77,7 +77,7 @@ mod tests {
             .await
             .unwrap();
 
-        let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+        let daemon = HybridSyncDaemon::new(sqlite_pool.clone(), Some(pg_pool.clone()), None);
         daemon.sync_step().await.unwrap();
 
         let row = sqlx::query("SELECT sync_status FROM swarm_truth_embeddings WHERE memory_id = 'test_mem_1'")
@@ -161,7 +161,7 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
 
     // We also need to reload config somehow... or actually our change reads ::server_config::get().
     // We can't really reload standard OnceLock easily so we'll just check if it blocks.
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), Some(pg_pool.clone()), None);
     daemon.sync_telemetry_step().await.unwrap();
 
     // Check that it's still pending
