@@ -122,6 +122,58 @@ const swaggerSpec = {
         }
       }
     },
+    "/api/v1/documents": {
+      post: {
+        summary: "Add a New Document",
+        description: "Save a new file into your smart filing cabinet.",
+        tags: ["Documentation"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  title: { type: "string", example: "Vanilla Cake Recipe" },
+                  content: { type: "string", example: "Mix flour, sugar, and vanilla extract..." }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Success"
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      post: {
+        summary: "Search Your Documents",
+        description: "Searches all your business documents (like recipes, manuals, or past quotes) to give you the exact answer using the Hybrid MCP RAG Protocol.",
+        tags: ["Documentation"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  query: { type: "string", example: "What is the recipe for the vanilla cake?" },
+                  offline_mode: { type: "boolean", example: true }
+                }
+              }
+            }
+          }
+        },
+        responses: {
+          "200": {
+            description: "Success"
+          }
+        }
+      }
+    },
     "/api/agents/status": {
       get: {
         summary: "Get workforce status",

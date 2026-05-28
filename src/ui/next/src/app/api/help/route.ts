@@ -7,6 +7,7 @@ export async function GET() {
     { title: "Getting Paid", desc: "Set up how you get paid, view deposits, and handle simple taxes.", link: "/help/payments" },
     { title: "Your AI Helpers", desc: "Learn how to hire AI helpers and give them tasks to do.", link: "/help/ai-agents" },
     { title: "Finding Customers", desc: "Send emails to customers and grow your business easily.", link: "/help/marketing" },
-    { title: "Account & Billing", desc: "View your bills, manage your plan, and invite team members.", link: "/help/account-billing" }
+    { title: "Account & Billing", desc: "View your bills, manage your plan, and invite team members.", link: "/help/account-billing" },
+    { title: "Custom Domains", desc: "Connect your own web address so customers can easily find your store online.", link: "/help/my-store" }
   ]);
 }
