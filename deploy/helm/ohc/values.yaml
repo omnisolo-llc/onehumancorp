@@ -7,7 +7,7 @@ backend:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 5
@@ -52,7 +52,7 @@ ohcCore:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 5
@@ -96,7 +96,7 @@ chatwoot:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 5
@@ -139,7 +139,7 @@ powersync:
   networkPolicy:
     enabled: true
   vpa:
-    enabled: true
+    enabled: false
   autoscaling:
     enabled: true
     minReplicas: 5
