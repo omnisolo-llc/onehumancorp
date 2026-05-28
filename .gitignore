@@ -110,7 +110,7 @@ Chart.lock
 !/RELEASE_NOTES.md
 
 # Golang is not allowed in this project
-!*.go
+!!*.go
 
 
 # Rust build artifacts
@@ -129,7 +129,7 @@ site/
 playwright-report/
 debian-binary
 /*.diff
-!/srcs/
+!!/srcs/
 /scratch/
 *.db
 
