@@ -93,7 +93,6 @@ impl LlmClient for LocalEnforcementLlmProxy {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

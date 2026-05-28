@@ -13,7 +13,7 @@ rust_library(
         "core.rs",
         "expert_team.rs",
         "goose.rs",
-
+        "agentic_seek.rs",
         "hnsw_memory.rs",
         "output_parser.rs",
         "pubsub.rs",
@@ -80,7 +80,6 @@ rust_library(
         "registry.rs",
         "ruflo.rs",
         "service.rs",
-
         "sona_patterns.rs",
         "sqlite_memory.rs",
         "swarm_topology.rs",
