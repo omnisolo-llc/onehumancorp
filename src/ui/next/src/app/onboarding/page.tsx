@@ -23,9 +23,75 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
   useEffect(() => {
     setIsLoaded(true);
+
+    // Auto-restore logic for cross-device E2E
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    fetch('/api/onboarding/state', {
+      headers: {
+        'x-tenant-id': tenantId,
+        'x-user-id': userId
+      }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.step) {
+        setStep(data.step);
+        if (data.businessName) setBusinessName(data.businessName);
+        if (data.chatStep) setChatStep(data.chatStep);
+        if (data.firstProductName) setFirstProductName(data.firstProductName);
+        if (data.businessName) setBusinessName(data.businessName);
+        if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+        if (data.categories) setCategories(data.categories);
+        if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+        setIsLoaded(true);
+        if (data.whatYouSell) setWhatYouSell(data.whatYouSell);
+        if (data.location) setLocation(data.location);
+        if (data.businessType) setBusinessType(data.businessType);
+      }
+    })
+    .catch(() => {});
   }, []);
+
+  // Auto-save logic
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const stateData = {
+      step,
+      chatStep,
+      businessName,
+      whatYouSell,
+      location,
+      businessType,
+      categories,
+      websiteTemplate,
+      firstProductName,
+      firstProductPrice
+    };
+
+    const timeout = setTimeout(() => {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+          'x-user-id': userId
+        },
+        body: JSON.stringify(stateData)
+      }).catch(() => {});
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded]);
+
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -123,7 +189,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative" id="setup-screen">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -157,7 +223,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -224,7 +290,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>

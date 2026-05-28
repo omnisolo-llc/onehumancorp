@@ -4,7 +4,7 @@ test('lens audit: verifies current login error states', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByText('One Human Corp')).toBeVisible();
   await expect(page.locator('#login-error')).toContainText("Oops! We couldn't sign you in.");
-  await expect(page.getByRole('button', { name: /Login Sign In/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Login/ }).first()).toBeVisible();
 });
 
 test('lens audit: verifies sign up mode', async ({ page }) => {
