@@ -10,6 +10,7 @@ export default function CheckoutPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [region, setRegion] = useState("US");
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -43,31 +44,81 @@ export default function CheckoutPage() {
       </header>
 
       <main id="checkout-screen" className="p-6 md:p-8 flex-1 max-w-lg mx-auto w-full flex flex-col gap-6">
-        <p className="text-gray-700">Please enter your payment details below.</p>
+        <div className="flex items-center justify-between">
+          <p className="text-gray-700">Please enter your payment details below.</p>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">Region:</label>
+            <select
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              className="bg-white border border-gray-200 rounded-md px-2 py-1 text-sm focus:outline-none focus:border-indigo-500"
+            >
+              <option value="US">United States (USD)</option>
+              <option value="MX">Mexico (MXN)</option>
+              <option value="BR">Brazil (BRL)</option>
+              <option value="AR">Argentina (ARS)</option>
+            </select>
+          </div>
+        </div>
 
         <div className="p-6 shadow-sm flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
           <p className="text-sm text-gray-600">100% money back guarantee. Secure SSL payments.</p>
 
-          <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
-            <button
-              onClick={handlePayment}
-              disabled={isProcessing}
-              className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-            >
-              {isProcessing ? 'Processing...' : 'Pay Now'}
-            </button>
-          </WithTooltip>
+          {region === 'US' ? (
+            <>
+              <WithTooltip id="checkout-pay-now-tooltip" defaultText="Click here to securely finish your purchase and process your payment.">
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing}
+                  className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm ${isProcessing ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                >
+                  {isProcessing ? 'Processing...' : 'Pay Now'}
+                </button>
+              </WithTooltip>
 
-          <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
-            <button
-              onClick={() => {
-                router.push('/dashboard');
-              }}
-              className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
-            >
-              Tap to Pay (Stripe Terminal)
-            </button>
-          </WithTooltip>
+              <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
+                <button
+                  onClick={() => {
+                    router.push('/dashboard');
+                  }}
+                  className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
+                >
+                  Tap to Pay (Stripe Terminal)
+                </button>
+              </WithTooltip>
+            </>
+          ) : (
+            <>
+              <div className="mb-2 p-3 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-800 flex items-start gap-2">
+                <span>💡</span>
+                <p>For LATAM regions, we recommend Mercado Pago for better conversion and local payment options like Pix or OXXO.</p>
+              </div>
+              <WithTooltip id="checkout-mercado-pago-tooltip" defaultText="Pay securely using Mercado Pago and local payment methods.">
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing}
+                  className={`w-full px-4 py-3 text-white rounded-lg font-medium transition-colors shadow-sm flex items-center justify-center gap-2 ${isProcessing ? 'bg-blue-400 cursor-not-allowed' : 'bg-[#009EE3] hover:bg-[#008DD0]'}`}
+                >
+                  {isProcessing ? 'Processing...' : (
+                    <>
+                      <span>Pay with Mercado Pago</span>
+                    </>
+                  )}
+                </button>
+              </WithTooltip>
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+                <div className="relative flex justify-center"><span className="bg-white px-2 text-xs text-gray-500 uppercase font-semibold tracking-wide" style={{ background: '#FDFDFD' }}>Or</span></div>
+              </div>
+              <button
+                onClick={handlePayment}
+                disabled={isProcessing}
+                className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                Pay with International Card
+              </button>
+            </>
+          )}
 
           <WithTooltip id="checkout-cancel-tooltip" defaultText="Go back to the previous screen without buying anything.">
             <button

@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState([
-    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true },
+    { id: '1', customer: 'Maya', service: 'Custom Cake Consultation', time: '10:00 AM', date: 'Today', status: 'confirmed', ai_scheduled: true, is_online: true },
     { id: '2', customer: 'Carlos', service: 'Pipe Fixing', time: '2:00 PM', date: 'Tomorrow', status: 'pending', ai_scheduled: true },
     { id: '3', customer: 'Priya', service: 'Styling Session', time: '4:00 PM', date: 'Tomorrow', status: 'confirmed', ai_scheduled: false },
   ]);
@@ -15,6 +15,7 @@ export default function CalendarPage() {
   ]);
 
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [calSynced, setCalSynced] = useState(false);
 
   return (
     <div className="min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
@@ -27,6 +28,12 @@ export default function CalendarPage() {
           <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Calendar & Bookings</h1>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setCalSynced(!calSynced)}
+            className={`mr-4 px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm border ${calSynced ? 'bg-white text-gray-800 border-gray-200' : 'bg-gray-900 text-white border-transparent'}`}
+          >
+            {calSynced ? '✓ Cal.com Synced' : 'Sync Cal.com'}
+          </button>
           <span className="text-sm font-medium text-gray-700">AI Scheduling (Zero-Setup)</span>
           <button
             onClick={() => setAiEnabled(!aiEnabled)}
@@ -49,9 +56,16 @@ export default function CalendarPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900 text-lg">{apt.service}</h3>
                     <p className="text-sm text-gray-500">{apt.date} at {apt.time} • {apt.customer}</p>
-                    {apt.ai_scheduled && (
-                      <span className="inline-block mt-2 px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
-                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                        {apt.ai_scheduled && (
+                          <span className="inline-block px-2 py-1 text-xs font-medium bg-blue-50 text-blue-600 rounded-md">✨ AI Scheduled</span>
+                        )}
+                        {apt.is_online && (
+                          <a href={`https://meet.jit.si/ohc-${apt.customer.toLowerCase()}-${apt.id}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium bg-purple-50 text-purple-700 rounded-md hover:bg-purple-100 transition-colors">
+                            🎥 Join Jitsi Meet
+                          </a>
+                        )}
+                    </div>
                   </div>
                   <div className="mt-2 sm:mt-0">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${apt.status === 'confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>

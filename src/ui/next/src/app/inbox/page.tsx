@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function InboxPage() {
+  const [ayrshareConnected, setAyrshareConnected] = useState(false);
   const [messages, setMessages] = useState([
     { id: 1, sender: 'Facebook User', source: 'Facebook', icon: '📘', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
     { id: 2, sender: 'Instagram User', source: 'Instagram', icon: '📸', content: 'When will my order be shipped?', date: 'Yesterday' },
@@ -27,9 +28,15 @@ export default function InboxPage() {
           &lt; Back
         </Link>
         <h1 className="text-2xl font-bold">Unified Inbox</h1>
-        <div className="ml-auto">
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black inline-block">
-            Audit Dashboard
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setAyrshareConnected(!ayrshareConnected)}
+            className={`px-3 py-1.5 rounded text-sm font-semibold transition-colors border ${ayrshareConnected ? 'bg-white text-gray-800 border-gray-200' : 'bg-[#0071E3] text-white border-transparent hover:bg-blue-600'}`}
+          >
+            {ayrshareConnected ? '✓ Socials Linked' : 'Link Socials (Ayrshare)'}
+          </button>
+          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-1.5 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black inline-block">
+            Audit
           </Link>
         </div>
       </div>

@@ -65,6 +65,11 @@ export default function Dashboard() {
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [isPrintingLabel, setIsPrintingLabel] = useState(false);
+  const [labelPrinted, setLabelPrinted] = useState(false);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -744,6 +749,96 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+            <div className="p-6 shadow-sm border rounded-2xl mb-8 flex flex-col md:flex-row gap-6 items-start" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1 w-full">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">Email Marketing</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed">Send plain-text AI drafted emails to customer segments seamlessly.</p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex flex-col sm:flex-row items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100 gap-4">
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Draft an email campaign</label>
+                                <textarea
+                                    className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#0066FF] resize-none"
+                                    rows={2}
+                                    placeholder="Draft an email about our new summer dresses to customers tagged 'bought-shoes'."
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 mt-4 sm:mt-0">
+                                <button
+                                    onClick={() => {
+                                        setIsSendingEmail(true);
+                                        setTimeout(() => {
+                                            setIsSendingEmail(false);
+                                            setEmailSent(true);
+                                            setTimeout(() => setEmailSent(false), 3000);
+                                        }, 1500);
+                                    }}
+                                    disabled={isSendingEmail || emailSent}
+                                    className={`px-4 py-2 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap h-full ${isSendingEmail ? 'bg-blue-400 cursor-not-allowed' : emailSent ? 'bg-green-500' : 'bg-[#0066FF] hover:bg-blue-700'}`}
+                                >
+                                    {isSendingEmail ? 'Sending...' : emailSent ? 'Sent!' : 'Send via Listmonk'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-6 shadow-sm border rounded-2xl mb-8 flex flex-col md:flex-row gap-6 items-start" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="flex-1 w-full">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">Order Fulfillment</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed">Manage shipping and notify customers via SMS.</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-700">Twilio SMS Notifications</span>
+                            <button
+                                onClick={() => setSmsEnabled(!smsEnabled)}
+                                className={`w-11 h-6 rounded-full relative transition-colors duration-300 focus:outline-none ${smsEnabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                            >
+                                <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform duration-300 ${smsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-lg">
+                                    📦
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-semibold text-gray-900">Order #8924 - Pending Fulfillment</h4>
+                                    <p className="text-xs text-gray-500">Priya M. bought 2x Vanilla Cupcakes</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => {
+                                        setIsPrintingLabel(true);
+                                        setTimeout(() => {
+                                            setIsPrintingLabel(false);
+                                            setLabelPrinted(true);
+                                            setTimeout(() => setLabelPrinted(false), 3000);
+                                        }, 1500);
+                                    }}
+                                    disabled={isPrintingLabel || labelPrinted}
+                                    className={`px-4 py-2 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm whitespace-nowrap ${isPrintingLabel ? 'bg-indigo-400 cursor-not-allowed' : labelPrinted ? 'bg-green-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                                >
+                                    {isPrintingLabel ? 'Generating...' : labelPrinted ? 'Label Printed!' : 'Print Label (EasyPost)'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <div className="flex-1">
                     <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Advocates</h3>
