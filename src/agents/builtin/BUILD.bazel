@@ -77,6 +77,7 @@ rust_library(
         "ralph_loop.rs",
         "registry.rs",
         "ruflo.rs",
+        "scalable_multi_agent.rs",
         "service.rs",
         "sona_patterns.rs",
         "sqlite_memory.rs",
