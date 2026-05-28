@@ -19,9 +19,14 @@ export default function CheckoutPage() {
       const response = await fetch("/api/v1/growth/referrals/generate", {
         method: "POST",
       });
-      const data = await response.json();
-      if (data && data.referral_link) {
-        setReferralLink(data.referral_link);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.referral_link) {
+          setReferralLink(data.referral_link);
+        } else {
+          const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+          setReferralLink(`https://ohc.store/join?ref=${tenant}`);
+        }
       } else {
         const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
         setReferralLink(`https://ohc.store/join?ref=${tenant}`);
