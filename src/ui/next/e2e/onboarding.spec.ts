@@ -5,17 +5,35 @@ test.describe('Onboarding Wizard Flow', () => {
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 
-    // Wait for the Smart Builder welcome screen (Step 1)
+    // Wait for the Smart Builder welcome screen (Chat Step 1)
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
-    // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    // Fill in the business name
+    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+    const nameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+    await nameInput.fill('Maya Bakery');
+    await page.locator('button:has-text("Next")').click();
+
+    // Fill in what you sell (Chat Step 2)
+    await expect(page.locator('text="What do you sell?"')).toBeVisible();
+    const sellInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
+    await sellInput.fill('I am a freelance handyman in Miami');
+    await page.locator('button:has-text("Next")').click();
+
+    // Fill in location (Chat Step 3)
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+    await locationInput.fill('Miami, FL');
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 200,
-      json: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+      json: {
+        business_type: "Handyman",
+        business_name: "Maya Bakery",
+        categories: ["service"],
+        initial_products: [{ name: 'Custom Cake', price: '25.00' }]
+      }
     }));
 
     await page.route('**/api/onboarding/start', route => route.fulfill({
