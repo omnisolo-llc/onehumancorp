@@ -1858,6 +1858,48 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         is_cloud
     ).await.expect("Failed to create MeshTransport");
 
+
+    let queue_manager = std::sync::Arc::new(crate::queue::QueueManager::new(db.pool.clone()));
+    let (queue_shutdown_tx, queue_shutdown_rx) = tokio::sync::broadcast::channel(1);
+
+    let qm_clone = queue_manager.clone();
+    let mesh_transport_clone = mesh_transport.clone();
+    tokio::spawn(async move {
+        qm_clone.start_polling(
+            "main_server",
+            std::time::Duration::from_secs(1),
+            move |job| {
+                let transport = mesh_transport_clone.clone();
+                async move {
+                    use prost::Message;
+                    let req = ::server_ohc::agent::service::RunTaskRequest {
+                        task_id: job.id.clone(),
+                        department: "".to_string(),
+                        task: job.payload.to_string(),
+                        llm_provider: "".to_string(),
+                        model: "".to_string(),
+                        llm_endpoint: "".to_string(),
+                        system_prompt: "".to_string(),
+                        runtime_config: None,
+                        toolset_config: None,
+                    };
+                    let mut buf = Vec::new();
+                    if req.encode(&mut buf).is_ok() {
+                        let _ = transport.publish("agent_jobs", ohc_builtin_agent::mesh::transport::Message {
+                            agent_id: "main_server".to_string(),
+                            action: "agent_jobs".to_string(),
+                            status: "ok".to_string(),
+                            payload: buf,
+                            msg_id: uuid::Uuid::new_v4().to_string(),
+                        }).await;
+                    }
+                    Ok(false)
+                }
+            },
+            queue_shutdown_rx
+        ).await;
+    });
+
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
