@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -534,17 +535,14 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS autodream_memories (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
-                        agent_id TEXT NOT NULL,
-                        task_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
+                        agent_id TEXT,
                         content TEXT NOT NULL,
                         embedding TEXT,
                         source_type TEXT NOT NULL,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        topic TEXT DEFAULT ''
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
+                    CREATE INDEX IF NOT EXISTS idx_autodream_org ON autodream_memories(organization_id);
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL DEFAULT 'system',
@@ -833,11 +831,10 @@ pub async fn insert_autodream_memory(
     ) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
@@ -845,11 +842,10 @@ pub async fn insert_autodream_memory(
                     .await?;
             }
             DbStore::Postgres => {
-                sqlx::query("INSERT INTO autodream_memories (id, tenant_id, agent_id, task_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5, $6::vector, $7)")
+                sqlx::query("INSERT INTO autodream_memories (id, organization_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
                     .bind(id)
                     .bind(org_id)
                     .bind(agent_id)
-                    .bind(task_id)
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
