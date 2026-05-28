@@ -154,7 +154,8 @@ async fn handle_webhook(
 
     if draft_reply == "Thank you for reaching out! We will get back to you shortly." || draft_reply == "Draft generation failed." {
         if !minimax_api_key.is_empty() {
-            let client = crate::minimax::MinimaxClient::new(minimax_api_key);
+                let minimax_api_key_clone = minimax_api_key.clone();
+            let client = crate::minimax::MinimaxClient::new(minimax_api_key_clone);
             draft_reply = client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string());
         }
     }
