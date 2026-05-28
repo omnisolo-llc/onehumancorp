@@ -842,33 +842,9 @@ impl Agent {
                                 let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                                 return (id, final_res);
                             }
-                            let mut retry_count = 0;
-                            let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                            let final_res;
-
-                            loop {
-                                match tool.execute.execute(args.clone()).await {
-                                    Ok(res) => {
-                                        final_res = Ok(res);
-                                        break;
-                                    }
-                                    Err(crate::types::ToolError::Transient(msg)) => {
-                                        if retry_count < max_retries {
-                                            retry_count += 1;
-                                            let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                            tokio::time::sleep(backoff).await;
-                                            continue;
-                                        } else {
-                                            final_res = Err(crate::types::ToolError::Transient(msg));
-                                            break;
-                                        }
-                                    }
-                                    Err(e) => {
-                                        final_res = Err(e);
-                                        break;
-                                    }
-                                }
-                            }
+                            let mut modified_tc = tc.clone();
+                            modified_tc.arguments = args.clone();
+                            let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, cfg_max_retries).await;
                             (id, final_res)
                         } else {
                             // Unreachable if tool not found goes to mutating calls
@@ -976,33 +952,9 @@ impl Agent {
                             });
                             continue;
                         }
-                        let mut retry_count = 0;
-                        let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
-                        let final_res;
-
-                        loop {
-                            match tool.execute.execute(args.clone()).await {
-                                Ok(res) => {
-                                    final_res = Ok(res);
-                                    break;
-                                }
-                                Err(crate::types::ToolError::Transient(msg)) => {
-                                    if retry_count < max_retries {
-                                        retry_count += 1;
-                                        let backoff = std::time::Duration::from_millis(50 * (1 << retry_count));
-                                        tokio::time::sleep(backoff).await;
-                                        continue;
-                                    } else {
-                                        final_res = Err(crate::types::ToolError::Transient(msg));
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    final_res = Err(e);
-                                    break;
-                                }
-                            }
-                        }
+                        let mut modified_tc = tc.clone();
+                        modified_tc.arguments = args.clone();
+                        let final_res = crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, cfg_max_retries).await;
 
                         match final_res {
                             Ok(res) => {
@@ -1309,27 +1261,11 @@ impl Agent {
             }
 
             read_only_futures.push(async move {
-                let mut retry_count = 0;
-                loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
-                        Ok(res) => break Ok(res),
-                        Err(crate::types::ToolError::Transient(msg)) => {
-                            if retry_count < max_retries {
-                                retry_count += 1;
-                                let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                                tokio::time::sleep(backoff).await;
-                                continue;
-                            } else {
-                                break Ok(format!("Error executing planned step: Transient error after retries: {}", msg));
-                            }
-                        }
-                        Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
-                        }
-                        Err(e) => {
-                            break Err(e);
-                        }
-                    }
+                match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
+                    Ok(res) => Ok(res),
+                    Err(crate::types::ToolError::Transient(msg)) => Ok(format!("Error executing planned step: Transient error after retries: {}", msg)),
+                    Err(crate::types::ToolError::LlmRecoverable(msg)) => Ok(format!("Error executing planned step (LlmRecoverable): {}", msg)),
+                    Err(e) => Err(e),
                 }
             });
         }
@@ -1385,39 +1321,18 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let mut retry_count = 0;
-            let max_retries = cfg.max_retries;
-            let result = loop {
-                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
-                    Ok(res) => break res,
-                    Err(crate::types::ToolError::Transient(msg)) => {
-                        if retry_count < max_retries {
-                            retry_count += 1;
-                            let backoff = std::time::Duration::from_millis(500 * (1 << retry_count));
-                            tokio::time::sleep(backoff).await;
-                            continue;
-                        } else {
-                            break format!("Error executing planned step: Transient error after retries: {}", msg);
-                        }
-                    }
-                    Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        break format!("Error executing planned step (LlmRecoverable): {}", msg);
-                    }
-                    Err(crate::types::ToolError::UserFixable(msg)) => {
-                        let err = format!("USER_FIXABLE: {}", msg);
-                        on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
-                        return Err(err.into());
-                    }
-                    Err(crate::types::ToolError::Fatal(msg)) => {
-                        return Err(format!("Fatal tool error: {}", msg).into());
-                    }
-                    Err(crate::types::ToolError::Unexpected(msg)) => {
-                        return Err(format!("Unexpected tool error: {}", msg).into());
-                    }
-                    Err(e) => {
-                        return Err(format!("Fatal tool error: {:?}", e).into());
-                    }
+            let result = match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
+                Ok(res) => res,
+                Err(crate::types::ToolError::Transient(msg)) => format!("Error executing planned step: Transient error after retries: {}", msg),
+                Err(crate::types::ToolError::LlmRecoverable(msg)) => format!("Error executing planned step (LlmRecoverable): {}", msg),
+                Err(crate::types::ToolError::UserFixable(msg)) => {
+                    let err = format!("USER_FIXABLE: {}", msg);
+                    on_event(AgentEvent::UserInterventionRequired { error: err.clone() });
+                    return Err(err.into());
                 }
+                Err(crate::types::ToolError::Fatal(msg)) => return Err(format!("Fatal tool error: {}", msg).into()),
+                Err(crate::types::ToolError::Unexpected(msg)) => return Err(format!("Unexpected tool error: {}", msg).into()),
+                Err(e) => return Err(format!("Fatal tool error: {:?}", e).into()),
             };
 
             on_event(AgentEvent::ToolCall {
@@ -2240,18 +2155,9 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
-                            Ok(r) => {
-                                return (tc_clone, Ok(r));
-                            }
-                            Err(ToolError::Transient(msg)) => {
-                                return (tc_clone, Err(ToolError::Transient(msg)));
-                            }
-                            Err(e) => {
-                                return (tc_clone, Err(e));
-                            }
-                        }
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                        Ok(r) => (tc_clone, Ok(r)),
+                        Err(e) => (tc_clone, Err(e)),
                     }
                 }.instrument(tool_span));
             }
