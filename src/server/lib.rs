@@ -187,10 +187,10 @@ pub mod proto {
     }
 }
 
-use crate::proto::orchestration::hub_service_server::{HubService, HubServiceServer};
-use crate::proto::orchestration::growth_service_server::GrowthServiceServer;
-use crate::proto::billing::billing_service_server::BillingServiceServer;
-use crate::proto::orchestration::*;
+use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
+use crate::ohc::billing::billing_service_server::BillingServiceServer;
+use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -2961,7 +2961,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             opacity: 1;
             transform: translateY(0);
             position: relative;
-            border-radius: 16px;
         }
 
         #setup-screen button, #setup-screen input {
@@ -3195,7 +3194,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
                         <div class="card glass" id="approval-inbox" placeholder="approval-inbox-tooltip" style="cursor: help;">
-                            <h3>Approval Inbox</h3>
+                            <h3>Pending Actions Hub</h3>
                         </div>
                         <div class="card glass" id="activity-feed"></div>
                         <div class="card glass">
@@ -3674,19 +3673,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (!container) return;
 
                                     if (data.pending_approvals && data.pending_approvals.length > 0) {
-                                        container.innerHTML = '<h3>Approval Inbox</h3>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3>';
                                         data.pending_approvals.forEach(approval => {
+                                            const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
                                             container.innerHTML += `
-                                                <div style="margin-top: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
-                                                    <p style="margin: 0 0 5px 0;"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
-                                                    <p style="margin: 0 0 10px 0; font-size: 14px;">${approval.description}</p>
-                                                    <button onclick="decideApproval('${approval.id}', true)">Approve</button>
-                                                    <button class="secondary" onclick="decideApproval('${approval.id}', false)">Dismiss</button>
+                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                    <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
+                                                    <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
+                                                    ${payloadStr}
+                                                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                                                        <button style="flex: 1;" onclick="decideApproval('${approval.id}', true)">Approve</button>
+                                                        <button style="flex: 1;" class="secondary" onclick="decideApproval('${approval.id}', false)">Edit</button>
+                                                    </div>
                                                 </div>
                                             `;
                                         });
                                     } else {
-                                        container.innerHTML = '<h3>Approval Inbox</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
+                                        container.innerHTML = '<h3>Pending Actions Hub</h3><p style="font-size: 14px; color: var(--text-secondary);">No pending approvals.</p>';
                                     }
                                 }
                             } catch (e) {
@@ -3695,6 +3698,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function decideApproval(id, approved) {
+                            const card = document.getElementById('approval-card-' + id);
+                            if (card) {
+                                card.style.display = 'none';
+                            }
                             try {
                                 const res = await fetch('/api/agents/approvals/' + id, {
                                     method: 'POST',
@@ -3706,11 +3713,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 if (res.ok) {
                                     fetchApprovals();
-                                fetchActivityFeed();
+                                    fetchActivityFeed();
                                 } else {
+                                    if (card) card.style.display = 'block';
                                     alert('Failed to process approval.');
                                 }
                             } catch (e) {
+                                if (card) card.style.display = 'block';
                                 console.error('Error processing approval:', e);
                             }
                         }
@@ -4107,9 +4116,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto; position: relative;">
-                        <div id="setup-error" class="error" style="display: none; margin: 16px; border-radius: 8px; padding: 12px; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.3); color: #FF3B30;"></div>
-                        <h1 style="margin-bottom: 24px; padding: 0 16px; margin-top: 16px;">OneHuman</h1>
+                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                        <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
                             <p>Your business, live in minutes.</p>
@@ -5087,16 +5095,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         let currentStep = 1;
 
-                        let errorTimeout = null;
-                        function showError(message) {
-                            const errDiv = document.getElementById('setup-error');
-                            if (errDiv) {
-                                errDiv.innerText = message;
-                                errDiv.style.display = 'block';
-                                if (errorTimeout) clearTimeout(errorTimeout);
-                                errorTimeout = setTimeout(() => { errDiv.style.display = 'none'; }, 4000);
-                            }
-                        }
 
                         function validateInputs(stepId) {
                             if (stepId === 3 && currentStep === 2) {
@@ -5105,7 +5103,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     if (b.classList.contains('selected') || document.activeElement === b) valid = true;
                                 });
                                 if (!valid) {
-                                    showError('Please select a business type');
+                                    alert('Please select a business type');
                                     return false;
                                 }
                             }
@@ -5114,7 +5112,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 let valid = false;
                                 inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
                                 if (!valid) {
-                                    showError('Please enter a business name (at least 3 characters)');
+                                    alert('Please enter a business name (at least 3 characters)');
                                     return false;
                                 }
                             }
@@ -5122,11 +5120,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
                                 const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    showError('Please enter a product or service name');
+                                    alert('Please enter a product or service name');
                                     return false;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    showError('Please enter a valid price (e.g., 10.00)');
+                                    alert('Please enter a valid price (e.g., 10.00)');
                                     return false;
                                 }
                             }
@@ -5134,7 +5132,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const emailInput = document.querySelector('#step-7 input[type="email"]');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    showError('Please enter a valid email address');
+                                    alert('Please enter a valid email address');
                                     return false;
                                 }
                             }
