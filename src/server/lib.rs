@@ -2123,7 +2123,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
-        .route("/api/finance/receipts", axum::routing::post(crate::services::finance::receipts::upload_receipt).with_state(std::sync::Arc::new(crate::services::finance::receipts::FinanceState { db_pool: db_for_login.clone(), minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default() })).layer(axum::middleware::from_fn_with_state(db_for_login.clone(), ::server_common::auth_utils::auth_middleware)))
+        .route("/api/finance/receipts", axum::routing::post(crate::services::finance::receipts::upload_receipt).with_state(std::sync::Arc::new(crate::services::finance::receipts::FinanceState { db_pool: db_for_login.clone(), minimax_api_key: std::env::var("MINIMAX_API_KEY").unwrap_or_default() })).layer(axum::middleware::from_fn_with_state(db_for_login.clone(), server_common::auth_utils::auth_middleware)))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {

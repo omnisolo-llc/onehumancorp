@@ -7,7 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
-use ::server_common::Claims;
+use server_common::Claims;
 use sqlx::PgPool;
 use uuid::Uuid;
 use chrono::Utc;
@@ -36,7 +36,7 @@ pub struct FinanceState {
 
 pub async fn upload_receipt(
     State(state): State<Arc<FinanceState>>,
-    Extension(auth): Extension<::server_common::Claims>,
+    Extension(auth): Extension<server_common::Claims>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     let tenant_id = auth.organization_id.unwrap_or_default();
@@ -99,7 +99,7 @@ pub async fn upload_receipt(
     // IMPORTANT: Enforce RLS by setting current_tenant context
     let mut tx = state.db_pool.begin().await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": format!("Tx failed: {}", e)}))))?;
 
-    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+    server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": format!("Context failed: {}", e)}))))?;
 
