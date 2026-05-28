@@ -1177,6 +1177,8 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
+    use super::*;
+
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
