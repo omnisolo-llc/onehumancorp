@@ -1,7 +1,7 @@
 export default function GettingStarted() {
   return (
     <div className="max-w-3xl mx-auto p-6 mt-10 bg-white rounded-xl shadow-sm border border-gray-100 font-inter">
-      <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">Getting Started with Your Store</h1>
+      <h1 className="text-3xl font-extrabold font-outfit text-gray-900 mb-6">Getting Started with Your Store - Guide</h1>
 
       <p className="text-gray-700 mb-4 leading-relaxed text-lg">
         Welcome to OneHumanCorp! Setting up your store is quick and easy. Our system helps you get everything ready to sell online.
