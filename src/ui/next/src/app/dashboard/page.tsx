@@ -23,6 +23,9 @@ export default function Dashboard() {
   const [todaysSales, setTodaysSales] = useState<number>(0);
   const [activeCustomers, setActiveCustomers] = useState<number>(0);
   const [pendingOrders, setPendingOrders] = useState<number>(0);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const [voiceTestStatus, setVoiceTestStatus] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState<boolean>(true);
   const [teamInvitesSent, setTeamInvitesSent] = useState<number>(0);
   const [productCount, setProductCount] = useState<number>(10);
@@ -637,6 +640,54 @@ export default function Dashboard() {
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
+            </div>
+         </section>
+
+
+         {/* Autonomous AI Voice Receptionist */}
+         <section className="mb-6">
+            <div className="p-6 rounded-2xl shadow-sm transition-all" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
+                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                        AI Voice Receptionist
+                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(0, 102, 255, 0.1)', color: '#0066FF' }}>
+                            Zero-Drop Calls
+                        </span>
+                    </h3>
+                    <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold text-gray-800">{voiceEnabled ? 'ON' : 'OFF'}</span>
+                        <button
+                            id="toggle-voice-receptionist"
+                            onClick={() => setVoiceEnabled(!voiceEnabled)}
+                            className={`w-12 h-6 rounded-full transition-colors relative ${voiceEnabled ? 'bg-[#34C759]' : 'bg-gray-300'}`}
+                        >
+                            <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${voiceEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+                        </button>
+                    </div>
+                </div>
+                <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
+                    Never miss a booking. Our multilingual AI receptionist answers calls instantly, provides real-time quotes, and takes orders or appointments 24/7.
+                </p>
+
+                {voiceEnabled && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                        {voiceTestStatus && (
+                            <div className={`p-4 rounded-xl mb-4 font-bold text-sm ${voiceTestStatus.includes('completed') ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
+                                {voiceTestStatus.includes('completed') ? '✓ ' : 'ℹ '} {voiceTestStatus}
+                            </div>
+                        )}
+                        <button
+                            id="test-voice-receptionist"
+                            onClick={testVoiceReceptionist}
+                            disabled={isTestingVoice}
+                            className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2"
+                            style={{ background: 'linear-gradient(135deg, #0066FF 0%, #3b82f6 100%)' }}
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                            {isTestingVoice ? 'Initiating...' : 'Test my AI Receptionist'}
+                        </button>
+                    </div>
+                )}
             </div>
          </section>
 

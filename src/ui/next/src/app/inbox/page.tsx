@@ -42,6 +42,45 @@ export default function InboxPage() {
       draft: 'Certainly! Please provide your new delivery address, and we will update your order right away.'
     },
   ]);
+
+  // Periodic polling for new messages
+  useEffect(() => {
+    let mounted = true;
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch('/api/inbox/messages', {
+          headers: { 'Authorization': 'Bearer ' + (typeof localStorage !== 'undefined' ? localStorage.getItem('token') || 'test-token' : 'test-token') }
+        });
+        if (res.ok && mounted) {
+           const data = await res.json();
+           if (data.length > 0) {
+              const formattedMsgs = data.map((m: any) => ({
+                 id: m.id,
+                 sender: m.source,
+                 source: m.source,
+                 icon: m.source === 'Voice' ? '📞' : '📱',
+                 type: m.source === 'Voice' ? 'voice' : 'text',
+                 content: m.content,
+                 summary: m.content.split('Transcript:')[0],
+                 transcript: m.content.split('Transcript:')[1],
+                 date: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              }));
+              // Only append new ones for simplicity in this demo, or just merge
+              setMessages(prev => {
+                  const existingIds = new Set(prev.map(p => p.id));
+                  const newMsgs = formattedMsgs.filter((m:any) => !existingIds.has(m.id));
+                  return [...prev, ...newMsgs];
+              });
+           }
+        }
+      } catch(e) {}
+    };
+
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 2000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, []);
+
   const [replyInput, setReplyInput] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
 
@@ -153,9 +192,44 @@ export default function InboxPage() {
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
+
             <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+              {msg.type === 'voice' ? (
+                <div className="flex flex-col gap-2 min-w-[280px]">
+                   <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-gray-200 shadow-sm">
+                      <button className="w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center shrink-0 hover:bg-blue-600 transition-colors">
+                        <svg className="w-4 h-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                      </button>
+                      <div className="flex-1">
+                        <div className="h-4 flex items-end gap-0.5 opacity-60">
+                           <div className="w-1 bg-gray-400 h-2 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-3 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-4 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-2 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-3 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-1 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-2 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-4 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-3 rounded-full"></div>
+                           <div className="w-1 bg-gray-400 h-2 rounded-full"></div>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-gray-500">{msg.audioDuration || "0:45"}</span>
+                   </div>
+                   <div className="mt-2 border-l-2 border-blue-400 pl-3">
+                      <p className="text-sm font-semibold text-gray-900 mb-1">AI Summary:</p>
+                      <p className="text-sm text-gray-700 leading-relaxed italic">{msg.summary}</p>
+                   </div>
+                   <div className="mt-2 bg-gray-100 rounded-lg p-3">
+                      <p className="text-xs font-semibold text-gray-600 mb-1 uppercase tracking-wider">Transcript:</p>
+                      <p className="text-xs text-gray-600 leading-relaxed font-mono">{msg.transcript || msg.content}</p>
+                   </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+              )}
             </div>
+
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (

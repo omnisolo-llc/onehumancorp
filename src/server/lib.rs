@@ -2247,6 +2247,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
+        .nest("/api/voice", api::voice_gateway::router(db.pool.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
