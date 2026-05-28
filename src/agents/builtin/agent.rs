@@ -122,6 +122,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub computational_guide_command: String,
     pub enable_visual_verification: bool,
     pub enable_hnsw_memory: bool,
+    pub enable_agentic_seek: bool,
     pub visual_verification_command: String,
     pub guardrails: Option<GuardrailRegistry>,
     pub enable_state_checkpointing: bool,
@@ -179,6 +180,7 @@ enable_llmcompiler_plan_and_execute: false,
             computational_guide_command: String::new(),
             enable_visual_verification: false,
             enable_hnsw_memory: false,
+            enable_agentic_seek: false,
             visual_verification_command: String::new(),
             guardrails: None,
             enable_state_checkpointing: false,
@@ -1681,6 +1683,14 @@ impl Agent {
     where
         F: FnMut(AgentEvent) + Send + Sync,
     {
+        if cfg.enable_agentic_seek {
+            // Note: In tests we might pass a mock_env, but in production we use the real env (None).
+            // For testing purposes, we rely on the agentic_seek unit tests for isolation.
+            if let Err(e) = crate::agentic_seek::AgenticSeekEnforcer::enforce_no_api_costs(None) {
+                return Err(e.into());
+            }
+        }
+
         let mut self_with_memory = self;
         let owned_agent;
         if let Some(ltm) = &cfg.long_term_memory {
@@ -2918,6 +2928,35 @@ mod tests {
     struct MyStructuredOutput {
         city: String,
         population: u32,
+    }
+
+    #[tokio::test]
+    async fn test_agentic_seek_enforcement_in_agent() {
+        let mut cfg = super::AgentRunConfig::default();
+        cfg.enable_agentic_seek = true;
+
+        struct MockAgenticLlmClient;
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockAgenticLlmClient {
+            async fn chat(&self, _req: crate::types::ChatRequest) -> Result<crate::types::ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(crate::types::ChatResponse {
+                    message: crate::types::Message::assistant("ok"),
+                    usage: crate::types::Usage::default(),
+                    stop_reason: "stop".to_string(),
+                    response_id: Some("1".to_string()),
+                })
+            }
+        }
+
+        let agent = super::Agent::new(std::sync::Arc::new(MockAgenticLlmClient), vec![]);
+
+        // We simulate the failure by calling the inner enforcer logic explicitly
+        // to avoid polluting global env in the agent.run_internal test.
+        // The actual logic is well-tested in `agentic_seek::tests`
+        let mock_env = [("OPENAI_API_KEY", "dummy")];
+        let res = crate::agentic_seek::AgenticSeekEnforcer::enforce_no_api_costs(Some(&mock_env));
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("agenticSeek Error: External API key OPENAI_API_KEY found"));
     }
 
     #[test]

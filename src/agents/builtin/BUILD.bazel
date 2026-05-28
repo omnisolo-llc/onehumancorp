@@ -84,6 +84,7 @@ rust_library(
         "swarm_topology.rs",
         "tools_gating.rs",
         "tool_executor_engine.rs",
+        "agentic_seek.rs",
         "verification_loops.rs",
         "visual_workflow.rs",
         "visual_orchestration.rs",
