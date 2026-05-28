@@ -257,3 +257,4 @@ We provide helper scripts in `deploy/scripts/` to smooth the friction of develop
 
 The old `src/app/` Slint/Flutter UI has been removed. The canonical desktop UI is `src/ui/tauri/`; the remaining Next.js prototype under `src/ui/next/` is retained only while route and asset references are audited.
 <!-- Miser: Complete implementation -->
+Done
