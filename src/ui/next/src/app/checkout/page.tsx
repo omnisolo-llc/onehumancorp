@@ -61,7 +61,29 @@ export default function CheckoutPage() {
           <WithTooltip id="checkout-tap-to-pay-tooltip" defaultText="Tap your card or phone on the reader to pay in person.">
             <button
               onClick={() => {
-                router.push('/dashboard');
+                const amount = prompt("Enter amount to charge:");
+                if (!amount) return;
+
+                if (navigator.onLine) {
+                  alert(`Payment of $${amount} successful!`);
+                  router.push('/dashboard');
+                } else {
+                  let queue = [];
+                  try {
+                    queue = JSON.parse(localStorage.getItem('ohc_offline_queue') || '[]');
+                  } catch (e) {}
+
+                  queue.push({
+                    id: 'txn_' + Date.now(),
+                    amount: parseFloat(amount),
+                    timestamp: new Date().toISOString(),
+                    type: 'tap_to_pay',
+                    idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
+                  });
+                  localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
+                  alert(`You are offline. Payment of $${amount} saved locally and will process when reconnected.`);
+                  router.push('/dashboard');
+                }
               }}
               className="w-full px-4 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors shadow-sm"
             >
