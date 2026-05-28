@@ -7,10 +7,25 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
+    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+
+    // Fill in the business name
+    const nameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+    await nameInput.fill('Maya Bakery');
+    await page.locator('button:has-text("Next")').click();
+
+    // Wait for what you sell
+    await expect(page.locator('text="What do you sell?"')).toBeVisible();
 
     // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
+    await descriptionInput.fill('Cakes');
+    await page.locator('button:has-text("Next")').click();
+
+    // Wait for location
+    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+    await locationInput.fill('NY');
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
