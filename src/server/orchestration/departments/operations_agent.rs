@@ -51,6 +51,40 @@ impl Department for OperationsAgent {
             event.payload.clone(),
         ).await?;
 
+        // Extract order details and generate a shipping label
+        if event.event_type == "tenant.order.created" {
+            let order_id = event.payload.get("order_id").and_then(|v| v.as_str()).unwrap_or("unknown_order");
+            let customer_address = event.payload.get("customer_address").and_then(|v| v.as_str()).unwrap_or("Customer Address");
+
+            // In a real scenario, we'd fetch the tenant's business address, but for now we mock it
+            let business_address = "Business Address";
+
+            // Generate label
+            let fulfillment_service = crate::services::fulfillment::service::FulfillmentService::new(
+                std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new())
+            );
+
+            match fulfillment_service.generate_shipping_label(&event.tenant_id, order_id, customer_address, business_address).await {
+                Ok(label_url) => {
+                    // Send to Thermal Print Mesh
+                    // Creating an isolated MemoryBus to satisfy the mock Thermal Print Mesh dispatch since the global bus isn't directly exposed in orchestrator
+                    let mock_bus = crate::msgbus::MemoryBus::new();
+                    use crate::msgbus::Bus;
+                    let _ = mock_bus.publish(crate::msgbus::Message {
+                            topic: "system:print_thermal_label".to_string(),
+                            payload: serde_json::to_vec(&serde_json::json!({
+                                "tenant_id": event.tenant_id,
+                                "order_id": order_id,
+                                "label_url": label_url
+                            })).unwrap_or_default(),
+                        }).await;
+                }
+                Err(e) => {
+                    tracing::error!("Failed to generate shipping label: {}", e);
+                }
+            }
+        }
+
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),

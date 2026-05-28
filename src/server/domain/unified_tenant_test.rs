@@ -171,6 +171,7 @@ mod tests {
             customer_id: "c1".to_string(),
             status: None,
             total_amount: None,
+            customer_address: None,
             created_at: None,
             updated_at: None,
         };

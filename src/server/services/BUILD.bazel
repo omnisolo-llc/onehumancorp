@@ -34,6 +34,8 @@ rust_library(
         "//src/server/services/docs:mod.rs",
         "//src/server/services/docs:service.rs",
         "//src/server/services/docs:service_tests.rs",
+        "//src/server/services/fulfillment:mod.rs",
+        "//src/server/services/fulfillment:service.rs",
         "//src/server/services/growth:experiments.rs",
         "//src/server/services/growth:invites.rs",
         "//src/server/services/growth:mod.rs",

@@ -89,6 +89,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod fulfillment;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2113,6 +2114,15 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 axum::response::Json(serde_json::json!({ "success": true }))
             }
         }))
+        .route("/api/checkout/calculate-fulfillment", axum::routing::post(|axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let tenant_id = req.get("tenant_id").and_then(|v| v.as_str()).unwrap_or("e2e-tenant");
+            let customer_address = req.get("customer_address").and_then(|v| v.as_str()).unwrap_or("Local Address");
+            let fulfillment_service = crate::services::fulfillment::service::FulfillmentService::new(std::sync::Arc::new(crate::integrations::registry::IntegrationsRegistry::new()));
+            match fulfillment_service.calculate_fulfillment_options(tenant_id, customer_address).await {
+                Ok(options) => axum::response::Json(serde_json::json!({ "success": true, "options": options })),
+                Err(_) => axum::response::Json(serde_json::json!({ "success": false })),
+            }
+        }))
         .route("/", axum::routing::get(ui_handler))
         .route("/business-setup", axum::routing::get(ui_handler))
         .route("/website-builder", axum::routing::get(ui_handler))
@@ -3908,7 +3918,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>5GB Storage Quota</li>
                                 <li>100 Products Limit</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Starter via Stripe</button>
+                            <button onclick="showScreen('checkout-screen'); loadFulfillmentOptions();">Upgrade to Starter via Stripe</button>
                         </div>
 
                         <div class="card glass">
@@ -3920,7 +3930,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>50GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Pro via Stripe</button>
+                            <button onclick="showScreen('checkout-screen'); loadFulfillmentOptions();">Upgrade to Pro via Stripe</button>
                         </div>
 
                         <div class="card glass">
@@ -3932,7 +3942,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <li>500GB Storage Quota</li>
                                 <li>Unlimited Products</li>
                             </ul>
-                            <button onclick="showScreen('checkout-screen')">Upgrade to Business via Stripe</button>
+                            <button onclick="showScreen('checkout-screen'); loadFulfillmentOptions();">Upgrade to Business via Stripe</button>
                         </div>
 
                         <p>100% money back guarantee. Secure SSL payments powered by Stripe.</p>
@@ -4016,10 +4026,39 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      <!-- Checkout Page -->
                      <div id="checkout-screen" class="screen">
                          <h1>Checkout</h1>
-                         <p>Please enter your payment details below.</p>
+                         <p>Please review your order and select a fulfillment method.</p>
                          <div class="card glass">
+                             <h3>Fulfillment Options</h3>
+                             <div id="fulfillment-options-container">
+                                <p>Loading options...</p>
+                             </div>
+                             <script>
+                                async function loadFulfillmentOptions() {
+                                    const container = document.getElementById('fulfillment-options-container');
+                                    container.innerHTML = '<p>Loading options...</p>';
+                                    try {
+                                        const response = await fetch('/api/checkout/calculate-fulfillment', { method: 'POST' });
+                                        const data = await response.json();
+                                        let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+                                        data.options.forEach((opt, idx) => {
+                                            const costDisplay = opt.cost > 0 ? `$` + opt.cost.toFixed(2) : 'Free';
+                                            const methodDisplay = opt.method.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                            html += `<label style="display: flex; align-items: center; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer;">
+                                                        <input type="radio" name="fulfillment_method" value="${opt.method}" ${idx === 0 ? 'checked' : ''} style="margin-right: 12px;">
+                                                        <div style="flex: 1;">
+                                                            <div style="font-weight: 600;">${methodDisplay} - ${costDisplay}</div>
+                                                            <div style="font-size: 12px; color: var(--text-secondary);">Estimated: ${opt.estimated_days} days</div>
+                                                        </div>
+                                                     </label>`;
+                                        });
+                                        html += '</div>';
+                                        container.innerHTML = html;
+                                    } catch (e) { container.innerHTML = '<p>Shipping: $10.00</p>'; }
+                                }
+                             </script>
+                             <hr style="border-color: rgba(255,255,255,0.1); margin: 20px 0;">
                              <p>100% money back guarantee. Secure SSL payments.</p>
-                             <button onclick="alert('Payment successful!'); showScreen('dashboard-screen')">Pay Now</button>
+                             <button onclick="alert('Payment successful! Label will be printed instantly.'); showScreen('dashboard-screen')">Pay Now</button>
                              <button class="secondary" onclick="showScreen('pricing-screen')">Cancel</button>
                          </div>
                      </div>

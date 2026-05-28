@@ -27,6 +27,7 @@ pub struct Tenant {
     pub name: String,
     pub industry: Option<String>,
     pub tier: Option<String>,
+    pub business_address: Option<String>,
     pub owner_email: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -93,6 +94,40 @@ pub struct Order {
     pub customer_id: String,
     pub status: Option<String>,
     pub total_amount: Option<f64>,
+    pub customer_address: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FulfillmentProfile {
+    pub id: String,
+    pub tenant_id: String,
+    pub enable_local_delivery: Option<bool>,
+    pub enable_pickup: Option<bool>,
+    pub enable_shipping: Option<bool>,
+    pub local_delivery_radius_miles: Option<f64>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct FulfillmentMethod {
+    pub id: String,
+    pub order_id: String,
+    pub r#type: Option<String>,
+    pub cost: Option<f64>,
+    pub provider: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct ShippingLabel {
+    pub id: String,
+    pub order_id: String,
+    pub tracking_number: Option<String>,
+    pub label_url: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
 }
