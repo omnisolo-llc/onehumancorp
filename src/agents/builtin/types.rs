@@ -176,3 +176,17 @@ pub enum HumanInLoopSpectrum {
     /// Triggers human intervention only under specific conditions (e.g. low confidence or specific triggers, falling back to Autonomous otherwise).
     Supervisory,
 }
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub enum PermissionArchitecture {
+    /// Permissive (auto-approve): All tools are auto-approved unless explicitly in high-risk.
+    Permissive,
+    /// Restrictive (require approval): All mutating tools require explicit approval.
+    Restrictive,
+}
+
+impl Default for PermissionArchitecture {
+    fn default() -> Self {
+        Self::Permissive
+    }
+}

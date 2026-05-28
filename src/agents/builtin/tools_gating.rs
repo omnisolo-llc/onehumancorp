@@ -27,7 +27,8 @@ impl ToolGater {
             || cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnAll
             || (!is_read_only && cfg.hil_spectrum == HumanInLoopSpectrum::ApprovalOnMutate)
             || cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit
-            || (cfg.hil_spectrum == HumanInLoopSpectrum::Supervisory && cfg.confidence_threshold < 0.5); // Fallback: requires approval if low confidence
+            || (cfg.hil_spectrum == HumanInLoopSpectrum::Supervisory && cfg.confidence_threshold < 0.5) // Fallback: requires approval if low confidence
+            || (cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive && !is_read_only); // C.5 Permission Architecture
 
         if requires_approval {
             let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id);
@@ -50,6 +51,31 @@ impl ToolGater {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn test_permission_architecture() {
+        use crate::types::PermissionArchitecture;
+        let mut cfg = AgentRunConfig::default();
+        cfg.project_trusted = true;
+
+        let tc_mutating = create_tool_call("1", "mutating_tool");
+        let tc_readonly = create_tool_call("2", "readonly_tool");
+
+        // Permissive (auto-approve)
+        cfg.permission_architecture = PermissionArchitecture::Permissive;
+        assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
+        assert!(ToolGater::check_gating(&tc_readonly, true, &cfg).is_ok());
+
+        // Restrictive (require approval for mutating tools)
+        cfg.permission_architecture = PermissionArchitecture::Restrictive;
+        assert!(ToolGater::check_gating(&tc_readonly, true, &cfg).is_ok());
+        let res_mutate = ToolGater::check_gating(&tc_mutating, false, &cfg);
+        assert!(matches!(res_mutate, Err(ToolError::UserFixable(_))));
+
+        // Restrictive + Approved
+        cfg.approved_tool_calls.push("1".to_string());
+        assert!(ToolGater::check_gating(&tc_mutating, false, &cfg).is_ok());
+    }
+
     use super::*;
 
     fn create_tool_call(id: &str, name: &str) -> ToolCall {
