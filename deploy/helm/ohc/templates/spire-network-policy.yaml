@@ -1,0 +1,47 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: spire-agent
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-backend
+      ports:
+        - protocol: TCP
+          port: 8081
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-core
+      ports:
+        - protocol: TCP
+          port: 8081
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app: spire-server
+      ports:
+        - protocol: TCP
+          port: 8081
+{{- end }}
