@@ -47,7 +47,7 @@ impl MigrationWorker {
                     tx.commit().await?;
 
                     // Real "Scout" extraction logic
-                    let mut products_imported = 0;
+
 
                     match self.extract_data(&source_url).await {
                         Ok(extracted_products) => {
@@ -57,7 +57,7 @@ impl MigrationWorker {
                                 return Ok(());
                             }
 
-                            products_imported = extracted_products.len();
+                            let products_imported = extracted_products.len();
 
                             for prod in extracted_products {
                                 let product_id = Uuid::new_v4().to_string();
@@ -128,11 +128,11 @@ impl MigrationWorker {
                         .execute(pool)
                         .await?;
 
-                    let mut products_imported = 0;
+
 
                     match self.extract_data(&source_url).await {
                         Ok(extracted_products) => {
-                            products_imported = extracted_products.len();
+                            let products_imported = extracted_products.len();
 
                             for prod in extracted_products {
                                 let product_id = Uuid::new_v4().to_string();
