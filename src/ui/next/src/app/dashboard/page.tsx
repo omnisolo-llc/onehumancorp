@@ -367,6 +367,9 @@ export default function Dashboard() {
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
+             <Link href="/changelog" className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors shadow-sm">
+               <WithTooltip id="changelog-nav-tooltip" defaultText="See what&#39;s new in the latest OneHumanCorp updates.">What&#39;s New</WithTooltip>
+             </Link>
              <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-600">
                  AC
              </div>
@@ -563,17 +566,17 @@ export default function Dashboard() {
 
                 {/* Metric Card */}
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div>
+                    <WithTooltip id="todays-sales-tooltip" defaultText="Your total sales for today. Check back often to track your progress."><div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Today's Sales</div></WithTooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>${todaysSales.toFixed(2)}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div>
+                    <WithTooltip id="active-customers-tooltip" defaultText="The number of unique people who have bought from you in the last 30 days."><div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Active Customers</div></WithTooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{activeCustomers}</div>
                 </div>
 
                 <div className="ohc-hybrid-panel p-5 shadow-sm flex flex-col justify-between">
-                    <div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div>
+                    <WithTooltip id="pending-orders-tooltip" defaultText="Orders that have been paid for but not yet shipped or completed."><div className="text-sm font-medium mb-1" style={{ color: '#86868B' }}>Pending Orders</div></WithTooltip>
                     <div className="text-3xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>{pendingOrders}</div>
                 </div>
 
@@ -584,12 +587,14 @@ export default function Dashboard() {
          <section className="mb-6">
             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated AI Review Requests
-                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                            New Growth Loop
-                        </span>
-                    </h3>
+                    <WithTooltip id="review-requests-tooltip" defaultText="Turn on AI tools to automatically ask recent buyers for feedback to boost your store's rating.">
+                        <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
+                            Automated AI Review Requests
+                            <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                                New Growth Loop
+                            </span>
+                        </h3>
+                    </WithTooltip>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
                     You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
@@ -992,12 +997,14 @@ export default function Dashboard() {
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 relative">
                         <div className="flex gap-2 items-center">
                             <input type="text" readOnly value={`<iframe src="https://ohc.app/api/v1/growth/storefront/embed" ...></iframe>`} className="flex-1 bg-transparent text-sm text-gray-500 outline-none p-1 font-mono border rounded" />
-                            <button
-                                onClick={() => setShowEmbedModal(true)}
-                                className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Get Widget
-                            </button>
+                            <WithTooltip id="embed-widget-tooltip" defaultText="Click here to copy the code snippet needed to show your store on your other website.">
+                                <button
+                                    onClick={() => setShowEmbedModal(true)}
+                                    className="px-3 py-1.5 bg-gray-900 text-white rounded-md text-xs font-semibold hover:bg-black transition-colors shadow-sm whitespace-nowrap"
+                                >
+                                    Get Widget
+                                </button>
+                            </WithTooltip>
                         </div>
                     </div>
                 </div>
@@ -1140,14 +1147,16 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-indigo-600">Active</span>
                     </div>
                 </div>
-                <button
-                    name="Referrals"
-                    onClick={openReferralModal}
-                    disabled={isGeneratingReferral}
-                    className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
-                >
-                    <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
-                </button>
+                <WithTooltip id="refer-earn-tooltip" defaultText="Earn free store credits by inviting other business owners to try OneHumanCorp.">
+                    <button
+                        name="Referrals"
+                        onClick={openReferralModal}
+                        disabled={isGeneratingReferral}
+                        className={`flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm ${isGeneratingReferral ? "opacity-75 cursor-not-allowed" : ""}`}
+                    >
+                        <span>{isGeneratingReferral ? "Generating..." : "🎁 Invite a Business & Earn $50"}</span>
+                    </button>
+                </WithTooltip>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -1714,7 +1723,7 @@ export default function Dashboard() {
               style={{ color: '#1DA1F2', border: '2px solid #1DA1F2', background: 'white' }}
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-              Share on X to get 7 Days Free
+              <WithTooltip id="share-on-x-tooltip" defaultText="Post about your new store on X (formerly Twitter) to get one week of premium features for free.">Share on X to get 7 Days Free</WithTooltip>
             </button>
           </div>
         </div>
