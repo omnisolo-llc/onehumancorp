@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
-use crate::orchestration::locks::DistributedLock;
+use super::locks::DistributedLock;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
