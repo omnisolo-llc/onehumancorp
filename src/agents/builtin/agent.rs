@@ -147,6 +147,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
     pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
+    pub manually_edited_tool_arguments: std::collections::HashMap<String, serde_json::Value>,
 }
 
 impl Default for AgentRunConfig {
@@ -204,6 +205,7 @@ enable_llmcompiler_plan_and_execute: false,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
+            manually_edited_tool_arguments: std::collections::HashMap::new(),
         }
     }
 }
@@ -505,7 +507,7 @@ impl Agent {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
                     let res = match gating_res {
-                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries, &cfg_clone).await,
                         Err(e) => Err(e),
                     };
                     (tc_clone, res)
@@ -566,7 +568,7 @@ impl Agent {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
                 let res = match gating_res {
-                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries, cfg).await,
                     Err(e) => Err(e),
                 };
 
@@ -1311,7 +1313,7 @@ impl Agent {
             read_only_futures.push(async move {
                 let mut retry_count = 0;
                 loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries, cfg).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1388,7 +1390,7 @@ impl Agent {
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
+                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries, cfg).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -2236,12 +2238,13 @@ impl Agent {
                     tool_name = %tc_clone.name,
                 );
 
+                let final_cfg_clone = final_cfg.clone();
                 read_only_futures.push(async move {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg_clone.max_retries, &final_cfg_clone).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -2449,7 +2452,7 @@ impl Agent {
                         agent_id = %final_cfg.agent_id,
                         tool_name = %tc.name,
                     );
-                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
+                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries, &final_cfg).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2878,6 +2881,7 @@ impl Agent {
         session_tools: &[Tool],
         current_messages: &[Message],
         max_retries: usize,
+        cfg: &AgentRunConfig,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
@@ -2885,6 +2889,11 @@ impl Agent {
             .ok_or_else(|| ToolError::LlmRecoverable(format!("unknown tool: {}", tc.name)))?;
 
         let mut args = tc.arguments.clone();
+
+        if let Some(edited_args) = cfg.manually_edited_tool_arguments.get(&tc.id) {
+            args = edited_args.clone();
+        }
+
         if tc.name == "spawn_subagent" {
             if let Some(obj) = args.as_object_mut() {
                 if obj.get("mode").and_then(|v| v.as_str()) == Some("fork") {
@@ -2910,6 +2919,102 @@ impl Agent {
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn test_human_in_loop_collaborative_edit() {
+        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolError};
+        use crate::tools::Tool;
+        use crate::agent::AgentEvent;
+
+        struct MockLlmClientCollab {
+            call_count: tokio::sync::Mutex<usize>,
+        }
+
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for MockLlmClientCollab {
+            async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                let mut count = self.call_count.lock().await;
+                *count += 1;
+                if *count == 1 || *count == 2 {
+                    Ok(ChatResponse {
+                        message: Message {
+                            role: Role::Assistant,
+                            content: String::new(),
+                            tool_calls: vec![ToolCall {
+                                id: "collab_call_1".to_string(),
+                                name: "echo_tool".to_string(),
+                                arguments: serde_json::json!({"text": "original"}),
+                            }],
+                            tool_results: vec![],
+                            response_id: Some("id1".to_string()),
+                            previous_response_id: None,
+                        },
+                        usage: Default::default(),
+                        stop_reason: "tool_calls".to_string(),
+                        response_id: Some("id1".to_string()),
+                    })
+                } else {
+                    Ok(ChatResponse {
+                        message: Message::assistant("Final Answer"),
+                        usage: Default::default(),
+                        stop_reason: "stop".to_string(),
+                        response_id: Some("id2".to_string()),
+                    })
+                }
+            }
+        }
+
+        struct EchoTool;
+        #[async_trait::async_trait]
+        impl ohc_builtin_agent_tools::ToolExecutor for EchoTool {
+            async fn execute(&self, args: serde_json::Value) -> Result<String, ToolError> {
+                let text = args["text"].as_str().unwrap_or("");
+                Ok(format!("Echoed: {}", text))
+            }
+        }
+
+        let tools = vec![
+            Tool {
+                name: "echo_tool".to_string(),
+                description: "echos text".to_string(),
+                is_read_only: false,
+                parameters: serde_json::json!({}),
+                execute: std::sync::Arc::new(EchoTool),
+            }
+        ];
+
+        let llm = std::sync::Arc::new(MockLlmClientCollab { call_count: tokio::sync::Mutex::new(0) });
+        let agent = Agent::new(llm, tools);
+
+        let mut cfg = AgentRunConfig::default();
+        cfg.hil_spectrum = crate::types::HumanInLoopSpectrum::CollaborativeEdit;
+        cfg.project_trusted = true;
+
+        let mut events = vec![];
+        let mut on_event = |e| { events.push(e); };
+
+        let result1 = agent.run(&cfg, "Start", &mut on_event).await;
+        assert!(result1.is_err());
+
+        cfg.manually_edited_tool_arguments.insert("collab_call_1".to_string(), serde_json::json!({"text": "edited"}));
+
+        let result2 = agent.run(&cfg, "Start", &mut on_event).await;
+        assert!(result2.is_ok());
+
+        let tool_event = events.iter().find_map(|e| {
+            if let AgentEvent::ToolCall { args_json, result, .. } = e {
+                Some((args_json.clone(), result.clone()))
+            } else {
+                None
+            }
+        });
+
+        assert!(tool_event.is_some());
+        let (args_json, result) = tool_event.unwrap();
+        assert!(args_json.contains("original"));
+        assert!(result.contains("Echoed: edited"));
+    }
+
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct MyStructuredOutput {
         city: String,
@@ -3278,7 +3383,8 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[], 2).await;
+        let config = AgentRunConfig::default();
+        let res = agent.execute_tool(&valid_call, &tools, &[], 2, &config).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -3287,7 +3393,8 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[], 2).await;
+        let config = AgentRunConfig::default();
+        let res = agent.execute_tool(&missing_call, &tools, &[], 2, &config).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -3302,7 +3409,8 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2).await;
+        let config = AgentRunConfig::default();
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2, &config).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {

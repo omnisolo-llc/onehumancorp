@@ -31,7 +31,7 @@ impl ToolGater {
             || (cfg.permission_architecture == crate::types::PermissionArchitecture::Restrictive && !is_read_only); // C.5 Permission Architecture
 
         if requires_approval {
-            let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id);
+            let is_approved = cfg.approved_tool_calls.contains(&tc.id) || cfg.manually_approved_tool_calls.contains(&tc.id) || cfg.manually_edited_tool_arguments.contains_key(&tc.id);
             if !is_approved {
                 if cfg.hil_spectrum == HumanInLoopSpectrum::CollaborativeEdit {
                     return Err(ToolError::UserFixable(format!("Collaborative Edit required for tool '{}'. Please review and edit the tool payload to proceed.", tc.name)));

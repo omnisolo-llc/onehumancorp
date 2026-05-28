@@ -605,7 +605,8 @@ impl AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
-        }
+            manually_edited_tool_arguments: std::collections::HashMap::new(),
+            }
     }
 
     fn workspace_path() -> PathBuf {
@@ -1026,6 +1027,7 @@ impl AgentService for AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+            manually_edited_tool_arguments: std::collections::HashMap::new(),
             };
 
             let observation_store = Arc::new(dashmap::DashMap::new());
