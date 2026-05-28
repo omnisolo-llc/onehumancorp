@@ -1,0 +1,13 @@
+load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+
+rust_library(
+    name = "capital",
+    srcs = glob(["*.rs"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src/server:server_lib",
+        "@crates//:serde",
+        "@crates//:uuid",
+        "@crates//:sqlx",
+    ],
+)

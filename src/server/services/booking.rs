@@ -213,6 +213,15 @@ impl BookingService {
             });
         }
 
+        // Trigger Capital Engine Check
+        let tenant_id_clone = booking.tenant_id.clone();
+        tokio::spawn(async move {
+            let pool = crate::db::get_pool();
+            let capital_service = crate::services::capital::service::CapitalService::new(pool);
+            // Simulating a booking amount trigger check (e.g. 500.0)
+            let _ = capital_service.trigger_offer_for_booking(&tenant_id_clone, 500.0).await;
+        });
+
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, product_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)"
