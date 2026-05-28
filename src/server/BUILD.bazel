@@ -436,135 +436,59 @@ rust_binary(
     ],
 )
 
-# Keep these groups stable and non-overlapping. Rust libtest filters are plain
-# substring matches, not module globs, so broad filters like "hub::", "tasks::",
-# or "workers" can accidentally select tests from another module path such as
-# "orchestration::hub::" or "orchestration::tasks::". When adding a server_lib
-# unit test here:
-# - Prefer a precise module prefix that cannot appear under another group.
-# - Use full test-name filters for ambiguous short module names.
-# - Preserve exhaustive coverage and zero duplicates; validate with
-#   `bazel test --test_arg=--list //src/server:server_lib_unit_test` and check
-#   the produced bazel-testlogs.
-SERVER_LIB_TEST_GROUPS = {
-    "agents": [
-        "api::agents::",
-        "sip::tests::test_delegate_mission_tc2_agents_md",
-        "workers::",
-    ],
-    "core": [
-        "analytics::",
-        "benchmarks::",
-        "chaos::",
-        "db::",
-        "scheduler::",
-        "services::org::",
-        "settings::",
-        "autodream_pipeline::pipeline::tests::test_chunk_content",
-        "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
-        "autodream_pipeline::pipeline::tests::test_process_closed_tasks_with_cache",
-        "test_cache_invalidation",
-        "test_check_health",
-        "test_delegate_sub_task_invalid_sender",
-        "test_delegate_sub_task_valid_hierarchy",
-        "test_fork_agent",
-        "pipeline::tests::test_handle_spec_approved",
-        "pipeline::tests::test_parse_spec_approved",
-        "test_publish_mesh_event",
-        "test_sanitize_hub_event_redaction",
-        "tasks::tests::test_approve_task",
-        "tasks::tests::test_approve_task_integration",
-        "tasks::tests::test_claim_task",
-        "tasks::tests::test_complete_task",
-        "tasks::tests::test_create_and_get_task",
-        "tasks::tests::test_fail_task",
-        "tasks::tests::test_get_pending_approvals",
-        "tasks::tests::test_reject_task",
-        "tasks::tests::test_review_task",
-        "ultraplan::",
-    ],
-    "domain": [
-        "builder::",
-        "domain::",
-    ],
-    "interop": [
-        "interop::",
-        "msgbus::",
-    ],
-    "orchestration_departments": [
-        "orchestration::departments::",
-    ],
-    "orchestration_mesh": [
-        "orchestration::handoff::",
-        "orchestration::hub::",
-        "orchestration::locks_test::",
-        "orchestration::mesh::",
-    ],
-    "orchestration_misc": [
-        "orchestration::health::",
-        "orchestration::hybrid_sync::",
-        "orchestration::local_sandbox::",
-        "services::sync::service::tests::test_hybrid_sync_missions_empty",
-    ],
-    "orchestration_state": [
-        "orchestration::orchestration_test::",
-        "orchestration::state::",
-        "orchestration::statemachine",
-    ],
-    "orchestration_tasks": [
-        "orchestration::shared_tasks_test::",
-        "orchestration::tasks::",
-    ],
-    "services": [
-        "api::growth::",
-        "services::sync::service::tests::test_power_sync",
-    ],
-    "tools": [
-        "tools::config_sync::",
-        "tools::hybridfsmcp::",
-    ],
-}
-
-SERVER_LIB_SPLIT_TESTS = [
-    "server_lib_%s_unit_test" % group
-    for group in SERVER_LIB_TEST_GROUPS
+SERVER_LIB_TEST_FILTERS = [
+    "agents",
+    "analytics",
+    "api::growth",
+    "benchmarks",
+    "builder",
+    "chaos",
+    "db",
+    "domain",
+    "hub",
+    "hybrid_sync",
+    "interop",
+    "msgbus",
+    "orchestration",
+    "pipeline",
+    "power_sync",
+    "powersync",
+    "scheduler",
+    "settings",
+    "tasks",
+    "tools::config_sync",
+    "tools::hybridfsmcp",
+    "ultraplan",
+    "workers",
 ]
 
-[
-    rust_test(
-        name = "server_lib_%s_unit_test" % group,
-        size = "large",
-        args = filters,
-        crate = ":server_lib",
-        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-        edition = "2024",
-        env = {
-            "RUST_TEST_THREADS": "1",
-        },
-        proc_macro_deps = [
-            "@crates//:async-trait",
-        ],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
-        deps = [
-            "@crates//:serde_json",
-            "@crates//:sqlx",
-            "@crates//:temp-env",
-            "@crates//:tempfile",
-            "@crates//:tokio",
-            "@crates//:tokio-tungstenite",
-            "@crates//:tree-sitter-bash",
-            "@crates//:walkdir",
-        ],
-    )
-    for group, filters in SERVER_LIB_TEST_GROUPS.items()
-]
-
-test_suite(
+rust_test(
     name = "server_lib_unit_test",
-    tests = SERVER_LIB_SPLIT_TESTS,
+    size = "enormous",
+    args = SERVER_LIB_TEST_FILTERS,
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:tree-sitter-bash",
+        "@crates//:walkdir",
+    ],
 )
 
 # Filtered module targets are useful for local debugging, but each one builds a
