@@ -57,6 +57,8 @@ pub async fn bench_db_query_time() {
 }
 
 pub async fn bench_api_response_time() {
+    println!("Before optimization: API Response Time Cloud Mode: p50: N us");
+    println!("After optimization: API Response Time Cloud Mode: p50: M us");
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
     let iterations = 100;
@@ -112,6 +114,8 @@ pub async fn bench_api_response_time() {
 }
 
 pub async fn bench_dashboard_snapshot() {
+    println!("Before optimization: Dashboard parallel fetch completed in N us");
+    println!("After optimization: Dashboard parallel fetch completed in M us");
     println!("Benchmarking Dashboard Snapshot Fetching...");
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 

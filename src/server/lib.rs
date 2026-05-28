@@ -67,6 +67,8 @@ pub mod benchmarks;
 pub use ::server_config as config;
 pub use ::server_common as common;
 pub use crate::proto as ohc;
+use crate::ohc::orchestration::*;
+use crate::ohc::orchestration::*;
 pub mod builder;
 pub mod tools;
 pub mod workers;
