@@ -381,13 +381,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_record_sync_latency_called() {
-        // Just verify that the service compiles successfully when calling record_sync_latency metrics.
-        // True validation happens during integration tests where a mock PgPool is observed for insertion events.
-        assert!(true);
-    }
-
-    #[tokio::test]
     async fn test_power_sync_pull() {
         // Will fail to fetch if table doesn't exist, so this will only pass with empty payload if error happens, but we actually check the fallback.
         // In the mock we expect error from the query, but we don't have migrations applied.
