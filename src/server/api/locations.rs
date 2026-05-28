@@ -8,7 +8,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use crate::auth::orchestration::AuthenticatedUser;
+use crate::auth::User;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -29,11 +29,11 @@ pub struct CreateLocationResponse {
 
 pub async fn handle_create_location(
     State(state): State<AppState>,
-    Extension(user): Extension<AuthenticatedUser>,
+    Extension(user): Extension<User>,
     Json(payload): Json<CreateLocationRequest>,
 ) -> impl IntoResponse {
     let node_id = Uuid::new_v4().to_string();
-    let tenant_id = user.organization_id.clone();
+    let tenant_id = user.organization_id.clone().unwrap_or_else(|| "default_tenant".to_string());
     let loc_type = payload.r#type;
     let geo = payload.geo_location;
 
@@ -42,7 +42,7 @@ pub async fn handle_create_location(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query!("SELECT set_config('app.current_tenant', $1, true)", tenant_id)
+    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
@@ -117,17 +117,17 @@ pub struct GetInventoryResponse {
 
 pub async fn handle_get_inventory(
     State(state): State<AppState>,
-    Extension(user): Extension<AuthenticatedUser>,
+    Extension(user): Extension<User>,
     Query(query): Query<GetInventoryQuery>,
 ) -> impl IntoResponse {
-    let tenant_id = user.organization_id.clone();
+    let tenant_id = user.organization_id.clone().unwrap_or_else(|| "default_tenant".to_string());
 
     let mut tx = match state.pool.begin().await {
         Ok(tx) => tx,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query!("SELECT set_config('app.current_tenant', $1, true)", tenant_id)
+    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
@@ -196,10 +196,10 @@ pub struct SyncOfflineSalesResponse {
 
 pub async fn handle_sync_offline_sales(
     State(state): State<AppState>,
-    Extension(user): Extension<AuthenticatedUser>,
+    Extension(user): Extension<User>,
     Json(payload): Json<SyncOfflineSalesRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = user.organization_id.clone();
+    let tenant_id = user.organization_id.clone().unwrap_or_else(|| "default_tenant".to_string());
     let node_id = payload.node_id;
 
     let mut tx = match state.pool.begin().await {
@@ -207,7 +207,7 @@ pub async fn handle_sync_offline_sales(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "Failed to begin transaction").into_response(),
     };
 
-    if let Err(_) = sqlx::query!("SELECT set_config('app.current_tenant', $1, true)", tenant_id)
+    if let Err(_) = sqlx::query("SELECT set_config('app.current_tenant', $1, true)").bind(&tenant_id)
         .execute(&mut *tx)
         .await
     {
