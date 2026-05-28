@@ -1497,13 +1497,16 @@ impl HubService for MyHubService {
         self.hub.register_agent(sub_agent);
         
         // Prompt injection checks
-        if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
-            return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
+        {
+            static INJECTION_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+            let re = INJECTION_RE.get_or_init(|| regex::Regex::new(r"(?i)(SYSTEM:|\[INST\]|<\|im_start\|>|Ignore previous instructions)").unwrap());
+            if re.is_match(&req.instruction) {
+                return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
+            }
+            if re.is_match(&req.parent_thread_id) {
+                return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
+            }
         }
-        if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
-            return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
-        }
-        
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
