@@ -23,15 +23,29 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
-    act(() => { render(<OnboardingWizard />); });
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ step: 1 })
+    });
 
-    expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    render(<OnboardingWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Tell us about your business")).toBeInTheDocument();
+    });
+
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).toBeDisabled();
   });
 
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock initial load success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ step: 1 })
+    });
 
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
@@ -50,7 +64,11 @@ describe('OnboardingWizard', () => {
       json: async () => ({ message: "Success!" })
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    render(<OnboardingWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/I bake custom vegan cakes/i)).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
@@ -95,12 +113,22 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
+    // Mock initial load success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ step: 1 })
+    });
+
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    render(<OnboardingWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/I bake custom vegan cakes/i)).toBeInTheDocument();
+    });
 
     const input = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(input, 'I am a baker in NY');
@@ -124,12 +152,22 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
+    // Mock initial load success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ step: 3 })
+    });
+
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    render(<OnboardingWizard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Launch Store/i })).toBeInTheDocument();
+    });
 
     const launchButton = screen.getByRole('button', { name: /Launch Store/i });
 
@@ -150,7 +188,13 @@ describe('OnboardingWizard', () => {
       startResult: { message: "Your business has been successfully launched." }
     });
 
-    act(() => { render(<OnboardingWizard />); });
+    // Mock initial load success
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ step: 5 })
+    });
+
+    render(<OnboardingWizard />);
 
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();

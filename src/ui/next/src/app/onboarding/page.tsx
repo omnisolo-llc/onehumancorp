@@ -181,7 +181,14 @@ export default function OnboardingWizard() {
     }
   };
 
-  if (!isLoaded) return null;
+  // Wait to render the loaded state or show a loading skeleton
+  if (!isLoaded) return (
+    <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative flex items-center justify-center">
+         <div className="w-8 h-8 border-4 border-[#0066FF] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
@@ -210,7 +217,7 @@ export default function OnboardingWizard() {
                   value={businessDescription}
                   onChange={(e) => setBusinessDescription(e.target.value)}
                   placeholder="e.g. I bake custom vegan cakes in Portland, OR..."
-                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                  className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                 />
               </div>
 
@@ -243,7 +250,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -252,7 +259,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div>
@@ -261,7 +268,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -271,7 +278,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                    <div>
@@ -279,8 +286,8 @@ export default function OnboardingWizard() {
                       <input
                         type="text"
                         value={firstProductPrice}
-                        onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        onChange={(e) => { const val = e.target.value; if (/^\d*\.?\d*$/.test(val)) setFirstProductPrice(val); }}
+                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7]"
                       />
                    </div>
                 </div>
@@ -316,7 +323,7 @@ export default function OnboardingWizard() {
                       <div
                         key={template}
                         onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 mac-glass-container hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
                       >
                         <div className="font-semibold">{template}</div>
                       </div>
@@ -366,7 +373,7 @@ export default function OnboardingWizard() {
               </p>
 
               <div className="w-full space-y-3 mt-auto">
-                <div className="p-3 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[8px] border border-white/50 dark:border-white/10 flex flex-col items-center mb-6">
+                <div className="p-3 mac-glass-container rounded-[8px] flex flex-col items-center mb-6">
                    <p className="text-xs text-gray-500 dark:text-[#A1A1A6] uppercase font-bold tracking-wider mb-2">Your Shareable Link</p>
                    <div className="flex items-center gap-2">
                       <span className="text-[#0066FF] font-semibold">my-business.ohc.store</span>
@@ -381,7 +388,7 @@ export default function OnboardingWizard() {
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="block w-full mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] p-4 rounded-[8px] font-bold shadow-sm hover:opacity-80 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront
                 </a>
