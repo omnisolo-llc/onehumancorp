@@ -22,7 +22,7 @@ pub trait StateManager: Send + Sync {
         reason: Option<&str>,
     ) -> Result<(), String>;
 
-    async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String>;
+    async fn pull_available_tasks(&self, limit: i64, tenant_id: &str) -> Result<Vec<SharedTask>, String>;
 }
 
 pub struct MeshLockGuard {

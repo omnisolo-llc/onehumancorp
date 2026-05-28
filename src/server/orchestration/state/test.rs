@@ -158,7 +158,7 @@ async fn test_dag_workflow() {
     }
 
     // Since pull_available_tasks now updates them to IN_PROGRESS directly
-    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    let tasks = state_manager.pull_available_tasks(10, "system").await.unwrap();
 
     // Parent should be available, child should not because parent is PENDING (now IN_PROGRESS)
     assert!(tasks.iter().any(|t| t.id == parent_id));
@@ -168,7 +168,7 @@ async fn test_dag_workflow() {
     state_manager.transition_state(&parent_id, "system", "IN_PROGRESS", "COMPLETED", Some("agent_1"), None).await.unwrap();
 
     // Now child should be available
-    let tasks_after = state_manager.pull_available_tasks(10).await.unwrap();
+    let tasks_after = state_manager.pull_available_tasks(10, "system").await.unwrap();
     assert!(tasks_after.iter().any(|t| t.id == child_id));
 }
 
@@ -241,7 +241,7 @@ async fn test_degradation_fallback_standalone() {
     // Testing the fail-safe behavior via mocked timeout
     // The acquire_lock on the MockMesh sleeps for 61s, which exceeds the 60s timeout.
     let start = std::time::Instant::now();
-    let tasks = state_manager.pull_available_tasks(10).await.unwrap();
+    let tasks = state_manager.pull_available_tasks(10, "system").await.unwrap();
     let elapsed = start.elapsed();
 
     // It should have timed out around 60 seconds, not the full 61 seconds

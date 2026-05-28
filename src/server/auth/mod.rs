@@ -643,8 +643,12 @@ impl AuthService for AuthServiceServerImpl {
 
                     if let Ok(claims) = self.store.validate_token(token).await {
                         // Securely revoke the session
+                        let token_org = claims.organization_id.clone().unwrap_or_default();
+                        if ::server_config::get().multitenant && token_org != auth_info.org_id {
+                            return Err(Status::permission_denied("Token organization mismatch"));
+                        }
                         let exp = chrono::DateTime::from_timestamp(claims.exp, 0).unwrap_or_else(chrono::Utc::now);
-                        self.store.revoke_token(claims.jti, exp, &auth_info.org_id).await;
+                        self.store.revoke_token(claims.jti, exp, &token_org).await;
                     }
                 }
             }

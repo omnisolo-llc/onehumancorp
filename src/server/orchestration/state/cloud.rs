@@ -23,7 +23,7 @@ impl CloudStateManager {
     async fn transition_state_inner(
         &self,
         task_id: &str,
-        _tenant_id: &str,
+        tenant_id: &str,
         from_state: &str,
         to_state: &str,
         agent_id: Option<&str>,
@@ -31,7 +31,7 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -56,7 +56,7 @@ impl CloudStateManager {
             ));
         }
 
-        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
+        let tenant_id_db: String = row.try_get("tenant_id").unwrap_or_else(|_| tenant_id.to_string());
 
         // DAG validation
         if to_state == "EXECUTING" {
@@ -149,8 +149,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         }
     }
 
-    async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
-        let lock_key = "ohc:lock:system:pull_tasks".to_string();
+    async fn pull_available_tasks(&self, limit: i64, tenant_id: &str) -> Result<Vec<SharedTask>, String> {
+        let lock_key = format!("ohc:lock:{}:pull_tasks", tenant_id);
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
         let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_future).await {
             Ok(Ok(guard)) => guard,
@@ -162,7 +162,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         };
 
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let rows_future = sqlx::query(
             r#"
@@ -198,8 +198,8 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
             let id: uuid::Uuid = row.get("id");
             let id_str = id.to_string();
 
-            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
-            task_ids.push((id_str.clone(), tenant_id.clone()));
+            let row_tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| tenant_id.to_string());
+            task_ids.push((id_str.clone(), row_tenant_id.clone()));
 
             let deps_val: serde_json::Value = row.try_get("dependencies").unwrap_or_else(|_| serde_json::json!([]));
             let dependencies: Vec<String> = serde_json::from_value(deps_val).unwrap_or_default();
@@ -209,7 +209,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
 
             tasks.push(SharedTask {
                 id: id_str,
-                organization_id: tenant_id,
+                organization_id: row_tenant_id,
                 mission_id: row.get("mission_id"),
                 parent_plan_id: row.try_get("parent_plan_id").unwrap_or_default(),
                 dependencies,

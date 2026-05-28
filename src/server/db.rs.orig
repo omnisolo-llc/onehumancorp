@@ -762,7 +762,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT st.id, st.payload FROM swarm_tasks st JOIN agent_missions am ON st.mission_id = am.id WHERE st.status = 'COMPLETED' AND st.auto_dreamed = FALSE AND am.tenant_id = ? LIMIT 25").bind(tenant_id).fetch_all(sqlite_pool).await?;
+                let swarm_rows = sqlx::query("SELECT id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = "system".to_string(); // Fallback tenant_id
@@ -781,7 +781,7 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT st.id::text, st.payload::text FROM swarm_tasks st JOIN agent_missions am ON st.mission_id = am.id WHERE st.status = 'COMPLETED' AND st.auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                let swarm_rows = sqlx::query("SELECT id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
@@ -890,7 +890,7 @@ pub async fn insert_autodream_memory(
     }
 
 
-    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
@@ -925,7 +925,7 @@ pub async fn insert_autodream_memory(
         Ok(())
     }
 
-    pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64, tenant_id: &str) -> Result<u64, Box<dyn std::error::Error>> {
+    pub async fn cleanup_stagnant_missions(&self, timeout_secs: i64) -> Result<u64, Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
@@ -951,7 +951,7 @@ pub async fn insert_autodream_memory(
         Ok(affected)
     }
 
-    pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str, tenant_id: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn mark_task_auto_dreamed(&self, task_id: &str, table: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {

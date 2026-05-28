@@ -102,7 +102,7 @@ impl AutoDreamWorker {
     async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
-        let stale_sessions = db.delete_stale_sessions(threshold).await?;
+        let stale_sessions = db.delete_stale_sessions(threshold, "system").await?;
         
         let client = crate::minimax::LocalLLMClient::new();
 
@@ -129,7 +129,7 @@ impl AutoDreamWorker {
                  }
              };
 
-             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding).await?;
+             db.inject_truth(&format!("session-summary-{}", id), &summary, &embedding, "system").await?;
 
              db.insert_autodream_memory(&format!("session-summary-{}", id), "system", "system_agent", &id, &summary, &embedding, "SESSION_SUMMARY").await?;
 
@@ -176,7 +176,7 @@ impl AutoDreamWorker {
     }
 
     async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
-        let tasks = db.get_completed_tasks().await?;
+        let tasks = db.get_completed_tasks("system").await?;
 
         for (id, org_id, payload, table) in tasks {
             let client = crate::minimax::LocalLLMClient::new();
@@ -211,7 +211,7 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&id, &table).await?;
+            db.mark_task_auto_dreamed(&id, &table, "system").await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
         }

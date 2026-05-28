@@ -253,7 +253,7 @@ mod chaos_tests {
         let state_manager = CloudStateManager::new(db.clone(), mesh);
 
         let start = std::time::Instant::now();
-        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+        let tasks = state_manager.pull_available_tasks(10, "system").await.unwrap_or(vec![]);
         let elapsed = start.elapsed();
 
         // The pull_available_tasks for cloud has a 60-second timeout on the lock or DB
@@ -303,7 +303,7 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = CloudStateManager::new(db, mesh);
 
-        let tasks = state_manager.pull_available_tasks(10).await;
+        let tasks = state_manager.pull_available_tasks(10, "system").await;
 
         // On connection failure (not timeout), it correctly propagates the error.
         assert!(tasks.is_err());
@@ -345,7 +345,7 @@ mod chaos_tests {
         let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
         let state_manager = crate::orchestration::state::standalone::StandaloneStateManager::new(db.clone(), mesh);
 
-        let tasks = state_manager.pull_available_tasks(10).await;
+        let tasks = state_manager.pull_available_tasks(10, "system").await;
 
         // With SleepingMockMesh, this triggers the inner lock timeout.
         assert!(tasks.is_ok());
