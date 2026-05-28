@@ -23,6 +23,8 @@ export OHC_SOURCE_MODE=standalone
 export TOKIO_WORKER_THREADS=2
 export MALLOC_ARENA_MAX=2
 export RAYON_NUM_THREADS=4
+export GOMEMLIMIT=256MiB
+export GOGC=50
 export OHC_STANDALONE=true
 export LOG_FORMAT="json"
 export LOG_LEVEL="info"
@@ -51,12 +53,27 @@ if [ -z "$OHC_SQLITE_KEY" ]; then
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
+# Local Sovereignty Guardrail: Prevent background PII/telemetry exports unless enabled
+if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+  export HTTP_PROXY="http://127.0.0.1:9999"
+  export HTTPS_PROXY="http://127.0.0.1:9999"
+  export NO_PROXY="localhost,127.0.0.1"
+fi
+
+# Local Sovereignty Guardrail: Prevent background PII/telemetry exports unless enabled
+# We set dummy proxy for all outgoing traffic except localhost to enforce complete airgap
+if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+  export HTTP_PROXY="http://127.0.0.1:9999"
+  export HTTPS_PROXY="http://127.0.0.1:9999"
+  export NO_PROXY="localhost,127.0.0.1,::1"
+fi
+
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Build optimized binaries instead of running through Bazelisk repeatedly
 echo -e "${DIM}  Compiling optimized binaries...${RESET}"
 # Optimize caching
-npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/app:app > /dev/null 2>&1
+npx @bazel/bazelisk build -c opt --disk_cache=~/.cache/bazel-disk-cache //src/server:server //src/ui/tauri:app --//src/ui/tauri:build_tauri=true > /dev/null 2>&1
 echo -e "  ${GREEN}✓ Binaries compiled${RESET}"
 
 # Prune stale memory files (older than 60 mins) periodically to prevent unbounded growth
@@ -81,7 +98,7 @@ until curl -s http://localhost:8080/health > /dev/null 2>&1; do
   sleep 1
 done
 
-./bazel-bin/src/app/app > /dev/null 2>&1 &
+./bazel-bin/src/ui/tauri/app > /dev/null 2>&1 &
 APP_PID=$!
 echo -e "  ${GREEN}✓ UI Desktop app started with PID $APP_PID${RESET}"
 

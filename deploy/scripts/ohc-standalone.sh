@@ -53,6 +53,14 @@ if [ -z "$OHC_SQLITE_KEY" ]; then
   export OHC_SQLITE_KEY="$(cat "$KEY_FILE")"
 fi
 
+# Local Sovereignty Guardrail: Prevent background PII/telemetry exports unless enabled
+# We set dummy proxy for all outgoing traffic except localhost to enforce complete airgap
+if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
+  export HTTP_PROXY="http://127.0.0.1:9999"
+  export HTTPS_PROXY="http://127.0.0.1:9999"
+  export NO_PROXY="localhost,127.0.0.1,::1"
+fi
+
 echo -e "${DIM}[2/2] Launching internal standalone architecture...${RESET}"
 
 # Build optimized binaries instead of running through Bazelisk repeatedly

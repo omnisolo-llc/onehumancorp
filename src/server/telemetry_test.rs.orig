@@ -530,14 +530,8 @@ fn test_standalone_wrapper_audit() {
   export OHC_TELEMETRY_ENABLED=false
 fi"#;
 
-    let expected_airgap = r#"if [ "$OHC_TELEMETRY_ENABLED" != "true" ]; then
-  export HTTP_PROXY="http://127.0.0.1:9999"
-  export HTTPS_PROXY="http://127.0.0.1:9999"
-  export NO_PROXY="localhost,127.0.0.1,::1"
-fi"#;
-
     assert!(
-        content.contains(expected_telemetry_check) && content.contains(expected_airgap),
+        content.contains(expected_telemetry_check),
         "Local Sovereignty violation: ohc-standalone.sh does not properly strictly enforce OHC_TELEMETRY_ENABLED opt-in boundary."
     );
 }

@@ -1,0 +1,8 @@
+--- .miser_precommit
++++ .miser_precommit
+@@ -1 +1,4 @@
+-echo "OK"
++#!/bin/bash
++# Run PII leakage check
++./scripts/check_pii_leakage.sh
++

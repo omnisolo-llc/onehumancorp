@@ -1,1 +1,2 @@
-Pre-commit completed
+#!/bin/bash
+./scripts/check_pii_leakage.sh
