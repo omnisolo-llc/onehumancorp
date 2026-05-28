@@ -80,7 +80,7 @@ pub struct ProductGenerateRequest {
     pub image_url: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ProductGenerateResponse {
     pub title: String,
     pub description: String,
