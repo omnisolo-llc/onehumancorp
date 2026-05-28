@@ -375,6 +375,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS tenants (
                         tenant_id TEXT PRIMARY KEY,
+                        ai_budget INTEGER DEFAULT 100,
                         owner_id TEXT,
                         business_name TEXT,
                         tier TEXT,

@@ -17,7 +17,7 @@ export type ApprovalRequest = {
 const DEPARTMENTS = [
   { id: 'operations', name: 'The Manager' },
   { id: 'marketing', name: 'The Promoter' },
-  { id: 'sales', name: 'The Salesperson' },
+  { id: 'sales', name: 'The Closer' },
   { id: 'customer_success', name: 'The Ambassador' },
   { id: 'finance', name: 'The Accountant' },
   { id: 'legal', name: 'The Protector' },
