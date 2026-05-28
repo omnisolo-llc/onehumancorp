@@ -1184,3 +1184,69 @@ mod additional_tests {
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }
+
+// KAIROS Orchestrator Metrics
+static KAIROS_TRANSITIONS_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
+static KAIROS_TRANSITION_DURATION: OnceLock<Histogram<f64>> = OnceLock::new();
+static KAIROS_QUEUE_DEPTH: OnceLock<opentelemetry::metrics::ObservableGauge<i64>> = OnceLock::new();
+static LAST_QUEUE_DEPTH: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
+
+pub fn get_kairos_transitions_total() -> &'static UpDownCounter<i64> {
+    KAIROS_TRANSITIONS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.kairos");
+        meter
+            .i64_up_down_counter("ohc_kairos_transitions_total")
+            .with_description("Total state machine transitions")
+            .build()
+    })
+}
+
+pub fn get_kairos_transition_duration() -> &'static Histogram<f64> {
+    KAIROS_TRANSITION_DURATION.get_or_init(|| {
+        let meter = global::meter("ohc.kairos");
+        meter
+            .f64_histogram("ohc_kairos_transition_duration_seconds")
+            .with_description("Duration of state machine transitions")
+            .build()
+    })
+}
+
+pub fn init_kairos_queue_depth() {
+    KAIROS_QUEUE_DEPTH.get_or_init(|| {
+        let meter = global::meter("ohc.kairos");
+        meter
+            .i64_observable_gauge("ohc_agent_task_queue_depth")
+            .with_description("Agent task queue depth")
+            .with_callback(|observer| {
+                let depth = LAST_QUEUE_DEPTH.load(std::sync::atomic::Ordering::Relaxed);
+                observer.observe(depth, &[]);
+            })
+            .build()
+    });
+}
+
+pub fn record_kairos_transition(mode: &str, status: &str) {
+    let gauge = get_kairos_transitions_total();
+    gauge.add(
+        1,
+        &[
+            opentelemetry::KeyValue::new("mode", mode.to_string()),
+            opentelemetry::KeyValue::new("status", status.to_string()),
+        ],
+    );
+}
+
+pub fn record_kairos_transition_duration(mode: &str, status: &str, duration_seconds: f64) {
+    let histogram = get_kairos_transition_duration();
+    histogram.record(
+        duration_seconds,
+        &[
+            opentelemetry::KeyValue::new("mode", mode.to_string()),
+            opentelemetry::KeyValue::new("status", status.to_string()),
+        ],
+    );
+}
+
+pub fn record_kairos_queue_depth(_mode: &str, depth: i64) {
+    LAST_QUEUE_DEPTH.store(depth, std::sync::atomic::Ordering::Relaxed);
+}

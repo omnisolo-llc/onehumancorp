@@ -96,6 +96,7 @@ impl KairosOrchestrator {
 
                 if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "COMPLETED");
                     sqlx::query(
                         "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES ($1, $2, 'EXECUTING', 'COMPLETED', $3, $4)"
                     )
@@ -154,6 +155,7 @@ impl KairosOrchestrator {
 
                 if result.rows_affected() > 0 {
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "COMPLETED");
                     sqlx::query(
                         "INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at) VALUES (?, ?, 'EXECUTING', 'COMPLETED', ?, ?)"
                     )
@@ -227,6 +229,7 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "IN_PROGRESS");
                     sqlx::query(
                         r#"
                         INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
@@ -295,6 +298,7 @@ impl KairosOrchestrator {
                     };
 
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "IN_PROGRESS");
                     sqlx::query(
                         r#"
                         INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
@@ -505,6 +509,7 @@ impl KairosOrchestrator {
                     .map_err(KairosError::Database)?;
 
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "IN_PROGRESS");
                     sqlx::query(
                         r#"
                         INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)
@@ -590,6 +595,7 @@ impl KairosOrchestrator {
                     };
 
                     let trans_id = uuid::Uuid::new_v4().to_string();
+                    crate::telemetry::record_kairos_transition(crate::telemetry::get_deployment_mode(), "IN_PROGRESS");
                     sqlx::query(
                         r#"
                         INSERT INTO state_machine_transitions (id, task_id, from_state, to_state, agent_id, transitioned_at)

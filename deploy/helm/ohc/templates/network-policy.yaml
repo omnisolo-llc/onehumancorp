@@ -339,3 +339,91 @@ spec:
         - protocol: TCP
           port: 53
 {{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-default-deny-all
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spiffe-csi-driver
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server
+---
+# Zero Trust SPIRE Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-trust
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server
+---
+# Zero Trust SPIRE Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-trust
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      spiffe.io/spire-managed-identity: "true"
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: spire
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: spire-server

@@ -23,6 +23,7 @@ impl HybridSyncDaemon {
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
             }
+            measure_queue_depth(&self.sqlite_pool).await;
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -96,6 +97,7 @@ impl HybridSyncDaemon {
             .await?;
 
         let mut success_count = 0;
+        let _mode = ::server_telemetry::get_deployment_mode();
 
         for row in rows {
             let id: String = row.get("memory_id");
@@ -127,6 +129,7 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
+                    let _ = ::server_telemetry::record_autodream_sync_error(&self.pg_pool, 1.0, &e.to_string()).await;
                     continue;
                 }
             };
@@ -145,6 +148,7 @@ impl HybridSyncDaemon {
                     .execute(&self.sqlite_pool)
                     .await;
                 let _ = tx.rollback().await;
+                let _ = ::server_telemetry::record_autodream_sync_error(&self.pg_pool, 1.0, &e.to_string()).await;
                 continue;
             }
 
@@ -165,6 +169,7 @@ impl HybridSyncDaemon {
                             .bind(&id)
                             .execute(&self.sqlite_pool)
                             .await;
+                        let _ = ::server_telemetry::record_autodream_sync_error(&self.pg_pool, 1.0, &e.to_string()).await;
                         continue;
                     }
 
@@ -188,6 +193,7 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await;
+                    let _ = ::server_telemetry::record_autodream_sync_error(&self.pg_pool, 1.0, &e.to_string()).await;
                 }
             }
         }
@@ -199,5 +205,13 @@ impl HybridSyncDaemon {
         }
 
         Ok(())
+    }
+}
+
+pub async fn measure_queue_depth(sqlite_pool: &sqlx::SqlitePool) {
+    if let Ok(row) = sqlx::query("SELECT COUNT(*) as count FROM swarm_tasks WHERE status = 'PENDING'").fetch_one(sqlite_pool).await {
+        use sqlx::Row;
+        let count: i64 = row.get("count");
+        crate::telemetry::record_kairos_queue_depth(crate::telemetry::get_deployment_mode(), count);
     }
 }
