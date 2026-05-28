@@ -224,8 +224,6 @@ SERVER_RS_SRCS = [
     "//src/server/tools/hybridfsmcp:mod.rs",
     "//src/server/tools/hybridfsmcp:provider.rs",
     "//src/server/tools/hybridfsmcp:server.rs",
-    "sync/mod.rs",
-    "sync/service.rs",
     "//src/server/tools/hybridfsmcp:tests.rs",
     "//src/server/tools/kvmcp:mod.rs",
     "//src/server/tools/kvmcp:server.rs",
@@ -438,127 +436,59 @@ rust_binary(
     ],
 )
 
-# Keep the remaining root server_lib groups stable and non-overlapping. Rust
-# libtest filters are plain substring matches, not module globs, so broad
-# filters like "hub::" or "tasks::" can accidentally select tests from another
-# module path such as "orchestration::hub::" or "orchestration::tasks::". When
-# adding a root server_lib unit test here:
-# - Prefer a precise module prefix that cannot appear under another group.
-# - Use full test-name filters for ambiguous short module names.
-# - Prefer a package wrapper test below when the test belongs to a subpackage.
-SERVER_LIB_TEST_GROUPS = {
-    "agents": [
-        "sip::tests::test_delegate_mission_tc2_agents_md",
-    ],
-    "core": [
-        "analytics::",
-        "benchmarks::",
-        "chaos::",
-        "db::",
-        "scheduler::",
-        "settings::",
-        "autodream_pipeline::pipeline::tests::test_chunk_content",
-        "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
-        "autodream_pipeline::pipeline::tests::test_process_closed_tasks_with_cache",
-        "test_cache_invalidation",
-        "test_check_health",
-        "test_delegate_sub_task_invalid_sender",
-        "test_delegate_sub_task_valid_hierarchy",
-        "test_fork_agent",
-        "pipeline::tests::test_handle_spec_approved",
-        "pipeline::tests::test_parse_spec_approved",
-        "test_publish_mesh_event",
-        "test_sanitize_hub_event_redaction",
-        "tasks::tests::test_approve_task",
-        "tasks::tests::test_approve_task_integration",
-        "tasks::tests::test_claim_task",
-        "tasks::tests::test_complete_task",
-        "tasks::tests::test_create_and_get_task",
-        "tasks::tests::test_fail_task",
-        "tasks::tests::test_get_pending_approvals",
-        "tasks::tests::test_reject_task",
-        "tasks::tests::test_review_task",
-        "ultraplan::",
-    ],
-    "interop": [
-        "msgbus::",
-    ],
-}
-
-SERVER_LIB_SUBCRATE_TESTS = [
-    "//src/server/agents:server_agents_unit_test",
-    "//src/server/api:server_api_unit_test",
-    "//src/server/auth:server_auth_unit_test",
-    "//src/server/autodream:server_autodream_unit_test",
-    "//src/server/autodream_pipeline:server_autodream_pipeline_unit_test",
-    "//src/server/benchmarks:server_benchmarks_unit_test",
-    "//src/server/builder:server_builder_unit_test",
-    "//src/server/config:server_config_unit_test",
-    "//src/server/domain:server_domain_unit_test",
-    "//src/server/integrations:server_integrations_unit_test",
-    "//src/server/integrations/alipay:server_integrations_alipay_unit_test",
-    "//src/server/integrations/mercadopago:server_integrations_mercadopago_unit_test",
-    "//src/server/integrations/meta:server_integrations_meta_unit_test",
-    "//src/server/integrations/stripe:server_integrations_stripe_unit_test",
-    "//src/server/interop:server_interop_unit_test",
-    "//src/server/oidc:server_oidc_unit_test",
-    "//src/server/orchestration:server_orchestration_unit_test",
-    "//src/server/services:server_services_unit_test",
-    "//src/server/services/billing:server_services_billing_unit_test",
-    "//src/server/services/chat:server_services_chat_unit_test",
-    "//src/server/services/dashboard:server_services_dashboard_unit_test",
-    "//src/server/services/growth:server_services_growth_unit_test",
-    "//src/server/services/mcp:server_services_mcp_unit_test",
-    "//src/server/services/onboarding:server_services_onboarding_unit_test",
-    "//src/server/services/org:server_services_org_unit_test",
-    "//src/server/services/sync:server_services_sync_unit_test",
-    "//src/server/storage:server_storage_unit_test",
-    "//src/server/telemetry:server_telemetry_unit_test",
-    "//src/server/tools:server_tools_unit_test",
-    "//src/server/utils:server_utils_unit_test",
-    "//src/server/workers:server_workers_unit_test",
+SERVER_LIB_TEST_FILTERS = [
+    "agents",
+    "analytics",
+    "api::growth",
+    "benchmarks",
+    "builder",
+    "chaos",
+    "db",
+    "domain",
+    "hub",
+    "hybrid_sync",
+    "interop",
+    "msgbus",
+    "orchestration",
+    "pipeline",
+    "power_sync",
+    "powersync",
+    "scheduler",
+    "settings",
+    "tasks",
+    "tools::config_sync",
+    "tools::hybridfsmcp",
+    "ultraplan",
+    "workers",
 ]
 
-SERVER_LIB_SPLIT_TESTS = [
-    "server_lib_%s_unit_test" % group
-    for group in SERVER_LIB_TEST_GROUPS
-] + SERVER_LIB_SUBCRATE_TESTS
-
-[
-    rust_test(
-        name = "server_lib_%s_unit_test" % group,
-        size = "large",
-        args = filters,
-        crate = ":server_lib",
-        data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
-        edition = "2024",
-        env = {
-            "RUST_TEST_THREADS": "1",
-        },
-        proc_macro_deps = [
-            "@crates//:async-trait",
-        ],
-        target_compatible_with = select({
-            "@platforms//os:linux": [],
-            "//conditions:default": ["@platforms//:incompatible"],
-        }),
-        deps = [
-            "@crates//:serde_json",
-            "@crates//:sqlx",
-            "@crates//:temp-env",
-            "@crates//:tempfile",
-            "@crates//:tokio",
-            "@crates//:tokio-tungstenite",
-            "@crates//:tree-sitter-bash",
-            "@crates//:walkdir",
-        ],
-    )
-    for group, filters in SERVER_LIB_TEST_GROUPS.items()
-]
-
-test_suite(
+rust_test(
     name = "server_lib_unit_test",
-    tests = SERVER_LIB_SPLIT_TESTS,
+    size = "enormous",
+    args = SERVER_LIB_TEST_FILTERS,
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:tree-sitter-bash",
+        "@crates//:walkdir",
+    ],
 )
 
 # Filtered module targets are useful for local debugging, but each one builds a

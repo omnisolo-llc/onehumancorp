@@ -24,26 +24,6 @@ static HUMAN_INTERACTION: OnceLock<Counter<u64>> = OnceLock::new();
 static MEETING_EVENT: OnceLock<Counter<u64>> = OnceLock::new();
 static SWARM_TASK_COMPLETED: OnceLock<Counter<u64>> = OnceLock::new();
 static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
-static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
-static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
-
-pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
-    POSTGRES_LOCK_CONTENTION.get_or_init(|| {
-        let meter = global::meter("ohc.telemetry");
-        meter.u64_counter("ohc_postgres_lock_contention_total")
-            .with_description("Total number of PostgreSQL lock contentions")
-            .build()
-    })
-}
-
-pub fn get_llm_network_latency_histogram() -> &'static Histogram<f64> {
-    LLM_NETWORK_LATENCY.get_or_init(|| {
-        let meter = global::meter("ohc.telemetry");
-        meter.f64_histogram("ohc_llm_network_latency_seconds")
-            .with_description("Latency to external LLM providers in seconds")
-            .build()
-    })
-}
 
 pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
     MCP_TOOL_CALLS_TOTAL.get_or_init(|| {
@@ -246,26 +226,6 @@ pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
         &[
             opentelemetry::KeyValue::new("tool_name", tool_name.to_string()),
             opentelemetry::KeyValue::new("status", status.to_string()),
-        ]
-    );
-}
-
-pub fn record_postgres_lock_contention(operation: &str) {
-    let counter = get_postgres_lock_contention_counter();
-    counter.add(
-        1,
-        &[
-            opentelemetry::KeyValue::new("operation", operation.to_string()),
-        ]
-    );
-}
-
-pub fn record_llm_network_latency(model: &str, latency: f64) {
-    let histogram = get_llm_network_latency_histogram();
-    histogram.record(
-        latency,
-        &[
-            opentelemetry::KeyValue::new("model", model.to_string()),
         ]
     );
 }
@@ -895,9 +855,10 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("credential")
         || k.contains("email")
         || k.contains("phone")
+        || (k.contains("user_id") && !k.contains("tenant_id") && !k.contains("organization_id"))
         || k.contains("ssn")
         || k.contains("address")
-        || k.contains("name")
+        || (k.contains("name") && !k.contains("metric_name"))
         || k.contains("pii")
         || k.contains("jwt")
         || k.contains("bearer")
@@ -1141,7 +1102,7 @@ mod additional_tests {
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.
-        let mode = crate::get_deployment_mode();
+        let mode = ::server_telemetry::get_deployment_mode();
         assert!(mode == "Standalone" || mode == "Cloud");
     }
 }

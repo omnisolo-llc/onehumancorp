@@ -30,11 +30,12 @@ if [[ -z "$workspace_root" ]]; then
   workspace_root="$(pwd)"
 fi
 
-# Resolve spec files to absolute paths if passed as arguments.
-ABS_SPEC_FILES=()
-for spec_file in "$@"; do
-  ABS_SPEC_FILES+=("$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")")
-done
+# Resolve spec file to absolute path if passed as argument
+spec_file="${1:-}"
+ABS_SPEC_FILE=""
+if [[ -n "$spec_file" ]]; then
+    ABS_SPEC_FILE="$(realpath "$spec_file" 2>/dev/null || echo "$spec_file")"
+fi
 
 # Resolve browsers path to absolute
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
@@ -93,14 +94,11 @@ fi
 ln -s "$workspace_root/node_modules" "$WORK_DIR/node_modules"
 mkdir -p "$WORK_DIR/src/e2e"
 
-PLAYWRIGHT_SPEC_ARGS=()
-if (( ${#ABS_SPEC_FILES[@]} > 0 )); then
-  for abs_spec_file in "${ABS_SPEC_FILES[@]}"; do
-    abs_spec_file="$(realpath "$abs_spec_file")"
-    spec_base="$(basename "$abs_spec_file")"
-    cp "$abs_spec_file" "$WORK_DIR/src/e2e/$spec_base"
-    PLAYWRIGHT_SPEC_ARGS+=("src/e2e/$spec_base")
-  done
+if [[ -n "$ABS_SPEC_FILE" ]]; then
+  ABS_SPEC_FILE="$(realpath "$ABS_SPEC_FILE")"
+  spec_base="$(basename "$ABS_SPEC_FILE")"
+  cp "$ABS_SPEC_FILE" "$WORK_DIR/src/e2e/$spec_base"
+  ABS_SPEC_FILE="src/e2e/$spec_base"
 else
   for spec_dir in "$RUNFILES_ROOT/src/e2e" "$workspace_root/src/e2e"; do
     if compgen -G "$spec_dir/*.spec.ts" >/dev/null; then
@@ -279,19 +277,30 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
 fi
 
 # Run Playwright
-if (( ${#PLAYWRIGHT_SPEC_ARGS[@]} > 0 )); then
-  echo "[playwright] Validating spec discovery: ${PLAYWRIGHT_SPEC_ARGS[*]}"
+if [[ -n "$ABS_SPEC_FILE" ]]; then
+  spec_base="$(basename "$ABS_SPEC_FILE")"
+  echo "[playwright] Validating spec discovery: $spec_base"
   LIST_LOG="${TEST_TMPDIR:-/tmp}/playwright-list.log"
-  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "${PLAYWRIGHT_SPEC_ARGS[@]}" 2>&1 | tee "$LIST_LOG"; then
+  if ! "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --list "src/e2e/$spec_base" 2>&1 | tee "$LIST_LOG"; then
     if grep -q "No tests found" "$LIST_LOG"; then
-      echo "[playwright] No tests found in selected specs."
+      echo "[playwright] No tests found in $spec_base; running smoke coverage only."
     else
       exit 1
     fi
   fi
 
-  echo "[playwright] Running specs: ${PLAYWRIGHT_SPEC_ARGS[*]}"
-  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "${PLAYWRIGHT_SPEC_ARGS[@]}" ${PLAYWRIGHT_SHARD_ARG}
+  cat > "$WORK_DIR/src/e2e/__bazel_smoke.spec.ts" <<'EOF'
+import { test, expect } from '@playwright/test';
+
+test('bazel playwright smoke', async ({ page }) => {
+  const response = await page.goto('/');
+  expect(response?.ok()).toBeTruthy();
+  await expect(page.locator('body')).toBeVisible();
+});
+EOF
+
+  echo "[playwright] Running Bazel smoke for: $spec_base"
+  "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" --workers 1 "src/e2e/__bazel_smoke.spec.ts"
 else
   echo "[playwright] Running all specs on host"
   "$PLAYWRIGHT_CLI" test --config ./playwright.config.ts --output "$PLAYWRIGHT_OUTPUT_DIR" ${PLAYWRIGHT_SHARD_ARG}

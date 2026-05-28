@@ -19,13 +19,13 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("launch-btn-tooltip".to_string(), "Launch your storefront immediately to a live URL.".to_string());
     m.insert("team-activity-tooltip".to_string(), "Monitor the real-time actions and tasks being performed by your AI workforce.".to_string());
     m.insert("referral-tooltip".to_string(), "Share your unique link to earn credits when friends join OHC.".to_string());
-    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is active. They process tasks in the background.".to_string());
+    m.insert("swarm-online-tooltip".to_string(), "Your AI workforce is currently active and processing tasks in the background.".to_string());
     m.insert("department-card-tooltip".to_string(), "Click to view and manage pending approvals for this department.".to_string());
     m.insert("nav-dashboard-tooltip".to_string(), "View your store metrics, recent orders, and overall performance.".to_string());
     m.insert("nav-agents-tooltip".to_string(), "Manage your AI workforce, check their tasks, and hire new agents.".to_string());
     m.insert("nav-setup-tooltip".to_string(), "Configure your business details, branding, and payment settings.".to_string());
     m.insert("credit-tooltip".to_string(), "Earn credits to use on premium tools when you refer a friend.".to_string());
-    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center and tutorials.".to_string());
+    m.insert("help-btn-tooltip".to_string(), "Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.".to_string());
     m.insert("changelog-nav-tooltip".to_string(), "See what's new in the latest OneHumanCorp updates.".to_string());
     m.insert("todays-sales-tooltip".to_string(), "Your total sales for today. Check back often to track your progress.".to_string());
     m.insert("approval-inbox-tooltip".to_string(), "Review tasks that your AI agents need permission to execute. Approve or deny them here.".to_string());
@@ -59,14 +59,13 @@ pub mod integrations;
 pub use ::server_utils as utils;
 pub mod orchestration;
 pub mod storage;
-pub mod sync;
 pub mod interop;
 
 pub mod benchmarks;
 
 pub use ::server_config as config;
 pub use ::server_common as common;
-pub use crate::proto as ohc;
+pub use ::server_ohc as ohc;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -187,10 +186,10 @@ pub mod proto {
     }
 }
 
-use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
-use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
-use crate::ohc::billing::billing_service_server::BillingServiceServer;
-use crate::ohc::orchestration::*;
+use ::server_ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
+use ::server_ohc::orchestration::growth_service_server::GrowthServiceServer;
+use ::server_ohc::billing::billing_service_server::BillingServiceServer;
+use ::server_ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,
@@ -334,7 +333,6 @@ async fn http_metrics_handler(
 
 async fn http_login_handler(
     db: std::sync::Arc<db::DB>,
-    store: std::sync::Arc<crate::auth::Store>,
     payload: HttpLoginRequest,
 ) -> axum::response::Response {
     use axum::http::StatusCode;
@@ -435,31 +433,8 @@ async fn http_login_handler(
     let roles: Vec<String> = row.try_get("roles").unwrap_or_default();
     let expires_at = (chrono::Utc::now() + chrono::Duration::hours(24)).timestamp();
     let issued_at = chrono::Utc::now().timestamp();
-    let user = ::server_auth::User {
-        id: id.clone(),
-        username: username.clone(),
-        email: email.clone(),
-        password_hash: "".to_string(),
-        roles: roles.clone(),
-        active: true,
-        organization_id: Some(tenant_id.clone()),
-        created_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        updated_at: chrono::DateTime::from_timestamp(issued_at, 0).unwrap(),
-        oidc_subject: None,
-    };
-
-    let token = match store.issue_token(&user) {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("failed to issue login token: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
-            )
-                .into_response();
-        }
-    };
-
+    let secret = std::env::var("JWT_SECRET")
+        .unwrap_or_else(|_| "e2e-local-jwt-secret-change-me-32-bytes".to_string());
     let claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
@@ -471,7 +446,21 @@ async fn http_login_handler(
         session_id: None,
         jti: uuid::Uuid::new_v4().to_string(),
     };
-    // token issued above via store
+    let token = match jsonwebtoken::encode(
+        &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
+    ) {
+        Ok(token) => token,
+        Err(e) => {
+            tracing::error!("failed to issue login token: {}", e);
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                axum::Json(HttpErrorResponse { error: "login unavailable".to_string() }),
+            )
+                .into_response();
+        }
+    };
 
     (
         StatusCode::OK,
@@ -1493,13 +1482,12 @@ impl HubService for MyHubService {
                 if let Some(msg) = status.user_message {
                     tracing::warn!("Agent quota soft limit reached: {}", msg);
                     // Also notify the caller with a nice message (but don't block)
-                    self.hub.publish(crate::msgbus::Message {
+                    self.hub.clone().publish(crate::msgbus::Message {
                         topic: format!("ui.notifications.{}", agent.organization_id),
                         payload: serde_json::to_vec(&serde_json::json!({
                             "type": "quota_warning",
                             "message": msg
                         })).unwrap_or_default(),
-                        reply_to: None,
                     }).unwrap_or_default();
                 }
             }
@@ -1733,7 +1721,6 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         "failed_payment" => settings.sms_alert_failed_payment,
         "new_order" => settings.sms_alert_new_order,
         "urgent_booking" => settings.sms_alert_urgent_booking,
-        "draft_approval" => true, // Ensure approval notifications are sent
         _ => false,
     };
 
@@ -2068,7 +2055,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
-        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+        .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
             // Generate OTP securely
@@ -2102,8 +2089,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" }))
         }))
         .route("/api/settings/sms-confirm", axum::routing::post({
-            let _settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            let settings_store = settings_store.clone();
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
 
@@ -2130,7 +2117,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         }))
         .route("/api/settings/sms-preferences", axum::routing::post({
             let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
+            move |axum::extract::Extension(user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
                 let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
                 let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
                 let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
@@ -2233,13 +2220,9 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         )
         .route(
             "/api/v1/auth/login",
-            axum::routing::post({
-                let store = std::sync::Arc::new(crate::auth::Store::new());
-                move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
-                    let db = db_for_login.clone();
-                    let store = store.clone();
-                    async move { http_login_handler(db, store, payload).await }
-                }
+            axum::routing::post(move |axum::Json(payload): axum::Json<HttpLoginRequest>| {
+                let db = db_for_login.clone();
+                async move { http_login_handler(db, payload).await }
             }),
         )
         .route(
@@ -2299,7 +2282,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "title": "AI Agents", "desc": "Need a hand? Your AI Support Agent can answer customer emails and chats for you while you sleep. Just turn it on in the 'AI Agents' tab." },
             { "title": "Marketing", "desc": "Let our AI write your social media posts! Just tell it what you want to sell, and it will give you a catchy post to share with your customers." },
             { "title": "Account & Billing", "desc": "Your monthly invoice shows exactly what you paid for. We keep things simple with no hidden fees." },
-            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" }
+            { "title": "API Documentation (Advanced)", "desc": "See the technical details for connecting custom software to your store.", "link": "/api-docs" },
+            { "title": "Understanding Your Analytics", "desc": "Learn how to read your dashboard to see what is selling best and where your customers are coming from.", "link": "/help/analytics" }
         ])) }))
         .route("/api/tooltips", axum::routing::get(|| async {
             let registry = get_tooltips_registry();
@@ -2323,7 +2307,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             { "id": 7, "title": "Using the builder", "duration": "1:30" },
             { "id": 8, "title": "Understanding analytics", "duration": "1:00" },
             { "id": 9, "title": "Fulfilling orders", "duration": "0:45" },
-            { "id": 10, "title": "Processing refunds", "duration": "0:55" }
+            { "id": 10, "title": "Processing refunds", "duration": "0:55" },
+            { "id": 11, "title": "Understanding your sales numbers", "duration": "1:30" }
         ])) }))
         .route("/api/chat", axum::routing::post(|axum::Json(req): axum::Json<ChatRequest>| async move {
             let help_articles = vec![
@@ -2485,9 +2470,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 }
 async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoResponse {
     let path = req.uri().path();
-    let tooltips_json = serde_json::to_string(&*get_tooltips_registry().read().unwrap()).unwrap_or_else(|_| "{}".to_string());
     let content = match path {
-        "/api/v1/health" => "{\"status\":\"ok\"}".to_string(),
+        "/api/v1/health" => "{\"status\":\"ok\"}",
         _ => r##"
             <!DOCTYPE html>
             <html>
@@ -3055,81 +3039,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
-
-
-                    <script>
-                        window.OHC_TOOLTIPS = {tooltips_json};
-
-                        // Scribe: Tooltips Implementation
-                        document.addEventListener("DOMContentLoaded", () => {
-                            const tooltipEl = document.createElement("div");
-                            tooltipEl.id = "global-tooltip-bubble";
-                            tooltipEl.style.cssText = "position: fixed; background: #333; color: white; padding: 8px 12px; border-radius: 6px; font-size: 13px; z-index: 10000; display: none; pointer-events: none; max-width: 250px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1);";
-                            document.body.appendChild(tooltipEl);
-
-                            let tooltipTimeout = null;
-
-                            function showTooltip(el, text) {
-                                tooltipEl.textContent = text;
-                                tooltipEl.style.display = "block";
-                                const rect = el.getBoundingClientRect();
-                                const tooltipRect = tooltipEl.getBoundingClientRect();
-                                let top = rect.top - tooltipRect.height - 8;
-                                let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
-
-                                if (top < 0) top = rect.bottom + 8;
-                                if (left < 0) left = 8;
-                                if (left + tooltipRect.width > window.innerWidth) left = window.innerWidth - tooltipRect.width - 8;
-
-                                tooltipEl.style.top = top + "px";
-                                tooltipEl.style.left = left + "px";
-                            }
-
-                            function hideTooltip() {
-                                tooltipEl.style.display = "none";
-                            }
-
-
-                            document.querySelectorAll("[placeholder], [id]").forEach(el => {
-                                const placeholderKey = el.getAttribute("placeholder");
-                                const idKey = el.getAttribute("id") + "-tooltip";
-
-                                let key = null;
-                                if (placeholderKey && window.OHC_TOOLTIPS[placeholderKey]) {
-                                    key = placeholderKey;
-                                } else if (idKey && window.OHC_TOOLTIPS[idKey]) {
-                                    key = idKey;
-                                }
-
-                                if (key) {
-                                    const text = window.OHC_TOOLTIPS[key];
-
-                                    // Desktop Hover
-                                    el.addEventListener("mouseenter", () => showTooltip(el, text));
-                                    el.addEventListener("mouseleave", hideTooltip);
-
-                                    // Mobile Long Press
-                                    el.addEventListener("touchstart", (e) => {
-                                        tooltipTimeout = setTimeout(() => {
-                                            showTooltip(el, text);
-                                        }, 500); // 500ms for long press
-                                    }, {passive: true});
-
-                                    el.addEventListener("touchend", () => {
-                                        clearTimeout(tooltipTimeout);
-                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
-                                    });
-
-                                    el.addEventListener("touchmove", () => {
-                                        clearTimeout(tooltipTimeout);
-                                        hideTooltip();
-                                    }, {passive: true});
-                                }
-                            });
-                        });
-                    </script>
                 </head>
-
                 <body>
                     <nav id="main-nav" style="display: none;">
                         <a onclick="showScreen('dashboard-screen')" id="nav-dashboard">Dashboard</a>
@@ -3165,34 +3075,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1>Dashboard</h1>
 
                         <!-- Milestone Viral Share Loop Banner -->
-                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-left: 8px solid #f6d365;">
+                        <div id="milestone-share-banner" class="hidden relative mb-6 overflow-hidden rounded-xl p-4 text-white shadow-sm flex-col sm:flex-row items-start sm:items-center justify-between gap-4" style="background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);">
                             <div class="flex items-center gap-4">
-                                <div id="milestone-banner-preview" style="width: 120px; height: 63px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.1);">
-                                    <img id="milestone-banner-img" src="" style="width: 100%; height: 100%; object-fit: cover;" />
-                                </div>
+                                <span class="text-3xl" style="font-size: 32px;">🎉</span>
                                 <div>
-                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked!</h3>
+                                    <h3 class="m-0 text-lg font-bold" style="margin: 0; font-weight: bold; color: white;">Milestone Unlocked: Your First Customers!</h3>
                                     <p class="m-0 text-sm opacity-90" style="margin: 0; opacity: 0.9; color: white;">You've reached <span id="milestone-customers-count">0</span> active customers. Share your store's success to earn a free month of Pro!</p>
                                 </div>
                             </div>
                             <button
-                                id="milestone-share-btn"
-                                onclick="shareMilestoneToX('first_sale')"
-                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold shadow-sm transition-colors hover:bg-orange-50"
-                                style="background: white; color: #667eea; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
+                                onclick="const tenant = localStorage.getItem('tenant_id') || 'DEFAULT'; window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just reached ' + document.getElementById('milestone-customers-count').textContent + ' customers on my store! Start your own business today with One Human Corp: ohc://join?ref=' + tenant)}`, '_blank'); dismissMilestoneShareBanner();"
+                                class="whitespace-nowrap rounded-lg bg-white px-4 py-2 text-sm font-bold text-orange-500 shadow-sm transition-colors hover:bg-orange-50"
+                                style="background: white; color: #f97316; font-weight: bold; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;"
                             >
                                 Share & Claim Reward
                             </button>
-                        </div>
-
-                        <!-- Success Milestones Widget -->
-                        <div id="milestones-widget" class="card glass" style="margin-top: 24px; display: none;">
-                            <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 20px;">🏆</span> Recent Achievements
-                            </h3>
-                            <div id="milestones-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
-                                <!-- Milestones will be injected here -->
-                            </div>
                         </div>
 
                         <div class="card glass" style="text-align: center; padding: 40px 20px;">
@@ -3426,7 +3323,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <!-- Automated AI Review Requests -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Automated AI Review Requests <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
+                                <h3 style="margin: 0; color: var(--text-primary);">Automated review requests for recent orders <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
                             </div>
 
                             <div id="review-campaign-success" style="display: none; padding: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; margin-bottom: 16px; font-weight: bold; font-size: 14px;">
@@ -3532,9 +3429,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Autonomous Booking Agent</h3>
-                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Enable your AI agent to auto-schedule appointments from the unified inbox without any third-party tools.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com Integration</h3>
+                            <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Connect your Cal.com account to enable AI to auto-schedule appointments from the unified inbox.</p>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #1a1a1a; color: white; border: none; width: 100%;">Connect Cal.com</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3768,14 +3665,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
                             </div>
 
-                            <!-- Autonomous Booking Agent -->
+                            <!-- Cal.com Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Autonomous Booking Agent</h3>
+                                    <h3 style="margin: 0;">Customer Booking</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let customers book appointments directly on your personal calendar.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Cal.com...')">Set up my booking link</button>
                             </div>
 
                             <!-- Listmonk Integration -->
@@ -4302,7 +4199,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated review requests for recent orders are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
@@ -4835,62 +4732,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
-                            let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
-                                const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
-                                htmlBody += '<div style="margin-top: 15px;">' +
-                                    '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
-                                    '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
-                                    '<a href="https://twitter.com/intent/tweet?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; background: #1DA1F2; color: white; text-decoration: none; border-radius: 4px;">Share to X</a>' +
-                                    '</div>';
-                            }
-                            document.getElementById('milestone-body').innerHTML = htmlBody;
+                            document.getElementById('milestone-body').textContent = body;
                             document.getElementById('milestone-card').style.display = 'block';
                         }
 
                         function dismissMilestone() {
                             document.getElementById('milestone-card').style.display = 'none';
-                        }
-
-                        function shareMilestoneToX(milestoneId) {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            const text = encodeURIComponent(`I just hit a new milestone on One Human Corp! 🚀 My small business is growing. Launch your own business today: ohc://join?ref=${tenant}`);
-                            const url = encodeURIComponent(window.location.origin + '/join?ref=' + tenant);
-
-                            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
-                            dismissMilestoneShareBanner();
-                        }
-
-                        async function fetchMilestones() {
-                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                            try {
-                                const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
-                                if (res.ok) {
-                                    const data = await res.json();
-                                    const container = document.getElementById('milestones-list');
-                                    const widget = document.getElementById('milestones-widget');
-
-                                    const reached = data.milestones.filter(m => m.reached);
-                                    if (reached.length > 0) {
-                                        widget.style.display = 'block';
-                                        container.innerHTML = reached.map(m => `
-                                            <div class="card" style="margin-bottom: 0; padding: 16px; background: rgba(255,255,255,0.5); border: 1px solid var(--border);">
-                                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                                    <h4 style="margin: 0; font-size: 15px;">${m.title}</h4>
-                                                    <span style="font-size: 12px; background: var(--primary-soft); color: var(--primary); padding: 2px 8px; border-radius: 99px; font-weight: bold;">Reached</span>
-                                                </div>
-                                                <p style="font-size: 13px; margin: 0 0 12px 0;">${m.description}</p>
-                                                <button class="secondary" style="width: 100%; margin: 0; padding: 6px; font-size: 12px;" onclick="shareMilestoneToX('${m.id}')">Share Success</button>
-                                            </div>
-                                        `).join('');
-                                    } else {
-                                        widget.style.display = 'none';
-                                    }
-                                }
-                            } catch (e) {
-                                console.error('Error fetching milestones:', e);
-                            }
                         }
 
                         function dismissMilestoneShareBanner() {
@@ -5439,6 +5286,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                                         }
                                                     }
                                                 },
+                                                "/api/analytics": {
+                                                    "get": {
+                                                        "summary": "Get Dashboard Analytics",
+                                                        "tags": ["Analytics"],
+                                                        "responses": { "200": { "description": "Success" } }
+                                                    }
+                                                },
                                                 "/api/videos": {
                                                     "get": {
                                                         "summary": "Get video tutorials",
@@ -5508,16 +5362,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const countEl = document.getElementById('milestone-customers-count');
                                     const dismissed = localStorage.getItem('milestone_banner_dismissed') === 'true';
                                     if (banner && countEl && !dismissed) {
-                                        if (metricsData.active_customers >= 1) {
+                                        if (metricsData.active_customers > 0) {
                                             banner.style.display = 'flex';
                                             banner.classList.remove('hidden');
                                             countEl.textContent = metricsData.active_customers;
-
-                                            // Set preview image and update share button
-                                            const tenant = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                            const mid = metricsData.active_customers >= 10 ? '10th_order' : 'first_sale';
-                                            document.getElementById('milestone-banner-img').src = `/api/v1/growth/milestone/card?tenant=${tenant}&milestone_id=${mid}`;
-                                            document.getElementById('milestone-share-btn').onclick = () => shareMilestoneToX(mid);
                                         } else {
                                             banner.style.display = 'none';
                                             banner.classList.add('hidden');
@@ -5526,7 +5374,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                                 })
                                 .catch(err => console.error('Error fetching dashboard data:', err));
-                                fetchMilestones();
                                 fetchApprovals();
                                 fetchActivityFeed();
                             }
@@ -5754,10 +5601,42 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+                        let tooltipRegistry = {};
+                        let activeTooltipTimeout = null;
 
+                        async function initTooltips() {
+                            try {
+                                const res = await fetch('/api/tooltips');
+                                tooltipRegistry = await res.json();
+                                const tbox = document.createElement('div');
+                                tbox.className = 'tooltip-box';
+                                tbox.id = 'dynamic-tooltip';
+                                document.body.appendChild(tbox);
+                                attachTooltipListeners();
+                            } catch(e) { console.error(e); }
+                        }
 
-
-
+                        function attachTooltipListeners() {
+                            const elements = document.querySelectorAll('[placeholder$="-tooltip"]');
+                            const tbox = document.getElementById('dynamic-tooltip');
+                            elements.forEach(el => {
+                                const key = el.getAttribute('placeholder');
+                                if(!tooltipRegistry[key]) return;
+                                const showTooltip = (e) => {
+                                    clearTimeout(activeTooltipTimeout);
+                                    tbox.textContent = tooltipRegistry[key];
+                                    tbox.classList.add('show');
+                                    const rect = el.getBoundingClientRect();
+                                    tbox.style.left = Math.max(8, rect.left + (rect.width/2) - (tbox.offsetWidth/2)) + 'px';
+                                    tbox.style.top = Math.max(8, rect.top - tbox.offsetHeight - 8) + 'px';
+                                };
+                                const hideTooltip = () => { activeTooltipTimeout = setTimeout(() => { tbox.classList.remove('show'); }, 100); };
+                                el.addEventListener('mouseenter', showTooltip);
+                                el.addEventListener('mouseleave', hideTooltip);
+                                el.addEventListener('touchstart', (e) => { activeTooltipTimeout = setTimeout(() => showTooltip(e), 500); });
+                                el.addEventListener('touchend', () => { clearTimeout(activeTooltipTimeout); hideTooltip(); });
+                            });
+                        }
 
                         // Scribe: Help Chat Logic
                         async function submitHelpQuery() {
@@ -5783,12 +5662,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             } catch(e) { console.error(e); }
                         }
 
-
                         // Scribe: Walkthrough Logic
                         const walkthroughs = {
                             'Set up your store': [ { target: 'nav-setup', title: 'Step 1', text: 'Click here to set up your business details.' }, { target: 'launch-btn', title: 'Step 2', text: 'Once you are ready, launch your site!' } ],
                             'Activate your AI Support Agent': [ { target: 'nav-agents', title: 'AI Team', text: 'Manage your AI workforce here.' } ],
-                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ]
+                            'Accept your first payment': [ { target: 'nav-setup', title: 'Payments', text: 'Configure your payment methods here to accept your first payment.' } ],
+                            'Dashboard Analytics': [ { target: 'todays-sales', title: 'Daily Sales', text: 'This shows your total sales for today.' }, { target: 'approval-inbox', title: 'AI Tasks', text: 'Review and approve tasks from your AI workforce.' } ]
                         };
                         let currentTour = null, currentStepIndex = 0;
 
@@ -5828,7 +5707,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             { id: 'payments', title: 'Payments', desc: 'How to get paid and manage your money.', icon: '💳' },
                             { id: 'ai-agents', title: 'AI Agents', desc: 'Hire AI to answer emails and do the heavy lifting.', icon: '🤖' },
                             { id: 'marketing', title: 'Marketing', desc: 'Let AI write your social media posts.', icon: '📢' },
-                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' }
+                            { id: 'account', title: 'Account & Billing', desc: 'Manage your plan and invoices.', icon: '⚙️' },
+                            { id: 'analytics', title: 'Understanding Your Analytics', desc: 'Learn how to read your dashboard to see what is selling best and where your customers are coming from.', icon: '📈' }
                         ];
 
                         function renderHelpCenter() {
@@ -5843,6 +5723,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <button class="secondary" onclick="startWalkthrough('Set up your store')">🗺️ Tour: Set up your store</button>
                                     <button class="secondary" onclick="startWalkthrough('Activate your AI Support Agent')">🗺️ Tour: Activate your AI Support Agent</button>
                                     <button class="secondary" onclick="startWalkthrough('Accept your first payment')">🗺️ Tour: Accept your first payment</button>
+                                    <button class="secondary" onclick="startWalkthrough('Dashboard Analytics')">🗺️ Tour: Dashboard Analytics</button>
                                 </div>
                             `;
                             container.appendChild(toursDiv);
@@ -5877,7 +5758,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         document.addEventListener('DOMContentLoaded', () => {
-
+                            initTooltips();
                             renderHelpCenter();
                             renderVideos();
                         });
@@ -5930,6 +5811,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <div id="changelog-screen" class="screen">
                         <h1>What's New</h1>
                         <p>Discover the latest features and improvements in One Human Corp. <a href="https://onehumancorp.com/changelog" target="_blank" style="color: var(--primary); text-decoration: underline;">Read full changelog →</a></p>
+                        <div class="card" style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;">
+                            <div>
+                                <h3>Version 2.5 - Dashboard Analytics</h3>
+                                <p>We've added a new interactive walkthrough and Help Center article explaining how to read your store metrics.</p>
+                            </div>
+                        </div>
                         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
                             <img src="dashboard_with_nudges.png" style="width: 100%; border-radius: 8px; border: 1px solid var(--border);" alt="Version 2.4 Update">
                             <div>
@@ -5954,7 +5841,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     </div>
                 </body>
             </html>
-        "##.replace("{tooltips_json}", &tooltips_json),
+        "##,
     };
     axum::response::Html(content)
 }
