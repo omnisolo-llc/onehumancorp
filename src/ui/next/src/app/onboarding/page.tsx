@@ -21,6 +21,40 @@ export default function OnboardingWizard() {
     startResult, setStartResult
   } = useOnboardingStore();
 
+  // Safe cross-device state persistence
+  useEffect(() => {
+    // Basic debounce to avoid too many requests
+    const timeoutId = setTimeout(() => {
+      if (!isLoaded || (step === 1 && chatStep === 1 && !businessName && !businessDescription)) return;
+
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step: step,
+            chatStep: chatStep,
+            businessDescription: businessDescription,
+            businessName: businessName,
+            businessType: businessType,
+            categories: categories,
+            firstProductName: firstProductName,
+            firstProductPrice: firstProductPrice,
+            websiteTemplate: websiteTemplate,
+          }),
+        }).catch(e => {});
+      } catch (e) {}
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [step, chatStep]);
+
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -257,10 +291,13 @@ export default function OnboardingWizard() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1">Business Name</label>
                   <input
+                    autoFocus
+                    inputMode="text"
+                    enterKeyHint="next"
                     type="text"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[12px] border border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/50 dark:bg-black/20 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                   />
                 </div>
                 <div>
@@ -269,7 +306,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={businessType}
                     onChange={(e) => setBusinessType(e.target.value)}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[12px] border border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/50 dark:bg-black/20 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                   />
                 </div>
                 <div>
@@ -278,7 +315,7 @@ export default function OnboardingWizard() {
                     type="text"
                     value={categories.join(', ')}
                     onChange={(e) => setCategories(e.target.value.split(',').map(c => c.trim()))}
-                    className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                    className="w-full p-3 rounded-[12px] border border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/50 dark:bg-black/20 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -288,7 +325,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductName}
                         onChange={(e) => setFirstProductName(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[12px] border border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/50 dark:bg-black/20 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                       />
                    </div>
                    <div>
@@ -297,7 +334,7 @@ export default function OnboardingWizard() {
                         type="text"
                         value={firstProductPrice}
                         onChange={(e) => setFirstProductPrice(e.target.value)}
-                        className="w-full p-3 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7]"
+                        className="w-full p-3 rounded-[12px] border border-white/40 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/50 dark:bg-black/20 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] shadow-inner transition-all"
                       />
                    </div>
                 </div>
