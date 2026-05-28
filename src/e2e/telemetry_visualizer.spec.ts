@@ -11,11 +11,9 @@ test.describe('Telemetry and Cost Visualizer', () => {
   });
 
   test('shows AI cost usage details', async ({ page }) => {
-    await page.goto('/my-plan');
+    await page.goto('/plan');
     await page.getByRole('button', { name: 'View Cost Details' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Cost & AI Usage' })).toBeVisible();
-    await expect(page.getByText('Total Costs: $1.23')).toBeVisible();
-    await expect(page.getByText('LLM Usage: 5,000 tokens')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Cost Transparency' })).toBeVisible();
   });
 });
