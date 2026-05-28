@@ -48,6 +48,7 @@ rust_library(
         "agent.rs",
         "agent_protocol.rs",
         "auth.rs",
+        "agentic_seek.rs",
         "autogen.rs",
         "checkpointer.rs",
         "codex_runner.rs",
@@ -216,6 +217,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "tools_gating",
     "registry",
     "gpt_researcher",
+        "agentic_seek",
     "local_provider",
     "sona_patterns",
 ]
