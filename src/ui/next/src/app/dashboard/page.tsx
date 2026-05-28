@@ -106,16 +106,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     async function checkMilestones() {
-      if (localStorage.getItem('10th_order_milestone_shown') === 'true') return;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('10th_order_milestone_shown') === 'true') return;
       try {
-        const res = await fetch('/api/v1/growth/milestones/check');
+        const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'DEFAULT' : 'DEFAULT';
+        const res = await fetch(`/api/v1/growth/milestones/check?tenant=${tenant}`);
         const data = await res.json();
         if (data && data.milestones) {
-          const orderMilestone = data.milestones.find((m: any) => m.id === "3" && m.reached);
+          const orderMilestone = data.milestones.find((m: any) => m.id === "10th_order" && m.reached);
           if (orderMilestone) {
             setCurrentMilestone(orderMilestone);
             setShowMilestoneModal(true);
-            localStorage.setItem('10th_order_milestone_shown', 'true');
+            if (typeof localStorage !== 'undefined') localStorage.setItem('10th_order_milestone_shown', 'true');
           }
         }
       } catch (e) {
