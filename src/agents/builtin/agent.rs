@@ -145,6 +145,7 @@ pub enable_llmcompiler_plan_and_execute: bool,
     pub max_rewind_attempts: usize,
     pub long_term_memory: Option<Arc<dyn crate::memory_store::LongTermMemory>>,
     pub hil_spectrum: crate::types::HumanInLoopSpectrum,
+    pub permission_architecture: crate::types::PermissionArchitecture,
     pub manually_approved_tool_calls: Vec<String>,
 }
 
@@ -201,6 +202,7 @@ enable_llmcompiler_plan_and_execute: false,
             max_rewind_attempts: 3,
             long_term_memory: None,
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: crate::types::PermissionArchitecture::default(),
             manually_approved_tool_calls: vec![],
         }
     }
@@ -1639,7 +1641,6 @@ impl Agent {
     {
         // ML-Resilience Rule: AI agent jobs must have a 60-second timeout.
         let timeout_duration = std::time::Duration::from_secs(60);
-
         let mut attempts = 0;
         let max_attempts = 3;
         loop {
@@ -1923,7 +1924,11 @@ impl Agent {
 
         let mut final_messages = messages.clone();
 
-
+        // Context Management (Preventing Context Rot): Observation Masking (JetBrains' Junie)
+        // Hide the raw output of old tools from the prompt, but keep the `tool_calls` themselves visible so the model remembers what it did.
+        if final_cfg.enable_observation_masking {
+            crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
+        }
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
@@ -2014,7 +2019,7 @@ impl Agent {
                 Err(e) => {
                     let err = format!("LLM error: {}", e);
                     if err.to_lowercase().contains("timeout") || err.to_lowercase().contains("rate limit") || err.to_lowercase().contains("unavailable") || err.to_lowercase().contains("resource exhausted") {
-                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Please try again later.".to_string();
+                        let err_msg = "LLM API is currently unavailable or rate-limited. Agent transitioning to PAUSED state. Business owner has been notified. Please try again later.".to_string();
                         on_event(AgentEvent::TaskError { error: err_msg.clone() });
                         return Err(err_msg.into());
                     } else if err.to_lowercase().contains("malformed") || err.to_lowercase().contains("invalid json") {

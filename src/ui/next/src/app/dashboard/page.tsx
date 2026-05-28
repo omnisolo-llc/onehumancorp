@@ -38,6 +38,8 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+  const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
+  const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
   const [embedCopied, setEmbedCopied] = useState<boolean>(false);
   const [showPromoModal, setShowPromoModal] = useState<boolean>(false);
@@ -340,7 +342,17 @@ export default function Dashboard() {
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+         <div className="flex justify-between items-center w-full">
+          <div className="flex justify-between items-center w-full">
+          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
+          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+            Offline - Changes saved locally
+          </div>
+        </div>
          <nav className="flex items-center gap-3">
              <Link href="/calendar" className="px-4 py-2 bg-purple-100 text-purple-800 rounded-md text-sm font-medium hover:bg-purple-200 transition-colors border border-purple-200 shadow-sm">
                Calendar 📅
@@ -361,9 +373,11 @@ export default function Dashboard() {
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
              </Link>
-             <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
-               <span>⚡️</span> KAIROS
-             </Link>
+             <WithTooltip id="kairos-nav-link-tooltip" defaultText="Click here to see what your AI helpers are working on and how they plan.">
+               <Link href="/kairos" id="kairos-nav-link" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1">
+                 <span>⚡️</span> KAIROS
+               </Link>
+             </WithTooltip>
              <Link href="/plan" className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors shadow-sm">
                My Plan
              </Link>
@@ -373,7 +387,53 @@ export default function Dashboard() {
          </nav>
       </header>
 
-      <main className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+      <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+
+         {/* Business Analytics Widget */}
+         <section className="mb-6 animate-fade-in">
+           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+               <div className="flex items-center gap-4">
+                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
+               </div>
+           </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
+               </div>
+               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
+                   <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
+               </div>
+           </div>
+
+           {/* Advanced AI Insights Soft Paywall */}
+           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
+               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
+               <div className="filter blur-sm select-none opacity-50">
+                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
+                   <div className="flex gap-4">
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
+                   </div>
+               </div>
+               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
+                       Unlock predictive analytics to foresee trends and boost your revenue.
+                   </p>
+                   <button
+                       onClick={() => {
+                           if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
+                               window.location.href = '/pricing';
+                           }
+                       }}
+                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                   >
+                       Upgrade to Pro
+                   </button>
+               </div>
+           </div>
+         </section>
 
          {/* Morning Briefing */}
          {!morningBriefingDismissed && (
@@ -1015,26 +1075,16 @@ export default function Dashboard() {
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Products</h2>
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Items</h2>
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
                 <button
-                    onClick={() => {
-                        if (productCount >= 10) {
-                            setShowPaywallModal(true);
-                        } else {
-                            setProductCount(prev => prev + 1);
-                            if (!productAdded) {
-                                setProductAdded(true);
-                                setTrialDaysLeft(prev => prev + 7);
-                            }
-                        }
-                    }}
+                    onClick={() => setShowAddItemModal(true)}
                     className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
                 >
-                    <span>+ Add Product</span>
+                    <span>+ Add Item</span>
                 </button>
             </div>
          </section>
@@ -1277,6 +1327,80 @@ export default function Dashboard() {
                  </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Add New Item</h2>
+              <button
+                onClick={() => setShowAddItemModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+                <button onClick={() => setNewItemType('product')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'product' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Physical Product</button>
+                <button onClick={() => setNewItemType('service')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'service' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Service</button>
+                <button onClick={() => setNewItemType('digital')} className={`flex-1 py-2 rounded-lg font-semibold text-sm transition-all ${newItemType === 'digital' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Digital Good</button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
+                    <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="e.g. Custom Cake" />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0.00" />
+                </div>
+
+                {newItemType === 'product' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Count</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="10" />
+                    </div>
+                )}
+
+                {newItemType === 'service' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                        <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="60" />
+                    </div>
+                )}
+
+                {newItemType === 'digital' && (
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">File URL</label>
+                        <input type="text" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://..." />
+                    </div>
+                )}
+            </div>
+
+            <button
+                onClick={() => {
+                    setShowAddItemModal(false);
+                    if (productCount >= 10) {
+                        setShowPaywallModal(true);
+                    } else {
+                        setProductCount(prev => prev + 1);
+                        if (!productAdded) {
+                            setProductAdded(true);
+                            setTrialDaysLeft(prev => prev + 7);
+                        }
+                    }
+                }}
+                className="w-full py-3 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all"
+            >
+                Save {newItemType === 'product' ? 'Product' : newItemType === 'service' ? 'Service' : 'Digital Good'}
+            </button>
           </div>
         </div>
       )}
