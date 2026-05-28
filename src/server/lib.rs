@@ -265,8 +265,6 @@ struct HttpMetricsResponse {
     active_customers: i64,
     pending_orders: i64,
     total_sales: f64,
-    unreviewed_orders: i64,
-    total_campaigns_sent: i64,
 }
 
 async fn http_metrics_handler(
@@ -302,7 +300,7 @@ async fn http_metrics_handler(
          return (StatusCode::FORBIDDEN, "Tenant ID does not match authorization context").into_response();
     }
 
-    let (active_customers_res, pending_orders_res, sales_res, unreviewed_res) = tokio::join!(
+    let (active_customers_res, pending_orders_res, sales_res) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users WHERE tenant_id = $1")
                 .bind(&tenant_id)
@@ -320,24 +318,16 @@ async fn http_metrics_handler(
                 .bind(&tenant_id)
                 .fetch_one(&db.pool)
                 .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'ready'")
-                .bind(&tenant_id)
-                .fetch_one(&db.pool)
-                .await
         }
     );
 
     let active_customers = active_customers_res.unwrap_or(0);
     let pending_orders = pending_orders_res.unwrap_or(0);
     let total_sales = sales_res.unwrap_or(0.0);
-    let unreviewed_orders = unreviewed_res.unwrap_or(0);
-    let total_campaigns_sent = 0;
 
     (
         StatusCode::OK,
-        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales, unreviewed_orders, total_campaigns_sent }),
+        axum::Json(HttpMetricsResponse { active_customers, pending_orders, total_sales }),
     )
         .into_response()
 }
