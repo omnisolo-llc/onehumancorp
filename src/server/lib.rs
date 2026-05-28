@@ -51,7 +51,7 @@ pub mod sip;
 pub mod seeder;
 pub mod queue;
 pub mod domain;
-pub use ::server_pricing as pricing;
+pub mod pricing;
 pub mod analytics;
 pub use ::server_telemetry as telemetry;
 pub mod chaos;
@@ -660,25 +660,25 @@ impl HubService for MyHubService {
 
         let (tier_res, ai_used_res, storage_used_bytes_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
 
-        let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
+        let tier = tier_res.unwrap_or(crate::pricing::rate_limit::PlanTier::Free);
         let ai_used = ai_used_res.unwrap_or(0);
         let storage_used_bytes = storage_used_bytes_res.unwrap_or(0);
 
         let plan_name = match tier {
-            ::server_pricing::rate_limit::PlanTier::Free => "Free",
-            ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
-            ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
-            ::server_pricing::rate_limit::PlanTier::Business => "Business",
+            crate::pricing::rate_limit::PlanTier::Free => "Free",
+            crate::pricing::rate_limit::PlanTier::Starter => "Starter",
+            crate::pricing::rate_limit::PlanTier::Pro => "Pro",
+            crate::pricing::rate_limit::PlanTier::Business => "Business",
         }.to_string();
 
         let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
         let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
 
         let next_bill_estimated = match tier {
-            ::server_pricing::rate_limit::PlanTier::Free => 0,
-            ::server_pricing::rate_limit::PlanTier::Starter => 9,
-            ::server_pricing::rate_limit::PlanTier::Pro => 29,
-            ::server_pricing::rate_limit::PlanTier::Business => 79,
+            crate::pricing::rate_limit::PlanTier::Free => 0,
+            crate::pricing::rate_limit::PlanTier::Starter => 9,
+            crate::pricing::rate_limit::PlanTier::Pro => 29,
+            crate::pricing::rate_limit::PlanTier::Business => 79,
         };
 
         Ok(tonic::Response::new(::server_ohc::orchestration::MyPlanResponse {
@@ -1926,7 +1926,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             llm_provider: std::env::var("OHC_LLM_PROVIDER").unwrap_or_default(),
             model: std::env::var("OHC_LLM_MODEL").unwrap_or_default(),
             llm_endpoint: std::env::var("OHC_LOCAL_LLM_ENDPOINT").unwrap_or_default(),
-            system_prompt: ::server_pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
+            system_prompt: crate::pricing::compression::reduce_tokens(&std::env::var("OHC_SYSTEM_PROMPT").unwrap_or_default()),
             max_tokens: {
                 let parsed = std::env::var("OHC_MAX_TOKENS").ok().and_then(|v| v.parse().ok()).unwrap_or(2048);
                 if parsed > 4096 { 4096 } else if parsed == 0 { 2048 } else { parsed }
@@ -1956,7 +1956,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
     let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
-        std::sync::Arc::new(::server_pricing::rate_limit::RedisRateLimiter::new(client))
+        std::sync::Arc::new(crate::pricing::rate_limit::RedisRateLimiter::new(client))
     } else {
         panic!("Failed to initialize Redis client for RateLimiter at {}", redis_url);
     };
@@ -1975,8 +1975,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
-        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
-        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -6026,6 +6024,43 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button class="secondary" onclick="endWalkthrough()">Skip</button>
                             <button onclick="nextWalkthroughStep()" id="walkthrough-next-btn">Next</button>
                         </div>
+                    </div>
+
+                    <!-- Booking Screen -->
+                    <div id="booking-screen" class="screen glass">
+                        <h1>Booking Services</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your services and bookings.</p>
+
+                        <div class="card glass">
+                            <h2>Add New Service</h2>
+                            <label>Service Title</label>
+                            <input type="text" id="booking-service-title" placeholder="e.g., Plumbing Consultation">
+
+                            <label>Description</label>
+                            <input type="text" id="booking-service-desc" placeholder="e.g., 1 hour video call">
+
+                            <label>Price (Cents)</label>
+                            <input type="number" id="booking-service-price" placeholder="5000">
+
+                            <button onclick="createBookingService()" style="margin-top: 15px;">Create Service</button>
+                        </div>
+
+                        <div class="card glass" style="margin-top: 20px;">
+                            <h2>Your Services</h2>
+                            <div id="booking-services-list">Loading...</div>
+                        </div>
+
+                        <div class="card glass" style="margin-top: 20px;">
+                            <h2>Recent Bookings</h2>
+                            <div id="booking-list">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div id="marketing-screen" class="screen glass">
+                        <h1>Marketing</h1>
+                        <p style="color: var(--text-secondary); margin-bottom: 20px;">Review and approve social media posts drafted by your Marketing Agent.</p>
+
+                        <div id="marketing-drafts-list">Loading...</div>
                     </div>
 
                     <!-- Help Center Screen -->
