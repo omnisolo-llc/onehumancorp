@@ -283,6 +283,12 @@ impl DB {
                         version INTEGER DEFAULT 1
                     );
 
+                    CREATE TABLE IF NOT EXISTS swarm_memory_embeddings (
+                        memory_id TEXT PRIMARY KEY,
+                        context TEXT NOT NULL,
+                        vector_embedding BLOB,
+                        source_plugin TEXT
+                    );
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
@@ -852,6 +858,37 @@ pub async fn insert_autodream_memory(
                     .bind(content)
                     .bind(embedding)
                     .bind(source_type)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
+
+    pub async fn insert_swarm_memory_embedding(
+        &self,
+        memory_id: &str,
+        context: &str,
+        embedding: &str,
+        source_plugin: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin) VALUES (?, ?, ?, ?)")
+                    .bind(memory_id)
+                    .bind(context)
+                    .bind(embedding)
+                    .bind(source_plugin)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO swarm_memory_embeddings (memory_id, context, vector_embedding, source_plugin) VALUES ($1, $2, $3::vector, $4)")
+                    .bind(memory_id)
+                    .bind(context)
+                    .bind(embedding)
+                    .bind(source_plugin)
                     .execute(&self.pool)
                     .await?;
             }

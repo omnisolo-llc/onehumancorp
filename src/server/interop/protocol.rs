@@ -7,9 +7,12 @@ pub mod proto {
 }
 
 /// Interop Layer protocol for mode-switch behaviour and sync
+use crate::interop::mesh::TeammateMeshApi;
+
 pub struct InteropProtocol {
     bus: Arc<dyn Bus>,
     lock: Arc<dyn DistributedLock>,
+    pub mesh: Arc<dyn TeammateMeshApi>,
     node_id: String,
 }
 
@@ -18,6 +21,7 @@ impl InteropProtocol {
         Self {
             bus,
             lock,
+            mesh: Arc::new(crate::interop::mesh::StandaloneTeammateMesh::new()),
             node_id,
         }
     }
@@ -436,6 +440,26 @@ impl InteropProtocol {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interop::mesh::{StandaloneTeammateMesh, TeammateMeshApi};
+
+    #[tokio::test]
+    async fn test_mesh_pub_sub() {
+        let mesh = Arc::new(StandaloneTeammateMesh::new());
+        let mut rx = mesh.subscribe("test-channel").await.unwrap();
+        mesh.publish("test-channel", b"hello".to_vec()).await.unwrap();
+        let msg = rx.recv().await.unwrap();
+        assert_eq!(msg, b"hello".to_vec());
+    }
+
+    #[tokio::test]
+    async fn test_mesh_locking() {
+        let mesh = Arc::new(StandaloneTeammateMesh::new());
+        assert!(mesh.acquire_lock("resource", "owner1", 10).await.unwrap());
+        assert!(!mesh.acquire_lock("resource", "owner2", 10).await.unwrap());
+        mesh.release_lock("resource", "owner1").await.unwrap();
+        assert!(mesh.acquire_lock("resource", "owner2", 10).await.unwrap());
+    }
+
     use crate::msgbus::MemoryBus;
     use std::sync::atomic::{AtomicBool, Ordering};
 

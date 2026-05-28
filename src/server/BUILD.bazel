@@ -107,6 +107,7 @@ SERVER_RS_SRCS = [
     "//src/server/integrations/stripe:routing.rs",
     "//src/server/interop:mod.rs",
     "//src/server/interop:protocol.rs",
+    "//src/server/interop:mesh.rs",
     "//src/server/orchestration:chaos_test.rs",
     "//src/server/orchestration:dynamic_workflows.rs",
     "//src/server/orchestration:handoff.rs",

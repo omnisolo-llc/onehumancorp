@@ -207,6 +207,13 @@ impl TaskDecompositionService {
                 Ok(Some(task))
             }
             DbStore::Sqlite(sqlite_pool) => {
+                // Distributed locking for SQLite/Standalone hybrid sync
+                let lock_key = "tasks:claim:lock";
+                let acquired = self.mesh.acquire_lock(lock_key, agent_id, 10).await.unwrap_or(false);
+                if !acquired {
+                    return Ok(None);
+                }
+
                 let lock_result = self.sqlite_mu.try_lock();
                 let _lock = match lock_result {
                     Ok(guard) => guard,
@@ -246,6 +253,7 @@ impl TaskDecompositionService {
                     Some(r) => r,
                     None => {
                         tx.commit().await.map_err(|e| e.to_string())?;
+                        let _ = self.mesh.release_lock("tasks:claim:lock", agent_id).await;
                         return Ok(None);
                     }
                 };
@@ -287,6 +295,7 @@ impl TaskDecompositionService {
                 let _ = proto_task.encode(&mut payload_bytes);
                 let _ = self.mesh.publish_with_ack("task.assigned", payload_bytes).await;
 
+                let _ = self.mesh.release_lock("tasks:claim:lock", agent_id).await;
                 Ok(Some(task))
             }
         }
