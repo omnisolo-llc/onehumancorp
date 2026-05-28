@@ -91,14 +91,7 @@ where
         if let Ok(mut guard) = self.get_local().write() {
             if guard.len() >= self.max_local_capacity && !guard.contains_key(key) {
                 let now = std::time::Instant::now();
-                let keys_to_remove: Vec<String> = guard.iter()
-                    .filter(|(_, (_, expiry))| *expiry <= now)
-                    .map(|(k, _)| k.clone())
-                    .collect();
-
-                for k in keys_to_remove {
-                    guard.remove(&k);
-                }
+                guard.retain(|_, (_, expiry)| *expiry > now);
 
                 if guard.len() >= self.max_local_capacity {
                     if let Some(k) = guard.keys().next().cloned() {

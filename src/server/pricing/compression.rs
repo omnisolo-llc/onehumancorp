@@ -45,13 +45,17 @@ pub fn reduce_tokens(data: &str) -> String {
         ].iter().cloned().collect()
     });
 
-    data.split_whitespace()
-        .filter(|word| {
-            let clean_word = word.to_lowercase();
-            !stop_words.contains(clean_word.as_str())
-        })
-        .collect::<Vec<&str>>()
-        .join(" ")
+    let mut result = String::with_capacity(data.len());
+    for word in data.split_whitespace() {
+        let clean_word = word.to_lowercase();
+        if !stop_words.contains(clean_word.as_str()) {
+            if !result.is_empty() {
+                result.push(' ');
+            }
+            result.push_str(word);
+        }
+    }
+    result
 }
 
 
