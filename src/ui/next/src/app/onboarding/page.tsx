@@ -18,14 +18,79 @@ export default function OnboardingWizard() {
     firstProductPrice, setFirstProductPrice,
     isLoading, setIsLoading,
     error, setError,
-    startResult, setStartResult
+    startResult, setStartResult, hydrateState
   } = useOnboardingStore();
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
+  // Sync state to backend (Debounced)
   useEffect(() => {
-    setIsLoaded(true);
+    if (!isLoaded || step === 5) return; // Don't sync before loaded or after completion
+
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify({
+            step,
+            chatStep,
+            businessName,
+            whatYouSell,
+            location,
+            businessType,
+            categories,
+            websiteTemplate,
+            firstProductName,
+            firstProductPrice
+          })
+        });
+      } catch (e) {
+        console.error('Failed to sync state', e);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded]);
+
+  // Load state from backend on init
+  useEffect(() => {
+    const loadState = async () => {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      try {
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+             hydrateState(data);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load state', e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+
+    loadState();
   }, []);
+
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -123,7 +188,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
