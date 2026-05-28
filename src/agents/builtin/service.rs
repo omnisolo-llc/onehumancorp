@@ -661,6 +661,10 @@ impl AgentServiceImpl {
             observation_store,
         );
 
+        // Instantiate PluginRegistry and inject Claude Code plugins
+        let mut plugin_registry = crate::plugins::PluginRegistry::new();
+        plugin_registry.register(Arc::new(crate::plugins::MathPlugin));
+        tools.extend(plugin_registry.get_tools());
 
         // Add create_skill tool
         tools.push(crate::tools::create_skill::create_skill_tool(()));

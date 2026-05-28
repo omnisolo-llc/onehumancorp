@@ -73,6 +73,7 @@ rust_library(
         "plane.rs",
         "progressive_skills.rs",
         "proto.rs",
+        "plugins.rs",
         "provider.rs",
         "ralph_loop.rs",
         "registry.rs",
