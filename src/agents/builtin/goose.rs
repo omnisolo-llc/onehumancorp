@@ -37,8 +37,8 @@ mod tests {
         registry.register_extension(McpServerConfig {
             name: "test_server".to_string(),
             transport: McpTransportType::McpTransportUnspecified as i32,
-            command: "".to_string(),
-            args: vec![],
+            command: vec!["".to_string()],
+            env: std::collections::HashMap::new(),
             endpoint: "".to_string(),
             allowed_tools: vec![],
         });
