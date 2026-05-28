@@ -259,27 +259,62 @@ impl SyncService for MySyncService {
                 continue;
             }
 
-            let query = "INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
-                          VALUES ($1, $2, $3, $4, $5, true)
-                          ON CONFLICT(tenant_id, id) DO UPDATE SET
-                          data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = true
-                          WHERE crdt_deltas.updated_at < excluded.updated_at";
-
-            match sqlx::query(query)
+            use sqlx::Row;
+            let existing_row = sqlx::query("SELECT updated_at, data FROM crdt_deltas WHERE tenant_id = $1 AND id = $2")
                 .bind(&tenant_id)
                 .bind(&delta.id)
-                .bind(&delta.entity_id)
-                .bind(&delta.data)
-                .bind(&delta.updated_at)
-                .execute(&mut *tx)
+                .fetch_optional(&mut *tx)
                 .await
-            {
-                Ok(_) => {
-                    synced_count += 1;
+                .unwrap_or(None);
+
+            let mut is_conflict = false;
+            if let Some(row) = existing_row {
+                let existing_updated_at: String = row.get("updated_at");
+                if existing_updated_at > delta.updated_at {
+                    is_conflict = true;
+                    let existing_data: String = row.get("data");
+                    let conflict_id = uuid::Uuid::new_v4().to_string();
+                    let conflict_query = "INSERT INTO crdt_conflict_queue (id, tenant_id, crdt_id, entity_id, local_data, cloud_data) VALUES ($1, $2, $3, $4, $5, $6)";
+                    if let Err(e) = sqlx::query(conflict_query)
+                        .bind(&conflict_id)
+                        .bind(&tenant_id)
+                        .bind(&delta.id)
+                        .bind(&delta.entity_id)
+                        .bind(&delta.data)
+                        .bind(&existing_data)
+                        .execute(&mut *tx)
+                        .await
+                    {
+                        tracing::error!("failed to insert into crdt_conflict_queue: error={}", e);
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("failed to upsert CRDT delta: error={}", e);
+            }
+
+            if !is_conflict {
+                let query = "INSERT INTO crdt_deltas (tenant_id, id, entity_id, data, updated_at, synced_to_cloud)
+                              VALUES ($1, $2, $3, $4, $5, true)
+                              ON CONFLICT(tenant_id, id) DO UPDATE SET
+                              data = excluded.data, updated_at = excluded.updated_at, synced_to_cloud = true
+                              WHERE crdt_deltas.updated_at < excluded.updated_at";
+
+                match sqlx::query(query)
+                    .bind(&tenant_id)
+                    .bind(&delta.id)
+                    .bind(&delta.entity_id)
+                    .bind(&delta.data)
+                    .bind(&delta.updated_at)
+                    .execute(&mut *tx)
+                    .await
+                {
+                    Ok(_) => {
+                        synced_count += 1;
+                    }
+                    Err(e) => {
+                        tracing::error!("failed to upsert CRDT delta: error={}", e);
+                    }
                 }
+            } else {
+                synced_count += 1; // It was handled as a conflict
             }
         }
 

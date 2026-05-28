@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WithTooltip } from "../../components/TooltipRegistry";
+import { useSyncStatus, SyncEngine } from "../../components/SyncEngine";
 
 export default function Dashboard() {
   const [approvals, setApprovals] = useState<any[]>([]);
@@ -337,20 +338,26 @@ export default function Dashboard() {
     }
   };
 
+  const { isOnline, isSyncing } = useSyncStatus();
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
+      <SyncEngine />
 
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
          <div className="flex justify-between items-center w-full">
-          <div className="flex justify-between items-center w-full">
-          <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
-          </div>
-        </div>
-          <div id="network-status-indicator" className="hidden px-3 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(255, 193, 7, 0.2)', color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
-            Offline - Changes saved locally
+          <div className="flex items-center gap-4">
+            <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Dashboard</h1>
+            {!isOnline ? (
+              <div id="network-status-indicator" className="px-3 py-1 rounded-full text-xs font-medium bg-white/60 backdrop-blur-md" style={{ color: '#B28200', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+                Offline - Changes saved locally
+              </div>
+            ) : isSyncing ? (
+              <div id="network-status-indicator" className="px-3 py-1 rounded-full text-xs font-medium bg-white/60 backdrop-blur-md" style={{ color: '#007AFF', border: '1px solid rgba(0, 122, 255, 0.3)' }}>
+                Syncing...
+              </div>
+            ) : null}
           </div>
         </div>
          <nav className="flex items-center gap-3">
