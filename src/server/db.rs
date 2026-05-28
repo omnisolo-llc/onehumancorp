@@ -521,7 +521,7 @@ impl DB {
                     );
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
-                        tenant_id TEXT NOT NULL,
+                        organization_id TEXT NOT NULL,
                         task_id TEXT NOT NULL,
                         raw_content BLOB NOT NULL,
                         summary_embedding BLOB,
@@ -771,7 +771,14 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                                let tasks_rows = sqlx::query("SELECT id, tenant_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
+                for row in tasks_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "tasks".to_string()));
+                }
+let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
                     let org_id: String = row.get("tenant_id");
@@ -790,7 +797,14 @@ impl DB {
                     result.push((id, org_id, payload, "shared_tasks".to_string()));
                 }
 
-                let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                                let tasks_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
+                for row in tasks_rows {
+                    let id: String = row.get("id");
+                    let org_id: String = row.get("tenant_id");
+                    let payload: String = row.try_get("payload").unwrap_or_default();
+                    result.push((id, org_id, payload, "tasks".to_string()));
+                }
+let swarm_rows = sqlx::query("SELECT id::text, tenant_id::text, payload::text FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(&mut *tx).await?;
                 tx.commit().await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
@@ -806,8 +820,8 @@ impl DB {
 
     pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, organization_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5::vector)")
                 .bind(id)
                 .bind(org_id)
                 .bind(task_id)
@@ -965,6 +979,8 @@ pub async fn insert_autodream_memory(
             DbStore::Sqlite(sqlite_pool) => {
                 let query = if table == "swarm_tasks" {
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = ?"
+                } else if table == "tasks" {
+                    "UPDATE tasks SET auto_dreamed = TRUE WHERE id = ?"
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = ?"
                 };
@@ -974,6 +990,8 @@ pub async fn insert_autodream_memory(
                 let query = if table == "swarm_tasks" {
                     // swarm_tasks uses UUID primary key
                     "UPDATE swarm_tasks SET auto_dreamed = TRUE WHERE id = $1::uuid"
+                } else if table == "tasks" {
+                    "UPDATE tasks SET auto_dreamed = TRUE WHERE id = $1"
                 } else {
                     "UPDATE shared_tasks SET auto_dreamed = TRUE WHERE id = $1"
                 };

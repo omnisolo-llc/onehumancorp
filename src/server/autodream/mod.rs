@@ -211,6 +211,8 @@ impl AutoDreamWorker {
             
             // Insert into the proper KAIROS knowledge_embeddings table
             db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
+            // Upsert into agent_memories table as per Phase 3 autoDream pipeline requirements
+            db.insert_agent_memory(&mem_id, &org_id, &id, &summary, &embedding).await?;
             db.mark_task_auto_dreamed(&id, &table).await?;
 
             debug!("AutoDream: ingested completed task {} from {}", id, table);
