@@ -226,6 +226,7 @@ async fn handle_track_visitor(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StorefrontEmbedQuery {
+    pub referral_code: Option<String>,
     pub tenant: Option<String>,
     pub product_name: Option<String>,
     pub price: Option<String>,
@@ -309,6 +310,13 @@ async fn handle_og_card(
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
 
+    let referral_code_raw = query.referral_code.as_deref().unwrap_or("");
+    let referral_code = escape_html(referral_code_raw);
+    let referral_text = if !referral_code.is_empty() {
+        format!("<text x=\"600\" y=\"380\" font-family=\"sans-serif\" font-size=\"30\" fill=\"{}\" text-anchor=\"middle\">Use code {} for 15% off!</text>", accent_color, referral_code)
+    } else {
+        String::new()
+    };
     let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
@@ -316,6 +324,7 @@ async fn handle_og_card(
   <text x="100" y="200" font-family="sans-serif" font-size="80" font-weight="bold" fill="{text_color}">{safe_name}</text>
   <text x="100" y="300" font-family="sans-serif" font-size="60" fill="{accent_color}">{safe_price}</text>
 
+  {referral_text}
   <rect x="100" y="450" width="300" height="80" fill="{accent_color}" rx="10" />
   <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
 

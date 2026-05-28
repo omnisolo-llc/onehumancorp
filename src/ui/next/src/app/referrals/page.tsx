@@ -1,28 +1,37 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from "next/navigation";
 export default function ReferralsPage() {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [copiedInsta, setCopiedInsta] = useState(false);
   const referralLink = "ohc://join?ref=DEFAULT";
   const inviteMessage = `Launch your business online instantly with OHC! Use my invite link: ${referralLink}`;
+  const ogCardUrl = `/api/v1/growth/storefront/og-card?referral_code=DEFAULT&theme=dark`;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
-      <title>Referral Dashboard</title>
+      <header className="px-4 md:px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-md border-white/40">
+        <h1 className="text-xl md:text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Referrals & Rewards 🎁</h1>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="px-3 py-1.5 md:px-4 md:py-2 bg-gray-200 rounded-md text-xs md:text-sm font-medium hover:bg-gray-300 transition-colors"
+        >
+          Back to Dashboard
+        </button>
+      </header>
 
-      <main className="flex-1 max-w-4xl w-full mx-auto p-4 md:p-8 mt-16 md:mt-0">
-        <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-8">Referral Dashboard</h1>
-
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-bl-full -z-10"></div>
-
-          <div className="max-w-2xl">
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-4">Grow Together & Earn Rewards</h2>
-            <p className="text-gray-600 mb-8">
-              When your friends launch their storefront on OHC, they get priority AI setup, and you earn <strong className="text-gray-900">$50 credit</strong> toward your premium tools.
-            </p>
+      <main className="p-4 md:p-8 flex-1 w-full max-w-5xl mx-auto flex flex-col gap-8 items-center">
+        <div className="w-full flex flex-col md:flex-row gap-8 items-start bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100">
+          <div className="w-full md:w-1/3 flex flex-col items-center gap-4">
+            <div className="w-full aspect-[1.91/1] rounded-xl overflow-hidden shadow-md bg-gray-100">
+              <img src={ogCardUrl} alt="Social Share Card Preview" className="w-full h-full object-cover" />
+            </div>
+            <p className="text-xs text-gray-500 text-center">This is what your friends will see when you share your link.</p>
+          </div>
+          <div className="w-full md:w-2/3 max-w-2xl">
 
             <div className="mb-8">
               <label className="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Your Referral Link</label>
