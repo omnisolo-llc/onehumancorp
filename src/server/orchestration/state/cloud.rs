@@ -152,9 +152,15 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
     async fn pull_available_tasks(&self, limit: i64) -> Result<Vec<SharedTask>, String> {
         let lock_key = "ohc:lock:system:pull_tasks".to_string();
         let acquire_future = MeshLockGuard::acquire(self.mesh.clone(), lock_key.clone(), "cloud_state_manager".to_string(), 30);
-        let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_future).await {
+                let _lock_guard = match tokio::time::timeout(std::time::Duration::from_secs(60), acquire_future).await {
             Ok(Ok(guard)) => guard,
-            Ok(Err(e)) => return Err(e),
+            Ok(Err(e)) => {
+                if e.contains("is currently locked") || e.contains("Timeout") {
+                    tracing::warn!("Lock timeout or unavailable in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
+                    return Ok(vec![]);
+                }
+                return Err(e);
+            },
             Err(_) => {
                 tracing::warn!("Lock timeout in CloudStateManager::pull_available_tasks, fail-safing to empty list.");
                 return Ok(vec![]);
