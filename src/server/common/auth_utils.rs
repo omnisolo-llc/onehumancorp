@@ -1,5 +1,15 @@
 use sqlx::{Executor, Postgres, query};
 
+pub async fn set_system_context<'a, E>(executor: E) -> Result<(), sqlx::Error>
+where
+    E: Executor<'a, Database = Postgres>,
+{
+    query("SET LOCAL ROLE ohc_bypassrls")
+        .execute(executor)
+        .await?;
+    Ok(())
+}
+
 pub async fn set_org_context<'a, E>(executor: E, org_id: &str) -> Result<(), sqlx::Error>
 where
     E: Executor<'a, Database = Postgres>,

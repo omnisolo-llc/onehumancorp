@@ -79,7 +79,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
 
     async fn process_incoming_syncs(&self, records: Vec<AutoDreamSyncRecord>) -> Result<(), Box<dyn std::error::Error>> {
         let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
         for record in records {
             let id = uuid::Uuid::parse_str(&record.id).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
@@ -119,7 +119,7 @@ impl AutoDreamSyncService for AutoDreamSyncServiceImpl {
 
     async fn mark_records_synced(&self, ids: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
         let mut tx = self.pool.begin().await?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
 
         for id_str in ids {
             let id = uuid::Uuid::parse_str(&id_str).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;

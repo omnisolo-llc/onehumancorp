@@ -31,7 +31,7 @@ impl CloudStateManager {
         _lock_guard: &MeshLockGuard,
     ) -> Result<(), String> {
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
         // 1. Verify current state with FOR UPDATE
         let row = sqlx::query(
@@ -162,7 +162,7 @@ impl crate::orchestration::state::StateManager for CloudStateManager {
         };
 
         let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, "system").await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_system_context(&mut *tx).await.map_err(|e| e.to_string())?;
 
         let rows_future = sqlx::query(
             r#"
