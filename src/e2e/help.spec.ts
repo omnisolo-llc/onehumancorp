@@ -75,3 +75,59 @@ test.describe('Dashboard', () => {
     await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
   });
 });
+test.describe('Documentation Features', () => {
+  test('Help Center page contains required topics', async ({ page }) => {
+    await page.goto('/help');
+
+    // Check main topics
+    await expect(page.getByRole('heading', { name: 'Getting Started' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'My Store' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Payments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Marketing' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Account & Billing' })).toBeVisible();
+
+    // Check a topic page works
+    await page.getByRole('heading', { name: 'Payments' }).click();
+    await expect(page.locator('h1').filter({ hasText: 'Payments' })).toBeVisible();
+    await expect(page.locator('text=Getting paid is the best part of running a business.')).toBeVisible();
+  });
+
+  test('AI Help Chat is accessible and functional', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Open Help Widget to check if chat tab works
+    // In E2E, HelpChat component is disabled, so we rely on the internal chat tab in the Help Widget instead of floating chat.
+    const helpWidgetButton = page.locator('button', { hasText: '?' }).first();
+    await helpWidgetButton.click({ timeout: 5000, force: true });
+
+    // Go to Chat tab
+    await page.getByRole('button', { name: 'Ask AI' }).click();
+
+    // Send a message
+    const input = page.getByPlaceholder('Ask anything...');
+    await input.fill('How do I setup my store?');
+    await input.press('Enter');
+
+    // Verify response
+    await expect(page.locator('text=I am your AI Help Agent!')).toBeVisible();
+    await expect(page.locator('a:has-text("Read the full article →")')).toBeVisible();
+  });
+
+  test('Help Widget contains Walkthroughs and Tours', async ({ page }) => {
+    await page.goto('/dashboard');
+
+    // Open Help Widget
+    const helpWidgetButton = page.locator('button', { hasText: '?' }).first();
+    await helpWidgetButton.click({ timeout: 5000, force: true });
+
+    // Check tabs are visible
+    await expect(page.getByRole('button', { name: 'Tours' })).toBeVisible();
+    await page.getByRole('button', { name: 'Tours' }).click();
+
+    // Check specific walkthroughs
+    await expect(page.locator('text=Tour: Set up your store')).toBeVisible();
+    await expect(page.locator('text=Tour: Accept your first payment')).toBeVisible();
+    await expect(page.locator('text=Tour: Activate your AI Support Agent')).toBeVisible();
+  });
+});
