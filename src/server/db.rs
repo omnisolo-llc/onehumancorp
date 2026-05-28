@@ -282,6 +282,36 @@ impl DB {
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
+                    CREATE TABLE IF NOT EXISTS delivery_batches (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        scheduled_for TIMESTAMP,
+                        optimized_route_data TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS delivery_stops (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        batch_id TEXT NOT NULL REFERENCES delivery_batches(id) ON DELETE CASCADE,
+                        order_id TEXT NOT NULL,
+                        sequence_index INTEGER NOT NULL,
+                        status TEXT DEFAULT 'pending',
+                        proof_of_delivery TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS driver_sessions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT NOT NULL,
+                        batch_id TEXT NOT NULL REFERENCES delivery_batches(id) ON DELETE CASCADE,
+                        phone_number TEXT NOT NULL,
+                        magic_link_token TEXT NOT NULL UNIQUE,
+                        expires_at TIMESTAMP NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
 
                     CREATE TABLE IF NOT EXISTS knowledge_embeddings (
                         id TEXT PRIMARY KEY,

@@ -123,3 +123,39 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DeliveryBatch {
+    pub id: String,
+    pub tenant_id: String,
+    pub status: Option<String>,
+    pub scheduled_for: Option<DateTime<Utc>>,
+    pub optimized_route_data: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DeliveryStop {
+    pub id: String,
+    pub tenant_id: String,
+    pub batch_id: String,
+    pub order_id: String,
+    pub sequence_index: i32,
+    pub status: Option<String>,
+    pub proof_of_delivery: Option<sqlx::types::Json<serde_json::Value>>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DriverSession {
+    pub id: String,
+    pub tenant_id: String,
+    pub batch_id: String,
+    pub phone_number: String,
+    pub magic_link_token: String,
+    pub expires_at: DateTime<Utc>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

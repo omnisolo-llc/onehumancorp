@@ -3,6 +3,7 @@ pub mod autodream;
 
 pub mod billing_webhook;
 pub mod billing_api;
+pub mod delivery;
 #[cfg(test)]
 pub mod billing_webhook_test;
 pub mod health;
