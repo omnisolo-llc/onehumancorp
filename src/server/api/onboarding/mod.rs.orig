@@ -5,9 +5,6 @@ use axum::{
 };
 use std::sync::Arc;
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
-use axum::response::sse::{Event, Sse};
-use tokio_stream::Stream;
-use std::convert::Infallible;
 use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
 
 pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
@@ -17,7 +14,6 @@ pub fn router(agent: Arc<OnboardingAgent>) -> Router<Arc<dyn ohc_builtin_agent::
         .route("/state", get(get_state).post(save_state))
         .route("/launch", post(launch_onboarding))
         .route("/draft", get(get_draft).post(save_draft))
-        .route("/ingest", post(ingest_handler))
         .with_state(agent);
 
     // Convert to accept MeshTransport state
@@ -37,26 +33,6 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     }
-}
-
-#[derive(serde::Deserialize)]
-pub struct IngestPayload {
-    pub payload: Option<String>, // Base64 image
-    pub url: Option<String>,
-}
-
-async fn ingest_handler(
-    State(agent): State<Arc<OnboardingAgent>>,
-    Json(payload): Json<IngestPayload>,
-) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
-    // Return a proxy stream for now, we will connect it properly later
-    let (tx, rx) = tokio::sync::mpsc::channel(10);
-    let agent_clone = agent.clone();
-    tokio::spawn(async move {
-        let _ = agent_clone.ingest_business_data(payload, tx).await;
-    });
-
-    Sse::new(tokio_stream::wrappers::ReceiverStream::new(rx))
 }
 
 async fn get_draft(

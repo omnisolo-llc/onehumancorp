@@ -4,48 +4,6 @@ use ::server_ohc::orchestration::{StartOnboardingRequest, StartOnboardingRespons
 use crate::minimax::MinimaxClient;
 
 
-#[async_trait::async_trait]
-pub trait CatalogRepository: Send + Sync {
-    async fn insert_product(&self, tenant_id: &str, product: IntakeProduct) -> Result<(), String>;
-}
-
-pub struct SqlxCatalogRepository {
-    db: std::sync::Arc<crate::db::DB>,
-}
-
-impl SqlxCatalogRepository {
-    pub fn new(db: std::sync::Arc<crate::db::DB>) -> Self {
-        Self { db }
-    }
-}
-
-#[async_trait::async_trait]
-impl CatalogRepository for SqlxCatalogRepository {
-    async fn insert_product(&self, tenant_id: &str, product: IntakeProduct) -> Result<(), String> {
-        let id = format!("prod-{}", uuid::Uuid::new_v4());
-        let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
-        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
-
-        let price_cents = (product.price.parse::<f64>().unwrap_or(0.0) * 100.0) as i64;
-
-        sqlx::query(
-            "INSERT INTO products (id, organization_id, name, description, price_cents, fulfillment_strategy, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7)"
-        )
-        .bind(id)
-        .bind(tenant_id)
-        .bind(product.name)
-        .bind(product.description.unwrap_or_else(|| "Added during onboarding".to_string()))
-        .bind(price_cents)
-        .bind("physical")
-        .bind(serde_json::json!({"category": product.category}))
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| e.to_string())?;
-
-        tx.commit().await.map_err(|e| e.to_string())?;
-        Ok(())
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IntakeData {
@@ -59,8 +17,6 @@ pub struct IntakeData {
 pub struct IntakeProduct {
     pub name: String,
     pub price: String,
-    pub description: Option<String>,
-    pub category: Option<String>,
 }
 
 #[derive(Clone)]
@@ -76,59 +32,6 @@ impl OnboardingAgent {
             .ok()
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
         OnboardingAgent { db, hub, minimax }
-    }
-
-    pub async fn ingest_business_data(&self, payload: crate::api::onboarding::IngestPayload, tx: tokio::sync::mpsc::Sender<Result<axum::response::sse::Event, std::convert::Infallible>>) -> Result<(), String> {
-        let minimax = self.minimax.as_ref().ok_or("MiniMax API key not configured")?;
-
-        let prompt = if let Some(url) = payload.url {
-            format!("Extract menu items and products from the following URL. Return a JSON array of objects with 'name', 'price', 'description', and 'category' as string.\nURL: {}", url)
-        } else if let Some(img) = payload.payload {
-            format!("Extract menu items and products from the following base64 image data. Return a JSON array of objects with 'name', 'price', 'description', and 'category' as string.\nImage: {}", img)
-        } else {
-            return Err("No input provided".to_string());
-        };
-
-        // We will fake streaming JSON chunks since minimax client doesn't fully support structured streaming
-        let response = minimax.reason(&prompt).await?;
-
-        // Clean up markdown code blocks if present
-        let clean_json = response.trim_start_matches("```json")
-            .trim_start_matches("```")
-            .trim_end_matches("```")
-            .trim();
-
-        // Sometimes LLM returns an object containing an array, or an array directly
-        let items: Vec<IntakeProduct> = if let Ok(data) = serde_json::from_str::<Vec<IntakeProduct>>(clean_json) {
-            data
-        } else if let Ok(obj) = serde_json::from_str::<serde_json::Value>(clean_json) {
-            if let Some(arr) = obj.get("initial_products").and_then(|v| v.as_array()) {
-                serde_json::from_value(serde_json::Value::Array(arr.clone())).unwrap_or_default()
-            } else {
-                Vec::new()
-            }
-        } else {
-            Vec::new()
-        };
-
-        let repo = SqlxCatalogRepository::new(self.db.clone());
-
-        for item in items {
-            // Send to SSE stream
-            let event_data = serde_json::to_string(&item).unwrap_or_default();
-            let _ = tx.send(Ok(axum::response::sse::Event::default().data(event_data))).await;
-
-            // Delay slightly to simulate streaming "glassy" feedback UI as per design doc
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-
-            // Map to DB
-            let tenant_id = "default_tenant"; // Use proper tenant later
-            let _ = repo.insert_product(tenant_id, item).await;
-        }
-
-        let _ = tx.send(Ok(axum::response::sse::Event::default().data("[DONE]"))).await;
-
-        Ok(())
     }
 
     pub async fn process_intake(&self, input: &str) -> Result<IntakeData, String> {

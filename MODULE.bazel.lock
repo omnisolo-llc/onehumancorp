@@ -3127,7 +3127,7 @@
           "REPO_MAPPING:rules_rust+,rules_cc rules_cc+",
           "REPO_MAPPING:rules_rust+,rules_rust rules_rust+",
           "FILE:@@//Cargo.lock 0916008855fe3d5af5d9f000b071a0871e908d23d79728f9b70338fd73072db3",
-          "FILE:@@//Cargo.toml 91923e2e4c8295e894f3f301b18e92713974e22ce188cbe1dd3858ed3456859d",
+          "FILE:@@//Cargo.toml f81761b563f01e54b8f2aa8bcda39e1b6dcb4cbb1cb9a0b922572dd1be17ad8c",
           "FILE:@@//src/ui/tauri/Cargo.toml aae3ad3c76614746cfb92ccfa3d5bdb01acf2d703bd83356b9ef52deb884eb04"
         ],
         "generatedRepoSpecs": {
