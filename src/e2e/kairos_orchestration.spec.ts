@@ -8,7 +8,7 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
 
   test('Test 2: Navigate to /agents page and verify the Agents heading', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 
   test('Test 3: Verify the Business Snapshot section is displayed', async ({ page }) => {
@@ -27,6 +27,6 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
     await expect(page.getByRole('heading', { name: 'Business Snapshot' })).toBeVisible();
     await expect(page.getByText('Today\'s Sales')).toBeVisible();
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
   });
 });

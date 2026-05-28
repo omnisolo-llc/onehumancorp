@@ -42,6 +42,24 @@ function KairosContent() {
     }
   }, [searchParams, startWalkthrough]);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const res = await fetch('/api/kairos');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.activeTasks) setActiveTasks(data.activeTasks);
+          if (data.meshNodes) setMeshNodes(data.meshNodes);
+          // NOTE: AutoDreamMemory could also be updated here if state is added.
+        }
+      } catch (e) {
+        console.error("Error fetching KAIROS data:", e);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#16161A' }}>
       {/* Header */}

@@ -26,7 +26,7 @@ test.describe('🎨 Canvas: KAIROS Orchestration Walkthrough', () => {
 
     // Open Help Widget
     await page.click('button[aria-label="Help"]');
-    await expect(page.locator('#help-widget-container')).toBeVisible();
+    await expect(page.locator('#help-widget-container').nth(1)).toBeVisible();
 
     // Find and click the KAIROS tour button
     const kairosTourBtn = page.locator('#kairos-walkthrough-btn');
