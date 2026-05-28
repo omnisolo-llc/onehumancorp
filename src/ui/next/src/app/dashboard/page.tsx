@@ -1723,7 +1723,18 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    await fetch('/api/v1/growth/campaign/send', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            target_segment: 'vip_customers',
+                                            message: customerReferralMessage
+                                        })
+                                    });
+                                } catch (e) {
+                                    console.error("Failed to send VIP referral campaign", e);
+                                }
                                 setCustomerReferralSent(true);
                                 setTimeout(() => {
                                     setShowCustomerReferralModal(false);
