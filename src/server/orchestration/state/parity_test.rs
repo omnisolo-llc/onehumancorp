@@ -88,6 +88,8 @@ mod parity_tests {
                 .unwrap();
             let id: String = row.get("id");
             assert_eq!(id, test_product_id);
+            let fetched_content: String = row.get("content");
+            assert_eq!(fetched_content, "content");
         }
 
         if let Some(ref db) = pg_db {
@@ -98,6 +100,8 @@ mod parity_tests {
                 .unwrap();
             let id: String = row.get("id");
             assert_eq!(id, test_product_id);
+            let fetched_content: String = row.get("content");
+            assert_eq!(fetched_content, "content");
         }
     }
 
