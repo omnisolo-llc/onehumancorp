@@ -1,3 +1,4 @@
+pub mod compliance;
 pub mod repository;
 pub mod organization;
 pub mod model;
