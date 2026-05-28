@@ -24,8 +24,7 @@ rust_library(
         "escalator.rs",
         "local_repository.rs",
         "local_repository_impl.rs",
-        "mod.rs",
-        "mcp_sync.rs",
+
         "power_sync_orchestrator.rs",
         "power_sync_test.rs",
         "service.rs",
