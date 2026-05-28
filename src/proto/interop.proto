@@ -51,6 +51,23 @@ message JobAck {
   int64 timestamp_ms = 3;
 }
 
+// IntakePayload represents the payload for multimodal visual quoting and intake.
+message IntakePayload {
+  string tenant_id = 1;
+  string origin_channel = 2;
+  string image_url = 3;
+  string user_text_context = 4;
+}
+
+// VisualEstimate represents the structured data derived by the Multimodal Vision Sidecar.
+message VisualEstimate {
+  string tenant_id = 1;
+  string item_type = 2;
+  string visible_damage = 3;
+  string estimated_size = 4;
+  int32 complexity_score = 5;
+}
+
 // Represents a job in the queue.
 message QueueJob {
   string id = 1;

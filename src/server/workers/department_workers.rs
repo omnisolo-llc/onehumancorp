@@ -616,19 +616,71 @@ mod tests {
 pub struct CustomerSuccessWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
+    pub hub: Arc<crate::hub::Hub>,
 }
 
 impl CustomerSuccessWorker {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),
+            hub,
         }
     }
 
     pub fn start(&self) {
         let db = self.db.clone();
         let interval_duration = self.poll_interval;
+
+        let hub = self.hub.clone();
+        let mut cs_rx = hub.subscribe_teammate_mesh("cs_inbox".to_string());
+
+        // Background loop for Event Mesh subscriptions
+        let db_clone = self.db.clone();
+        tokio::spawn(async move {
+            while let Ok(event) = cs_rx.recv().await {
+                if event.action == "VisualIntake" {
+                    if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
+                        if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                            let tenant_id = payload_json.get("tenant_id").and_then(|t| t.as_str()).unwrap_or("system");
+
+                            // Insert acknowledgment message
+                            let drafted_msg = "Thanks! Let me take a look at this...".to_string();
+                            match &db_clone.store {
+                                crate::db::DbStore::Postgres => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                                        VALUES ('customer_success', $1, $2, 'system', 'customer', 'auto_reply', $3)
+                                        "#
+                                    )
+                                    .bind(tenant_id)
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&drafted_msg)
+                                    .execute(&db_clone.pool)
+                                    .await;
+                                },
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    let _ = sqlx::query(
+                                        r#"
+                                        INSERT INTO agent_inbox (agent_id, tenant_id, message_id, from_agent, to_agent, type, content)
+                                        VALUES ('customer_success', ?, ?, 'system', 'customer', 'auto_reply', ?)
+                                        "#
+                                    )
+                                    .bind(tenant_id)
+                                    .bind(uuid::Uuid::new_v4().to_string())
+                                    .bind(&drafted_msg)
+                                    .execute(pool)
+                                    .await;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Polling loop for DB queue
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(interval_duration);
             loop {

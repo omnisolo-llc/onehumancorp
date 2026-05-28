@@ -31,9 +31,17 @@ impl Department for SalesAgent {
 
         ::server_telemetry::record_business_event(&event.tenant_id, ::server_telemetry::get_deployment_mode(), "quote_generated");
 
+        let mut description = "Quote generated for review".to_string();
+
+        if event.event_type == "tenant.quote.requested" {
+            let item_type = event.payload.get("item_type").and_then(|v| v.as_str()).unwrap_or("unknown item");
+            let damage = event.payload.get("visible_damage").and_then(|v| v.as_str()).unwrap_or("unknown damage");
+            description = format!("Drafted quote based on visual estimate. Item: {}, Damage: {}", item_type, damage);
+        }
+
         self.orchestrator.execute_action(
             DepartmentType::Sales,
-            "Quote generated for review".to_string(),
+            description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),
