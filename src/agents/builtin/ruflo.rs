@@ -5,7 +5,6 @@ use futures::future::join_all;
 
 /// Ruflo Unique Harness Innovations: Swarm coordination topologies
 /// Hierarchical, mesh, adaptive with consensus
-/// Multi-agent swarm
 /// SONA neural patterns: Self-learning trajectory patterns
 
 #[derive(Debug, Clone, PartialEq, Eq)]
