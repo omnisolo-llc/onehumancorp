@@ -1927,7 +1927,9 @@ impl Agent {
         // Context Management (Preventing Context Rot): Observation Masking (JetBrains' Junie)
         // Hide the raw output of old tools from the prompt, but keep the `tool_calls` themselves visible so the model remembers what it did.
         if final_cfg.enable_observation_masking {
-            crate::observation_masking::apply_observation_masking(&mut final_messages, final_cfg.observation_masking_threshold, final_cfg.observation_masking_size_limit);
+            let masker = crate::observation_masking::JetBrainsObservationMasker { threshold: final_cfg.observation_masking_threshold, size_limit: final_cfg.observation_masking_size_limit };
+            use crate::observation_masking::ObservationMasker;
+            masker.apply_masking(&mut final_messages);
         }
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
@@ -2588,11 +2590,9 @@ impl Agent {
             }
 
             if final_cfg.enable_observation_masking {
-                crate::observation_masking::apply_observation_masking(
-                    &mut messages,
-                    final_cfg.observation_masking_threshold,
-                    final_cfg.observation_masking_size_limit,
-                );
+                let masker = crate::observation_masking::JetBrainsObservationMasker { threshold: final_cfg.observation_masking_threshold, size_limit: final_cfg.observation_masking_size_limit };
+                use crate::observation_masking::ObservationMasker;
+                masker.apply_masking(&mut messages);
             }
 
             // Append tool results as a user turn.
