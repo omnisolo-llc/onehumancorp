@@ -2757,10 +2757,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         #setup-screen > div.hidden {
                             opacity: 0;
-                            transform: translateY(10px);
                             pointer-events: none;
-                            position: absolute;
+                            transform: translateY(10px);
                             visibility: hidden;
+                            position: absolute;
                         }
 
                         @media (max-width: 375px) {
@@ -2975,6 +2975,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             }
             #setup-screen h1 {
                 font-size: 24px;
+            }
+
+            #setup-screen .step-container {
+                transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                opacity: 1;
+                visibility: visible;
             }
             #setup-screen button, #setup-screen input {
                 width: 100%;
@@ -4431,10 +4437,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 // Restore screen visually without calling nextStep to avoid validation
                                 if (currentStep && currentStep !== 1) {
-                                    document.getElementById('step-1').style.display = 'none';
+                                    const step1 = document.getElementById('step-1');
+                                    if (step1) {
+                                        step1.classList.add('hidden');
+                                        step1.style.display = 'none';
+                                    }
                                     const currentStepEl = document.getElementById(`step-${currentStep}`);
                                     if (currentStepEl) {
-                                        currentStepEl.style.display = 'block';
+                                        currentStepEl.style.display = '';
                                         currentStepEl.classList.remove('hidden');
                                     }
                                 }
@@ -5216,7 +5226,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.classList.add('hidden');
-                                    d.style.display = 'none'; // Fallback for old e2e logic
                                     setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
@@ -5224,13 +5233,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
-                                next.style.display = 'block'; // Fallback for old e2e logic
+                                next.style.display = ''; // Fallback for old e2e logic
                                 setTimeout(() => next.classList.remove('hidden'), 10);
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
-                                    if (child.style.display === 'none') child.style.display = 'block';
+                                    if (child.style.display === 'none') child.style.display = '';
                                 });
                             }
 
