@@ -139,7 +139,7 @@ export default function BuilderPage() {
                     b.type === 'Catalog' ? 'ProductGridBlock' :
                     b.type === 'Booking' ? 'ServiceBookingBlock' :
                     b.type === 'Testimonials' ? 'TestimonialBlock' :
-                    b.type === 'Referral' ? 'ReferralBlock' : b.type,
+                    b.type === 'Referral' ? 'CustomerReferralBlock' : b.type,
         content: b.props,
         sort_order: i
       }));

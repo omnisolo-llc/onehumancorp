@@ -45,6 +45,10 @@ async fn execute_publish_site_job(
     info!("Generating SEO metadata (JSON-LD) for site {}...", site_id);
     info!("Injecting SEO metadata (title, desc, JSON-LD) for site {}...", site_id);
 
+    // 3.01 Mock Sitemap Generation and Submission (via Marketing AI Agent)
+    info!("Generating and maintaining sitemap for site {}...", site_id);
+    info!("Submitting sitemap to search engines for site {}...", site_id);
+
     // 3.1 Mock Domain & Infrastructure Provisioning
     info!("Automated Domain Provisioner: Checking availability and provisioning infrastructure for site {}...", site_id);
 

@@ -67,6 +67,9 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
         "TestimonialBlock" => {
             content.get("quotes").and_then(|v| v.as_array()).is_some()
         },
+        "CustomerReferralBlock" => {
+            content.get("offerTitle").is_some() && content.get("offerDescription").is_some() || content.get("title").is_some() && content.get("offer").is_some()
+        },
         "ContactFormBlock" | "BookingCalendarBlock" => {
             content.is_object()
         },
