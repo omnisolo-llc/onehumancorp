@@ -6,8 +6,8 @@ use axum::{
     Router,
     Json,
 };
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
+
+use serde::Serialize;
 use ::server_common::Claims;
 use sqlx::PgPool;
 
@@ -41,11 +41,11 @@ async fn test_voice_receptionist(
 
     let mut tx = match pool.begin().await {
         Ok(t) => t,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(VoiceTestResponse { success: false })).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(VoiceTestResponse { success: false })).into_response();
     };
 
     if let Err(_) = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(VoiceTestResponse { success: false })).into_response(),
+        return (StatusCode::INTERNAL_SERVER_ERROR, Json(VoiceTestResponse { success: false })).into_response();
     }
 
     let query = "INSERT INTO inbox_messages (id, tenant_id, source, content, status) VALUES ($1, $2, $3, $4, $5)";
