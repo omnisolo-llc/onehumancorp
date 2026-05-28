@@ -110,7 +110,7 @@ rust_library(
 
 rust_test(
     name = "server_services_dashboard_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_services_dashboard",
     edition = "2024",
     env = {

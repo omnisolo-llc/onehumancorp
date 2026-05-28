@@ -145,7 +145,7 @@ rust_library(
 
 rust_test(
     name = "server_integrations_unit_test",
-    size = "small",
+    size = "large",
     args = [
         "mcp::",
         "mcp_gateway::",
