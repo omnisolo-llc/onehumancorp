@@ -20,7 +20,7 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Fill in the description (incorporating Maya to trigger mock)
+    // Fill in the description
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
@@ -79,7 +79,7 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Fill in the description (incorporating Carlos to trigger mock)
+    // Fill in the description
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
 
