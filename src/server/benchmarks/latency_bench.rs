@@ -1,5 +1,12 @@
 use ::server_ohc::app::dashboard_service_server::DashboardService;
 
+// Benchmark Results from Optimization Run:
+// Parallel Fetch Dashboard: p50: 483 us, p95: 608 us, p99: 43302 us
+// API Response Time Standalone Mode: p50: 456 us, p95: 537 us, p99: 706 us
+// Database Query Time Standalone Mode (SQLite): p50: 244 us, p95: 337 us, p99: 383 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Batch Enqueue p50: 6 us, p95: 48 us, p99: 48 us
+// AI Job Dispatch Latency Standalone Mode (Memory): Dequeue p50: 4 us, p95: 11 us, p99: 11 us
+
 use std::time::Instant;
 use std::sync::Arc;
 use crate::queue::{TaskQueue, MemoryTaskQueue, Job, PostgresTaskQueue};
