@@ -16,7 +16,7 @@ test('Scribe Mission Track page displays plain language and works correctly', as
   await expect(page.getByText("Tracking your team's progress.")).toBeVisible();
 
   // Verify the plain language task is visible
-  await expect(page.getByText('Identify undocumented endpoints')).toBeVisible();
+  await expect(page.getByText('Find missing help articles')).toBeVisible();
 
   // Verify the agent is also plain language
   await expect(page.getByText('Scribe').first()).toBeVisible();
@@ -24,18 +24,18 @@ test('Scribe Mission Track page displays plain language and works correctly', as
   // Click on the active tab
   await page.getByRole('button', { name: 'active' }).click();
 
-  // Wait for it to filter to "Generate missing OpenAPI specs"
-  await expect(page.getByText('Generate missing OpenAPI specs')).toBeVisible();
-  // "Identify undocumented endpoints" should not be visible since it's completed
-  await expect(page.getByText('Identify undocumented endpoints')).toBeHidden();
+  // Wait for it to filter to "Write new tutorial guides"
+  await expect(page.getByText('Write new tutorial guides')).toBeVisible();
+  // "Find missing help articles" should not be visible since it's completed
+  await expect(page.getByText('Find missing help articles')).toBeHidden();
 
   // Click on completed tab
   await page.getByRole('button', { name: 'completed' }).click();
 
-  // Wait for it to filter to "Identify undocumented endpoints"
-  await expect(page.getByText('Identify undocumented endpoints')).toBeVisible();
-  // "Generate missing OpenAPI specs" should not be visible since it's active
-  await expect(page.getByText('Generate missing OpenAPI specs')).toBeHidden();
+  // Wait for it to filter to "Find missing help articles"
+  await expect(page.getByText('Find missing help articles')).toBeVisible();
+  // "Write new tutorial guides" should not be visible since it's active
+  await expect(page.getByText('Write new tutorial guides')).toBeHidden();
 
   // Go back to the dashboard using the link
   await page.getByRole('link').click();
