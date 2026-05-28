@@ -17,7 +17,9 @@ export default function Integrations() {
     { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
     { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
     { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "1-Click Shipping Labels." },
     { id: "resend", name: "Resend", category: "marketing", status: "disconnected", icon: "📧", description: "AI-Powered Email Marketing." },
+    { id: "googlemeet", name: "Google Meet", category: "operations", status: "disconnected", icon: "📹", description: "Automated online lessons." },
     { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
   ]);
 
