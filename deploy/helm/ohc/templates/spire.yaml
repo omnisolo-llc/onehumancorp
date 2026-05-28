@@ -1,0 +1,297 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server
+  namespace: {{ .Release.Namespace }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server-trust-role
+rules:
+- apiGroups: ["authentication.k8s.io"]
+  resources: ["tokenreviews"]
+  verbs: ["create"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server-trust-role-binding
+subjects:
+- kind: ServiceAccount
+  name: {{ include "ohc.fullname" . }}-spire-server
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "ohc.fullname" . }}-spire-server-trust-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server
+  namespace: {{ .Release.Namespace }}
+data:
+  server.conf: |
+    server {
+      bind_address = "0.0.0.0"
+      bind_port = "8081"
+      trust_domain = "example.org"
+      data_dir = "/run/spire/data"
+      log_level = "DEBUG"
+    }
+    plugins {
+      DataStore "sql" {
+        plugin_data {
+          database_type = "sqlite3"
+          connection_string = "/run/spire/data/datastore.sqlite3"
+        }
+      }
+      NodeAttestor "k8s_psat" {
+        plugin_data {
+          clusters = {
+            "my-cluster" = {
+              use_token_review_api_validation = true
+              service_account_allow_list = ["{{ .Release.Namespace }}:{{ include "ohc.fullname" . }}-spire-agent"]
+            }
+          }
+        }
+      }
+      KeyManager "disk" {
+        plugin_data {
+          keys_path = "/run/spire/data/keys.json"
+        }
+      }
+      Notifier "k8sbundle" {
+        plugin_data {
+          namespace = "{{ .Release.Namespace }}"
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "ohc.fullname" . }}-spire-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-spire-server
+  serviceName: {{ include "ohc.fullname" . }}-spire-server
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace }}
+      labels:
+        app: {{ include "ohc.fullname" . }}-spire-server
+    spec:
+      serviceAccountName: {{ include "ohc.fullname" . }}-spire-server
+      containers:
+        - name: spire-server
+          image: gcr.io/spiffe-io/spire-server:1.8.0
+          args:
+            - -config
+            - /run/spire/config/server.conf
+          ports:
+            - containerPort: 8081
+          volumeMounts:
+            - name: spire-config
+              mountPath: /run/spire/config
+              readOnly: true
+            - name: spire-data
+              mountPath: /run/spire/data
+              readOnly: false
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/opt/spire/bin/spire-server healthcheck"
+            failureThreshold: 2
+            initialDelaySeconds: 15
+            periodSeconds: 60
+            timeoutSeconds: 3
+      volumes:
+        - name: spire-config
+          configMap:
+            name: {{ include "ohc.fullname" . }}-spire-server
+  volumeClaimTemplates:
+    - metadata:
+        name: spire-data
+        namespace: {{ .Release.Namespace }}
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-server
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8081
+      targetPort: 8081
+      protocol: TCP
+      name: grpc
+  selector:
+    app: {{ include "ohc.fullname" . }}-spire-server
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  namespace: {{ .Release.Namespace }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["pods","nodes","nodes/proxy"]
+  verbs: ["get"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: {{ include "ohc.fullname" . }}-spire-agent-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-bundle
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  namespace: {{ .Release.Namespace }}
+data:
+  spire-agent.conf: |
+    agent {
+      data_dir = "/run/spire"
+      log_level = "DEBUG"
+      server_address = "{{ include "ohc.fullname" . }}-spire-server"
+      server_port = "8081"
+      socket_path = "/run/spire/sockets/agent.sock"
+      trust_bundle_path = "/run/spire/bundle/bundle.crt"
+      trust_domain = "example.org"
+    }
+    plugins {
+      NodeAttestor "k8s_psat" {
+        plugin_data {
+          cluster = "my-cluster"
+        }
+      }
+      KeyManager "memory" {
+        plugin_data {
+        }
+      }
+      WorkloadAttestor "k8s" {
+        plugin_data {
+          skip_kubelet_verification = true
+        }
+      }
+      WorkloadAttestor "unix" {
+          plugin_data {
+          }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ include "ohc.fullname" . }}-spire-agent
+spec:
+  selector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-spire-agent
+  template:
+    metadata:
+      namespace: {{ .Release.Namespace }}
+      labels:
+        app: {{ include "ohc.fullname" . }}-spire-agent
+    spec:
+      hostPID: true
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: {{ include "ohc.fullname" . }}-spire-agent
+      containers:
+        - name: spire-agent
+          image: gcr.io/spiffe-io/spire-agent:1.8.0
+          args: ["-config", "/run/spire/config/spire-agent.conf"]
+          volumeMounts:
+            - name: spire-config
+              mountPath: /run/spire/config
+              readOnly: true
+            - name: spire-bundle
+              mountPath: /run/spire/bundle
+            - name: spire-agent-socket
+              mountPath: /run/spire/sockets
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - "/opt/spire/bin/spire-agent healthcheck"
+            failureThreshold: 2
+            initialDelaySeconds: 15
+            periodSeconds: 60
+            timeoutSeconds: 3
+      volumes:
+        - name: spire-config
+          configMap:
+            name: {{ include "ohc.fullname" . }}-spire-agent
+        - name: spire-bundle
+          configMap:
+            name: {{ include "ohc.fullname" . }}-spire-bundle
+        - name: spire-agent-socket
+          hostPath:
+            path: /run/spire/sockets
+            type: DirectoryOrCreate
+---
+{{- if .Values.backend.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "ohc.fullname" . }}-spire-agent
+  labels:
+    {{- include "ohc.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ include "ohc.fullname" . }}-backend
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .Release.Namespace }}
+          podSelector:
+            matchLabels:
+              app: {{ include "ohc.fullname" . }}-spire-server
+      ports:
+        - protocol: TCP
+          port: 8081
+{{- end }}
