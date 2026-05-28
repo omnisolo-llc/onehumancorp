@@ -84,6 +84,9 @@ pub struct Product {
     pub metadata: Option<sqlx::types::Json<serde_json::Value>>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub dynamic_pricing_enabled: Option<bool>,
+    pub min_price_cents: Option<i64>,
+    pub max_price_cents: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
@@ -109,6 +112,9 @@ pub struct Booking {
     pub status: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub dynamic_pricing_enabled: Option<bool>,
+    pub min_price_cents: Option<i64>,
+    pub max_price_cents: Option<i64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, FromRow)]

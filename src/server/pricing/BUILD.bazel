@@ -11,6 +11,8 @@ rust_library(
         "payment_routing.rs",
         "prompt_caching.rs",
         "rate_limit.rs",
+        "dynamic/mod.rs",
+        "dynamic/engine.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",

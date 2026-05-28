@@ -29,7 +29,48 @@ export default function StorefrontBuilderPage() {
     const savedBlocks = localStorage.getItem("ohc_builder_blocks");
     if (savedBlocks) {
       try {
-        setBlocks(JSON.parse(savedBlocks));
+        const parsedBlocks = JSON.parse(savedBlocks);
+        setBlocks(parsedBlocks);
+
+        // Fetch dynamic pricing for Catalog/Booking blocks
+        parsedBlocks.forEach(async (block: any, bIdx: number) => {
+          if (block.type === 'Catalog' && block.props.items) {
+            const updatedItems = await Promise.all(block.props.items.map(async (item: any) => {
+              if (item.id) {
+                try {
+                  const res = await fetch(`/api/v1/pricing/dynamic/evaluate?item_id=${item.id}&item_type=product`);
+                  const dynData = await res.json();
+                  if (dynData && dynData.adjusted_price_cents !== dynData.original_price_cents) {
+                    return {
+                      ...item,
+                      dynamic_price: `$${(dynData.adjusted_price_cents / 100).toFixed(2)}`,
+                      dynamic_reason: dynData.reason
+                    };
+                  }
+                } catch (e) {}
+              }
+              return item;
+            }));
+            setBlocks(prev => {
+              const nb = [...prev];
+              nb[bIdx].props.items = updatedItems;
+              return nb;
+            });
+          } else if (block.type === 'Booking' && block.props.id) {
+            try {
+              const res = await fetch(`/api/v1/pricing/dynamic/evaluate?item_id=${block.props.id}&item_type=booking`);
+              const dynData = await res.json();
+              if (dynData && dynData.adjusted_price_cents !== dynData.original_price_cents) {
+                setBlocks(prev => {
+                  const nb = [...prev];
+                  nb[bIdx].props.dynamic_price = `$${(dynData.adjusted_price_cents / 100).toFixed(2)}`;
+                  nb[bIdx].props.dynamic_reason = dynData.reason;
+                  return nb;
+                });
+              }
+            } catch (e) {}
+          }
+        });
       } catch (e) {
         console.error("Failed to parse saved blocks", e);
       }
@@ -72,8 +113,52 @@ export default function StorefrontBuilderPage() {
     .then(data => {
       if (data && data.builderState) {
         if (data.builderState.bio) setBio(data.builderState.bio);
-        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) setBlocks(data.builderState.blocks);
         if (data.builderState.status) setStatus(data.builderState.status);
+        if (data.builderState.blocks && Array.isArray(data.builderState.blocks)) {
+          const parsedBlocks = data.builderState.blocks;
+          setBlocks(parsedBlocks);
+          // Fetch dynamic pricing for Catalog/Booking blocks
+          parsedBlocks.forEach(async (block: any, bIdx: number) => {
+            if (block.type === 'Catalog' && block.props.items) {
+              const updatedItems = await Promise.all(block.props.items.map(async (item: any) => {
+                if (item.id) {
+                  try {
+                    const res = await fetch(`/api/v1/pricing/dynamic/evaluate?item_id=${item.id}&item_type=product`);
+                    const dynData = await res.json();
+                    if (dynData && dynData.adjusted_price_cents !== dynData.original_price_cents) {
+                      return {
+                        ...item,
+                        dynamic_price: `$${(dynData.adjusted_price_cents / 100).toFixed(2)}`,
+                        dynamic_reason: dynData.reason
+                      };
+                    }
+                  } catch (e) {}
+                }
+                return item;
+              }));
+              setBlocks((prev: any[]) => {
+                const nb = [...prev];
+                if (nb[bIdx]) nb[bIdx].props.items = updatedItems;
+                return nb;
+              });
+            } else if (block.type === 'Booking' && block.props.id) {
+              try {
+                const res = await fetch(`/api/v1/pricing/dynamic/evaluate?item_id=${block.props.id}&item_type=booking`);
+                const dynData = await res.json();
+                if (dynData && dynData.adjusted_price_cents !== dynData.original_price_cents) {
+                  setBlocks((prev: any[]) => {
+                    const nb = [...prev];
+                    if (nb[bIdx]) {
+                      nb[bIdx].props.dynamic_price = `$${(dynData.adjusted_price_cents / 100).toFixed(2)}`;
+                      nb[bIdx].props.dynamic_reason = dynData.reason;
+                    }
+                    return nb;
+                  });
+                }
+              } catch (e) {}
+            }
+          });
+        }
       }
     })
     .catch(err => console.error('Failed to load builder state', err));

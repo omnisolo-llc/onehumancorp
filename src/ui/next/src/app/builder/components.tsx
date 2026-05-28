@@ -148,9 +148,22 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
             <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-4 rounded-[16px] flex flex-col">
               <div className="flex justify-between items-start mb-1">
                 <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.name}</h3>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm">{item.price}</span>
+                <div className="flex flex-col items-end">
+                  <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] bg-white/50 dark:bg-white/10 backdrop-blur-sm px-2 py-1 rounded-[8px] text-sm flex items-center gap-1">
+                    {item.dynamic_reason && item.dynamic_reason.toLowerCase().includes("high demand") && (
+                      <svg className="w-3 h-3 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"></path></svg>
+                    )}
+                    {item.dynamic_reason && (item.dynamic_reason.toLowerCase().includes("clearance") || item.dynamic_reason.toLowerCase().includes("last minute") || item.dynamic_reason.toLowerCase().includes("happy hour")) && (
+                      <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 10.293a1 1 0 010 1.414l-6 6a1 1 0 01-1.414 0l-6-6a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l4.293-4.293a1 1 0 011.414 0z" clipRule="evenodd"></path></svg>
+                    )}
+                    {item.dynamic_price || item.price}
+                  </span>
+                  {item.dynamic_reason && (
+                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">{item.dynamic_reason}</span>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed">{item.description}</p>
+              <p className="text-sm text-gray-600 dark:text-[#A1A1A6] leading-relaxed mt-2">{item.description}</p>
             </div>
           ))}
         </div>
@@ -161,8 +174,17 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "Booking") {
     return (
       <div className="p-6 bg-transparent font-inter min-w-[375px]">
-        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center">
-          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.title}</h2>
+        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px] text-center relative">
+          {props.dynamic_reason && (
+             <div className="absolute -top-3 right-4 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm z-10 flex items-center gap-1 uppercase tracking-wider">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"></path></svg>
+                {props.dynamic_reason}
+             </div>
+          )}
+          <h2 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">{props.title}</h2>
+          {props.dynamic_price ? (
+              <p className="text-md font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">{props.dynamic_price}</p>
+          ) : null}
           <p className="text-sm text-gray-600 dark:text-[#A1A1A6] mb-4">{props.availability}</p>
           <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-semibold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all">
             Select Time

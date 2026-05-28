@@ -439,7 +439,10 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        dynamic_pricing_enabled BOOLEAN DEFAULT FALSE,
+                        min_price_cents INTEGER,
+                        max_price_cents INTEGER
                     );
                     CREATE TABLE IF NOT EXISTS products (
                         id TEXT PRIMARY KEY,
@@ -459,7 +462,10 @@ impl DB {
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        dynamic_pricing_enabled BOOLEAN DEFAULT FALSE,
+                        min_price_cents INTEGER,
+                        max_price_cents INTEGER
                     );
                     CREATE TABLE IF NOT EXISTS referrals (
                         id TEXT PRIMARY KEY,
