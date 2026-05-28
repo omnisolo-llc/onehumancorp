@@ -1,3 +1,4 @@
+use serde_json;
 use reqwest::Client;
 
 pub struct AyrshareClient {
