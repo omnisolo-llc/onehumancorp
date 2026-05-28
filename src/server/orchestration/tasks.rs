@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
@@ -326,7 +327,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::Low),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -372,7 +373,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: dt_created,
             updated_at: dt_updated,
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::Low),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -426,7 +427,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::Low),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -476,7 +477,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::Low),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
