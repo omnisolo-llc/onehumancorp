@@ -30,10 +30,10 @@ test.describe('Social Media Autoposting Flow', () => {
     await expect(page.getByText('Invite message copied!')).toBeVisible();
   });
 
-  test('user can configure Manychat from dashboard integrations', async ({ page }) => {
+  test('user can configure Meta Graph API from dashboard integrations', async ({ page }) => {
     await page.getByRole('button', { name: 'Integrations' }).click();
-    await expect(page.getByRole('heading', { name: /Manychat/ })).toBeVisible();
-    await page.locator('#manychat-integration').getByRole('button', { name: 'Configure' }).click();
+    await expect(page.getByRole('heading', { name: /Meta Graph API/ })).toBeVisible();
+    await page.locator('#meta-integration').getByRole('button', { name: 'Configure' }).click();
 
     await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
   });
