@@ -97,7 +97,12 @@ impl SandboxAdapter for MacOsSandbox {
     }
 
     fn annotate_error(&self, err: String, stdout: String) -> String {
-        format!("SANDBOX_FAILURE: {}\nSTDOUT:\n{}", err, stdout)
+        let details = if stdout.is_empty() {
+            err.clone()
+        } else {
+            format!("{}\n{}", err, stdout)
+        };
+        format!("<sandbox_violations>{}</sandbox_violations>\nSTDOUT:\n{}", details, stdout)
     }
 }
 

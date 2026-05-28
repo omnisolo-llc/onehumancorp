@@ -23,10 +23,33 @@ impl ASTParser {
     fn walk_node_for_security(&self, node: Node<'_>, source: &str) -> Result<(), String> {
         let node_kind = node.kind();
 
+        // Check for git internal path creation attempts (e.g. .git/HEAD, .git/objects/, .git/hooks/)
+        if node_kind == "command" {
+            if let Some(command_name_node) = node.child_by_field_name("name") {
+                let start_byte = command_name_node.start_byte() as usize;
+                let end_byte = command_name_node.end_byte() as usize;
+                let name = &source[start_byte..end_byte];
+                if name == "git" || name == "echo" || name == "touch" || name == "cat" || name == "cp" || name == "mv" || name == "mkdir" {
+                    // Quick text-based check in the command for git paths if it modifies files
+                    let node_start_byte = node.start_byte() as usize;
+                    let node_end_byte = node.end_byte() as usize;
+                    let cmd_text = &source[node_start_byte..node_end_byte];
+                    if cmd_text.contains(".git/HEAD") ||
+                       cmd_text.contains(".git/objects/") ||
+                       cmd_text.contains(".git/refs/") ||
+                       cmd_text.contains(".git/hooks/") {
+                        return Err("Dangerous pattern detected: git internal path write".to_string());
+                    }
+                }
+            }
+        }
+
         // zmodload check
         if node_kind == "command" {
             if let Some(command_name_node) = node.child_by_field_name("name") {
-                let name = &source[command_name_node.start_byte()..command_name_node.end_byte()];
+                let start_byte = command_name_node.start_byte() as usize;
+                let end_byte = command_name_node.end_byte() as usize;
+                let name = &source[start_byte..end_byte];
                 if name == "zmodload" {
                     return Err("Dangerous pattern detected: zmodload".to_string());
                 }
@@ -35,7 +58,9 @@ impl ASTParser {
 
         // process substitution <() or >()
         if node_kind == "process_substitution" {
-            let text = &source[node.start_byte()..node.end_byte()];
+            let start_byte = node.start_byte() as usize;
+            let end_byte = node.end_byte() as usize;
+            let text = &source[start_byte..end_byte];
             if text.starts_with("<(") {
                 return Err("Dangerous pattern detected: <() process substitution".to_string());
             }
@@ -48,7 +73,9 @@ impl ASTParser {
         // Check for node type "expansion" or similar, and check text.
         // In tree-sitter-bash it might be `expansion` or `arithmetic_expansion`
         if node_kind == "expansion" || node_kind == "arithmetic_expansion" {
-            let text = &source[node.start_byte()..node.end_byte()];
+            let start_byte = node.start_byte() as usize;
+            let end_byte = node.end_byte() as usize;
+            let text = &source[start_byte..end_byte];
             if text.starts_with("$[") && text.ends_with("]") {
                 return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
             }
@@ -57,7 +84,9 @@ impl ASTParser {
         // Just in case it's not parsed properly, check string content for $[] as fallback, but only if it's text.
         // But doing it robustly:
         if node_kind == "word" || node_kind == "raw_string" {
-             let text = &source[node.start_byte()..node.end_byte()];
+             let start_byte = node.start_byte() as usize;
+             let end_byte = node.end_byte() as usize;
+             let text = &source[start_byte..end_byte];
              if text.starts_with("$[") && text.ends_with("]") {
                   return Err("Dangerous pattern detected: $[] legacy expansion".to_string());
              }
@@ -83,6 +112,27 @@ mod tests {
         assert!(parser.parse_for_security("echo 'hello world'").is_ok());
         assert!(parser.parse_for_security("ls -l /tmp").is_ok());
         assert!(parser.parse_for_security("cat file.txt | grep foo").is_ok());
+    }
+
+    #[test]
+    fn test_block_git_internal_path_write() {
+        let mut parser = ASTParser::new();
+
+        let res = parser.parse_for_security("echo 'test' > .git/hooks/pre-commit");
+        assert!(res.is_err());
+        assert_eq!(res.unwrap_err(), "Dangerous pattern detected: git internal path write");
+
+        let res2 = parser.parse_for_security("touch .git/HEAD");
+        assert!(res2.is_err());
+        assert_eq!(res2.unwrap_err(), "Dangerous pattern detected: git internal path write");
+
+        let res3 = parser.parse_for_security("cp file .git/objects/obj");
+        assert!(res3.is_err());
+        assert_eq!(res3.unwrap_err(), "Dangerous pattern detected: git internal path write");
+
+        let res4 = parser.parse_for_security("mkdir -p .git/refs/heads");
+        assert!(res4.is_err());
+        assert_eq!(res4.unwrap_err(), "Dangerous pattern detected: git internal path write");
     }
 
     #[test]

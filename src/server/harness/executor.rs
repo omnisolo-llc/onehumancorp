@@ -51,7 +51,9 @@ impl LocalShellTask {
         }
 
         if !output.status.success() {
-            return Err(format!("Process exited with error: {}\n{}", exit_code, String::from_utf8_lossy(&output.stderr)));
+            let stderr_str = String::from_utf8_lossy(&output.stderr).to_string();
+            let err_msg = format!("Process exited with error: {}", exit_code);
+            return Err(self.manager.annotate_error(err_msg, stderr_str));
         }
 
         Ok(format!("Executing: {}\n{}", wrapped_cmd, String::from_utf8_lossy(&output.stdout)))
