@@ -79,11 +79,11 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/promotions/generate", post(handle_generate_promo))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
-        .route("/promotions/generate", post(handle_generate_promotion))
         .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
         .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
@@ -92,7 +92,6 @@ where
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
-        .route("/discount_share/generate", post(handle_generate_discount_share))
         .layer(Extension(GrowthState { pool, hub }))
 }
 
@@ -328,6 +327,25 @@ async fn handle_og_card(
     )
 }
 
+#[derive(Deserialize)]
+struct PromoRequest {
+    tenant: Option<String>,
+}
+
+#[derive(Serialize)]
+struct PromoResponse {
+    message: String,
+}
+
+async fn handle_generate_promo(
+    Json(req): Json<PromoRequest>,
+) -> Result<Json<PromoResponse>, StatusCode> {
+    let tenant_val = req.tenant.unwrap_or_else(|| "my-store".to_string());
+    Ok(Json(PromoResponse {
+        message: format!("Spring Sale Special! 20% OFF for {}", tenant_val),
+    }))
+}
+
 async fn handle_check_milestones(
     Extension(_state): Extension<GrowthState>,
 ) -> impl IntoResponse {
@@ -375,26 +393,6 @@ async fn handle_get_team_invites(
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct DiscountShareResponse {
-    pub share_url: String,
-}
-
-async fn handle_generate_discount_share(
-    Extension(state): Extension<GrowthState>,
-) -> Result<Json<DiscountShareResponse>, StatusCode> {
-    // In a real application we would use the authenticated user's tenant ID
-    let tenant_id = "acme-corp";
-    let uuid = uuid::Uuid::new_v4().to_string();
-    let share_url = format!("https://ohc.store/discount/{}?tenant={}", uuid, tenant_id);
-
-    // Track generation metrics
-    // Since metric isn't directly available from `telemetry` in this module's scope based on compiler error,
-    // we omit the direct `.add` call or use an existing log/metric method instead.
-
-    Ok(Json(DiscountShareResponse { share_url }))
-}
-
 async fn handle_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
@@ -440,15 +438,6 @@ async fn handle_referral_click(
                 return Err(StatusCode::NOT_FOUND);
             }
             state.hub.referral_tracker().record_click(&req.id);
-
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
-                    r#type: "growth.referral_clicked".to_string(),
-                    payload: event,
-                    occurred_at: chrono::Utc::now(),
-                };
-                state.hub.append_recent_event(msg);
-            }
             Ok(Json(()))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -469,15 +458,6 @@ async fn handle_referral_convert(
                 return Err(StatusCode::NOT_FOUND);
             }
             state.hub.referral_tracker().record_conversion(&req.id);
-
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
-                    r#type: "growth.referral_converted".to_string(),
-                    payload: event,
-                    occurred_at: chrono::Utc::now(),
-                };
-                state.hub.append_recent_event(msg);
-            }
             Ok(Json(()))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -502,19 +482,9 @@ async fn handle_referral_generate(
         .execute(&state.pool)
         .await
     {
-        Ok(_) => {
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": ref_id, "referral_code": ref_code })) {
-                let msg = crate::hub::HubEvent {
-                    r#type: "growth.referral_generated".to_string(),
-                    payload: event,
-                    occurred_at: chrono::Utc::now(),
-                };
-                state.hub.append_recent_event(msg);
-            }
-            Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://ohc.app/ref/{}", ref_code),
-            }))
-        },
+        Ok(_) => Ok(Json(ReferralGenerateResponse {
+            referral_link: format!("https://ohc.app/ref/{}", ref_code),
+        })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -527,17 +497,7 @@ async fn handle_team_invite_accept(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.accept_invite(&req.id).await {
-        Ok(_) => {
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
-                    r#type: "growth.team_invite_accepted".to_string(),
-                    payload: event,
-                    occurred_at: chrono::Utc::now(),
-                };
-                state.hub.append_recent_event(msg);
-            }
-            Ok(Json(()))
-        },
+        Ok(_) => Ok(Json(())),
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -551,17 +511,7 @@ async fn handle_create_team_invite(
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
-        Ok(_) => {
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id })) {
-                let msg = crate::hub::HubEvent {
-                    r#type: "growth.team_invite_created".to_string(),
-                    payload: event,
-                    occurred_at: chrono::Utc::now(),
-                };
-                state.hub.append_recent_event(msg);
-            }
-            Ok(Json(()))
-        },
+        Ok(_) => Ok(Json(())),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -648,10 +598,6 @@ mod tests {
         assert!(metrics_res.is_ok());
         let metrics_res_json = metrics_res.unwrap().0;
         assert_eq!(metrics_res_json.total_invites, 1);
-
-        let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
     }
 
     #[tokio::test]
@@ -698,10 +644,6 @@ mod tests {
         let res2_not_found = handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
         assert!(res2_not_found.is_err());
         assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
-
-        let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_clicked"));
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_converted"));
     }
 
     #[tokio::test]
@@ -770,9 +712,6 @@ mod tests {
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
         assert_eq!(count, 1);
-
-        let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
     }
 
     #[tokio::test]
@@ -844,27 +783,4 @@ async fn handle_aggregated_team_invites_metrics(
         Ok(total_invites) => Ok(Json(TeamInvitesMetricsResponse { total_invites })),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
-}
-
-#[derive(serde::Deserialize)]
-pub struct GeneratePromotionRequest {
-    pub tenant: Option<String>,
-}
-
-#[derive(serde::Serialize)]
-pub struct GeneratePromotionResponse {
-    pub message: String,
-}
-
-pub async fn handle_generate_promotion(
-    Json(req): Json<GeneratePromotionRequest>,
-) -> Result<Json<GeneratePromotionResponse>, StatusCode> {
-    let tenant = req.tenant.unwrap_or_else(|| "my-store".to_string());
-
-    let message = format!(
-        "🎉 Special Event Special!\n\nGet ready for our amazing Special Event deals! For a limited time, enjoy 10% OFF your entire order. 🛍️✨\n\nUse code: SPECIALEVENT10 at checkout.\n\nShop now and don't miss out! 🚀 #ShopLocal #Sale #SpecialEvent ({})",
-        tenant
-    );
-
-    Ok(Json(GeneratePromotionResponse { message }))
 }

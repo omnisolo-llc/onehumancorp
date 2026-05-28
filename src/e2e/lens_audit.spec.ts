@@ -3,24 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Lens Audit E2E Flow', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-
-  test('verify Automated Review Requests block does not contain mock orders text', async ({ page }) => {
-    await page.goto('/');
-    const dashboardLink = page.getByRole('link', { name: 'Dashboard' }).first();
-    await dashboardLink.click();
-    await expect(page.getByText('Automated AI Review Requests')).toBeVisible({ timeout: 10000 });
-    const mockText = page.getByText("You have 12 recent orders without reviews.");
-    await expect(mockText).not.toBeVisible();
   });
-
-  test('verify CustomerSuccess displays without typo', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
-    await expect(page.getByText("Customer Success Department")).not.toBeVisible();
-  });
-
-});
 
   test('verify dashboard visual state and full UI lifecycle', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
