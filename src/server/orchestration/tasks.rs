@@ -1,7 +1,8 @@
 use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use crate::tasks::SharedTask;
+use ::server_lib::tasks::SharedTask;
+use ::server_lib::tasks::ActionRisk;
 use chrono::Utc;
 
 use opentelemetry::global;

@@ -12,7 +12,6 @@ pub struct LocalLLMProvider {
     client: reqwest::Client,
 }
 
-/// agenticSeek: Fully local agent, no API costs
 impl LocalLLMProvider {
     pub fn new(endpoint: String, embed_endpoint: String, model: String) -> Self {
         LocalLLMProvider {
