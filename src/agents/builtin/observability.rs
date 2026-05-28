@@ -1,3 +1,4 @@
+#![allow(unused)]
 #![allow(dead_code)]
 use std::sync::Arc;
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, ToolCall};

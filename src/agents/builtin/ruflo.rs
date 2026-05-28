@@ -1,3 +1,4 @@
+#![allow(unused)]
 use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
