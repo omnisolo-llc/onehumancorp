@@ -71,7 +71,10 @@ pub async fn stripe_webhook_handler(
                 // Update Database
                 let tier_string = match tier {
                     PlanTier::Free => "Free",
+                    PlanTier::Entry => "Entry",
                     PlanTier::Starter => "Starter",
+                    PlanTier::Standard => "Standard",
+                    PlanTier::Advanced => "Advanced",
                     PlanTier::Pro => "Pro",
                     PlanTier::Business => "Business",
                 };

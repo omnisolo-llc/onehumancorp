@@ -10,6 +10,8 @@ pub struct HibernationState {
     pub messages_json: String,
     pub current_step: usize,
     pub active_tools: Vec<String>,
+    // Enhancing serverless persistence to track memory size
+    pub memory_size_bytes: Option<usize>,
 }
 
 pub struct HibernationManager {
@@ -69,6 +71,7 @@ mod tests {
             messages_json: "[]".to_string(),
             current_step: 42,
             active_tools: vec!["Read".to_string()],
+            memory_size_bytes: Some(2),
         };
 
         // Hibernate
@@ -80,6 +83,7 @@ mod tests {
         assert_eq!(woken.session_id, session_id);
         assert_eq!(woken.current_step, 42);
         assert_eq!(woken.active_tools.len(), 1);
+        assert_eq!(woken.memory_size_bytes, Some(2));
 
         // Clear
         assert!(manager.clear(session_id).await.is_ok());
