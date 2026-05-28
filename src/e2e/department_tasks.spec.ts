@@ -36,6 +36,7 @@ test.describe("AI Agent Department UI Mocks", () => {
       "The Accountant",
       "The Protector",
       "The Advisor",
+      "The Scout",
     ];
 
     for (const dept of expectedDepartments) {

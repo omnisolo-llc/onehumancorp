@@ -75,6 +75,7 @@ export default function AgentsPage() {
     { id: 'finance', name: 'The Accountant', role: 'Finance', icon: '💰', description: 'Tracks expenses and generates invoices.' },
     { id: 'legal', name: 'The Counsel', role: 'Legal', icon: '⚖️', description: 'Drafts contracts and handles compliance.' },
     { id: 'business_advisory', name: 'The Strategist', role: 'Advisory', icon: '📈', description: 'Provides insights and growth strategies.' },
+    { id: 'discovery', name: 'The Scout', role: 'Discovery', icon: '🔍', description: 'Optimizes structured data for LLM crawlers.' },
   ];
 
   return (
