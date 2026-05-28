@@ -140,7 +140,7 @@ filegroup(
     srcs = select({
         "//:linux": [
             ":ohc_deb",
-            ":ohc_rpm",
+
             ":ohc_unix_archive",
         ],
         "//:macos": [
