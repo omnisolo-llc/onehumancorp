@@ -58,3 +58,12 @@ graph LR
     style G fill:#ccf,stroke:#333,stroke-width:2px
     style H fill:#cfc,stroke:#333,stroke-width:2px
 ```
+
+## Track 6: Hybrid Interoperability for SMB Resilience
+
+A critical pain point not addressed by legacy platforms is **connectivity resilience**. Many SMBs (e.g., food carts, pop-up shops, rural services) operate in environments with unstable internet.
+
+**The OHC-HA (Hybrid Architecture) Solution:**
+*   **Offline Operation (Standalone Mode):** The builtin agent microservice and local UI continue to function via local SQLite advisory locks and IPC, ensuring the business owner can manage inventory and queue tasks without a cloud connection.
+*   **Zero-Latency Sync (State Handoff):** Once connectivity is restored, the Teammate Mesh Communication Layer automatically triggers a state handoff. Mission state, agent context, and customer data sync seamlessly with the Cloud (PostgreSQL) using Redis Pub/Sub, with full distributed locking to prevent conflicts.
+*   **No Disruption:** To the user, the transition is invisible. They never lose data, duplicate tasks, or experience "system down" errors. This hybrid consistency is a massive competitive advantage over cloud-only platforms like Shopify or Replit Agent.
