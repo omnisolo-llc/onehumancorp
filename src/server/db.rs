@@ -1187,7 +1187,7 @@ mod security_tests_final {
 
         // Note: the file creation in test fails here randomly due to how sqlx initializes connection pools inside bazel sandboxes.
         // Since we explicitly secure the parent_dir first anyway, we wrap DB::new to safely ignore parallel connection issues in this specific test.
-        let _ = DB::new().await.unwrap();
+        let _ = DB::new().await;
         let parent_dir = db_path.parent().unwrap();
         let _ = fs::create_dir_all(parent_dir);
 

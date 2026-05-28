@@ -89,7 +89,7 @@ sh_binary(
         "//deploy:server_load",
         "//deploy:setup_k8s.sh",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -111,7 +111,7 @@ sh_binary(
     srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["build"],
     data = [":docs_srcs"],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -123,7 +123,7 @@ sh_binary(
     srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["serve"],
     data = [":docs_srcs"],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -136,7 +136,7 @@ sh_binary(
     data = [
         "MODULE.bazel",
     ],
-    tags = ["manual"],
+
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -147,7 +147,7 @@ sh_binary(
 alias(
     name = "hello-world",
     actual = "//src/examples/hello-world-agent:hello-world",
-    tags = ["manual"],
+
 )
 
 # gazelle:prefix onehumancorp

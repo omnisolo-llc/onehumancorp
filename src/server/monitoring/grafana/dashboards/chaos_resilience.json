@@ -19,6 +19,22 @@
   "links": [],
   "panels": [
     {
+      "type": "text",
+      "title": "Visual Excellence Mandate UI",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 999,
+      "options": {
+        "content": "\n<style>\n.panel-container {\n    background: rgba(22, 22, 26, 0.7) !important;\n    backdrop-filter: blur(30px) saturate(210%) !important;\n    -webkit-backdrop-filter: blur(30px) saturate(210%) !important;\n    border: 1px solid rgba(255, 255, 255, 0.1) !important;\n    border-radius: 12px !important;\n    box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;\n}\n.theme-light .panel-container {\n    background: rgba(255, 255, 255, 0.65) !important;\n    border: 1px solid rgba(255, 255, 255, 0.4) !important;\n    box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;\n}\n</style>\n<div style=\"padding: 10px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;\">\n    <h2 style=\"margin:0; font-weight: 600;\">OHC Chaos Engineering & Resilience Report</h2>\n    <p style=\"margin-top: 5px; opacity: 0.8;\">Absolute Mode Parity Guaranteed</p>\n</div>\n",
+        "mode": "html"
+      },
+      "transparent": true
+    },
+    {
       "datasource": "Prometheus",
       "fieldConfig": {
         "defaults": {
