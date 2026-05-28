@@ -1,8 +1,22 @@
+use async_trait::async_trait;
 #[path = "store.rs"]
 pub mod store;
 use crate::db::DB;
 use std::sync::Arc;
 use tracing::{info, debug};
+
+struct WorkerConflictResolver {
+    client: crate::minimax::LocalLLMClient,
+}
+#[async_trait::async_trait]
+impl ohc_builtin_agent::memory_store::ConflictResolver for WorkerConflictResolver {
+    async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
+        let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
+        let merged = self.client.reason(&prompt).await.map_err(|e| e.to_string())?;
+        let embedding = self.client.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
+        Ok((merged, embedding))
+    }
+}
 use sqlx::Row;
 use tokio::time::{sleep, Duration};
 use chrono::Utc;
@@ -167,18 +181,6 @@ impl AutoDreamWorker {
             crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
         };
 
-        struct WorkerConflictResolver {
-            client: crate::minimax::LocalLLMClient,
-        }
-        #[async_trait::async_trait]
-        impl ohc_builtin_agent::memory_store::ConflictResolver for WorkerConflictResolver {
-            async fn merge_conflicts(&self, old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String> {
-                let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
-                let merged = self.client.reason(&prompt).await.map_err(|e| e.to_string())?;
-                let embedding = self.client.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
-                Ok((merged, embedding))
-            }
-        }
         let resolver = WorkerConflictResolver { client: crate::minimax::LocalLLMClient::new() };
 
         let resolved_count = repository.auto_resolve_conflicts(&resolver).await.map_err(|e| e.to_string())?;

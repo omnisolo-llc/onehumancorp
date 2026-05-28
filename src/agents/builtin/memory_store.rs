@@ -18,17 +18,17 @@ pub struct EmbeddingRecord {
     pub metadata: Option<String>,
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait ConflictResolver: Send + Sync {
-    async fn merge_conflicts(&self, old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String>;
+    async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String>;
 }
 
 pub struct MockConflictResolver;
 
-#[async_trait]
+#[async_trait::async_trait]
 impl ConflictResolver for MockConflictResolver {
-    async fn merge_conflicts(&self, _old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String> {
-        Ok((new_content.to_string(), vec![0.0; 1536]))
+    async fn merge_conflicts(&self, _old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
+        Ok((new_content, vec![0.0; 1536]))
     }
 }
 
@@ -406,7 +406,7 @@ impl VectorRepository {
             let (winner, loser) = Self::determine_conflict_winner(&a, &b);
             let (old, new) = if a.created_at < b.created_at { (&a, &b) } else { (&b, &a) };
 
-            match resolver.merge_conflicts(&old.content, &new.content).await {
+            match resolver.merge_conflicts(old.content.clone(), new.content.clone()).await {
                 Ok((merged_content, merged_embedding)) => {
                     let mut updated_winner = winner.clone();
                     updated_winner.content = merged_content;
@@ -665,7 +665,7 @@ impl VectorRepository {
 }
 
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait OHCMemory: Send + Sync {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String>;
     async fn read(&self, namespace: &str, key: &str) -> Result<Vec<u8>, String>;
@@ -697,7 +697,7 @@ impl FileBasedMemory {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl OHCMemory for FileBasedMemory {
     async fn write(&self, namespace: &str, key: &str, data: &[u8]) -> Result<(), String> {
         let dir = self.secure_join(&[namespace])?;
@@ -794,7 +794,7 @@ mod tests {
     }
 
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait LongTermMemory: Send + Sync + std::fmt::Debug {
     /// Retrieve relevant past conversations or state based on a query
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String>;
@@ -835,7 +835,7 @@ impl std::fmt::Debug for PersistentMemoryStore {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl LongTermMemory for PersistentMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let embedding = self.llm.generate_embedding(query).await.map_err(|e| e.to_string())?;
@@ -930,7 +930,7 @@ impl Anthropic3TierMemoryStore {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3TierMemoryStore {
     async fn retrieve_topic(&self, topic_name: &str) -> Result<String, String> {
         let safe_name = topic_name.replace(|c: char| !c.is_alphanumeric() && c != '_' && c != '-', "");
@@ -960,7 +960,7 @@ impl ohc_builtin_agent_tools::anthropic_memory::MemoryAccessor for Anthropic3Tie
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl LongTermMemory for Anthropic3TierMemoryStore {
     async fn retrieve(&self, query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut results = Vec::new();
@@ -1074,7 +1074,7 @@ impl RedisMemoryStore {
     }
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 impl LongTermMemory for RedisMemoryStore {
     async fn retrieve(&self, _query: &str, limit: usize) -> Result<Vec<String>, String> {
         let mut conn = self.get_connection().await?;

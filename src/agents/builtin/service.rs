@@ -155,6 +155,39 @@ async fn load_cascading_agents_md(current_dir: &std::path::Path, working_dir: Op
     combined
 }
 
+
+struct ServiceConflictResolver {
+    llm: Arc<dyn crate::llm::LlmClient>,
+}
+
+#[async_trait::async_trait]
+impl crate::memory_store::ConflictResolver for ServiceConflictResolver {
+    async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
+        let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
+
+        let req = ohc_builtin_agent_core::types::ChatRequest {
+            model: "default".to_string(),
+            system: "You are an AI assistant. Output only the requested merged summary.".to_string(),
+            messages: vec![ohc_builtin_agent_core::types::Message {
+                role: ohc_builtin_agent_core::types::Role::User,
+                content: prompt,
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            }],
+            tools: vec![],
+            max_tokens: 1000,
+            temperature: 0.0,
+        };
+
+        let response = self.llm.chat(req).await.map_err(|e| e.to_string())?;
+        let merged = response.message.content;
+        let embedding = self.llm.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
+        Ok((merged, embedding))
+    }
+}
+
 impl AgentServiceImpl {
     pub fn new(agent_id: impl Into<String>, cfg: AgentConfig, auth: AuthMode) -> Self {
         Self {
@@ -180,37 +213,6 @@ impl AgentServiceImpl {
 
         let db_url = std::env::var("DATABASE_URL").unwrap_or_default();
         if !db_url.is_empty() {
-            struct ServiceConflictResolver {
-                llm: Arc<dyn crate::llm::LlmClient>,
-            }
-            #[async_trait::async_trait]
-            impl crate::memory_store::ConflictResolver for ServiceConflictResolver {
-                async fn merge_conflicts(&self, old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String> {
-                    let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
-
-                    let req = ohc_builtin_agent_core::types::ChatRequest {
-                        model: "default".to_string(),
-                        system: "You are an AI assistant. Output only the requested merged summary.".to_string(),
-                        messages: vec![ohc_builtin_agent_core::types::Message {
-                            role: ohc_builtin_agent_core::types::Role::User,
-                            content: prompt,
-                            tool_calls: vec![],
-                            tool_results: vec![],
-                            response_id: None,
-                            previous_response_id: None,
-                        }],
-                        tools: vec![],
-                        max_tokens: 1000,
-                        temperature: 0.0,
-                    };
-
-                    let response = self.llm.chat(req).await.map_err(|e| e.to_string())?;
-                    let merged = response.message.content;
-                    let embedding = self.llm.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
-                    Ok((merged, embedding))
-                }
-            }
-
             let llm = self.resolve_llm("", "", "");
             let resolver = Arc::new(ServiceConflictResolver { llm: llm.clone() });
 

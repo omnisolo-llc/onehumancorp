@@ -31,7 +31,7 @@ impl MemoryConsolidationWorker {
             }
             #[async_trait::async_trait]
             impl ohc_builtin_agent::memory_store::ConflictResolver for WorkerConflictResolver {
-                async fn merge_conflicts(&self, old_content: &str, new_content: &str) -> Result<(String, Vec<f32>), String> {
+                async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
                     let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
                     let merged = self.client.reason(&prompt).await.map_err(|e| e.to_string())?;
                     let embedding = self.client.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
