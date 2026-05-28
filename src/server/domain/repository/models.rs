@@ -123,3 +123,23 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct DomainRecord {
+    pub id: String,
+    pub tenant_id: String,
+    pub domain_name: String,
+    pub status: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct SSLConfiguration {
+    pub id: String,
+    pub domain_id: String,
+    pub certificate_status: String,
+    pub provider: String,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}

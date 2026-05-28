@@ -2038,6 +2038,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
     let app = axum::Router::new()
+        .route("/api/domains/search", axum::routing::get(crate::api::domains::search_domain))
+        .route("/api/domains/purchase", axum::routing::post(crate::api::domains::purchase_domain))
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
 
@@ -4323,6 +4325,15 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <input type="text" id="free-domain-input" placeholder="mybusiness" /> .ohc.app
                                 <button style="margin-top: 16px; width: 100%;" onclick="publishStorefront()">Publish</button>
                             </div>
+                            <div class="domain-setup" id="domain-step-custom">
+                                <p>Search for a custom domain:</p>
+                                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                                    <input type="text" id="custom-domain-search-input" placeholder="mybusiness.com" style="flex: 1;" />
+                                    <button class="secondary" onclick="searchCustomDomain()">Search</button>
+                                </div>
+                                <div id="custom-domain-search-result" style="margin-bottom: 16px; min-height: 20px;"></div>
+                                <button id="custom-domain-purchase-btn" style="margin-top: 16px; width: 100%; display: none;" onclick="purchaseCustomDomain()">Purchase & Connect for $12/yr</button>
+                            </div>
                         </div>
 
                         <canvas id="confetti-canvas"></canvas>
@@ -4692,12 +4703,64 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             if (type === 'free') {
                                 document.getElementById('domain-step-free').classList.add('active');
                             } else {
-                                // simulate custom domain flow
-                                publishStorefront();
+                                document.getElementById('domain-step-custom').classList.add('active');
                             }
                         }
 
-                        async function publishStorefront() {
+                        async function searchCustomDomain() {
+                            const searchInput = document.getElementById('custom-domain-search-input').value;
+                            const resultDiv = document.getElementById('custom-domain-search-result');
+                            const purchaseBtn = document.getElementById('custom-domain-purchase-btn');
+
+                            resultDiv.innerHTML = 'Searching...';
+                            purchaseBtn.style.display = 'none';
+
+                            try {
+                                const response = await fetch(`/api/domains/search?q=${encodeURIComponent(searchInput)}`);
+                                const data = await response.json();
+                                if (data.available) {
+                                    resultDiv.innerHTML = `<span style="color: green;">✓ Available for $${data.price.toFixed(2)}/yr</span>`;
+                                    purchaseBtn.style.display = 'block';
+                                    purchaseBtn.innerText = `Purchase & Connect for $${data.price.toFixed(2)}/yr`;
+                                } else {
+                                    resultDiv.innerHTML = `<span style="color: red;">✗ Domain not available</span>`;
+                                }
+                            } catch (error) {
+                                resultDiv.innerHTML = `<span style="color: red;">Error searching domain</span>`;
+                            }
+                        }
+
+                        async function purchaseCustomDomain() {
+                            const domain = document.getElementById('custom-domain-search-input').value;
+                            const purchaseBtn = document.getElementById('custom-domain-purchase-btn');
+                            purchaseBtn.innerText = 'Provisioning SSL...';
+                            purchaseBtn.disabled = true;
+
+                            try {
+                                const response = await fetch(`/api/domains/purchase`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({ domain_name: domain })
+                                });
+
+                                const data = await response.json();
+                                if (data.success) {
+                                    publishStorefront(domain);
+                                } else {
+                                    alert('Failed to provision domain.');
+                                    purchaseBtn.innerText = 'Purchase & Connect';
+                                    purchaseBtn.disabled = false;
+                                }
+                            } catch (error) {
+                                alert('Failed to purchase custom domain');
+                                purchaseBtn.innerText = 'Purchase & Connect';
+                                purchaseBtn.disabled = false;
+                            }
+                        }
+
+                        async function publishStorefront(customDomain = null) {
                             const domainInput = document.getElementById('free-domain-input');
                             const domain = domainInput ? domainInput.value : '';
 
@@ -4712,8 +4775,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 sort_order: i
                             }));
 
+                            const finalDomain = customDomain || (domain ? domain : null);
+
                             const payload = {
-                                domain: domain ? domain : null,
+                                domain: finalDomain,
                                 draft: {
                                     domain: null,
                                     pages: [{
