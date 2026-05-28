@@ -17,9 +17,16 @@ test.describe('Virtual Meeting Room & UltraPlan Walkthrough', () => {
     await expect(tourButton).toBeVisible();
     await tourButton.click();
 
+    // Verify navigation and query param
+    await expect(page).toHaveURL(/.*virtual-meeting-room\?walkthrough=true/);
+
+    // Verify targets exist
+    await expect(page.locator('#vmr-board')).toBeVisible();
+    await expect(page.locator('#ultraplan-phases')).toBeVisible();
+
     // Verify first step of walkthrough
     const bubbleText1 = page.locator('text=Agents join the Virtual Meeting Room to debate and plan before executing tasks.');
-    await expect(bubbleText1).toBeVisible();
+    await expect(bubbleText1).toBeVisible({ timeout: 5000 });
 
     // Go to next step
     const nextButton = page.locator('button:has-text("Next")');
@@ -28,10 +35,10 @@ test.describe('Virtual Meeting Room & UltraPlan Walkthrough', () => {
 
     // Verify second step of walkthrough
     const bubbleText2 = page.locator('text=Phase 1: Brainstorming. Phase 2: Refinement. Phase 3: Consensus (UltraPlan protocol).');
-    await expect(bubbleText2).toBeVisible();
+    await expect(bubbleText2).toBeVisible({ timeout: 5000 });
 
     // Finish walkthrough
-    const gotItButton = page.locator('button:has-text("Got it")');
+    const gotItButton = page.locator('button:has-text("Finish")');
     await expect(gotItButton).toBeVisible();
     await gotItButton.click();
 
