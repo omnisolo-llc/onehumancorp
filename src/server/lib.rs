@@ -4306,7 +4306,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p id="soft-paywall-desc" style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
@@ -4639,8 +4639,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             localStorage.setItem('has_pro', 'true');
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-                            // Re-run the campaign now that they have pro
-                            sendReviewCampaign();
+                            // Re-run the pending action now that they have pro
+                            if (window.pendingProAction) {
+                                window.pendingProAction();
+                                window.pendingProAction = null;
+                            }
                         }
 
                         function closeEmbedSetup() {
@@ -4649,6 +4652,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         async function sendReviewCampaign() {
                             if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-desc').innerText = 'Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.';
+                                window.pendingProAction = sendReviewCampaign;
                                 document.getElementById('soft-paywall-modal').classList.add('open');
                                 return;
                             }
@@ -5375,6 +5380,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function generateSeasonalPromo() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-desc').innerText = 'Seasonal Promotion Generator is a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.';
+                                window.pendingProAction = generateSeasonalPromo;
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
                             const discountInput = document.getElementById('promo-discount').value || '10';
 
