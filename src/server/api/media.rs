@@ -1,37 +1,27 @@
 use axum::{
-    extract::Multipart,
+    body::Bytes,
     response::IntoResponse,
     Json,
 };
 use serde_json::json;
 use tokio::time::{sleep, Duration};
 
-pub async fn handle_media_upload(mut multipart: Multipart) -> impl IntoResponse {
-    let mut file_name = String::new();
-
-    // Simulate reading the file
-    while let Some(field) = multipart.next_field().await.unwrap_or(None) {
-        if let Some(name) = field.file_name() {
-            file_name = name.to_string();
-        }
-        let _data = field.bytes().await.unwrap_or_default();
-    }
-
-    if file_name.is_empty() {
-        file_name = "uploaded_file.jpg".to_string();
-    }
+// A naive handler taking raw body since multipart is disabled
+pub async fn handle_media_upload(body: Bytes) -> impl IntoResponse {
+    let file_name = "uploaded_file.webp".to_string();
 
     // Determine target URL for simulating processed file
-    let optimized_url = format!("https://cdn.ohc.store/optimized/{}", file_name.replace(".jpg", ".webp").replace(".png", ".webp"));
+    let optimized_url = format!("https://cdn.ohc.store/optimized/{}", file_name);
 
     // Spawn background task simulating AI processing (cropping, WebP conversion, etc)
+    let body_len = body.len();
     tokio::spawn(async move {
         // Simulating the delay of processing a 10MB photo
         sleep(Duration::from_secs(5)).await;
 
         // Simulating writing to DB or event queue indicating processing is done
         // In a real application, this would trigger an event or update a row in Postgres
-        tracing::info!("Background AI media processing completed for {}", file_name);
+        tracing::info!("Background AI media processing completed for {} of size {}", file_name, body_len);
     });
 
     // Instantly return the expected URL so the UI doesn't block
