@@ -71,6 +71,17 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DownloadRequest {
+    pub os: String,
+    pub version: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DownloadResponse {
+    pub tracked: bool,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -93,7 +104,26 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
+        .route("/downloads", post(handle_download))
         .layer(Extension(GrowthState { pool, hub }))
+}
+
+async fn handle_download(
+    Extension(state): Extension<GrowthState>,
+    Json(payload): Json<DownloadRequest>,
+) -> impl IntoResponse {
+    // Publish an event indicating a download intent
+    state.hub.publish_event(crate::hub::Event {
+        id: uuid::Uuid::new_v4().to_string(),
+        r#type: "growth.download_tracked".to_string(),
+        payload: serde_json::json!({
+            "os": payload.os,
+            "version": payload.version
+        }),
+        timestamp: chrono::Utc::now().timestamp(),
+    });
+
+    (StatusCode::OK, Json(DownloadResponse { tracked: true }))
 }
 
 
@@ -888,6 +918,31 @@ mod tests {
         let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
         assert!(res_missing.is_err());
         assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn test_download_tracking() {
+        let pool = setup_db().await;
+        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
+            println!("Skipping DB test, DB not available");
+            return;
+        }
+
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+
+        let req = DownloadRequest {
+            os: "mac".to_string(),
+            version: "1.0.0".to_string(),
+        };
+
+        let res = handle_download(Extension(state.clone()), Json(req)).await;
+        let (_, json_res): (StatusCode, Json<DownloadResponse>) = res.into_response();
+        assert!(json_res.0.tracked);
+
+        let recent_events = state.hub.recent_events(10);
+        assert!(recent_events.iter().any(|e| e.r#type == "growth.download_tracked"));
     }
 
     #[tokio::test]
