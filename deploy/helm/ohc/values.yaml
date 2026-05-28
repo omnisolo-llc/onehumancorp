@@ -10,8 +10,8 @@ backend:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
-    maxReplicas: 200
+    minReplicas: 2
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   resources:
@@ -37,9 +37,9 @@ resourceQuota:
     ephemeralStorage: "100Gi"
   limits:
     cpu: "150"
-    memory: "300Gi"
+    memory: "100Gi"
     ephemeralStorage: "500Gi"
-    pods: "500"
+    pods: "100"
 
 # OHC Core — Rust library (settings · agent scheduler · meeting rooms · chat)
 # In cloud-native mode the core runs as a dedicated micro-service.
@@ -55,8 +55,8 @@ ohcCore:
     enabled: true
   autoscaling:
     enabled: true
-    minReplicas: 10
-    maxReplicas: 200
+    minReplicas: 2
+    maxReplicas: 50
     targetCPUUtilizationPercentage: 70
     targetMemoryUtilizationPercentage: 80
   resources:
