@@ -64,12 +64,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in autodream_memories
+        // Find tasks that are COMPLETED but not yet in agent_memories
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN autodream_memories m ON t.id = m.task_id
-            WHERE t.status = 'COMPLETED' AND m.id IS NULL
+            WHERE t.status = 'COMPLETED' AND t.auto_dreamed = FALSE
             LIMIT 100
         ";
 
@@ -117,14 +116,12 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        self.db.insert_autodream_memory(
+                        self.db.insert_agent_memory(
                             &mem_id,
                             &tenant_id,
-                            agent_id.as_deref().unwrap_or("system"),
-                            &task_id,
+                            "system",
                             &chunk,
-                            &emb_str,
-                            "TASK_SUMMARY"
+                            &emb_str
                         ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
                         if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
@@ -136,6 +133,9 @@ impl AutoDreamPipeline {
                     }
                 }
             }
+
+            self.db.mark_task_auto_dreamed(&task_id, "shared_tasks").await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
+
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
 
@@ -208,20 +208,20 @@ mod tests {
         let cache = Arc::new(LocalEmbeddingCache::new(Duration::from_secs(60)));
 
         // Clean up
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM agent_memories").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id_1 = "test-task-cache-1";
         let task_id_2 = "test-task-cache-2";
 
         // Insert two tasks with identical payload/log so their chunk text is exactly the same.
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log, auto_dreamed) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log', FALSE)")
             .bind(task_id_1)
             .execute(&pool)
             .await
             .unwrap();
 
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log')")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, deliberation_log, auto_dreamed) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'identical payload', 'identical log', FALSE)")
             .bind(task_id_2)
             .execute(&pool)
             .await
@@ -232,14 +232,19 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id IN ($1, $2)")
-            .bind(task_id_1)
-            .bind(task_id_2)
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_memories")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         assert_eq!(count.0, 2);
+
+        // Also check if auto_dreamed is TRUE for the tasks
+        let task_1_ad: (bool,) = sqlx::query_as("SELECT auto_dreamed FROM shared_tasks WHERE id = $1").bind(task_id_1).fetch_one(&pool).await.unwrap();
+        assert!(task_1_ad.0);
+
+        let task_2_ad: (bool,) = sqlx::query_as("SELECT auto_dreamed FROM shared_tasks WHERE id = $1").bind(task_id_2).fetch_one(&pool).await.unwrap();
+        assert!(task_2_ad.0);
 
         // Since both tasks generated the exact same text chunk, the LLM should have only been called once.
         assert_eq!(tracking_llm.get_call_count(), 1);
@@ -263,11 +268,11 @@ mod tests {
         });
 
         // Clean up
-        sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM agent_memories").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
-        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload')")
+        sqlx::query("INSERT INTO shared_tasks (id, organization_id, mission_id, title, status, priority, payload, auto_dreamed) VALUES ($1, 'org1', 'm1', 'title', 'COMPLETED', 'HIGH', 'some payload', FALSE)")
             .bind(task_id)
             .execute(&pool)
             .await
@@ -277,12 +282,14 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
-            .bind(task_id)
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM agent_memories")
             .fetch_one(&pool)
             .await
             .unwrap();
 
         assert_eq!(count.0, 1);
+
+        let task_ad: (bool,) = sqlx::query_as("SELECT auto_dreamed FROM shared_tasks WHERE id = $1").bind(task_id).fetch_one(&pool).await.unwrap();
+        assert!(task_ad.0);
     }
 }

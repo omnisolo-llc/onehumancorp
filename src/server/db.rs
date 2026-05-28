@@ -337,7 +337,10 @@ impl DB {
                         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1
+                        version INTEGER DEFAULT 1,
+                        auto_dreamed BOOLEAN DEFAULT FALSE,
+                        payload TEXT,
+                        deliberation_log TEXT
                     );
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_organization_id ON shared_tasks(organization_id);
                     CREATE INDEX IF NOT EXISTS idx_shared_tasks_status ON shared_tasks(status);
@@ -523,14 +526,11 @@ impl DB {
                     CREATE TABLE IF NOT EXISTS agent_memories (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
-                        task_id TEXT NOT NULL,
-                        raw_content BLOB NOT NULL,
-                        summary_embedding BLOB,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        _sync_status TEXT DEFAULT 'pending',
-                        version INTEGER DEFAULT 1,
-                        department TEXT,
-                        interaction_data TEXT DEFAULT '{}'
+                        department TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        embedding BLOB,
+                        interaction_data TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                     CREATE TABLE IF NOT EXISTS autodream_memories (
                         id TEXT PRIMARY KEY,
@@ -805,13 +805,13 @@ impl DB {
         Ok(result)
     }
 
-    pub async fn insert_agent_memory(&self, id: &str, org_id: &str, task_id: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn insert_agent_memory(&self, id: &str, org_id: &str, department: &str, content: &str, embedding: &str) -> Result<(), Box<dyn std::error::Error>> {
         match &self.store {
-            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(task_id).bind(content).bind(embedding).execute(sqlite_pool).await?; },
-            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, task_id, raw_content, summary_embedding) VALUES ($1, $2, $3, $4, $5)")
+            DbStore::Sqlite(sqlite_pool) => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, department, content, embedding) VALUES (?, ?, ?, ?, ?)").bind(id).bind(org_id).bind(department).bind(content).bind(embedding).execute(sqlite_pool).await?; },
+            DbStore::Postgres => { sqlx::query("INSERT INTO agent_memories (id, tenant_id, department, content, embedding) VALUES ($1, $2, $3, $4, $5::vector)")
                 .bind(id)
                 .bind(org_id)
-                .bind(task_id)
+                .bind(department)
                 .bind(content)
                 .bind(embedding)
                 .execute(&self.pool)
