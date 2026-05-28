@@ -54,6 +54,107 @@ pub struct SharedTask {
     pub updated_at: Option<chrono::DateTime<Utc>>,
 }
 
+use async_trait::async_trait;
+use dashmap::DashMap;
+use tokio::sync::broadcast;
+use redis::AsyncCommands;
+
+#[async_trait]
+pub trait KairosTeammateMesh: Send + Sync {
+    async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String>;
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::mpsc::Receiver<Vec<u8>>, String>;
+}
+
+pub struct MemoryMesh {
+    subs: DashMap<String, broadcast::Sender<Vec<u8>>>,
+}
+
+impl MemoryMesh {
+    pub fn new() -> Self {
+        MemoryMesh {
+            subs: DashMap::new(),
+        }
+    }
+}
+
+#[async_trait]
+impl KairosTeammateMesh for MemoryMesh {
+    async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String> {
+        if let Some(tx) = self.subs.get(channel) {
+            let _ = tx.send(message);
+        }
+        Ok(())
+    }
+
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::mpsc::Receiver<Vec<u8>>, String> {
+        let tx = self.subs.entry(channel.to_string()).or_insert_with(|| {
+            let (tx, _) = broadcast::channel(100);
+            tx
+        });
+
+        let mut rx = tx.subscribe();
+        let (mpsc_tx, mpsc_rx) = tokio::sync::mpsc::channel(100);
+
+        tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                if mpsc_tx.send(msg).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        Ok(mpsc_rx)
+    }
+}
+
+pub struct RedisMesh {
+    client: redis::Client,
+    publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
+}
+
+impl RedisMesh {
+    pub async fn new(redis_url: &str) -> Result<Self, String> {
+        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
+        let publish_conn = client.get_multiplexed_tokio_connection().await.map_err(|e| e.to_string())?;
+
+        Ok(RedisMesh {
+            client,
+            publish_conn: tokio::sync::Mutex::new(publish_conn),
+        })
+    }
+}
+
+#[async_trait]
+impl KairosTeammateMesh for RedisMesh {
+    async fn publish(&self, channel: &str, message: Vec<u8>) -> Result<(), String> {
+        let mut conn = self.publish_conn.lock().await;
+        let _: () = conn.publish(channel, message).await.map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    async fn subscribe(&self, channel: &str) -> Result<tokio::sync::mpsc::Receiver<Vec<u8>>, String> {
+        use futures_util::StreamExt;
+
+        let mut pubsub = self.client.get_async_pubsub().await.map_err(|e| e.to_string())?;
+        pubsub.subscribe(channel).await.map_err(|e| e.to_string())?;
+
+        let mut stream = pubsub.into_on_message();
+        let (mpsc_tx, mpsc_rx) = tokio::sync::mpsc::channel(100);
+
+        tokio::spawn(async move {
+            while let Some(msg) = stream.next().await {
+                if let Ok(payload) = msg.get_payload_bytes() {
+                    if mpsc_tx.send(payload.to_vec()).await.is_err() {
+                        break;
+                    }
+                }
+            }
+        });
+
+        Ok(mpsc_rx)
+    }
+}
+
 pub struct KairosOrchestrator {
     pub db: Arc<DB>,
     pub sqlite_mutex: Mutex<()>,
@@ -732,6 +833,23 @@ mod tests {
             .fetch_one(&pool).await.unwrap();
         assert_eq!(row.0, "APPROVED");
         assert_eq!(row.1, "IN_PROGRESS");
+    }
+
+    #[tokio::test]
+    async fn test_kairos_memory_mesh() {
+        let mesh = MemoryMesh::new();
+
+        let mut rx1 = mesh.subscribe("mesh:tasks").await.unwrap();
+        let mut rx2 = mesh.subscribe("mesh:tasks").await.unwrap();
+
+        mesh.publish("mesh:tasks", b"hello".to_vec()).await.unwrap();
+        mesh.publish("mesh:coordination", b"ignore".to_vec()).await.unwrap();
+
+        let msg1 = tokio::time::timeout(std::time::Duration::from_secs(1), rx1.recv()).await.unwrap().unwrap();
+        assert_eq!(msg1, b"hello");
+
+        let msg2 = tokio::time::timeout(std::time::Duration::from_secs(1), rx2.recv()).await.unwrap().unwrap();
+        assert_eq!(msg2, b"hello");
     }
 
     #[tokio::test]
