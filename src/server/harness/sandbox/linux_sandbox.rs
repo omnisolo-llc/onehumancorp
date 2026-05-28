@@ -10,7 +10,7 @@ use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
 use crate::telemetry::ViolationStore;
 #[cfg(target_os = "linux")]
-use crate::harness::network::proxy::NetworkBridgeProxy;
+use crate::network::proxy::NetworkBridgeProxy;
 
 pub struct LinuxSandbox {
     evaluator: PermissionEvaluator,
