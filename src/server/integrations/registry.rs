@@ -396,6 +396,22 @@ impl IntegrationsRegistry {
         Err("integration not found or not supported".to_string())
     }
 
+
+    pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
+        let client = {
+            if integration_id == "manychat" {
+                let clients = self.manychat_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client {
+            return c.fetch_conversations().await;
+        }
+        Err("integration not found or not supported".to_string())
+    }
+
     pub async fn fetch_event_types(&self, integration_id: &str) -> Result<Vec<String>, String> {
         let client = {
             if integration_id == "calendly" {
