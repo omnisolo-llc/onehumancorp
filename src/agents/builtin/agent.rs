@@ -362,12 +362,17 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str(&self.user_instructions);
         }
 
-        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
+        // 5. Conversation History (happens at run loop outside this builder)
+
+        // Lost in the Middle prevention: High-signal context at the very beginning and very end
+        if self.enable_lost_in_the_middle_prevention {
+            if !self.server_system_message.is_empty() {
+                if !combined_system.is_empty() {
+                    combined_system.push_str("\n\n");
+                }
+                combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
+                combined_system.push_str(&self.server_system_message);
             }
-            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-            combined_system.push_str(&self.server_system_message);
         }
 
         combined_system
