@@ -18,4 +18,7 @@ rust_test(
     size = "small",
     crate = ":server_integrations_jitsi",
     edition = "2024",
+    deps = [
+        "@crates//:tokio",
+    ],
 )
