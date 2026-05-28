@@ -3738,74 +3738,74 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Social Media Accounts</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
+                                    <h3 style="margin: 0;">Social Media Inbox</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💬</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect ManyChat to view and respond to all social media messages (Instagram, Facebook, WhatsApp) in one simple inbox.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect ManyChat</button>
                             </div>
 
-                            <!-- Autonomous Booking Agent -->
+                            <!-- Calendly Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Autonomous Booking Agent</h3>
+                                    <h3 style="margin: 0;">Calendar Sync</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect Calendly to let clients book available time slots directly without double-booking your personal calendar.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Calendly...')">Connect Calendly</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- Mailchimp Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Customer Emails</h3>
+                                    <h3 style="margin: 0;">Email Marketing</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Keep Mailchimp Contacts in Sync. Automatically push new and updated customer details to your email marketing audience.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Mailchimp...')">Connect Mailchimp</button>
                             </div>
 
-                            <!-- Mercado Pago Integration -->
+                            <!-- Stripe Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Local Payments</h3>
-                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌎</span>
+                                    <h3 style="margin: 0;">Payment Processing</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">💳</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Get paid easily using local payment methods in Latin America.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect Stripe to generate simple invoice payment links and get paid securely without complex merchant accounts.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Stripe...')">Connect Stripe</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Shippo Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Shipping Labels</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect Shippo to instantly calculate shipping rates and generate printable PDF shipping labels from home.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Shippo...')">Connect Shippo</button>
                             </div>
 
                             <!-- Twilio Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Text Notifications</h3>
+                                    <h3 style="margin: 0;">Text Reminders</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🔔</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send automatic text message updates to your customers about their orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect Twilio to send automatic SMS text message reminders to clients 24 hours before their scheduled appointments.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Connect Twilio</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Zoom Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Online Meetings</h3>
+                                    <h3 style="margin: 0;">Video Conferencing</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
-                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect Zoom to auto-generate unique meeting links and automatically add them to your calendar invites.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Zoom...')">Connect Zoom</button>
                             </div>
                         </div>
 

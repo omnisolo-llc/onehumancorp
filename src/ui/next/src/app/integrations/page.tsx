@@ -8,15 +8,13 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
-    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Automated Booking widget for your store." },
-    { id: "manychat", name: "Manychat", category: "operations", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
-    { id: "ayrshare", name: "Ayrshare", category: "marketing", status: "disconnected", icon: "📱", description: "Unified API for posting and retrieving messages across social networks." },
-    { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
-    { id: "listmonk", name: "Listmonk", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
-    { id: "mercadopago", name: "Mercado Pago", category: "finance", status: "disconnected", icon: "🌎", description: "Accept credit cards and local payment methods in Latin America." },
-    { id: "easypost", name: "EasyPost", category: "operations", status: "disconnected", icon: "📦", description: "Painless Shipping Labels & Tracking." },
-    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Reliable SMS alerts for new orders and customer notifications." },
-    { id: "jitsi", name: "Jitsi Meet", category: "operations", status: "disconnected", icon: "📹", description: "Zero-Setup Online Lessons and video conferencing." }
+    { id: "manychat", name: "ManyChat", category: "operations", status: "disconnected", icon: "💬", description: "Connect ManyChat to view and respond to all social media messages (Instagram, Facebook, WhatsApp) in one simple inbox." },
+    { id: "calendly", name: "Calendly", category: "operations", status: "disconnected", icon: "📅", description: "Connect Calendly to let clients book available time slots directly without double-booking your personal calendar." },
+    { id: "mailchimp", name: "Mailchimp", category: "marketing", status: "disconnected", icon: "📨", description: "Keep Mailchimp Contacts in Sync. Automatically push new and updated customer details to your email marketing audience." },
+    { id: "stripe", name: "Stripe", category: "finance", status: "disconnected", icon: "💳", description: "Connect Stripe to generate simple invoice payment links and get paid securely without complex merchant accounts." },
+    { id: "shippo", name: "Shippo", category: "operations", status: "disconnected", icon: "📦", description: "Connect Shippo to instantly calculate shipping rates and generate printable PDF shipping labels from home." },
+    { id: "twilio", name: "Twilio", category: "operations", status: "disconnected", icon: "🔔", description: "Connect Twilio to send automatic SMS text message reminders to clients 24 hours before their scheduled appointments." },
+    { id: "zoom", name: "Zoom", category: "operations", status: "disconnected", icon: "📹", description: "Connect Zoom to auto-generate unique meeting links and automatically add them to your calendar invites." }
   ]);
 
   const filteredIntegrations = activeTab === "all" ? integrations : integrations.filter(i => i.category === activeTab);

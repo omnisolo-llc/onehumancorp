@@ -15,70 +15,70 @@ test.describe('Tool Integrations UI Premium Dashbaord', () => {
   });
 
   test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Social Media Accounts' })).toBeVisible();
-    await expect(page.getByText('Manage all your social media messages and posts in one place.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect my Instagram and Facebook' }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Social Media Inbox' })).toBeVisible();
+    await expect(page.getByText('Connect ManyChat to view and respond to all social media messages (Instagram, Facebook, WhatsApp) in one simple inbox.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Connect ManyChat' }).first()).toBeVisible();
   });
 
   test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Autonomous Booking Agent' })).toBeVisible();
-    await expect(page.getByText('Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Calendar Sync' })).toBeVisible();
+    await expect(page.getByText('Connect Calendly to let clients book available time slots directly without double-booking your personal calendar.')).toBeVisible();
   });
 
   test('displays automated shipping and global payment methods cards', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Shipping Labels' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Local Payments' })).toBeVisible();
-    await expect(page.getByText('Print shipping labels and automatically track packages for your orders.')).toBeVisible();
-    await expect(page.getByText('Get paid easily using local payment methods in Latin America.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Payment Processing' })).toBeVisible();
+    await expect(page.getByText('Connect Shippo to instantly calculate shipping rates and generate printable PDF shipping labels from home.')).toBeVisible();
+    await expect(page.getByText('Connect Stripe to generate simple invoice payment links and get paid securely without complex merchant accounts.')).toBeVisible();
   });
 
   test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Customer Emails' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Online Meetings' })).toBeVisible();
-    await expect(page.getByText('Send email updates and promotions to your customers.')).toBeVisible();
-    await expect(page.getByText('Host online video meetings with your customers easily without extra downloads.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Email Marketing' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Video Conferencing' })).toBeVisible();
+    await expect(page.getByText('Keep Mailchimp Contacts in Sync. Automatically push new and updated customer details to your email marketing audience.')).toBeVisible();
+    await expect(page.getByText('Connect Zoom to auto-generate unique meeting links and automatically add them to your calendar invites.')).toBeVisible();
   });
 
   test('displays global sms notifications card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Text Notifications' })).toBeVisible();
-    await expect(page.getByText('Send automatic text message updates to your customers about their orders.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Text Reminders' })).toBeVisible();
+    await expect(page.getByText('Connect Twilio to send automatic SMS text message reminders to clients 24 hours before their scheduled appointments.')).toBeVisible();
   });
 
-  test('can connect Social Media Accounts', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
+  test('can connect Social Media Inbox', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Inbox' }).getByRole('button', { name: 'Connect ManyChat' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Ayrshare...');
+      expect(dialog.message()).toContain('Connecting to ManyChat...');
       dialog.accept();
     });
     await connectButton.click();
   });
 
-  test('can enable Autonomous Booking Agent', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
+  test('can connect Calendar Sync', async ({ page }) => {
+    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Calendar Sync' }).getByRole('button', { name: 'Connect Calendly' });
     page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Enabling Autonomous Booking...');
+      expect(dialog.message()).toContain('Connecting to Calendly...');
       dialog.accept();
     });
     await connectButton.click();
   });
 
-  test('can connect Customer Emails and Local Payments', async ({ page }) => {
-    const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Customer Emails' }).getByRole('button', { name: 'Start sending emails' });
+  test('can connect Email Marketing and Payment Processing', async ({ page }) => {
+    const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Email Marketing' }).getByRole('button', { name: 'Connect Mailchimp' });
     page.once('dialog', dialog => dialog.accept());
     await emailBtn.click();
 
-    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
+    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Payment Processing' }).getByRole('button', { name: 'Connect Stripe' });
     page.once('dialog', dialog => dialog.accept());
     await paymentBtn.click();
   });
 
-  test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
+  test('can connect Shipping, Text Reminders, and Video Conferencing', async ({ page }) => {
     page.on('dialog', dialog => dialog.accept());
-    const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
+    const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Connect Shippo' });
     await shippingBtn.click();
-    const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });
+    const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Reminders' }).getByRole('button', { name: 'Connect Twilio' });
     await smsBtn.click();
-    const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Online Meetings' }).getByRole('button', { name: 'Create my meeting room' });
+    const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Video Conferencing' }).getByRole('button', { name: 'Connect Zoom' });
     await meetingBtn.click();
   });
 });
