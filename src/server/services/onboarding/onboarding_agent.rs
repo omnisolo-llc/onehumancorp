@@ -94,15 +94,16 @@ impl OnboardingAgent {
         Ok(())
     }
 
-    pub async fn get_onboarding_state(&self, tenant_id: &str) -> Result<serde_json::Value, String> {
+    pub async fn get_onboarding_state(&self, tenant_id: &str, user_id: &str) -> Result<serde_json::Value, String> {
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         use sqlx::Row;
         let row = sqlx::query(
-            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1"
+            "SELECT current_step, state_json FROM onboarding_state WHERE tenant_id = $1 AND user_id = $2"
         )
         .bind(tenant_id)
+        .bind(user_id)
         .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
@@ -174,6 +175,7 @@ impl OnboardingAgent {
                 ("The Accountant", "tenant.payment.success"),
                 ("The Protector", "tenant.contract.signed"),
                 ("The Advisor", "tenant.report.generated"),
+                ("The Scout", "tenant.seo.optimized"),
             ];
 
             for (agent_role, topic) in event_topics {
@@ -2418,6 +2420,7 @@ impl OnboardingAgent {
             ("Finance & Payments", "The Accountant", "Finance"),
             ("Legal & Compliance", "The Protector", "Legal"),
             ("Business Advisory", "The Advisor", "Advisory"),
+            ("Discovery & SEO", "The Scout", "Discovery"),
         ];
 
         for (name, role, role_id) in default_agents {
@@ -2499,9 +2502,9 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(agents.len(), 7);
+        assert_eq!(agents.len(), 8);
 
-        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor"];
+        let expected_roles = vec!["The Manager", "The Promoter", "The Salesperson", "The Ambassador", "The Accountant", "The Protector", "The Advisor", "The Scout"];
         for role in expected_roles {
             assert!(agents.iter().any(|a| a.get::<String, _>("role") == role));
         }

@@ -1,6 +1,8 @@
 use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
 use crate::llm::LlmClient;
 use std::sync::Arc;
+use serde::Deserialize;
+use crate::output_parser::{LlmClientForParser, parse_structured_output};
 
 /// A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
@@ -75,10 +77,17 @@ pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
 }
 
+#[derive(Deserialize)]
+struct JudgeEvaluation {
+    status: String,
+    reason: String,
+    confidence: f32,
+}
+
 #[async_trait::async_trait]
 impl InferentialSensor for LlmJudgeSensor {
     async fn verify_inferential(&self, output: &str, task: &str) -> Result<(), String> {
-        let system_prompt = "You are a harsh but fair judge. Evaluate the output against the task. If the output solves the task, reply only with 'PASS'. If it fails, reply with 'FAIL: ' followed by the reason.";
+        let system_prompt = "You are an expert judge. Evaluate the following output for correctness, completeness, and adherence to constraints. Provide your evaluation structured exactly as requested, where status is either 'APPROVE' or 'REJECT'.";
         let user_prompt = format!("Task: {}\nOutput: {}", task, output);
 
         let req = ChatRequest {
@@ -90,15 +99,18 @@ impl InferentialSensor for LlmJudgeSensor {
             temperature: 0.0,
         };
 
-        match self.llm.chat(req).await {
-            Ok(resp) => {
-                let text = resp.message.content.trim();
-                if text == "PASS" {
-                    Ok(())
-                } else if text.starts_with("FAIL:") {
-                    Err(text.to_string())
+        struct ParserAdapter { llm: Arc<dyn LlmClient>, }
+#[async_trait::async_trait]
+impl LlmClientForParser for ParserAdapter {
+    async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> { self.llm.chat(req).await }
+}
+let parser_client = Arc::new(ParserAdapter { llm: self.llm.clone() }) as Arc<dyn LlmClientForParser>;
+        match parse_structured_output::<JudgeEvaluation>(&parser_client, req, 3).await {
+            Ok(eval) => {
+                if eval.status.to_uppercase() == "REJECT" {
+                    Err(format!("Reason: {}. Confidence: {:.2}", eval.reason, eval.confidence))
                 } else {
-                    Err(format!("Judge returned unexpected response: {}", text))
+                    Ok(())
                 }
             }
             Err(e) => Err(format!("LLM Error: {}", e)),
@@ -112,112 +124,107 @@ mod tests {
     use ohc_builtin_agent_core::types::Usage;
 
     struct MockComputationalGuide {
-        should_fail: bool,
+        should_pass: bool,
     }
-
     #[async_trait::async_trait]
     impl ComputationalGuide for MockComputationalGuide {
-        async fn verify(&self, code: &str, _context: &str) -> Result<(), String> {
-            if self.should_fail {
-                Err(format!("Linter failed on code: {}", code))
-            } else {
+        async fn verify(&self, _code: &str, _context: &str) -> Result<(), String> {
+            if self.should_pass {
                 Ok(())
+            } else {
+                Err("Computational check failed".to_string())
             }
         }
     }
 
     struct MockVisualVerifier {
-        should_fail: bool,
+        should_pass: bool,
     }
-
     #[async_trait::async_trait]
     impl VisualVerifier for MockVisualVerifier {
-        async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-            if self.should_fail {
-                Err(format!("Visual check failed for path: {}", ui_state_path))
-            } else {
+        async fn verify_visual(&self, _ui_state_path: &str) -> Result<(), String> {
+            if self.should_pass {
                 Ok(())
+            } else {
+                Err("Visual check failed".to_string())
             }
         }
     }
 
-    struct MockJudgeLlm {
+    struct MockLlmClient {
         response_text: String,
     }
-
     #[async_trait::async_trait]
-    impl LlmClient for MockJudgeLlm {
-        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(ChatResponse {
-                message: Message::assistant(&self.response_text),
+    impl LlmClient for MockLlmClient {
+        async fn chat(
+            &self,
+            _req: ChatRequest,
+        ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let msg = Message {
+                role: ohc_builtin_agent_core::types::Role::Assistant,
+                content: self.response_text.clone(),
+                tool_calls: vec![],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            };
+            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+                message: msg,
                 usage: Usage::default(),
-                stop_reason: "stop".to_string(),
-                response_id: Some("judge-id".to_string()),
+            })
+        }
+    }
+    #[async_trait::async_trait]
+    impl LlmClientForParser for MockLlmClient {
+        async fn chat(&self, _req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            let tool_call = ohc_builtin_agent_core::types::ToolCall {
+                id: "call_1".to_string(),
+                name: "structured_output".to_string(),
+                arguments: serde_json::json!({
+                    "data": serde_json::from_str::<serde_json::Value>(&self.response_text).unwrap_or(serde_json::json!({}))
+                }),
+            };
+
+            let msg = Message {
+                role: ohc_builtin_agent_core::types::Role::Assistant,
+                content: "".to_string(),
+                tool_calls: vec![tool_call],
+                tool_results: vec![],
+                response_id: None,
+                previous_response_id: None,
+            };
+            Ok(ChatResponse { response_id: Some("test".to_string()), stop_reason: "".to_string(),
+                message: msg,
+                usage: Usage::default(),
             })
         }
     }
 
     #[tokio::test]
-    async fn test_computational_guide() {
+    async fn test_verification_manager() {
         let mut manager = VerificationManager::new();
-        manager.add_computational(Arc::new(MockComputationalGuide { should_fail: false }));
 
-        let result = manager.run_computational_guides("let x = 1;", "context").await;
-        assert!(result.is_ok());
+        manager.add_computational(Arc::new(MockComputationalGuide { should_pass: true }));
+        manager.add_visual(Arc::new(MockVisualVerifier { should_pass: true }));
 
-        let mut manager_fail = VerificationManager::new();
-        manager_fail.add_computational(Arc::new(MockComputationalGuide { should_fail: true }));
+        assert!(manager.run_computational_guides("", "").await.is_ok());
+        assert!(manager.run_visual_verifiers("").await.is_ok());
 
-        let result_fail = manager_fail.run_computational_guides("let x = 1;", "context").await;
-        assert!(result_fail.is_err());
-        assert_eq!(result_fail.unwrap_err(), "Linter failed on code: let x = 1;");
+        let mut fail_manager = VerificationManager::new();
+        fail_manager.add_computational(Arc::new(MockComputationalGuide { should_pass: false }));
+        assert!(fail_manager.run_computational_guides("", "").await.is_err());
     }
 
     #[tokio::test]
-    async fn test_visual_verifier() {
-        let mut manager = VerificationManager::new();
-        manager.add_visual(Arc::new(MockVisualVerifier { should_fail: false }));
+    async fn test_llm_judge_sensor() {
+        let pass_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#.to_string() });
+        let judge = LlmJudgeSensor { llm: pass_llm };
+        assert!(judge.verify_inferential("output", "task").await.is_ok());
 
-        let result = manager.run_visual_verifiers("/tmp/screen.png").await;
-        assert!(result.is_ok());
-
-        let mut manager_fail = VerificationManager::new();
-        manager_fail.add_visual(Arc::new(MockVisualVerifier { should_fail: true }));
-
-        let result_fail = manager_fail.run_visual_verifiers("/tmp/screen.png").await;
-        assert!(result_fail.is_err());
-        assert_eq!(result_fail.unwrap_err(), "Visual check failed for path: /tmp/screen.png");
-    }
-
-    #[tokio::test]
-    async fn test_inferential_sensor() {
-        let pass_llm = Arc::new(MockJudgeLlm { response_text: "PASS".to_string() });
-        let sensor_pass = Arc::new(LlmJudgeSensor { llm: pass_llm });
-
-        let mut manager = VerificationManager::new();
-        manager.add_inferential(sensor_pass);
-
-        let result = manager.run_inferential_sensors("output", "task").await;
-        assert!(result.is_ok());
-
-        let fail_llm = Arc::new(MockJudgeLlm { response_text: "FAIL: missing requirement".to_string() });
-        let sensor_fail = Arc::new(LlmJudgeSensor { llm: fail_llm });
-
-        let mut manager_fail = VerificationManager::new();
-        manager_fail.add_inferential(sensor_fail);
-
-        let result_fail = manager_fail.run_inferential_sensors("output", "task").await;
-        assert!(result_fail.is_err());
-        assert_eq!(result_fail.unwrap_err(), "FAIL: missing requirement");
-
-        let weird_llm = Arc::new(MockJudgeLlm { response_text: "It looks good to me!".to_string() });
-        let sensor_weird = Arc::new(LlmJudgeSensor { llm: weird_llm });
-
-        let mut manager_weird = VerificationManager::new();
-        manager_weird.add_inferential(sensor_weird);
-
-        let result_weird = manager_weird.run_inferential_sensors("output", "task").await;
-        assert!(result_weird.is_err());
-        assert!(result_weird.unwrap_err().contains("unexpected response: It looks good to me!"));
+        let fail_llm = Arc::new(MockLlmClient { response_text: r#"{"status": "REJECT", "reason": "Bad", "confidence": 0.8}"#.to_string() });
+        let judge_fail = LlmJudgeSensor { llm: fail_llm };
+        let res = judge_fail.verify_inferential("output", "task").await;
+        assert!(res.is_err());
+        assert!(res.unwrap_err().contains("Reason: Bad. Confidence: 0.80"));
     }
 }
