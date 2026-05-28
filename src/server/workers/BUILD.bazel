@@ -8,6 +8,7 @@ exports_files(
         "maintenance.rs",
         "memory.rs",
         "mod.rs",
+        "migration.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -22,6 +23,7 @@ rust_library(
         "maintenance.rs",
         "memory.rs",
         "mod.rs",
+        "migration.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",

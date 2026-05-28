@@ -41,6 +41,7 @@ SERVER_RS_SRCS = [
     "//src/server/api:mcp_webhook.rs",
     "//src/server/api:mesh_handler.rs",
     "//src/server/api:mod.rs",
+    "//src/server/api:migration.rs",
     "//src/server/api:telemetry.rs",
     "//src/server/api/agents:approvals.rs",
     "//src/server/api/agents:chat.rs",
@@ -237,6 +238,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
     "//src/server/workers:mod.rs",
+    "//src/server/workers:migration.rs",
 ]
 
 SERVICES_RS_SRCS = [
