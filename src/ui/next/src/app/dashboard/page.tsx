@@ -258,6 +258,7 @@ export default function Dashboard() {
 
     // Safety & Maintainability: We use payload structured data instead of string description matching
     let isReviewRequest = false;
+    let isCartRecovery = false;
     let payloadObj: any = null;
 
     if (approval && approval.payload) {
@@ -273,10 +274,12 @@ export default function Dashboard() {
 
         if (payloadObj && payloadObj.feature_type === 'automated_review_request') {
             isReviewRequest = true;
+        } else if (payloadObj && payloadObj.feature_type === 'abandoned_cart') {
+            isCartRecovery = true;
         }
     }
 
-    if (approved && isReviewRequest) {
+    if (approved && (isReviewRequest || isCartRecovery)) {
         setApprovals(approvals.filter(a => a.id !== id));
 
         // Ensure it's removed from backend as well
@@ -290,36 +293,66 @@ export default function Dashboard() {
             console.error("Failed to submit decision", e);
         }
 
-        // Use dynamic payload data to generate the review if present, otherwise fallback
-        const orderId = payloadObj?.target_order_id || '8922';
-        const customerName = payloadObj?.target_customer_name || 'Sarah';
-        const productName = payloadObj?.target_product_name || 'Signature Coffee Blend';
+        if (isReviewRequest) {
+            // Use dynamic payload data to generate the review if present, otherwise fallback
+            const orderId = payloadObj?.target_order_id || '8922';
+            const customerName = payloadObj?.target_customer_name || 'Sarah';
+            const productName = payloadObj?.target_product_name || 'Signature Coffee Blend';
 
-        // Open the review modal as per the new growth loop flow
-        setShowReviewModal(true);
-        setIsGeneratingReview(true);
-        try {
-            const response = await fetch('/api/v1/growth/campaign/generate-review', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    order_id: orderId,
-                    customer_name: customerName,
-                    product_name: productName
-                })
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setReviewMessage(data.message);
-            } else {
+            // Open the review modal as per the new growth loop flow
+            setShowReviewModal(true);
+            setIsGeneratingReview(true);
+            try {
+                const response = await fetch('/api/v1/growth/campaign/generate-review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: orderId,
+                        customer_name: customerName,
+                        product_name: productName
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setReviewMessage(data.message);
+                } else {
+                    setReviewMessage(`Hi ${customerName},\n\nWe noticed you recently received your ${productName} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${orderId}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+                }
+            } catch (e) {
+                console.error("Failed to generate review", e);
                 setReviewMessage(`Hi ${customerName},\n\nWe noticed you recently received your ${productName} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${orderId}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+            } finally {
+                setIsGeneratingReview(false);
+                setReviewSent(false);
             }
-        } catch (e) {
-            console.error("Failed to generate review", e);
-            setReviewMessage(`Hi ${customerName},\n\nWe noticed you recently received your ${productName} and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/${orderId}\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
-        } finally {
-            setIsGeneratingReview(false);
-            setReviewSent(false);
+        } else if (isCartRecovery) {
+            const customerName = payloadObj?.target_customer_name || 'Alex';
+            const cartValue = payloadObj?.target_cart_value || '$85.00';
+
+            setShowCartModal(true);
+            setIsGeneratingCartCampaign(true);
+            try {
+                const response = await fetch('/api/v1/growth/campaign/generate-cart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_name: customerName,
+                        cart_value: cartValue
+                    })
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setCartCampaignMessage(data.message);
+                } else {
+                    setCartCampaignMessage(`Hi ${customerName},\n\nWe noticed you left some items in your cart totaling ${cartValue}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+                }
+            } catch (e) {
+                console.error("Failed to generate cart recovery", e);
+                setCartCampaignMessage(`Hi ${customerName},\n\nWe noticed you left some items in your cart totaling ${cartValue}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC`);
+            } finally {
+                setIsGeneratingCartCampaign(false);
+                setCartCampaignSent(false);
+            }
         }
 
         return;
@@ -640,39 +673,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Automated AI Review Requests Growth Loop */}
-         <section className="mb-6">
-            <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4 gap-2">
-                    <h3 className="font-semibold text-lg font-outfit text-gray-900 m-0 flex items-center flex-wrap gap-2">
-                        Automated AI Review Requests
-                        <span className="text-xs px-3 py-1 rounded-full font-medium" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                            New Growth Loop
-                        </span>
-                    </h3>
-                </div>
-                <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
-                </p>
-
-                {campaignSuccess ? (
-                    <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
-                    </div>
-                ) : (
-                    <button
-                        onClick={handleSendCampaign}
-                        disabled={isSendingCampaign}
-                        className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed shadow-md"
-                        style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
-                    >
-                        {isSendingCampaign ? 'Generating drafts...' : '✨ Send AI Review Requests'}
-                    </button>
-                )}
-            </div>
-         </section>
-
-
          {/* SaaS Conversion: AI Business Insights (Soft Paywall) */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -700,258 +700,6 @@ export default function Dashboard() {
                    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
                    <div className="relative w-20 h-20 bg-gradient-to-tr from-yellow-400 to-orange-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                   </div>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: VIP Customer Referral Campaign */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>VIP Customer Referrals</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
-                        <span className="text-xs font-medium text-purple-600">Customer Acquisition</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Promoters</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>12 top customers</strong> who haven't joined your VIP referral program. Ask them to refer their friends using an AI-generated email campaign.</p>
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-lg">
-                                    🎁
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">VIP Referral Invite</h4>
-                                    <p className="text-xs text-gray-500">12 top customers</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={async () => {
-                                    setIsGeneratingCustomerReferral(true);
-                                    setShowCustomerReferralModal(true);
-                                    setCustomerReferralSent(false);
-                                    try {
-                                        const response = await fetch('/api/v1/growth/campaign/generate-customer-referral', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ store_name: businessName })
-                                        });
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            if (data.message) {
-                                                setCustomerReferralMessage(data.message);
-                                            }
-                                        }
-                                    } catch (e) {
-                                        console.error("Failed to generate VIP referral campaign", e);
-                                        setCustomerReferralMessage("Hi there! We love having you as a top customer. As a special thank you, give your friends 15% off their first order. When they buy, you get $10! Share your link today.");
-                                    } finally {
-                                        setIsGeneratingCustomerReferral(false);
-                                    }
-                                }}
-                                className="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Generate Campaign
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
-                    <div className="text-4xl mb-3">🤝</div>
-                    <span className="text-sm font-medium text-gray-600 text-center">+25% more new customers</span>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: Abandoned Cart Recovery */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Abandoned Cart Recovery</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-red-50 rounded-full border border-red-100">
-                        <span className="text-xs font-medium text-red-600">Revenue Recovery</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Win Back Lost Sales</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>5 abandoned carts</strong> totaling <strong className="text-green-600">$240.00</strong>. Recover these sales with an AI-generated discount campaign.</p>
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 text-lg">
-                                    🛒
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Cart #4410 - Abandoned</h4>
-                                    <p className="text-xs text-gray-500">Alex M. left $85.00 in their cart</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={async () => {
-                                    setShowCartModal(true);
-                                    setIsGeneratingCartCampaign(true);
-                                    try {
-                                        const response = await fetch('/api/v1/growth/campaign/generate-cart', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                customer_name: 'Alex',
-                                                cart_value: '$85.00'
-                                            })
-                                        });
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            setCartCampaignMessage(data.message);
-                                        } else {
-                                            setCartCampaignMessage("Hi Alex,\n\nWe noticed you left some items in your cart totaling $85.00. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
-                                        }
-                                    } catch (e) {
-                                        console.error("Failed to generate cart recovery", e);
-                                        setCartCampaignMessage("Hi Alex,\n\nWe noticed you left some items in your cart totaling $85.00. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
-                                    } finally {
-                                        setIsGeneratingCartCampaign(false);
-                                        setCartCampaignSent(false);
-                                    }
-                                }}
-                                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Recover Cart
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
-                    <div className="text-4xl mb-3">💸</div>
-                    <span className="text-sm font-medium text-gray-600 text-center">+15% average recovery rate</span>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: Automated AI-Driven Review Requests */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Automated Review Requests</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
-                        <span className="text-xs font-medium text-blue-600">Merchant Delight</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Turn Customers into Advocates</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">You have <strong>3 recent orders</strong> delivered that haven't left a review. Ask for a review with one tap and build your store's credibility automatically.</p>
-                    <div className="flex flex-col gap-3">
-                        <div className="flex items-center justify-between bg-gray-50 p-4 rounded-xl border border-gray-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">
-                                    ⭐
-                                </div>
-                                <div>
-                                    <h4 className="text-sm font-semibold text-gray-900">Order #8922 - Delivered</h4>
-                                    <p className="text-xs text-gray-500">Sarah J. bought Signature Coffee Blend</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={async () => {
-                                    setShowReviewModal(true);
-                                    setIsGeneratingReview(true);
-                                    try {
-                                        const response = await fetch('/api/v1/growth/campaign/generate-review', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({
-                                                order_id: '8922',
-                                                customer_name: 'Sarah',
-                                                product_name: 'Signature Coffee Blend'
-                                            })
-                                        });
-                                        if (response.ok) {
-                                            const data = await response.json();
-                                            setReviewMessage(data.message);
-                                        } else {
-                                            setReviewMessage("Hi Sarah,\n\nWe noticed you recently received your Signature Coffee Blend and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/8922\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
-                                        }
-                                    } catch (e) {
-                                        console.error("Failed to generate review", e);
-                                        setReviewMessage("Hi Sarah,\n\nWe noticed you recently received your Signature Coffee Blend and we hope you are absolutely loving it!\n\nAs a small business, we rely on feedback from amazing customers like you to grow and improve. If you have a minute, we would be incredibly grateful if you could share your thoughts by leaving a quick review here: https://ohc.store/review/8922\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
-                                    } finally {
-                                        setIsGeneratingReview(false);
-                                        setReviewSent(false);
-                                    }
-                                }}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap"
-                            >
-                                Request Review
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div className="hidden md:flex w-full md:w-1/3 flex-col items-center justify-center p-4">
-                     <div className="w-24 h-24 bg-gradient-to-tr from-blue-100 to-indigo-50 rounded-full flex items-center justify-center mb-3">
-                         <div className="text-4xl animate-bounce">💌</div>
-                     </div>
-                     <p className="text-xs font-medium text-gray-500 text-center">Stores with reviews sell 3x more</p>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth & Promotions Generator Card */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Growth & Promotions</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
-                        <span className="text-xs font-medium text-purple-600">AI Powered</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8" style={{ background: 'linear-gradient(to right, #ffffff, #fdfbfb)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Boost Sales with AI Campaigns</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Let our AI generate high-converting promotional messages for your next holiday or flash sale. Ready to send via SMS or WhatsApp.</p>
-                    <button
-                        onClick={async () => {
-                            setShowPromoModal(true);
-                            setIsGeneratingPromo(true);
-                            try {
-                                const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-                                const response = await fetch("/api/v1/growth/promotions/generate", {
-                                    method: "POST",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ tenant })
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    if (data.message) {
-                                        setPromoMessage(data.message);
-                                    }
-                                }
-                            } catch (e) {
-                                console.error("Failed to generate promotion", e);
-                            } finally {
-                                setIsGeneratingPromo(false);
-                            }
-                        }}
-                        disabled={isGeneratingPromo}
-                        className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-sm transition-all flex items-center gap-2 ${isGeneratingPromo ? "opacity-75 cursor-not-allowed" : ""}`}
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                        {isGeneratingPromo ? "Generating..." : "Generate Promotion"}
-                    </button>
-                </div>
-                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
-                   {/* Decorative AI visual */}
-                   <div className="absolute inset-0 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full opacity-20 blur-xl animate-pulse"></div>
-                   <div className="relative w-20 h-20 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl rotate-3 shadow-lg flex items-center justify-center text-white">
-                        <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                    </div>
                 </div>
             </div>
