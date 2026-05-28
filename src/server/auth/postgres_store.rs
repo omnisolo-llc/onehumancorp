@@ -193,7 +193,7 @@ impl UserRepository for PgUserRepository {
 
         let query = r#"
             UPDATE users SET username=$2, email=$3, password_hash=$4, roles=$5, active=$6,
-            tenant_id=$7, oidc_subject=$8, updated_at=$9
+            oidc_subject=$7, updated_at=$8
             WHERE id=$1 RETURNING id
             "#;
 
@@ -208,7 +208,6 @@ impl UserRepository for PgUserRepository {
             .bind(&user.password_hash)
             .bind(roles_json)
             .bind(user.active)
-            .bind(&user.organization_id)
             .bind(&user.oidc_subject)
             .bind(user.updated_at)
             .fetch_optional(&mut *tx)
