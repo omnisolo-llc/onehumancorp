@@ -71,7 +71,7 @@ export default function OnboardingWizard() {
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
-    setStep(4); // Go to loading screen
+    setStep(3); // Go to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -108,12 +108,12 @@ export default function OnboardingWizard() {
       const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
-      setStep(5); // Go to "You're Live" screen
+      setStep(4); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      setStep(3); // Go back to last input screen on error
+      setStep(2); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +123,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto backdrop-blur-xl bg-white/70 dark:bg-[#16161a]/70 border border-white/50 dark:border-white/10 rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -303,49 +303,25 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              <div className="mt-auto pt-6">
-                <button
-                  onClick={() => setStep(3)}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Continue
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
-              </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>
-              <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
-                Pick your storefront vibe. We'll automatically assign the best AI agents to manage it.
-              </p>
-
-              <div className="space-y-4 flex-1">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
-                      <div
-                        key={template}
-                        onClick={() => setWebsiteTemplate(template)}
-                        className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
-                      >
-                        <div className="font-semibold">{template}</div>
-                      </div>
-                    ))}
-                  </div>
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Website Template</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {['Modern', 'Minimal', 'Bold', 'Classic'].map(template => (
+                    <div
+                      key={template}
+                      onClick={() => setWebsiteTemplate(template)}
+                      className={`p-3 rounded-[8px] border cursor-pointer transition-all ${websiteTemplate === template ? 'border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF]' : 'border-white/50 dark:border-white/10 bg-white/60 dark:bg-black/30 hover:border-gray-400 dark:hover:border-gray-500 text-[#1D1D1F] dark:text-white'}`}
+                    >
+                      <div className="font-semibold text-center">{template}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div className="mt-auto pt-6">
                 <button
                   onClick={handleStartOnboarding}
-                  disabled={isLoading}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim() || isLoading}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Launch Store
@@ -354,7 +330,7 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {step === 4 && (
+          {step === 3 && (
              <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
                <div className="w-24 h-24 relative mb-8">
                  <div className="absolute inset-0 border-4 border-[#0066FF]/20 rounded-full"></div>
@@ -370,7 +346,7 @@ export default function OnboardingWizard() {
              </div>
           )}
 
-          {step === 5 && startResult && (
+          {step === 4 && startResult && (
             <div className="flex flex-col flex-1 justify-center items-center text-center animate-fade-in">
               <div className="w-20 h-20 bg-[#34C759]/20 rounded-full flex items-center justify-center mb-6">
                 <svg className="w-10 h-10 text-[#34C759]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
