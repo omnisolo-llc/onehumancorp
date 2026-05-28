@@ -45,11 +45,23 @@ impl Department for OperationsAgent {
 
         self.orchestrator.execute_action(
             DepartmentType::Operations,
-            action_description,
+            action_description.clone(),
             event.tenant_id.clone(),
-            risk,
+            risk.clone(),
             event.payload.clone(),
         ).await?;
+
+        if risk == ActionRisk::AutoExecute {
+            let customer_id = event.payload.get("customer_id").and_then(|v| v.as_str()).unwrap_or("unknown");
+            let _ = self.orchestrator.log_customer_action(
+                &event.tenant_id,
+                customer_id,
+                "The Manager",
+                "order_processed",
+                &action_description,
+                event.payload.clone(),
+            ).await;
+        }
 
         // Dispatch event for customer success agent
         let cs_event = DepartmentEvent {

@@ -49,7 +49,7 @@ async fn handle_webhook(
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: payload.tenant_id.clone(),
             event_type: "tenant.order.created".to_string(),
-            payload: serde_json::json!({"source": payload.source, "message": payload.message}),
+            payload: serde_json::json!({"source": payload.source, "message": payload.message, "customer_id": payload.source.clone()}),
         };
 
         match orchestrator.dispatch_event(event).await {
@@ -107,6 +107,19 @@ async fn handle_webhook(
     .await;
     let _ = tx.commit().await;
 
+    // Extract customer_id dynamically based on source or message, fallback to source name for demo
+    let customer_id = payload.source.clone();
+
+    // Log message arrival to timeline
+    let _ = orchestrator.log_customer_action(
+        &payload.tenant_id,
+        &customer_id,
+        "system",
+        "message_received",
+        &description,
+        serde_json::json!({"source": payload.source, "message": payload.message}),
+    ).await;
+
     match orchestrator.execute_action(
         DepartmentType::CustomerSuccess,
         description,
@@ -117,6 +130,7 @@ async fn handle_webhook(
             "message": payload.message,
             "draft_reply": draft_reply,
             "inbox_message_id": id,
+            "customer_id": customer_id
         }),
     ).await {
         Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),

@@ -624,6 +624,80 @@ impl DepartmentOrchestrator {
         }
     }
 
+    pub async fn log_customer_action(&self, tenant_id: &str, customer_id: &str, agent_id: &str, action_type: &str, description: &str, payload: serde_json::Value) -> Result<(), String> {
+        let id = Uuid::new_v4().to_string();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let _ = sqlx::query(
+                    "INSERT INTO customer_timeline (id, tenant_id, customer_id, agent_id, action_type, description, payload) VALUES ($1, $2, $3, $4, $5, $6, $7)"
+                )
+                .bind(id)
+                .bind(tenant_id)
+                .bind(customer_id)
+                .bind(agent_id)
+                .bind(action_type)
+                .bind(description)
+                .bind(payload)
+                .execute(&self.db.pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let payload_str = payload.to_string();
+                let _ = sqlx::query(
+                    "INSERT INTO customer_timeline (id, tenant_id, customer_id, agent_id, action_type, description, payload) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                )
+                .bind(id)
+                .bind(tenant_id)
+                .bind(customer_id)
+                .bind(agent_id)
+                .bind(action_type)
+                .bind(description)
+                .bind(payload_str)
+                .execute(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+        }
+    }
+
+    pub async fn get_customer_timeline(&self, tenant_id: &str, customer_id: &str) -> Result<Vec<String>, String> {
+        let mut results = Vec::new();
+        match &self.db.store {
+            crate::db::DbStore::Postgres => {
+                let rows = sqlx::query("SELECT action_type, description, payload FROM customer_timeline WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at ASC LIMIT 50")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                use sqlx::Row;
+                for row in rows {
+                    let action_type: String = row.get("action_type");
+                    let description: String = row.get("description");
+                    results.push(format!("[{}] {}", action_type, description));
+                }
+            }
+            crate::db::DbStore::Sqlite(pool) => {
+                let rows = sqlx::query("SELECT action_type, description, payload FROM customer_timeline WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at ASC LIMIT 50")
+                    .bind(tenant_id)
+                    .bind(customer_id)
+                    .fetch_all(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                use sqlx::Row;
+                for row in rows {
+                    let action_type: String = row.get("action_type");
+                    let description: String = row.get("description");
+                    results.push(format!("[{}] {}", action_type, description));
+                }
+            }
+        }
+        Ok(results)
+    }
+
 
 
 
