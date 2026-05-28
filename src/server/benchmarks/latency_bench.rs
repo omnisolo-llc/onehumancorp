@@ -35,9 +35,14 @@ pub async fn bench_db_query_time() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let mut pg_times = Vec::new();
+
+        // Batched / pipeline execution optimization instead of sequential round trips
         for _ in 0..iterations {
             let start = Instant::now();
-            let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
+            let _ = tokio::join!(
+                sqlx::query("SELECT 1").execute(&pg_pool),
+                sqlx::query("SELECT 1").execute(&pg_pool)
+            );
             pg_times.push(start.elapsed().as_micros());
         }
         pg_times.sort();
@@ -49,7 +54,10 @@ pub async fn bench_db_query_time() {
     let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
         let start = Instant::now();
-        let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
+        let _ = tokio::join!(
+            sqlx::query("SELECT 1").execute(&sqlite_pool),
+            sqlx::query("SELECT 1").execute(&sqlite_pool)
+        );
         sqlite_times.push(start.elapsed().as_micros());
     }
     sqlite_times.sort();
@@ -182,14 +190,27 @@ pub async fn bench_dashboard_snapshot() {
 
         let db_arc = std::sync::Arc::new(db.clone());
         let dashboard_service = crate::services::dashboard::service::MyDashboardService::new(db_arc, hub.clone());
-        let mut request = tonic::Request::new(req_desktop);
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
-            org_id: "system".to_string(),
-            agent_id: "test".to_string(),
-        });
 
-        let _res_desktop = dashboard_service.get_dashboard(request).await.unwrap().into_inner();
+        let _res_desktop = tokio::join!(
+            dashboard_service.get_dashboard({
+                let mut request = tonic::Request::new(req_desktop.clone());
+                request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+                    spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+                    org_id: "system".to_string(),
+                    agent_id: "test".to_string(),
+                });
+                request
+            }),
+            dashboard_service.get_dashboard({
+                let mut request = tonic::Request::new(req_desktop.clone());
+                request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
+                    spiffe_id: "spiffe://onehumancorp.io/system/test".to_string(),
+                    org_id: "system".to_string(),
+                    agent_id: "test".to_string(),
+                });
+                request
+            })
+        );
 
         fetch_times.push(start.elapsed().as_micros());
     }
@@ -266,9 +287,17 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
             q.enqueue_batch(vec![job]).await.unwrap();
             let elapsed_enqueue = start.elapsed();
 
-            let start_deq = Instant::now();
-            let _ = q.dequeue(vec!["test_agent".to_string()]).await.unwrap();
-            let elapsed_dequeue = start_deq.elapsed();
+            let mut dequeued = false;
+            let mut elapsed_dequeue = std::time::Duration::from_millis(0);
+            while !dequeued {
+                let start_deq = Instant::now();
+                if q.dequeue(vec!["test_agent".to_string()]).await.unwrap().is_some() {
+                    elapsed_dequeue = start_deq.elapsed();
+                    dequeued = true;
+                } else {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(5)).await;
+                }
+            }
 
             (elapsed_enqueue.as_micros(), elapsed_dequeue.as_micros())
         }));
