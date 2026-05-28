@@ -150,40 +150,25 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
         .await
         .unwrap();
 
-    // The async env issue... temp_env is synchronous
-    let _old_telemetry = std::env::var("OHC_TELEMETRY_ENABLED");
-    let _old_standalone = std::env::var("STANDALONE_MODE");
+    temp_env::async_with_vars(
+        [
+            ("OHC_TELEMETRY_ENABLED", Some("false")),
+            ("STANDALONE_MODE", Some("true")),
+        ],
+        || async {
+            // We also need to reload config somehow... or actually our change reads ::server_config::get().
+            // We can't really reload standard OnceLock easily so we'll just check if it blocks.
+            let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
+            daemon.sync_telemetry_step().await.unwrap();
 
-    unsafe {
-        std::env::set_var("OHC_TELEMETRY_ENABLED", "false");
-        std::env::set_var("STANDALONE_MODE", "true");
-    }
-
-    // We also need to reload config somehow... or actually our change reads ::server_config::get().
-    // We can't really reload standard OnceLock easily so we'll just check if it blocks.
-    let daemon = super::daemon::HybridSyncDaemon::new(sqlite_pool.clone(), pg_pool.clone());
-    daemon.sync_telemetry_step().await.unwrap();
-
-    // Check that it's still pending
-    let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
-        .fetch_one(&sqlite_pool)
-        .await
-        .unwrap();
-    use sqlx::Row;
-    let status: String = row.get("sync_status");
-    assert_eq!(status, "pending");
-
-    unsafe {
-        if let Ok(val) = _old_telemetry {
-            std::env::set_var("OHC_TELEMETRY_ENABLED", val);
-        } else {
-            std::env::remove_var("OHC_TELEMETRY_ENABLED");
-        }
-
-        if let Ok(val) = _old_standalone {
-            std::env::set_var("STANDALONE_MODE", val);
-        } else {
-            std::env::remove_var("STANDALONE_MODE");
-        }
-    }
+            // Check that it's still pending
+            let row = sqlx::query("SELECT sync_status FROM telemetry_buffer")
+                .fetch_one(&sqlite_pool)
+                .await
+                .unwrap();
+            use sqlx::Row;
+            let status: String = row.get("sync_status");
+            assert_eq!(status, "pending");
+        },
+    ).await;
 }
