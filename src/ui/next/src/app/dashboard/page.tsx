@@ -1035,6 +1035,60 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Post-Purchase Virality */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Post-Purchase Virality Loop</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-pink-50 rounded-full border border-pink-100">
+                        <span className="text-xs font-medium text-pink-600">Acquisition Channel</span>
+                    </div>
+                </div>
+                <Link
+                    href="/share-cards"
+                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-800 font-semibold rounded-xl shadow-sm hover:bg-gray-50 transition-all font-inter text-sm"
+                >
+                    <span>Customize Share Cards</span>
+                </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-6 shadow-sm border rounded-2xl flex flex-col justify-between" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-pink-100 flex items-center justify-center text-pink-600 text-lg">
+                            🎴
+                        </div>
+                        <h3 className="font-semibold text-gray-900">Social Shares Generated</h3>
+                    </div>
+                    <div className="text-4xl font-bold font-outfit text-gray-900 mb-2">42</div>
+                    <p className="text-sm text-green-600 font-medium">+15% this week</p>
+                </div>
+
+                <div className="p-6 shadow-sm border rounded-2xl flex flex-col justify-between" style={{ background: '#ffffff', border: '1px solid rgba(0,0,0,0.05)' }}>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-lg">
+                            👥
+                        </div>
+                        <h3 className="font-semibold text-gray-900">New Visitors from Shares</h3>
+                    </div>
+                    <div className="text-4xl font-bold font-outfit text-gray-900 mb-2">120</div>
+                    <p className="text-sm text-green-600 font-medium">+8% this week</p>
+                </div>
+
+                <div className="p-6 shadow-sm border rounded-2xl flex flex-col justify-between relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', color: '#fff' }}>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-bl-full -z-10"></div>
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white text-lg backdrop-blur-sm">
+                            💰
+                        </div>
+                        <h3 className="font-semibold text-white">Revenue from Referrals</h3>
+                    </div>
+                    <div className="text-4xl font-bold font-outfit text-white mb-2">$350.00</div>
+                    <p className="text-sm text-white/80 font-medium">From 7 new orders</p>
+                </div>
+            </div>
+         </section>
+
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
