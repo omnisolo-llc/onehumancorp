@@ -318,7 +318,6 @@ export default function BuilderPage() {
                       ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
                       : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
                   }`}
-                  className="rounded-[8px]"
                   onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
@@ -360,7 +359,6 @@ export default function BuilderPage() {
                         ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
                         : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                     }`}
-                    className="rounded-[8px]"
                     onClick={() => {
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
