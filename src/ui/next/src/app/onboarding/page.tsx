@@ -23,9 +23,87 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+  // Sync state to backend
+  const syncState = async (updates: any) => {
+    try {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      const currentState = useOnboardingStore.getState();
+      const payload = {
+        step: currentState.step,
+        chatStep: currentState.chatStep,
+        businessName: currentState.businessName,
+        whatYouSell: currentState.whatYouSell,
+        location: currentState.location,
+        businessType: currentState.businessType,
+        categories: currentState.categories,
+        websiteTemplate: currentState.websiteTemplate,
+        firstProductName: currentState.firstProductName,
+        firstProductPrice: currentState.firstProductPrice,
+        ...updates
+      };
+
+      await fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+          'X-User-ID': userId,
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.error('Failed to sync state:', e);
+    }
+  };
+
   useEffect(() => {
-    setIsLoaded(true);
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.chatStep) setChatStep(data.chatStep);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.whatYouSell) setWhatYouSell(data.whatYouSell);
+            if (data.location) setLocation(data.location);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load state:', e);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    loadState();
   }, []);
+
+  const handleNextStep = (newStep: number) => {
+    setStep(newStep);
+    syncState({ step: newStep });
+  };
+
+  const handleNextChatStep = (newChatStep: number) => {
+    setChatStep(newChatStep);
+    syncState({ chatStep: newChatStep });
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -59,7 +137,7 @@ export default function OnboardingWizard() {
       setFirstProductPrice(intakeData.initial_products?.[0]?.price || '10.00');
       setCategories(intakeData.categories || ['physical']);
 
-      setStep(2); // Go to review step
+      handleNextStep(2); // Go to review step
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred processing details');
@@ -71,7 +149,7 @@ export default function OnboardingWizard() {
   const handleStartOnboarding = async () => {
     setIsLoading(true);
     setError('');
-    setStep(4); // Go to loading screen
+    handleNextStep(4); // Go to loading screen
 
     try {
       const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
@@ -108,12 +186,12 @@ export default function OnboardingWizard() {
       const result = await startRes.json();
       setStartResult(result);
       localStorage.setItem('has_onboarded', 'true');
-      setStep(5); // Go to "You're Live" screen
+      handleNextStep(5); // Go to "You're Live" screen
 
     } catch (err: any) {
       console.error(err);
       setError(err.message || 'An error occurred during onboarding');
-      setStep(3); // Go back to last input screen on error
+      handleNextStep(3); // Go back to last input screen on error
     } finally {
       setIsLoading(false);
     }
@@ -156,6 +234,14 @@ export default function OnboardingWizard() {
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && businessName.trim()) {
+                            handleNextChatStep(2);
+                          }
+                        }}
+                        enterKeyHint="next"
+                        autoComplete="organization"
+                        autoCapitalize="words"
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -164,7 +250,7 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(2)}
+                      onClick={() => handleNextChatStep(2)}
                       disabled={!businessName.trim()}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -176,7 +262,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 2 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => handleNextChatStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">What do you sell?</h2>
@@ -189,6 +275,15 @@ export default function OnboardingWizard() {
                       <textarea
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && whatYouSell.trim()) {
+                            e.preventDefault();
+                            handleNextChatStep(3);
+                          }
+                        }}
+                        enterKeyHint="next"
+                        autoComplete="off"
+                        autoCapitalize="sentences"
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -197,7 +292,7 @@ export default function OnboardingWizard() {
 
                   <div className="mt-auto pt-6">
                     <button
-                      onClick={() => setChatStep(3)}
+                      onClick={() => handleNextChatStep(3)}
                       disabled={!whatYouSell.trim()}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -209,7 +304,7 @@ export default function OnboardingWizard() {
 
               {chatStep === 3 && (
                 <div className="flex flex-col flex-1 animate-fade-in">
-                  <button onClick={() => setChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+                  <button onClick={() => handleNextChatStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
                   </button>
                   <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Where are you located?</h2>
@@ -223,6 +318,14 @@ export default function OnboardingWizard() {
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            handleIntake();
+                          }
+                        }}
+                        enterKeyHint="go"
+                        autoComplete="address-level2"
+                        autoCapitalize="words"
                         placeholder="e.g. Portland, OR"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -245,7 +348,7 @@ export default function OnboardingWizard() {
 
           {step === 2 && (
             <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => handleNextStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
@@ -305,7 +408,7 @@ export default function OnboardingWizard() {
 
               <div className="mt-auto pt-6">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => handleNextStep(3)}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -317,7 +420,7 @@ export default function OnboardingWizard() {
 
           {step === 3 && (
             <div className="flex flex-col flex-1 animate-fade-in">
-              <button onClick={() => setStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
+              <button onClick={() => handleNextStep(2)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
               <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Style & Team</h2>

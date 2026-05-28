@@ -8,11 +8,29 @@ test.describe('Onboarding Wizard Flow', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
-    // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
+    // Fill in the description (Chat Step 1)
+    const nameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+    await nameInput.fill('Miami Handyman');
+    await page.locator('button:has-text("Next")').click();
+
+    // Chat Step 2
+    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
     await descriptionInput.fill('I am a freelance handyman in Miami');
+    await page.locator('button:has-text("Next")').click();
+
+    // Chat Step 3
+    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+    await locationInput.fill('Miami, FL');
 
     // Intercept API calls
+    await page.route('**/api/onboarding/state', route => {
+      // Mock both GET and POST to the state endpoint
+      route.fulfill({
+        status: 200,
+        json: {} // Return empty state to start fresh
+      });
+    });
+
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 200,
       json: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
