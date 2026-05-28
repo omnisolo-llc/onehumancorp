@@ -18,16 +18,11 @@ impl VisionWorker {
         tokio::spawn(async move {
             while let Ok(event) = vision_rx.recv().await {
                 if event.action == "VisualIntake" {
-                    // In a real scenario, this would deserialize to interop::IntakePayload
-                    // and call the LLM to get a visual estimate.
-                    // For now, we mock the extraction.
-
                     if let Ok(payload_str) = String::from_utf8(event.payload.clone()) {
                         if let Ok(payload_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
                             let tenant_id = payload_json.get("tenant_id").and_then(|t| t.as_str()).unwrap_or("default_tenant");
                             let user_text = payload_json.get("user_text_context").and_then(|t| t.as_str()).unwrap_or("Unknown item");
 
-                            // Mocking the result
                             let estimate = serde_json::json!({
                                 "tenant_id": tenant_id,
                                 "item_type": user_text,

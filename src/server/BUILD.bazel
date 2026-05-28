@@ -236,6 +236,7 @@ SERVER_RS_SRCS = [
     "//src/server/workers:maintenance.rs",
     "//src/server/workers:memory.rs",
     "//src/server/workers:mod.rs",
+    "//src/server/workers:vision_worker.rs",
 ]
 
 SERVICES_RS_SRCS = [
