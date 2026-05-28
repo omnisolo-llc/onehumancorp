@@ -109,7 +109,7 @@ impl BookingService {
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
             .fetch_all(&mut *tx)
@@ -132,7 +132,7 @@ impl BookingService {
     pub async fn upsert_service(service: Service) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
 
         sqlx::query(
             "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
@@ -179,7 +179,7 @@ impl BookingService {
     pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
@@ -204,7 +204,7 @@ impl BookingService {
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
 
         let now = chrono::Utc::now();
         if booking.start_time.signed_duration_since(now).num_hours() < 48 {
