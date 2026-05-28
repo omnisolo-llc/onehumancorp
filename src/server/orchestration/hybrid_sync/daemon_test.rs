@@ -136,7 +136,8 @@ async fn test_hybrid_sync_daemon_telemetry_opt_out() {
             value REAL NOT NULL,
             labels_json TEXT NOT NULL,
             timestamp TEXT NOT NULL,
-            sync_status TEXT NOT NULL
+            sync_status TEXT NOT NULL,
+            context_json TEXT
         )"
     ).execute(&sqlite_pool).await.unwrap();
 

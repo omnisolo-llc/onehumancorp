@@ -218,7 +218,8 @@ mod tests {
                 value REAL NOT NULL,
                 labels_json TEXT NOT NULL,
                 timestamp TIMESTAMPTZ NOT NULL,
-                sync_status TEXT NOT NULL
+                sync_status TEXT NOT NULL,
+                context_json TEXT
             )"
         ).execute(&pool).await.unwrap();
 

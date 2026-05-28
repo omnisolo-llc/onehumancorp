@@ -784,6 +784,31 @@ pub async fn record_rag_escalation(
     .await
 }
 
+pub async fn buffer_hybrid_context(
+    pool: &PgPool,
+    payload: Value,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
+
+    if !is_telemetry_enabled {
+        return Ok(());
+    }
+
+    let redacted_payload = redact_interface_pii(payload);
+    let context_json = serde_json::to_string(&redacted_payload)?;
+
+    query(
+        "INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, context_json)
+         VALUES ('hybrid_ui_context', 'event', 1.0, '{}', $1, 'pending', $2)"
+    )
+    .bind(Utc::now())
+    .bind(context_json)
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 pub async fn buffer_metric(
     pool: &PgPool,
     metric_name: &str,

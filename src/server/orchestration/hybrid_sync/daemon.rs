@@ -32,7 +32,7 @@ impl HybridSyncDaemon {
             return Ok(());
         }
 
-        let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp FROM telemetry_buffer WHERE sync_status = 'pending'")
+        let rows = sqlx::query("SELECT id, metric_name, metric_type, value, labels_json, timestamp, context_json FROM telemetry_buffer WHERE sync_status = 'pending'")
             .fetch_all(&self.sqlite_pool)
             .await?;
 
@@ -54,13 +54,15 @@ impl HybridSyncDaemon {
             let value: f32 = row.get("value");
             let labels_json: String = row.get("labels_json");
             let timestamp: chrono::NaiveDateTime = row.get("timestamp");
+            let context_json: Option<String> = row.try_get("context_json").unwrap_or(None);
 
-            let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status) VALUES ($1, $2, $3, $4, $5, 'synced')")
+            let res = sqlx::query("INSERT INTO telemetry_buffer (metric_name, metric_type, value, labels_json, timestamp, sync_status, context_json) VALUES ($1, $2, $3, $4, $5, 'synced', $6)")
                 .bind(metric_name)
                 .bind(metric_type)
                 .bind(value)
                 .bind(labels_json)
                 .bind(chrono::DateTime::<Utc>::from_naive_utc_and_offset(timestamp, Utc))
+                .bind(context_json)
                 .execute(&mut *tx)
                 .await;
 

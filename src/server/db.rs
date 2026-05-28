@@ -691,7 +691,8 @@ impl DB {
                         value REAL NOT NULL,
                         labels_json TEXT NOT NULL,
                         timestamp TIMESTAMP NOT NULL,
-                        sync_status TEXT NOT NULL
+                        sync_status TEXT NOT NULL,
+                        context_json TEXT
                     );
 
                     CREATE TABLE IF NOT EXISTS business_milestones (

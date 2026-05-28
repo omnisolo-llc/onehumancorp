@@ -37,16 +37,17 @@ impl HybridContextTool {
     }
 
     pub async fn execute(&self, arguments: Value) -> Result<Value, String> {
-        let metric_name = arguments.get("metric_name").and_then(|v| v.as_str()).unwrap_or("hybrid_action");
-        let metric_type = arguments.get("metric_type").and_then(|v| v.as_str()).unwrap_or("event");
-        let value = arguments.get("value").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
-        let labels = arguments.get("labels").cloned().unwrap_or(json!({}));
-
-        crate::telemetry::buffer_metric(&self.pool, metric_name, metric_type, value, labels)
+        crate::telemetry::buffer_hybrid_context(&self.pool, arguments)
             .await
             .map_err(|e| e.to_string())?;
 
-        Ok(json!({"status": "success"}))
+        // Formatting result to match the intended ExecutionResult JSON shape
+        Ok(json!({
+            "context": "hybrid_context",
+            "status": "success",
+            "result_bytes": null,
+            "failed": false
+        }))
     }
 }
 
@@ -182,15 +183,15 @@ mod tests {
             }
             let tool = HybridContextTool::new(pool);
             let args = json!({
-                "metric_name": "test_action_success",
-                "metric_type": "event",
-                "value": 1.0,
-                "labels": {"source": "test_success"}
+                "action": "test_action_success",
+                "ui_state": {"source": "test_success"}
             });
             let res = tool.execute(args).await;
             assert!(res.is_ok());
             let val = res.unwrap();
             assert_eq!(val["status"], "success");
+            assert_eq!(val["context"], "hybrid_context");
+            assert_eq!(val["failed"], false);
         }
     }
 
