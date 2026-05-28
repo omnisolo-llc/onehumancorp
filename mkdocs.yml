@@ -57,6 +57,7 @@ nav:
   - Operations:
       - Operations: technical/operations/index.md
   - Business:
+      - Business Journey Architecture: business/journey_architecture.md
       - Roadmap: business/roadmap.md
       - Execution Plan: business/execution-plan.md
   - Research:
