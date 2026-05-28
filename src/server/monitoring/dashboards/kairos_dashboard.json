@@ -65,33 +65,17 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 5,
-      "gridPos": {
-        "h": 2,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
       "title": "OHC Aesthetic Injector",
       "gridPos": {
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 2
+        "y": 0
       },
       "id": 1,
       "options": {
         "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID DASHBOARD</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
+        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
       },
       "transparent": true
     },
@@ -103,7 +87,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -192,7 +176,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -281,7 +265,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 11
       },
       "datasource": {
         "type": "prometheus",

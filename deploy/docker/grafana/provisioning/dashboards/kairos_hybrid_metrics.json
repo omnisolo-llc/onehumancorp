@@ -24,10 +24,9 @@
   "panels": [
     {
       "type": "text",
-      "title": "OHC Aesthetics",
-      "id": 103,
+      "title": "OHC Aesthetic Injector",
       "gridPos": {
-        "h": 2,
+        "h": 3,
         "w": 24,
         "x": 0,
         "y": 0
@@ -35,21 +34,6 @@
       "options": {
         "mode": "html",
         "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n"
-      },
-      "transparent": true
-    },
-    {
-      "type": "text",
-      "title": "OHC Aesthetic Injector",
-      "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
-        "y": 2
-      },
-      "options": {
-        "mode": "html",
-        "content": "<link rel=\"stylesheet\" href=\"/public/css/custom.css\">\n<div class=\"panel-container\" style=\"padding: 20px; text-align: center;\">\n  <h1 style=\"color: #00d3ff; font-weight: 800; letter-spacing: 2px;\">KAIROS HYBRID ORCHESTRATION</h1>\n  <p style=\"color: #a9a9a9; font-size: 14px;\">Full-Spectrum Observability for Cloud & Standalone Modes</p>\n</div>"
       },
       "transparent": true
     },
@@ -112,7 +96,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 5
+        "y": 3
       },
       "id": 2,
       "options": {
@@ -204,7 +188,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 5
+        "y": 3
       },
       "id": 3,
       "options": {
@@ -295,7 +279,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 11
       },
       "id": 4,
       "options": {
@@ -335,7 +319,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 21
+        "y": 19
       },
       "targets": [
         {
@@ -363,7 +347,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 19
       },
       "targets": [
         {
@@ -391,7 +375,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 27
       },
       "targets": [
         {
@@ -479,7 +463,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 24
       },
       "id": 100,
       "options": {
@@ -574,7 +558,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 24
       },
       "id": 101,
       "options": {
@@ -669,7 +653,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 34
+        "y": 32
       },
       "id": 102,
       "options": {
@@ -708,7 +692,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 18
+        "y": 16
       },
       "targets": [
         {
@@ -731,7 +715,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 18
+        "y": 16
       },
       "targets": [
         {

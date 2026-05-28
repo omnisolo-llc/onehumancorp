@@ -283,13 +283,6 @@ pub async fn razorpay_webhook_handler(
 
 
 #[derive(Debug, Deserialize)]
-pub struct CalComEvent {
-    #[serde(rename = "triggerEvent")]
-    pub trigger_event: String,
-    pub payload: CalComPayload,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
@@ -306,92 +299,6 @@ pub struct CalComAttendee {
     pub name: String,
 }
 
-pub async fn calcom_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    Json(payload): Json<CalComEvent>,
-) -> impl IntoResponse {
-    match payload.trigger_event.as_str() {
-        "BOOKING_CREATED" => {
-            let booking_uid = &payload.payload.uid;
-
-            // In a real app, create calendar events in the OHC dashboard
-            // and auto-generate meeting links (e.g., Zoom).
-            tracing::info!("Created booking: {}", booking_uid);
-            StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
-    }
-}
 
 
-#[derive(Debug, Deserialize)]
-pub struct ResendEvent {
-    #[serde(rename = "type")]
-    pub type_: String,
-    pub data: ResendEventData,
-}
 
-#[derive(Debug, Deserialize)]
-pub struct ResendEventData {
-    pub email_id: String,
-    pub to: Vec<String>,
-}
-
-pub async fn resend_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    Json(payload): Json<ResendEvent>,
-) -> impl IntoResponse {
-    match payload.type_.as_str() {
-        "email.bounced" | "email.complained" => {
-            // Automatically clean the tenant's mailing list
-            tracing::info!("Message bounced/complained: [REDACTED]");
-            StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
-    }
-}
-
-
-#[derive(Debug, Deserialize)]
-pub struct AyrshareEvent {
-    pub action: String,
-    pub message: String,
-    pub platform: String,
-    pub profile_key: String,
-}
-
-pub async fn ayrshare_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    Json(payload): Json<AyrshareEvent>,
-) -> impl IntoResponse {
-    match payload.action.as_str() {
-        "social_message" => {
-            // Ingest inbound messages into a unified OHC inbox table
-            tracing::info!("Incoming notification from integration: [REDACTED]");
-            StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ManychatEvent {
-    pub status: String,
-    pub messages: Vec<ManychatMessage>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ManychatMessage {
-    pub id: String,
-    pub text: String,
-}
-
-pub async fn manychat_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    Json(payload): Json<ManychatEvent>,
-) -> impl IntoResponse {
-    match payload.status.as_str() {
-        "ok" => StatusCode::OK.into_response(),
-        _ => StatusCode::OK.into_response()
-    }
-}
