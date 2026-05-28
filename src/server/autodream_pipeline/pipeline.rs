@@ -134,7 +134,7 @@ impl AutoDreamPipeline {
                             reference_count: 0,
                             reliability_score: 50,
                             owner_override: false,
-                            metadata: Some(format!("{{\"task_id\": \"{}\"}}", task_id)),
+                            metadata: Some(format!(r#"{{"task_id": "{}"}}"#, task_id)),
                         };
 
                         repository.upsert(&record).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
