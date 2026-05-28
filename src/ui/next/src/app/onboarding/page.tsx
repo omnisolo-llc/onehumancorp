@@ -165,8 +165,8 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(2)}
-                      disabled={!businessName.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={businessName.trim().length < 3}
+                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -198,8 +198,8 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={whatYouSell.trim().length < 5}
+                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -233,7 +233,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={handleIntake}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
                     </button>
@@ -307,7 +307,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={() => setStep(3)}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -346,7 +346,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Launch Store
                 </button>
@@ -392,13 +392,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 mac-button font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98]"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 mac-button font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98]"
                 >
                   Preview Storefront
                 </a>
