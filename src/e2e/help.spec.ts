@@ -64,7 +64,7 @@ test.describe('Business Setup Page', () => {
 
   test('should show setup wizard text', async ({ page }) => {
     await page.goto('/business-setup');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Tell us about your business')).toBeVisible();
   });
 });
 

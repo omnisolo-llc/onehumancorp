@@ -48,6 +48,6 @@ test.describe('Navigation', () => {
 
   test('should display business setup', async ({ page }) => {
     await page.goto('/business-setup');
-    await expect(page.locator('text=Your business, live in minutes')).toBeVisible();
+    await expect(page.locator('text=Tell us about your business')).toBeVisible();
   });
 });
