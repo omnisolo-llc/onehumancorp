@@ -20,6 +20,8 @@ mod tests {
         let customer_id = uuid::Uuid::new_v4().to_string();
         let product_id = uuid::Uuid::new_v4().to_string();
         let order_id = uuid::Uuid::new_v4().to_string();
+        let booking_id = uuid::Uuid::new_v4().to_string();
+        let memory_id = uuid::Uuid::new_v4().to_string();
 
         // First, insert data as system
         match pool.begin().await {
@@ -52,6 +54,19 @@ mod tests {
                     .bind(&customer_id)
                     .execute(&mut *tx).await;
 
+                // Insert a booking for tenant 2
+                let _ = sqlx::query("INSERT INTO bookings (id, tenant_id, customer_id, start_time) VALUES ($1, $2, $3, NOW()) ON CONFLICT DO NOTHING")
+                    .bind(&booking_id)
+                    .bind(tenant_2)
+                    .bind(&customer_id)
+                    .execute(&mut *tx).await;
+
+                // Insert an agent memory for tenant 2
+                let _ = sqlx::query("INSERT INTO agent_memories (id, tenant_id, content) VALUES ($1, $2, 'test content') ON CONFLICT DO NOTHING")
+                    .bind(&memory_id)
+                    .bind(tenant_2)
+                    .execute(&mut *tx).await;
+
                 tx.commit().await.expect("Failed to commit test data");
             },
             Err(_) => {
@@ -74,6 +89,12 @@ mod tests {
 
                 let result = sqlx::query("SELECT COUNT(*) FROM orders").fetch_one(&mut *tx).await;
                 assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM bookings").fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM agent_memories").fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
             },
             Err(_) => {}
         }
@@ -93,6 +114,12 @@ mod tests {
                 assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
 
                 let result = sqlx::query("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM bookings WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
+                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+
+                let result = sqlx::query("SELECT COUNT(*) FROM agent_memories WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
                 assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
             },
             Err(_) => {
