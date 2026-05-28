@@ -110,6 +110,71 @@ impl AppServer {
                     serde_json::to_string(&resp).unwrap()
                 }
             }
+        } else if req.method == "run_scalable_agents" {
+            let count = req.params.get("count").and_then(|v| v.as_u64()).unwrap_or(1) as usize;
+            let message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
+
+            // Integrate the scalable multi-agent cloud orchestrator
+            let mode = if count > 10 {
+                crate::scalable_multi_agent::DeploymentMode::CloudDistributed
+            } else {
+                crate::scalable_multi_agent::DeploymentMode::LocalCli
+            };
+
+            // We adapt Agent to AgentNode
+            struct AgentNodeAdapter {
+                runner: Arc<Runner>,
+            }
+            #[async_trait::async_trait]
+            impl crate::scalable_multi_agent::AgentNode for AgentNodeAdapter {
+                async fn execute(&self, chunk: crate::scalable_multi_agent::TaskChunk) -> Result<crate::scalable_multi_agent::TaskResult, String> {
+                    let cfg = AgentRunConfig::default();
+                    match self.runner.run_async(&cfg, &chunk.payload).await {
+                        Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
+                            chunk_id: chunk.id,
+                            output: res,
+                        }),
+                        Err(e) => Err(e.to_string()),
+                    }
+                }
+            }
+
+            let mut nodes: Vec<Arc<dyn crate::scalable_multi_agent::AgentNode>> = Vec::new();
+            // In a real cloud setup, these nodes would be distributed endpoints. Here we mock instances.
+            for _ in 0..count {
+                nodes.push(Arc::new(AgentNodeAdapter { runner: self.runner.clone() }));
+            }
+
+            let orchestrator = crate::scalable_multi_agent::CloudOrchestrator::new(mode, nodes);
+            let mut tasks = Vec::new();
+            for i in 0..count {
+                tasks.push(crate::scalable_multi_agent::TaskChunk {
+                    id: format!("chunk_{}", i),
+                    payload: format!("{} (chunk {})", message, i),
+                });
+            }
+
+            match orchestrator.distribute_and_execute(tasks).await {
+                Ok(results) => {
+                    let outputs: Vec<String> = results.into_iter().map(|r| r.output).collect();
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: Some(serde_json::json!({ "outputs": outputs })),
+                        error: None,
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+                Err(e) => {
+                    let resp = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(),
+                        id: req.id,
+                        result: None,
+                        error: Some(JsonRpcError { code: -32000, message: e.to_string() }),
+                    };
+                    serde_json::to_string(&resp).unwrap()
+                }
+            }
         } else {
             let resp = JsonRpcResponse {
                 jsonrpc: "2.0".to_string(),
@@ -230,8 +295,18 @@ mod tests {
         assert!(resp.error.is_none());
         assert_eq!(resp.result.unwrap().get("output").unwrap().as_str().unwrap(), "rpc success");
 
+        // Test run_scalable_agents method
+        let req_json_scalable = r#"{"jsonrpc": "2.0", "id": "2", "method": "run_scalable_agents", "params": {"message": "hello", "count": 2}}"#;
+        let resp_json_scalable = app_server.handle_request(req_json_scalable).await;
+        let resp_scalable: JsonRpcResponse = serde_json::from_str(&resp_json_scalable).unwrap();
+        assert!(resp_scalable.error.is_none());
+        let outputs = resp_scalable.result.unwrap().get("outputs").unwrap().as_array().unwrap().clone();
+        assert_eq!(outputs.len(), 2);
+        assert_eq!(outputs[0].as_str().unwrap(), "default output");
+        assert_eq!(outputs[1].as_str().unwrap(), "default output");
+
         // Test unknown method
-        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "2", "method": "unknown", "params": {}}"#;
+        let req_json_bad = r#"{"jsonrpc": "2.0", "id": "3", "method": "unknown", "params": {}}"#;
         let resp_json_bad = app_server.handle_request(req_json_bad).await;
         let resp_bad: JsonRpcResponse = serde_json::from_str(&resp_json_bad).unwrap();
         assert_eq!(resp_bad.error.unwrap().code, -32601);
