@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function ReviewCampaignsPage() {
@@ -10,6 +10,14 @@ export default function ReviewCampaignsPage() {
   const [generatedDraft, setGeneratedDraft] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSent, setIsSent] = useState(false);
+  const [hasPro, setHasPro] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof localStorage !== 'undefined') {
+      setHasPro(localStorage.getItem('has_pro') === 'true');
+    }
+  }, []);
 
   const handleGenerate = () => {
     setIsGenerating(true);
@@ -28,6 +36,10 @@ export default function ReviewCampaignsPage() {
   };
 
   const handleSend = () => {
+    if (!hasPro) {
+      setShowUpgradeModal(true);
+      return;
+    }
     // Simulate sending
     setIsSent(true);
   };
@@ -128,8 +140,13 @@ export default function ReviewCampaignsPage() {
                 ) : (
                   <button
                     onClick={handleSend}
-                    className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 relative overflow-hidden group"
                   >
+                    {!hasPro && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 bg-yellow-400/20 text-yellow-300 text-xs font-bold px-2 py-1 rounded">
+                        PRO
+                      </span>
+                    )}
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     Send to Audience ({customerSegment === 'recent' ? '48' : customerSegment === 'loyal' ? '12' : '156'} Customers)
                   </button>
@@ -144,6 +161,40 @@ export default function ReviewCampaignsPage() {
           </section>
         </div>
       </main>
+
+      {/* Upgrade Soft Paywall Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter text-center">
+            {/* Background embellishment */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-6">
+              🚀
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock Automated Campaigns</h2>
+            <p className="text-gray-600 mb-8 text-sm leading-relaxed">
+              Sending AI-generated review campaigns is a <strong>Pro</strong> feature. Upgrade your plan to instantly send this campaign and boost your sales on autopilot.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => router.push('/pricing')}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all"
+              >
+                View Plans & Upgrade
+              </button>
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="w-full py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-xl transition-all"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
