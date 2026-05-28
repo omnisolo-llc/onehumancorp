@@ -25,3 +25,9 @@ pub mod common {
 pub mod app {
     pub use app_proto::ohc::api::v1::*;
 }
+pub mod capital {
+    pub use capital_proto::ohc::capital::*;
+    pub mod service {
+        pub use capital_service_proto::ohc::capital::service::*;
+    }
+}

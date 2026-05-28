@@ -7,6 +7,7 @@ exports_files([
     "agent_service.proto",
     "app.proto",
     "billing.proto",
+    "capital.proto",
     "common.proto",
     "docs.proto",
     "hub.proto",
@@ -212,6 +213,21 @@ proto_library(
 proto_rust_library(
     name = "docs",
     proto = ":docs_proto",
+    use_grpc = True,
+    visibility = ["//visibility:public"],
+)
+
+# ── Capital ────────────────────────────────────────────────────────────────────
+
+proto_library(
+    name = "capital_proto",
+    srcs = ["capital.proto"],
+    visibility = ["//visibility:public"],
+)
+
+proto_rust_library(
+    name = "capital",
+    proto = ":capital_proto",
     use_grpc = True,
     visibility = ["//visibility:public"],
 )
