@@ -1902,6 +1902,7 @@ impl Agent {
         }
 
         let mut turn_count = 0;
+        // Orchestration Loop: Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle.
         while turn_count < max_iterations {
             let iteration = turn_count;
             turn_count += 1;
