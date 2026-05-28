@@ -64,6 +64,34 @@ async fn handle_webhook(
         }
     }
 
+    if payload.source == "mercadopago" {
+        if payload.message == "approved" {
+            tokio::spawn(async move {
+                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+            });
+
+            let event = crate::orchestration::departments::types::DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: payload.tenant_id.clone(),
+                event_type: "tenant.order.created".to_string(),
+                payload: serde_json::json!({"source": payload.source, "message": payload.message}),
+            };
+
+            match orchestrator.dispatch_event(event).await {
+                Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+                Err(e) => {
+                    if e.contains("AI Budget exhausted") {
+                        return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                    } else {
+                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                    }
+                }
+            }
+        } else if payload.message == "pending" || payload.message == "rejected" {
+            return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
+        }
+    }
+
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
     // We route external messages (like DMs) to the Customer Success department
