@@ -29,7 +29,15 @@ interface OnboardingState {
   setFirstProductPrice: (price: string) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
+
+
   setStartResult: (result: any) => void;
+  loadState: () => Promise<void>;
+  setStoreState: (state: Partial<OnboardingState>) => void;
+
+  loadState: () => Promise<void>;
+  setStoreState: (state: Partial<OnboardingState>) => void;
+
 }
 
 export const useOnboardingStore = create<OnboardingState>()(
@@ -62,7 +70,49 @@ export const useOnboardingStore = create<OnboardingState>()(
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
+
+
       setStartResult: (startResult) => set({ startResult }),
+      setStoreState: (partialState) => set((state) => ({ ...state, ...partialState })),
+      loadState: async () => {
+        try {
+          const res = await fetch('/api/onboarding/state', {
+            headers: {
+              'X-Tenant-ID': localStorage.getItem('tenant_id') || 'default',
+              'X-User-ID': localStorage.getItem('user_id') || 'default'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Object.keys(data).length > 0) {
+              set((state) => ({ ...state, ...data }));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load state from backend', e);
+        }
+      },
+
+      setStoreState: (partialState) => set((state) => ({ ...state, ...partialState })),
+      loadState: async () => {
+        try {
+          const res = await fetch('/api/onboarding/state', {
+            headers: {
+              'X-Tenant-ID': localStorage.getItem('tenant_id') || 'default',
+              'X-User-ID': localStorage.getItem('user_id') || 'default'
+            }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && Object.keys(data).length > 0) {
+              set((state) => ({ ...state, ...data }));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load state from backend', e);
+        }
+      },
+
     }),
     {
       name: 'onboarding-storage-v3', // Changed name to avoid cache collision with new structure

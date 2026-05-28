@@ -5,6 +5,9 @@ import { useOnboardingStore } from './store';
 import { beforeEach, describe, it, expect, vi, afterEach } from 'vitest';
 
 describe('OnboardingWizard', () => {
+  let intakeShouldFail = false;
+  let startShouldFail = false;
+
   beforeEach(() => {
     localStorage.clear();
     useOnboardingStore.setState({
@@ -19,7 +22,34 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    intakeShouldFail = false;
+    startShouldFail = false;
+
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return { ok: true, json: async () => ({}) };
+      }
+      if (url.includes('/api/onboarding/intake')) {
+        if (intakeShouldFail) return { ok: false };
+        return {
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        };
+      }
+      if (url.includes('/api/onboarding/start')) {
+        if (startShouldFail) return { ok: false };
+        return {
+          ok: true,
+          json: async () => ({ message: "Success!" })
+        };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
   });
 
   afterEach(() => {
@@ -37,52 +67,30 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
-
     act(() => { render(<OnboardingWizard />); });
 
-    // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await userEvent.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
     await act(async () => { nextBtn1.click(); });
 
-    // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
     await act(async () => { nextBtn2.click(); });
 
-    // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await userEvent.type(locInput, 'NY');
 
     const button = screen.getByRole('button', { name: /Generate My Business/i });
     expect(button).not.toBeDisabled();
 
-    // Step 1: Intake
     await act(async () => {
       button.click();
     });
 
-    // Verify it transitions to Step 2: Review Details
     await waitFor(() => {
       expect(screen.getByText("Review Details")).toBeInTheDocument();
       expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
@@ -93,7 +101,6 @@ describe('OnboardingWizard', () => {
       continueButton.click();
     });
 
-    // Verify it transitions to Step 3: Style & Team
     await waitFor(() => {
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
       expect(screen.getByText("Website Template")).toBeInTheDocument();
@@ -104,7 +111,6 @@ describe('OnboardingWizard', () => {
       launchButton.click();
     });
 
-    // Verify it transitions to Step 5 (Live Screen) on success
     await waitFor(() => {
       expect(screen.getByText("You're Live!")).toBeInTheDocument();
       expect(screen.getByText("my-business.ohc.store")).toBeInTheDocument();
@@ -114,28 +120,22 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    intakeShouldFail = true;
 
     act(() => { render(<OnboardingWizard />); });
 
-    // Chat Step 1
     const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
     await userEvent.type(nameInput, 'Maya Bakery');
 
     const nextBtn1 = screen.getByRole('button', { name: /Next/i });
     await act(async () => { nextBtn1.click(); });
 
-    // Chat Step 2
     const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
     await userEvent.type(sellInput, 'Cakes');
 
     const nextBtn2 = screen.getByRole('button', { name: /Next/i });
     await act(async () => { nextBtn2.click(); });
 
-    // Chat Step 3
     const locInput = screen.getByPlaceholderText(/Portland, OR/i);
     await userEvent.type(locInput, 'NY');
 
@@ -145,7 +145,6 @@ describe('OnboardingWizard', () => {
       button.click();
     });
 
-    // Verify error appears and step goes back to 1
     await waitFor(() => {
       expect(screen.getByText("Failed to process business details")).toBeInTheDocument();
       expect(screen.getByText("Where are you located?")).toBeInTheDocument();
@@ -153,15 +152,9 @@ describe('OnboardingWizard', () => {
   });
 
   it('Step 3: Handles start API failure and returns to Step 3', async () => {
-    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+    startShouldFail = true;
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -171,7 +164,6 @@ describe('OnboardingWizard', () => {
       launchButton.click();
     });
 
-    // Verify error appears and step goes back to 3
     await waitFor(() => {
       expect(screen.getByText("Failed to start onboarding")).toBeInTheDocument();
       expect(screen.getByText("Style & Team")).toBeInTheDocument();
@@ -192,5 +184,56 @@ describe('OnboardingWizard', () => {
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
     });
+  });
+
+  it('Loads state from backend on mount', async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return { ok: true, json: async () => ({ businessName: 'Restored Bakery', step: 2 }) };
+      }
+      return { ok: true };
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().businessName).toBe('Restored Bakery');
+      expect(useOnboardingStore.getState().step).toBe(2);
+    });
+  });
+
+
+  it('Debounces state syncs correctly', async () => {
+    vi.useRealTimers();
+
+    // reset store manually to make sure
+    act(() => { useOnboardingStore.setState({ businessName: '' }); });
+
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/api/onboarding/state')) {
+        return { ok: true, json: async () => ({ businessName: 'MOCKED_BACKEND_STATE' }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    // Wait for the initial loadState to finish
+    await waitFor(() => {
+      expect(useOnboardingStore.getState().businessName).toBe('MOCKED_BACKEND_STATE');
+    });
+
+    (global.fetch as any).mockClear();
+
+    act(() => { useOnboardingStore.getState().setBusinessName('Test 1'); });
+    act(() => { useOnboardingStore.getState().setBusinessName('Test 2'); });
+
+    await waitFor(() => {
+      const postCalls = (global.fetch as any).mock.calls.filter((c: any) => c[1]?.method === 'POST');
+      expect(postCalls.length).toBeGreaterThan(0);
+    }, { timeout: 2000 });
+
+    const postCalls = (global.fetch as any).mock.calls.filter((c: any) => c[1]?.method === 'POST');
+    expect(JSON.parse(postCalls[postCalls.length - 1][1].body).businessName).toBe('Test 2');
   });
 });

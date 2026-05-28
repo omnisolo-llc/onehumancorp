@@ -23,9 +23,40 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
   useEffect(() => {
     setIsLoaded(true);
+    let isInitialLoad = true;
+
+    useOnboardingStore.getState().loadState().then(() => {
+        isInitialLoad = false;
+    });
+
+    const unsubscribe = useOnboardingStore.subscribe((state, prevState) => {
+      if (state.isLoading || state.step === 5 || isInitialLoad) return;
+
+      if ((window as any).__syncTimeout) clearTimeout((window as any).__syncTimeout);
+
+      const __syncTimeout = (window as any).__syncTimeout = setTimeout(async () => {
+        try {
+          await fetch('/api/onboarding/state', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Tenant-ID': localStorage.getItem('tenant_id') || 'default',
+              'X-User-ID': localStorage.getItem('user_id') || 'default'
+            },
+            body: JSON.stringify(state)
+          });
+        } catch (e) {
+          console.error('Failed to sync state to backend', e);
+        }
+      }, 500);
+    });
+
+    return () => unsubscribe();
   }, []);
+
 
   const handleIntake = async () => {
     setIsLoading(true);
