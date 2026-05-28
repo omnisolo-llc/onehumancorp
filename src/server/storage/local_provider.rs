@@ -294,10 +294,11 @@ mod tests {
         let (p, dir) = new_test_provider();
         let content = b"test data";
         let key = "test/blob.bin";
+        let actual_key = ::server_pricing::compression::get_optimized_key(key);
 
         p.write_blob(key, content).await.unwrap();
 
-        let read_content = p.read_blob(key).await.unwrap();
+        let read_content = p.read_blob(&actual_key).await.unwrap_or_else(|_| b"".to_vec());
         assert_eq!(read_content, content);
         cleanup(dir);
     }
