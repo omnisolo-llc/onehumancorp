@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::collections::{BinaryHeap, HashSet};
 use std::cmp::Ordering;
 
 /// Ruflo Unique Harness Innovations: HNSW vector memory: 150x-12,500x faster search via AgentDB
@@ -35,13 +35,11 @@ pub struct HnswNode {
     pub connections: Vec<Vec<usize>>,
 }
 
-// Min-heap for keeping track of the closest elements (closest = highest cosine similarity)
 #[derive(PartialEq)]
 struct MinDist(usize, f32);
 impl Eq for MinDist {}
 impl PartialOrd for MinDist {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        // We want the smallest distance (lowest similarity) to be popped first, so we reverse the comparison.
         other.1.partial_cmp(&self.1)
     }
 }
@@ -51,20 +49,17 @@ impl Ord for MinDist {
     }
 }
 
-// Max-heap for traversing (furthest to pop first?) Actually for traversal we usually keep closest at the top.
-// Let's keep it simple.
-
 pub struct AgentDB {
     nodes: Vec<HnswNode>,
     entry_point: Option<usize>,
     m: usize,
+    #[allow(dead_code)]
     m_max: usize,
     m_max0: usize,
     level_mult: f64,
     ef_construction: usize,
 }
 
-// Pseudo-random generator to avoid external dependencies if possible, or we can just use a simple LCG
 struct Lcg {
     state: u64,
 }
@@ -96,14 +91,11 @@ impl AgentDB {
         (-unif.ln() * self.level_mult) as usize
     }
 
-    // Search layer: returns `ef` nearest neighbors
     fn search_layer(&self, query: &Vector, entry_point: usize, ef: usize, layer: usize) -> Vec<usize> {
         let mut visited = HashSet::new();
         visited.insert(entry_point);
 
-        let mut candidates = BinaryHeap::new(); // Max-heap: holds nearest candidates (so we pop furthest of the nearest?)
-        // Wait, for finding nearest, candidates should pop the CLOSEST to explore. So MinDist where we reverse.
-        // Actually, rust BinaryHeap is a max-heap. If we want to pop the highest similarity first, we just store similarity.
+        let mut candidates = BinaryHeap::new();
         #[derive(PartialEq)]
         struct MaxSim(usize, f32);
         impl Eq for MaxSim {}
@@ -118,16 +110,13 @@ impl AgentDB {
             }
         }
 
-        // To keep the best `ef` results, we can keep a min-heap of the best found so far.
-        // If the new element is worse than the worst in `ef` best, we might still explore it, but we don't add it to best.
         let dist = self.nodes[entry_point].vector.cosine_similarity(query);
         candidates.push(MaxSim(entry_point, dist));
 
-        let mut results = BinaryHeap::new(); // Min-heap to keep top `ef` results
+        let mut results = BinaryHeap::new();
         results.push(MinDist(entry_point, dist));
 
         while let Some(MaxSim(c, c_dist)) = candidates.pop() {
-            // results.peek() gives the WORST (lowest similarity) among the best `ef`
             if let Some(MinDist(_, worst_dist)) = results.peek() {
                 if c_dist < *worst_dist && results.len() >= ef {
                     break;
@@ -142,14 +131,13 @@ impl AgentDB {
                         candidates.push(MaxSim(neighbor, n_dist));
                         results.push(MinDist(neighbor, n_dist));
                         if results.len() > ef {
-                            results.pop(); // remove the worst
+                            results.pop();
                         }
                     }
                 }
             }
         }
 
-        // Return results sorted by similarity descending
         let mut final_results: Vec<_> = results.into_iter().collect();
         final_results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
         final_results.into_iter().map(|m| m.0).collect()
@@ -172,7 +160,6 @@ impl AgentDB {
         let mut ep = self.entry_point.unwrap();
         let max_level = self.nodes[ep].connections.len() - 1;
 
-        // Traverse down from top layer to `level + 1`
         for l in (level + 1..=max_level).rev() {
             let mut curr = ep;
             let mut curr_dist = self.nodes[curr].vector.cosine_similarity(&vec);
@@ -195,41 +182,36 @@ impl AgentDB {
             ep = curr;
         }
 
-        // Insert at layers `min(level, max_level)` down to 0
         let start_level = level.min(max_level);
         for l in (0..=start_level).rev() {
             let neighbors = self.search_layer(&vec, ep, self.ef_construction, l);
             let m_conn = if l == 0 { self.m_max0 } else { self.m };
 
-            // Connect to top `m`
             let to_connect = neighbors.into_iter().take(self.m).collect::<Vec<_>>();
             for &n in &to_connect {
                 connections[l].push(n);
             }
 
             self.nodes.push(HnswNode { vector: vec.clone(), connections: connections.clone() });
-            let _ = self.nodes.pop(); // remove temporary, we'll push at the end
+            let _ = self.nodes.pop();
 
-            // Back-connections
             for &n in &to_connect {
-                let node_n = &mut self.nodes[n];
-                node_n.connections[l].push(new_idx);
+                let node_n_vec = self.nodes[n].vector.clone();
+                let mut node_n_conns = self.nodes[n].connections[l].clone();
+                node_n_conns.push(new_idx);
 
-                // Prune if exceeds max connections
-                if node_n.connections[l].len() > m_conn {
-                    let mut node_n_conns = node_n.connections[l].clone();
-                    let node_n_vec = &node_n.vector;
-                    node_n_conns.sort_by(|&a, &b| {
-                        let da = self.nodes[a].vector.cosine_similarity(node_n_vec);
-                        let db = self.nodes[b].vector.cosine_similarity(node_n_vec);
-                        db.partial_cmp(&da).unwrap_or(Ordering::Equal)
-                    });
-                    node_n_conns.truncate(m_conn);
-                    self.nodes[n].connections[l] = node_n_conns;
+                if node_n_conns.len() > m_conn {
+                    let mut distances = Vec::new();
+                    for &c_idx in &node_n_conns {
+                        distances.push((c_idx, self.nodes[c_idx].vector.cosine_similarity(&node_n_vec)));
+                    }
+                    distances.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
+                    distances.truncate(m_conn);
+                    node_n_conns = distances.into_iter().map(|(c_idx, _)| c_idx).collect();
                 }
+                self.nodes[n].connections[l] = node_n_conns;
             }
 
-            // Update ep to the closest for the next level down
             if !to_connect.is_empty() {
                 ep = to_connect[0];
             }
