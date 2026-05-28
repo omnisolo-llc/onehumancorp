@@ -42,7 +42,7 @@ describe('OnboardingWizard', () => {
     (global.fetch as any) = vi.fn().mockImplementation((url, options) => {
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({
-          ok: true,
+          //ok: true,
           json: async () => ({
             business_type: 'Bakery',
             business_name: 'Maya Bakery',
@@ -53,19 +53,16 @@ describe('OnboardingWizard', () => {
       }
       if (url === '/api/onboarding/start') {
         return Promise.resolve({
-          ok: true,
+          //ok: true,
           json: async () => ({ message: "Successfully launched!" })
         });
       }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
+      return Promise.resolve({ //ok: true, json: async () => ({}) });
     });
 
 
     // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
+
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -132,7 +129,7 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/intake') {
         return Promise.resolve({ ok: false });
       }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
+      return Promise.resolve({ //ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -179,7 +176,7 @@ describe('OnboardingWizard', () => {
       if (url === '/api/onboarding/start') {
         return Promise.resolve({ ok: false });
       }
-      return Promise.resolve({ ok: true, json: async () => ({}) });
+      return Promise.resolve({ //ok: true, json: async () => ({}) });
     });
 
     act(() => { render(<OnboardingWizard />); });
