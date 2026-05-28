@@ -43,6 +43,7 @@ rust_library(
 rust_library(
     name = "ohc_builtin_agent_lib",
     srcs = [
+        "prompt_construction.rs",
         "actor_model.rs",
         "agent.rs",
         "agent_protocol.rs",

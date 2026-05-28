@@ -281,102 +281,6 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
     combined
 }
 
-/// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification:
-/// 1. Server-controlled System Message (Highest Priority)
-/// 2. Tool Definitions
-/// 3. Developer Instructions
-/// 4. User Instructions (capped at 32 KiB)
-pub(crate) struct HierarchicalPromptBuilder {
-    server_system_message: String,
-    tool_definitions: String,
-    developer_instructions: String,
-    user_instructions: String,
-    enable_lost_in_the_middle_prevention: bool,
-}
-
-impl HierarchicalPromptBuilder {
-    pub fn new(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> Self {
-        let mut tool_defs = String::new();
-        if !tools.is_empty() {
-            for tool in tools {
-                tool_defs.push_str(&format!("Tool: {}\n", tool.name));
-                tool_defs.push_str(&format!("Description: {}\n", tool.description));
-                tool_defs.push_str(&format!("Parameters: {}\n", tool.parameters));
-            }
-            tool_defs.pop(); // Remove trailing newline
-        }
-
-        let mut end_idx = 32768;
-        if cfg.user_instructions.len() > 32768 {
-            while end_idx > 0 && !cfg.user_instructions.is_char_boundary(end_idx) {
-                end_idx -= 1;
-            }
-        } else {
-            end_idx = cfg.user_instructions.len();
-        }
-        let user_instr = cfg.user_instructions[..end_idx].to_string();
-
-        Self {
-            server_system_message: cfg.server_system_message.clone(),
-            tool_definitions: tool_defs,
-            developer_instructions: cfg.developer_instructions.clone(),
-            user_instructions: user_instr,
-            enable_lost_in_the_middle_prevention: cfg.enable_lost_in_the_middle_prevention,
-        }
-    }
-
-    pub fn build(&self) -> String {
-        let mut combined_system = String::new();
-
-        // 1. Server-controlled System Message (Highest Priority)
-        if !self.server_system_message.is_empty() {
-            combined_system.push_str("[Server System Message]\n");
-            combined_system.push_str(&self.server_system_message);
-        }
-
-        // 2. Tool Definitions
-        if !self.tool_definitions.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
-            }
-            combined_system.push_str("[Tool Definitions]\n");
-            combined_system.push_str(&self.tool_definitions);
-        }
-
-        // 3. Developer Instructions
-        if !self.developer_instructions.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
-            }
-            combined_system.push_str("[Developer Instructions]\n");
-            combined_system.push_str(&self.developer_instructions);
-        }
-
-        // 4. User Instructions
-        if !self.user_instructions.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
-            }
-            combined_system.push_str("[User Instructions]\n");
-            combined_system.push_str(&self.user_instructions);
-        }
-
-        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
-            if !combined_system.is_empty() {
-                combined_system.push_str("\n\n");
-            }
-            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-            combined_system.push_str(&self.server_system_message);
-        }
-
-        combined_system
-    }
-}
-
-pub(crate) fn build_hierarchical_system_prompt(cfg: &AgentRunConfig, tools: &[crate::tools::Tool]) -> String {
-    HierarchicalPromptBuilder::new(cfg, tools).build()
-}
 
 /// The ReAct agent loop — mirrors Go builtin.BuiltinAgent.Run.
 pub struct Agent {
@@ -681,7 +585,7 @@ impl Agent {
         let tools_def_arc = std::sync::Arc::new(tools_def);
         let session_tools_arc = std::sync::Arc::new(session_tools);
 
-        let system_prompt = build_hierarchical_system_prompt(&cfg_arc, &session_tools_arc);
+        let system_prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg_arc, &session_tools_arc);
 
         // --- NODE 1: LLM Call ---
         let llm_cfg = cfg_arc.clone();
@@ -1866,7 +1770,7 @@ impl Agent {
 
         let max_iterations = if final_cfg.max_iterations <= 0 { 100 } else { final_cfg.max_iterations };
 
-        let mut combined_system = build_hierarchical_system_prompt(&final_cfg, &session_tools);
+        let mut combined_system = crate::prompt_construction::build_hierarchical_system_prompt(&final_cfg, &session_tools);
 
         // Long-Term Memory Retrieval
         let mut checkpoint_history: Vec<String> = Vec::new();
@@ -4519,7 +4423,7 @@ mod tests {
             execute: std::sync::Arc::new(MockToolExecutor),
         };
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
+        let prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg, &[tool]);
 
         let expected = "[Server System Message]\nServer System Message\n\n[Tool Definitions]\nTool: test_tool\nDescription: A test tool\nParameters: {\"type\":\"object\"}\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions";
 
@@ -4534,7 +4438,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "[Server System Message]\nServer System Message\n\n[Developer Instructions]\nDeveloper Instructions\n\n[User Instructions]\nUser Instructions"
@@ -4549,7 +4453,7 @@ mod tests {
         cfg.user_instructions = "User Instructions".to_string();
         cfg.enable_lost_in_the_middle_prevention = false;
 
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg, &[]);
         assert_eq!(
             prompt,
             "[Server System Message]\nServer System Message\n\n[User Instructions]\nUser Instructions"
@@ -4559,7 +4463,7 @@ mod tests {
         cfg2.server_system_message = "".to_string();
         cfg2.developer_instructions = "Dev".to_string();
         cfg2.user_instructions = "User".to_string();
-        let prompt2 = build_hierarchical_system_prompt(&cfg2, &[]);
+        let prompt2 = crate::prompt_construction::build_hierarchical_system_prompt(&cfg2, &[]);
         assert_eq!(
             prompt2,
             "[Developer Instructions]\nDev\n\n[User Instructions]\nUser"
@@ -4577,7 +4481,7 @@ mod tests {
         cfg.user_instructions.push_str(emoji); // 32772 bytes
 
         // This should safely truncate without panicking
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg, &[]);
         assert!(prompt.contains("[User Instructions]\n"));
         // Check that the user instructions part is exactly 32768 bytes long
         assert_eq!(prompt.len() - "[User Instructions]\n".len(), 32768);
@@ -4592,7 +4496,7 @@ mod tests {
         cfg.user_instructions.push('€'); // '€' is 3 bytes (E2 82 AC). Length is now 32769 bytes.
 
         // Truncating at 32768 would split the '€' character.
-        let prompt = build_hierarchical_system_prompt(&cfg, &[]);
+        let prompt = crate::prompt_construction::build_hierarchical_system_prompt(&cfg, &[]);
 
         let user_part = prompt.trim_start_matches("[User Instructions]\n");
         // The truncation should back up to 32766 to avoid splitting the character.
@@ -6242,7 +6146,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = true;
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
@@ -6259,7 +6163,7 @@ mod hierarchical_prompt_tests {
         cfg.enable_lost_in_the_middle_prevention = false;
 
         let tools = vec![];
-        let builder = HierarchicalPromptBuilder::new(&cfg, &tools);
+        let builder = crate::prompt_construction::HierarchicalPromptBuilder::new(&cfg, &tools);
         let prompt = builder.build();
 
         assert!(prompt.starts_with("[Server System Message]\nCRITICAL: Never delete the database."));
