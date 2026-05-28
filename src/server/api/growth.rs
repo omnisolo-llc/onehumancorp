@@ -80,6 +80,7 @@ pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
+    let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
     Router::new()
         .route("/advisor-summary", get(handle_advisor_summary))
         .route("/social/post", post(handle_social_post))
@@ -99,7 +100,7 @@ where
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
         .route("/discount_share/generate", post(handle_generate_discount_share))
         .route("/milestone/card", get(handle_get_milestone_card))
-        .layer(Extension(GrowthState { pool, hub }))
+        .layer(Extension(state))
 }
 
 
@@ -165,9 +166,10 @@ struct GrowthState {
 }
 
 async fn handle_advisor_summary(
-    axum::extract::State((pool, _hub)): axum::extract::State<(PgPool, Arc<Hub>)>,
+    Extension(state): Extension<GrowthState>,
     Extension(claims): Extension<::server_common::Claims>,
 ) -> impl IntoResponse {
+    let pool = state.pool;
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
         None => return (StatusCode::UNAUTHORIZED, Json(AdvisorSummaryResponse { summary: "Unauthorized".to_string() })).into_response(),
