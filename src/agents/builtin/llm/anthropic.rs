@@ -270,17 +270,10 @@ impl LlmClient for AnthropicClient {
             });
         }
 
-        // Prompt caching: cache the last TWO user messages
-        let mut user_msg_count = 0;
-        for m in messages.iter_mut().rev() {
-            if m.role == "user" {
-                if let Some(last_content) = m.content.last_mut() {
-                    last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
-                }
-                user_msg_count += 1;
-                if user_msg_count == 2 {
-                    break;
-                }
+        // Prompt caching: cache the last user message
+        if let Some(last_user) = messages.iter_mut().rev().find(|m| m.role == "user") {
+            if let Some(last_content) = last_user.content.last_mut() {
+                last_content.cache_control = Some(AnthropicCacheControl { r#type: "ephemeral" });
             }
         }
 
@@ -303,7 +296,7 @@ impl LlmClient for AnthropicClient {
                 name: t.name.clone(),
                 description: t.description.clone(),
                 input_schema: t.parameters.clone(),
-                cache_control: if i + 1 == num_tools {
+                cache_control: if i == num_tools - 1 {
                     Some(AnthropicCacheControl { r#type: "ephemeral" })
                 } else {
                     None
