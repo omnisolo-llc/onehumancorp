@@ -10,11 +10,27 @@ export default function Dashboard() {
   const [hasPro, setHasPro] = useState(false);
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
+  const [advisorSummary, setAdvisorSummary] = useState<string>("Loading your weekly summary...");
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
     }
+
+    const fetchAdvisorSummary = async () => {
+      try {
+        const response = await fetch('/api/v1/growth/advisor-summary');
+        if (response.ok) {
+          const data = await response.json();
+          setAdvisorSummary(data.summary);
+        } else {
+          setAdvisorSummary("Could not load summary.");
+        }
+      } catch (e) {
+        setAdvisorSummary("Could not load summary.");
+      }
+    };
+    fetchAdvisorSummary();
   }, []);
 
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
@@ -609,7 +625,7 @@ export default function Dashboard() {
                    <div>
                        <h3 className="text-sm font-bold text-gray-900 mb-1">AI Business Advisory</h3>
                        <p className="text-gray-800 text-sm leading-relaxed">
-                           Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
+                           {advisorSummary}
                        </p>
                    </div>
                 </div>

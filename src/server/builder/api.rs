@@ -74,6 +74,21 @@ fn validate_block(block_type: &str, content: &Value) -> bool {
     }
 }
 
+#[derive(Deserialize)]
+pub struct ProductGenerateRequest {
+    pub text: Option<String>,
+    pub image_url: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct ProductGenerateResponse {
+    pub title: String,
+    pub description: String,
+    pub price: f64,
+    pub category: String,
+    pub variants: Vec<String>,
+}
+
 pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S> {
     Router::new()
         .route("/sites", get(list_sites).post(create_site))
@@ -86,10 +101,72 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
         .route("/sites/{site_id}/publish", post(publish_site))
         .route("/generate", post(generate_storefront))
+        .route("/product-generate", post(product_generate))
         .route("/publish_draft", post(publish_draft))
         .route("/geo_score", post(geo_score))
         .route("/auto_seo", post(auto_seo))
         .with_state(pool)
+}
+
+async fn product_generate(
+    Json(payload): Json<ProductGenerateRequest>,
+) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+
+    if api_key.is_empty() {
+        // Mock response if no API key
+        let mut title = "New Product".to_string();
+        if let Some(text) = payload.text {
+            if text.contains("red dress") {
+                title = "Red Dress".to_string();
+            } else if text.contains("cake") {
+                title = "Vegan Chocolate Cake".to_string();
+            }
+        }
+
+        return (
+            axum::http::StatusCode::OK,
+            Json(ProductGenerateResponse {
+                title,
+                description: "A beautifully crafted item perfect for any occasion.".to_string(),
+                price: 40.0,
+                category: "Apparel".to_string(),
+                variants: vec!["Red".to_string(), "Blue".to_string()],
+            }),
+        )
+            .into_response();
+    }
+
+    let minimax = crate::minimax::MinimaxClient::new(api_key);
+
+    let prompt = format!(
+        r#"You are The Promoter (Marketing & Sales). Extract product details from the input.
+User Input: "{}"
+Image URL: "{}"
+Return a JSON object strictly matching this structure:
+{{
+  "title": "...",
+  "description": "...",
+  "price": 40.00,
+  "category": "...",
+  "variants": ["...", "..."]
+}}
+Only return the JSON. No markdown formatting, no explanations."#,
+        payload.text.clone().unwrap_or_default(),
+        payload.image_url.clone().unwrap_or_default()
+    );
+
+    match minimax.reason(&prompt).await {
+        Ok(res) => {
+            let cleaned = res.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
+            match serde_json::from_str::<ProductGenerateResponse>(cleaned) {
+                Ok(product) => (axum::http::StatusCode::OK, Json(product)).into_response(),
+                Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "Failed to parse AI response").into_response(),
+            }
+        },
+        Err(_) => (axum::http::StatusCode::INTERNAL_SERVER_ERROR, "AI generation failed").into_response(),
+    }
 }
 
 #[derive(Deserialize)]

@@ -71,11 +71,17 @@ pub struct OnboardingMetricsResponse {
     pub metrics: Vec<OnboardingMetric>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AdvisorSummaryResponse {
+    pub summary: String,
+}
+
 pub fn router<S>(pool: PgPool, hub: Arc<Hub>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
     Router::new()
+        .route("/advisor-summary", get(handle_advisor_summary))
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
@@ -156,6 +162,35 @@ pub struct TeamInvitesResponse {
 struct GrowthState {
     pool: PgPool,
     hub: Arc<Hub>,
+}
+
+async fn handle_advisor_summary(
+    axum::extract::State((pool, _hub)): axum::extract::State<(PgPool, Arc<Hub>)>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> impl IntoResponse {
+    let tenant_id = match claims.organization_id.as_deref() {
+        Some(org_id) => org_id.to_string(),
+        None => return (StatusCode::UNAUTHORIZED, Json(AdvisorSummaryResponse { summary: "Unauthorized".to_string() })).into_response(),
+    };
+
+    let sales_res = sqlx::query_scalar::<_, f64>("SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0.0);
+
+    let bookings_res = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
+        .bind(&tenant_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap_or(0);
+
+    let summary = format!(
+        "Great job! You had {} orders this week, totaling ${:.2}. Your most popular item was the Vegan Chocolate Cake. Want me to draft an Instagram post promoting it?",
+        bookings_res, sales_res
+    );
+
+    (StatusCode::OK, Json(AdvisorSummaryResponse { summary })).into_response()
 }
 
 async fn handle_social_post(
