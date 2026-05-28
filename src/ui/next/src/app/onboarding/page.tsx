@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useOnboardingStore } from './store';
+import debounce from 'lodash.debounce';
 
 export default function OnboardingWizard() {
   const {
@@ -26,9 +27,72 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+  // 1. Fetch initial state on mount
   useEffect(() => {
-    setIsLoaded(true);
-  }, []);
+    const fetchState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0 && data.step) {
+             setStep(data.step || 1);
+             setChatStep(data.chatStep || 1);
+             setBusinessName(data.businessName || '');
+             setWhatYouSell(data.whatYouSell || '');
+             setLocation(data.location || '');
+             setBusinessType(data.businessType || 'Online Store');
+             setCategories(data.categories || []);
+             setWebsiteTemplate(data.websiteTemplate || 'Modern');
+             setFirstProductName(data.firstProductName || '');
+             setFirstProductPrice(data.firstProductPrice || '');
+             setAiAgents(data.aiAgents || []);
+             setAiAutoRespond(data.aiAutoRespond ?? true);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial state', err);
+      } finally {
+        setIsLoaded(true);
+      }
+    };
+    fetchState();
+  }, []); // Only run once on mount
+
+  // 2. Persist state changes via debounce
+  const debouncedSaveState = useRef(debounce(async (currentState) => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-ID': tenantId,
+            'X-User-ID': userId,
+          },
+          body: JSON.stringify(currentState),
+        });
+      } catch (err) {
+        console.error('Failed to save state', err);
+      }
+  }, 1000)).current;
+
+  useEffect(() => {
+    if (isLoaded) {
+      debouncedSaveState({
+        step, chatStep, businessDescription, businessName, whatYouSell, location,
+        businessType, categories, websiteTemplate, firstProductName, firstProductPrice,
+        aiAgents, aiAutoRespond
+      });
+    }
+  }, [step, chatStep, businessDescription, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, aiAgents, aiAutoRespond, isLoaded, debouncedSaveState]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -157,8 +221,14 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && businessName.trim()) {
+                            setChatStep(2);
+                          }
+                        }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -190,8 +260,15 @@ export default function OnboardingWizard() {
                   <div className="space-y-4 flex-1">
                     <div>
                       <textarea
+                        autoFocus
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && whatYouSell.trim()) {
+                            e.preventDefault();
+                            setChatStep(3);
+                          }
+                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -224,8 +301,14 @@ export default function OnboardingWizard() {
                     <div>
                       <input
                         type="text"
+                        autoFocus
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && location.trim() && !isLoading) {
+                            handleIntake();
+                          }
+                        }}
                         placeholder="e.g. Portland, OR"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
