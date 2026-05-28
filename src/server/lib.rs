@@ -2147,8 +2147,156 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
             "/api/dev/seed",
-            axum::routing::post(|| async {
-                axum::Json(serde_json::json!({ "ok": true }))
+            axum::routing::post({
+                let db = db.clone();
+                move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
+                    let scenario = payload.get("scenario").and_then(|v| v.as_str()).unwrap_or("");
+
+                    if scenario == "launch-readiness" {
+                        let tenant_id = "default";
+
+                        let result = db.execute_with_retry("seed_data", || async {
+                            match &db.store {
+                                crate::db::DbStore::Sqlite(pool) => {
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO tenants (id, name, tier) VALUES (?, ?, ?)"
+                                    )
+                                    .bind(tenant_id)
+                                    .bind("My Local Business")
+                                    .bind("free")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("prod_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Artisan Sourdough Loaf")
+                                    .bind("Freshly baked daily.")
+                                    .bind(8.50)
+                                    .bind(850)
+                                    .bind("USD")
+                                    .bind(15)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("prod_demo2")
+                                    .bind(tenant_id)
+                                    .bind("Consultation Hour")
+                                    .bind("One hour of expert advice.")
+                                    .bind(150.00)
+                                    .bind(15000)
+                                    .bind("USD")
+                                    .bind(999)
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)"
+                                    )
+                                    .bind("cust_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Alice Demo")
+                                    .bind("alice@example.com")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT OR IGNORE INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES (?, ?, ?, ?, ?)"
+                                    )
+                                    .bind("ord_demo1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind(158.50)
+                                    .bind("completed")
+                                    .execute(pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                                crate::db::DbStore::Postgres => {
+                                    sqlx::query(
+                                        "INSERT INTO tenants (id, name, tier) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind(tenant_id)
+                                    .bind("My Local Business")
+                                    .bind("free")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("prod_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Artisan Sourdough Loaf")
+                                    .bind("Freshly baked daily.")
+                                    .bind(8.50)
+                                    .bind(850)
+                                    .bind("USD")
+                                    .bind(15)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("prod_demo2")
+                                    .bind(tenant_id)
+                                    .bind("Consultation Hour")
+                                    .bind("One hour of expert advice.")
+                                    .bind(150.00)
+                                    .bind(15000)
+                                    .bind("USD")
+                                    .bind(999)
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("cust_demo1")
+                                    .bind(tenant_id)
+                                    .bind("Alice Demo")
+                                    .bind("alice@example.com")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+
+                                    sqlx::query(
+                                        "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
+                                    )
+                                    .bind("ord_demo1")
+                                    .bind(tenant_id)
+                                    .bind("cust_demo1")
+                                    .bind(158.50)
+                                    .bind("completed")
+                                    .execute(&db.pool)
+                                    .await
+                                    .map_err(|e| e.to_string())?;
+                                }
+                            }
+                            Ok::<(), String>(())
+                        }).await;
+
+                        if let Err(e) = result {
+                            tracing::error!("Failed to seed data: {}", e);
+                            return axum::Json(serde_json::json!({ "ok": false, "error": e }));
+                        }
+                    }
+
+                    axum::Json(serde_json::json!({ "ok": true }))
+                }
             }),
         )
         .route(
