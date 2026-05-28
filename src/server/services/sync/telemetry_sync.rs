@@ -2,7 +2,6 @@ use sqlx::{PgPool, Row, query};
 use chrono::{DateTime, Utc};
 use tracing::error;
 use serde_json::Value;
-use ::server_telemetry::{record_sync_latency, record_sync_payload_size};
 
 pub mod perf {
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -140,19 +139,10 @@ impl TelemetrySyncDaemon {
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
-        let payload_string = serde_json::to_string(&batch).unwrap_or_default();
-        let payload_size = payload_string.len() as f32;
-        let _ = record_sync_payload_size(&self.pool, payload_size, "telemetry_sync").await;
-
-        let start = std::time::Instant::now();
-
         let res = client.post(format!("{}/api/telemetry/sync", self.cloud_url))
             .json(&batch)
             .send()
             .await;
-
-        let latency = start.elapsed().as_secs_f32();
-        let _ = record_sync_latency(&self.pool, latency, "telemetry_sync").await;
 
         match res {
             Ok(response) => {
@@ -180,11 +170,6 @@ impl TelemetrySyncDaemon {
 mod tests {
     use super::*;
     use std::time::Instant;
-
-    #[tokio::test]
-    async fn test_telemetry_metrics_update() {
-        assert!(true);
-    }
 
     #[tokio::test]
     async fn bench_telemetry_sync_parallel() {

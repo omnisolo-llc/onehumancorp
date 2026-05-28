@@ -134,7 +134,7 @@ impl CloudSynchronizerImpl {
 
             let resp = self.client.post_json(&endpoint, &payload).await;
 
-            let latency = start.elapsed().as_secs_f32();
+            let latency = start.elapsed().as_millis() as f32;
             if let Some(pool) = &self.pool {
                 let _ = record_sync_latency(pool, latency, mode).await;
             }
