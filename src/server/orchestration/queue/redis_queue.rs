@@ -97,7 +97,7 @@ impl TaskQueue for RedisTaskQueue {
         Ok(())
     }
 
-    async fn fail(&self, job_id: &str, _reason: &str) -> Result<(), String> {
+    async fn fail(async fn fail(&self, job_id: &str, _reason: &str)self, _job_id: async fn fail(&self, job_id: &str, _reason: &str)str, _reason: async fn fail(&self, job_id: &str, _reason: &str)str) -> Result<(), String> {
         // Normally we'd fetch the job state from a tracking hash, update attempt count, and enqueue
         // Since we lack state in this simplified trait interface we assume it's handled via requeue by the caller or we would implement it here
         Ok(())
