@@ -135,7 +135,7 @@ mod tests {
         {
             let mut agent = cs_agent.write().await;
             use crate::orchestration::departments::types::DepartmentConfig;
-            agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
+            agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0, printnode_api_key: None, printnode_printer_id: None });
         }
 
         let event = DepartmentEvent {

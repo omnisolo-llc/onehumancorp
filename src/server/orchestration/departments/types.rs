@@ -47,6 +47,8 @@ impl std::fmt::Display for DepartmentType {
 pub struct DepartmentConfig {
     pub tone_of_voice: String,
     pub auto_approve_limits: f64,
+    pub printnode_api_key: Option<String>,
+    pub printnode_printer_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

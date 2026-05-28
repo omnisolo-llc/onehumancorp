@@ -78,5 +78,8 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 
+    let printnode_provider = crate::integrations::printnode::provider::PrintNodeProvider::new("dummy_token".to_string());
+    catalog.push(printnode_provider.to_integration_provider());
+
     catalog
 }

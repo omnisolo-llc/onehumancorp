@@ -3625,7 +3625,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
+
+                        async function savePrintNodeApiKey() {
+                            const apiKey = document.getElementById('printnode-api-key').value;
+                            await fetch('/api/agents/settings/operations', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ tone_of_voice: "professional", auto_approve_limits: 10.0, printnode_api_key: apiKey, printnode_printer_id: document.getElementById('printnode-printer-id').value || null })
+                            });
+                            alert('PrintNode API Key saved');
+                        }
+
+                        async function savePrintNodePrinter() {
+                            const printerId = document.getElementById('printnode-printer-id').value;
+                            await fetch('/api/agents/settings/operations', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ tone_of_voice: "professional", auto_approve_limits: 10.0, printnode_api_key: document.getElementById('printnode-api-key').value || null, printnode_printer_id: printerId })
+                            });
+                            alert('PrintNode Default Printer ID saved');
+                        }
                     </script>
+
 
 
 
@@ -5793,7 +5820,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             renderHelpCenter();
                             renderVideos();
                         });
+
+                        async function savePrintNodeApiKey() {
+                            const apiKey = document.getElementById('printnode-api-key').value;
+                            await fetch('/api/agents/settings/operations', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ tone_of_voice: "professional", auto_approve_limits: 10.0, printnode_api_key: apiKey, printnode_printer_id: document.getElementById('printnode-printer-id').value || null })
+                            });
+                            alert('PrintNode API Key saved');
+                        }
+
+                        async function savePrintNodePrinter() {
+                            const printerId = document.getElementById('printnode-printer-id').value;
+                            await fetch('/api/agents/settings/operations', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': 'Bearer ' + (localStorage.getItem('token') || 'test-token')
+                                },
+                                body: JSON.stringify({ tone_of_voice: "professional", auto_approve_limits: 10.0, printnode_api_key: document.getElementById('printnode-api-key').value || null, printnode_printer_id: printerId })
+                            });
+                            alert('PrintNode Default Printer ID saved');
+                        }
                     </script>
+
                     <!-- Scribe: Documentation HTML Scaffolding -->
                     <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
