@@ -118,7 +118,7 @@ export default function ApprovalInbox({
                 </svg>
               </div>
               <h3 className="font-outfit font-bold text-gray-900 text-lg mb-2">
-                All Caught Up!
+                All caught up!
               </h3>
               <p className="text-sm text-gray-500">
                 There are no pending actions requiring your review.

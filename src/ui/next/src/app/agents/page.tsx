@@ -202,7 +202,7 @@ export default function AgentsPage() {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                     <span className="text-3xl">🎉</span>
                   </div>
-                  <h3 className="font-bold text-gray-900 font-outfit text-xl mb-2">All Caught Up!</h3>
+                  <h3 className="font-bold text-gray-900 font-outfit text-xl mb-2">All caught up!</h3>
                   <p className="text-gray-500 text-sm">Your AI team has no pending tasks.</p>
                 </div>
               ) : (
