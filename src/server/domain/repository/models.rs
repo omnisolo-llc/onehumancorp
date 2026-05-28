@@ -123,3 +123,25 @@ pub struct AIAgent {
     pub region: Option<String>,
     pub registered_at: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct LocationNode {
+    pub node_id: String,
+    pub tenant_id: String,
+    pub r#type: String,
+    pub geo_location: Option<String>,
+    pub is_active: Option<bool>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, FromRow)]
+pub struct InventoryLedger {
+    pub node_id: String,
+    pub tenant_id: String,
+    pub product_id: String,
+    pub available_qty: Option<i32>,
+    pub reserved_qty: Option<i32>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
+}
