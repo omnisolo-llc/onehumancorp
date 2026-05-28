@@ -1,7 +1,7 @@
 use super::sandbox::{SandboxManager, SandboxAdapter};
 use sqlx::PgPool;
 use std::time::Instant;
-use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation};
+use ::server_telemetry::{record_bubblewrap_spawn, record_bubblewrap_execution_latency, record_bubblewrap_violation, record_harness_execution_latency};
 
 pub struct LocalShellTask {
     manager: SandboxManager,
@@ -40,8 +40,11 @@ impl LocalShellTask {
 
         let exit_code = output.status.code().unwrap_or(-1);
 
-        let latency = start.elapsed().as_secs_f64() * 1000.0;
-        record_bubblewrap_execution_latency(agent_id, task_id, latency);
+        let latency_ms = start.elapsed().as_secs_f64() * 1000.0;
+        record_bubblewrap_execution_latency(agent_id, task_id, latency_ms);
+
+        let latency_seconds = start.elapsed().as_secs_f64();
+        record_harness_execution_latency(latency_seconds);
 
         if exit_code == 13 || exit_code == 126 { // Permission denied related exit codes
             record_bubblewrap_violation(agent_id, task_id, "permission_denied");

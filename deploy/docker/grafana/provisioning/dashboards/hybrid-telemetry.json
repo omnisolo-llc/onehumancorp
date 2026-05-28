@@ -3507,7 +3507,7 @@
             "uid": "Prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Latency",
           "range": true,
           "refId": "A"
@@ -4035,7 +4035,7 @@
             "uid": "${datasource}"
           },
           "editorMode": "code",
-          "expr": "rate(ohc_task_processing_latency_seconds_sum[5m]) / rate(ohc_task_processing_latency_seconds_count[5m])",
+          "expr": "sum(rate(ohc_task_processing_latency_seconds_sum[5m])) by (deployment_mode) / sum(rate(ohc_task_processing_latency_seconds_count[5m])) by (deployment_mode)",
           "legendFormat": "Seconds",
           "range": true,
           "refId": "A"
