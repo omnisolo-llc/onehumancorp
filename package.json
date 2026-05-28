@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@bazel/bazelisk": "^1.28.1",
-    "@playwright/test": "^1.60.0",
+    "@playwright/test": "^1.50.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/ink": "^2.0.3",

@@ -32,7 +32,7 @@
             topic_filter: "".to_string(),
         });
         let response = service.search_help_articles(request).await.unwrap().into_inner();
-        assert_eq!(response.articles.len(), 6);
+        assert_eq!(response.articles.len(), 7);
 
         // Test 2: Search by query "payment"
         let request = Request::new(SearchHelpArticlesRequest {
@@ -93,7 +93,7 @@
         let service = MyDocsService::new();
 
         let cases = vec![
-            ("store", "", 2), // "My Store" and "Getting Started"
+            ("store", "", 3), // "My Store" and "Getting Started"
             ("invoice", "", 1), // "Account & Billing"
             ("social media", "", 1), // "Marketing"
             ("photo", "", 1), // "My Store"
@@ -122,6 +122,7 @@
             ("btn-new-product", true, "Add Product"),
             ("setting-multitenant", true, "Cloud Mode"),
             ("setting-standalone", true, "Standalone Mode"),
+            ("nav-dashboard", true, "Your Dashboard"),
             ("missing-1", false, ""),
             ("missing-2", false, ""),
             ("missing-3", false, ""),
@@ -249,7 +250,7 @@
         let service = MyDocsService::new();
         // A large array of known topics and hypothetical search queries
         let test_cases = vec![
-            ("store", 2),
+            ("store", 3),
             ("storefront", 1),
             ("payment", 2), // getting started, payments
             ("social", 1), // marketing
@@ -419,7 +420,7 @@
         let service = MyDocsService::new();
         // Additional extensive testing for topic filtering combining with empty queries
         let test_cases = vec![
-            ("Getting Started", 1),
+            ("Getting Started", 2),
             ("My Store", 1),
             ("Payments", 1),
             ("AI Agents", 1),
@@ -747,6 +748,7 @@
             ("ai-agents-1", true),
             ("marketing-1", true),
             ("account-billing-1", true),
+            ("dashboard-1", true),
             ("missing-1", false),
             ("missing-2", false),
             ("missing-3", false),
