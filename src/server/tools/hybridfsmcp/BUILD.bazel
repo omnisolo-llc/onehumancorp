@@ -23,6 +23,10 @@ rust_library(
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     proc_macro_deps = [
         "@crates//:async-trait",
     ],
@@ -118,4 +122,9 @@ rust_test(
     name = "server_tools_hybridfsmcp_test",
     size = "small",
     crate = ":server_tools_hybridfsmcp",
+    edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )

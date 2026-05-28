@@ -9,6 +9,10 @@ rust_library(
     ],
     crate_root = "mod.rs",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         "//src/server/integrations/core:server_integrations_core",
@@ -21,4 +25,8 @@ rust_test(
     size = "small",
     crate = ":server_integrations_cal_com",
     edition = "2024",
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
 )
