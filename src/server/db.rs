@@ -779,13 +779,6 @@ impl DB {
                     let payload: String = row.try_get("payload").unwrap_or_default();
                     result.push((id, org_id, payload, "tasks".to_string()));
                 }
-                let tasks_rows = sqlx::query("SELECT id, tenant_id, payload FROM tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
-                for row in tasks_rows {
-                    let id: String = row.get("id");
-                    let org_id: String = row.get("tenant_id");
-                    let payload: String = row.try_get("payload").unwrap_or_default();
-                    result.push((id, org_id, payload, "tasks".to_string()));
-                }
 let swarm_rows = sqlx::query("SELECT id, tenant_id, payload FROM swarm_tasks WHERE status = 'COMPLETED' AND auto_dreamed = FALSE LIMIT 25").fetch_all(sqlite_pool).await?;
                 for row in swarm_rows {
                     let id: String = row.get("id");
