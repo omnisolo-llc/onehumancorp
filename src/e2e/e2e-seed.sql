@@ -12,12 +12,13 @@ ALTER TABLE IF EXISTS agents DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS tenants DISABLE ROW LEVEL SECURITY;
 
-INSERT INTO tenants (id, name, industry, tier)
-VALUES ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter')
+INSERT INTO tenants (id, name, industry, tier, ai_budget)
+VALUES ('e2e-tenant', 'OHC E2E Bakery', 'Food and beverage', 'starter', 1000)
 ON CONFLICT (id) DO UPDATE
 SET name = EXCLUDED.name,
     industry = EXCLUDED.industry,
     tier = EXCLUDED.tier,
+    ai_budget = EXCLUDED.ai_budget,
     updated_at = CURRENT_TIMESTAMP;
 
 INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, created_at, updated_at)
