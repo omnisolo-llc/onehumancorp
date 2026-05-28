@@ -8,9 +8,13 @@ test.describe('Onboarding Wizard Flow', () => {
     // Wait for the Smart Builder welcome screen (Step 1)
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
-    // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    // Mock state api calls
+    await page.route('**/api/onboarding/state', route => {
+      if (route.request().method() === 'POST') {
+        return route.fulfill({ status: 200 });
+      }
+      return route.fulfill({ status: 200, json: {} });
+    });
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
@@ -22,6 +26,20 @@ test.describe('Onboarding Wizard Flow', () => {
       status: 200,
       json: { message: "Your business has been successfully launched." }
     }));
+
+    // Step 1: Business Name
+    const nameInput = page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]');
+    await nameInput.fill('My Handyman Business');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 2: What you sell
+    const sellInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]');
+    await sellInput.fill('I am a freelance handyman');
+    await page.locator('button:has-text("Next")').click();
+
+    // Step 3: Location
+    const locationInput = page.locator('input[placeholder="e.g. Portland, OR"]');
+    await locationInput.fill('Miami');
 
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();
