@@ -28,6 +28,36 @@ pub async fn create_site(pool: &PgPool, tenant_id: Uuid, domain: Option<String>)
     .await
 }
 
+pub async fn bulk_create_blocks(
+    pool: &PgPool,
+    tenant_ids: Vec<Uuid>,
+    page_ids: Vec<Uuid>,
+    block_types: Vec<String>,
+    contents: Vec<Value>,
+    sort_orders: Vec<i32>,
+) -> Result<(), sqlx::Error> {
+    if tenant_ids.is_empty() {
+        return Ok(());
+    }
+
+    let mut query_builder: sqlx::QueryBuilder<sqlx::Postgres> = sqlx::QueryBuilder::new(
+        "INSERT INTO builder_blocks (tenant_id, page_id, block_type, content, sort_order) "
+    );
+
+    let rows = tenant_ids.into_iter().zip(page_ids.into_iter()).zip(block_types.into_iter()).zip(contents.into_iter()).zip(sort_orders.into_iter());
+
+    query_builder.push_values(rows, |mut b, ((((tenant_id, page_id), block_type), content), sort_order)| {
+        b.push_bind(tenant_id)
+            .push_bind(page_id)
+            .push_bind(block_type)
+            .push_bind(content)
+            .push_bind(sort_order);
+    });
+
+    query_builder.build().execute(pool).await?;
+    Ok(())
+}
+
 #[derive(sqlx::FromRow)]
 pub struct Page {
     pub id: Uuid,

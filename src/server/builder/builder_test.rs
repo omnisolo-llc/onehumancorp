@@ -74,6 +74,21 @@ async fn test_builder_db_crud() {
     assert_eq!(reordered_blocks[0].id, block2.id); // block2 should now be first
     assert_eq!(reordered_blocks[1].id, block1.id);
 
+    // 6. Bulk Create Blocks
+    db::bulk_create_blocks(
+        &pool,
+        vec![tenant_id, tenant_id],
+        vec![page.id, page.id],
+        vec!["BulkBlock1".to_string(), "BulkBlock2".to_string()],
+        vec![serde_json::json!({}), serde_json::json!({})],
+        vec![2, 3]
+    ).await.expect("Failed to bulk create blocks");
+
+    let all_blocks = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list all blocks");
+    assert_eq!(all_blocks.len(), 4);
+    assert_eq!(all_blocks[2].block_type, "BulkBlock1");
+    assert_eq!(all_blocks[3].block_type, "BulkBlock2");
+
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }

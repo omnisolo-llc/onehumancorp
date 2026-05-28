@@ -505,6 +505,12 @@ async fn publish_draft(
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     // 2. Iterate pages and blocks
+    let mut tenant_ids = Vec::new();
+    let mut page_ids = Vec::new();
+    let mut block_types = Vec::new();
+    let mut contents = Vec::new();
+    let mut sort_orders = Vec::new();
+
     for draft_page in payload.draft.pages {
         let page = db::create_page(&pool, tenant_id, site.id, draft_page.path, draft_page.title)
             .await
@@ -519,10 +525,18 @@ async fn publish_draft(
             .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
         for draft_block in draft_page.blocks {
-            db::create_block(&pool, tenant_id, page.id, draft_block.block_type, draft_block.content, draft_block.sort_order)
-                .await
-                .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+            tenant_ids.push(tenant_id);
+            page_ids.push(page.id);
+            block_types.push(draft_block.block_type);
+            contents.push(draft_block.content);
+            sort_orders.push(draft_block.sort_order);
         }
+    }
+
+    if !tenant_ids.is_empty() {
+        db::bulk_create_blocks(&pool, tenant_ids, page_ids, block_types, contents, sort_orders)
+            .await
+            .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
     }
 
     // 3. Enqueue Job
