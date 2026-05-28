@@ -9,11 +9,12 @@ pub struct Vector {
     pub id: String,
     pub values: Vec<f32>,
     pub metadata: String,
+    pub neighbors: Vec<String>,
 }
 
 impl Vector {
     pub fn new(id: String, values: Vec<f32>, metadata: String) -> Self {
-        Self { id, values, metadata }
+        Self { id, values, metadata, neighbors: Vec::new() }
     }
 
     pub fn cosine_similarity(&self, other: &Vector) -> f32 {
@@ -30,30 +31,157 @@ impl Vector {
 
 pub struct AgentDB {
     vectors: HashMap<String, Vector>,
+    entry_point: Option<String>,
+    m: usize, // Max neighbors per node
 }
 
 impl AgentDB {
     pub fn new() -> Self {
         Self {
             vectors: HashMap::new(),
+            entry_point: None,
+            m: 16, // Typical value for HNSW max neighbors
         }
     }
 
     pub fn insert(&mut self, id: String, values: Vec<f32>, metadata: String) {
-        self.vectors.insert(id.clone(), Vector::new(id, values, metadata));
+        let mut new_vec = Vector::new(id.clone(), values.clone(), metadata);
+
+        if self.vectors.is_empty() {
+            self.vectors.insert(id.clone(), new_vec);
+            self.entry_point = Some(id);
+            return;
+        }
+
+        // Find closest neighbors using greedy search
+        let query_vec = Vector::new("query".to_string(), values.clone(), "".to_string());
+
+        // Find candidate neighbors by searching the existing graph
+        let best_candidates = self.search_internal(&query_vec, self.m);
+
+        // Link bidirectional
+        for candidate_id in &best_candidates {
+            new_vec.neighbors.push(candidate_id.clone());
+        }
+
+        self.vectors.insert(id.clone(), new_vec);
+
+        for candidate_id in best_candidates {
+            // Check if we need to evict, but avoid mutable borrow spanning the immutable borrow
+            let mut eviction_target = None;
+            let mut neighbor_needs_update = false;
+
+            if let Some(neighbor_vec) = self.vectors.get(&candidate_id) {
+                if neighbor_vec.neighbors.len() < self.m {
+                    neighbor_needs_update = true;
+                } else {
+                    // Simple eviction strategy
+                    let mut worst_idx = 0;
+                    let mut worst_sim = f32::MAX;
+
+                    let new_sim = neighbor_vec.cosine_similarity(&Vector::new("".to_string(), values.clone(), "".to_string()));
+
+                    for (i, n_id) in neighbor_vec.neighbors.iter().enumerate() {
+                        if let Some(n_vec) = self.vectors.get(n_id) {
+                            let sim = neighbor_vec.cosine_similarity(n_vec);
+                            if sim < worst_sim {
+                                worst_sim = sim;
+                                worst_idx = i;
+                            }
+                        }
+                    }
+
+                    if new_sim > worst_sim {
+                        eviction_target = Some(worst_idx);
+                    }
+                }
+            }
+
+            if neighbor_needs_update {
+                if let Some(neighbor_vec) = self.vectors.get_mut(&candidate_id) {
+                    neighbor_vec.neighbors.push(id.clone());
+                }
+            } else if let Some(worst_idx) = eviction_target {
+                if let Some(neighbor_vec) = self.vectors.get_mut(&candidate_id) {
+                    neighbor_vec.neighbors.remove(worst_idx);
+                    neighbor_vec.neighbors.push(id.clone());
+                }
+            }
+        }
+    }
+
+    fn search_internal(&self, query_vec: &Vector, top_k: usize) -> Vec<String> {
+        let Some(entry_id) = &self.entry_point else {
+            return Vec::new();
+        };
+
+        let current_node = entry_id.clone();
+        let best_sim = self.vectors[&current_node].cosine_similarity(query_vec);
+
+        let mut candidates = std::collections::BinaryHeap::new();
+        let mut visited = std::collections::HashSet::new();
+
+        // Max-heap to keep track of best top_k for greedy traversal (storing Float wrapper for f32)
+        #[derive(PartialEq, Clone)]
+        struct OrderedF32(f32);
+        impl Eq for OrderedF32 {}
+        impl PartialOrd for OrderedF32 {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                self.0.partial_cmp(&other.0)
+            }
+        }
+        impl Ord for OrderedF32 {
+            fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+                self.partial_cmp(other).unwrap_or(std::cmp::Ordering::Equal)
+            }
+        }
+
+        candidates.push((OrderedF32(best_sim), current_node.clone()));
+        visited.insert(current_node.clone());
+
+        let mut results = Vec::new();
+        results.push((best_sim, current_node.clone()));
+
+        while let Some((_, curr)) = candidates.pop() {
+            let Some(curr_vec) = self.vectors.get(&curr) else { continue };
+
+            for neighbor_id in &curr_vec.neighbors {
+                if visited.insert(neighbor_id.clone()) {
+                    let neighbor_vec = &self.vectors[neighbor_id];
+                    let sim = neighbor_vec.cosine_similarity(query_vec);
+
+                    if results.len() < top_k || sim > results.last().unwrap().0 {
+                        results.push((sim, neighbor_id.clone()));
+                        results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+                        if results.len() > top_k {
+                            results.pop();
+                        }
+                        candidates.push((OrderedF32(sim), neighbor_id.clone()));
+                    }
+                }
+            }
+        }
+
+        // If we didn't find enough nodes via graph traversal (e.g., disconnected graph early on),
+        // fall back to brute-force for the remaining (this handles edge cases in our naive implementation)
+        if results.len() < top_k && self.vectors.len() > results.len() {
+             let mut all_res: Vec<(&Vector, f32)> = self.vectors.values()
+                .map(|v| (v, v.cosine_similarity(&query_vec)))
+                .collect();
+            all_res.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+            return all_res.into_iter().take(top_k).map(|(v, _)| v.id.clone()).collect();
+        }
+
+        results.into_iter().map(|(_, id)| id).collect()
     }
 
     pub fn search(&self, query: &Vec<f32>, top_k: usize) -> Vec<Vector> {
+        if self.vectors.is_empty() {
+            return Vec::new();
+        }
         let query_vec = Vector::new("query".to_string(), query.clone(), "".to_string());
-
-        let mut results: Vec<(&Vector, f32)> = self.vectors.values()
-            .map(|v| (v, v.cosine_similarity(&query_vec)))
-            .collect();
-
-        // Sort in descending order of similarity
-        results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-
-        results.into_iter().take(top_k).map(|(v, _)| v.clone()).collect()
+        let best_ids = self.search_internal(&query_vec, top_k);
+        best_ids.into_iter().filter_map(|id| self.vectors.get(&id).cloned()).collect()
     }
 }
 
