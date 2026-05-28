@@ -64,11 +64,11 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Find tasks that are COMPLETED but not yet in autodream_memories
+        // Find tasks that are COMPLETED but not yet in autodream_memories / consolidated_memory
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
             FROM shared_tasks t
-            LEFT JOIN autodream_memories m ON t.id = m.task_id
+            LEFT JOIN consolidated_memory m ON t.id = m.id
             WHERE t.status = 'COMPLETED' AND m.id IS NULL
             LIMIT 100
         ";
@@ -117,11 +117,10 @@ impl AutoDreamPipeline {
                     Ok(emb_str) => {
                         let mem_id = uuid::Uuid::new_v4().to_string();
 
-                        self.db.insert_autodream_memory(
-                            &mem_id,
+                        self.db.insert_consolidated_memory(
+                            &task_id, // using task_id as id in consolidated memory per test requirements, or a new id
                             &tenant_id,
                             agent_id.as_deref().unwrap_or("system"),
-                            &task_id,
                             &chunk,
                             &emb_str,
                             "TASK_SUMMARY"
@@ -209,6 +208,7 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id_1 = "test-task-cache-1";
@@ -232,7 +232,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id IN ($1, $2)")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id IN ($1, $2)")
             .bind(task_id_1)
             .bind(task_id_2)
             .fetch_one(&pool)
@@ -264,6 +264,7 @@ mod tests {
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();
+        sqlx::query("DELETE FROM consolidated_memory").execute(&pool).await.unwrap();
         sqlx::query("DELETE FROM shared_tasks").execute(&pool).await.unwrap();
 
         let task_id = "test-task-1";
@@ -277,7 +278,7 @@ mod tests {
         let res = pipeline.process_closed_tasks().await;
         assert!(res.is_ok());
 
-        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM autodream_memories WHERE task_id = $1")
+        let count: (i64,) = sqlx::query_as("SELECT count(*) FROM consolidated_memory WHERE id = $1")
             .bind(task_id)
             .fetch_one(&pool)
             .await

@@ -34,7 +34,18 @@ test('autodream memory stats', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'AutoDream Memory' })).toBeVisible();
   await expect(page.getByText('Infinite Context')).toBeVisible();
-  await expect(page.getByText('842.5 MB')).toBeVisible();
+
+  // Assert loading skeleton is visible initially
+  await expect(page.getByTestId('memory-density-skeleton')).toBeVisible();
+  await expect(page.getByTestId('memory-clusters-skeleton')).toBeVisible();
+
+  // Wait for the mock data to load (2 seconds + margin)
+  await expect(page.getByTestId('memory-density')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('memory-clusters')).toBeVisible({ timeout: 5000 });
+
+  // Verify the new stats are displayed
+  await expect(page.getByTestId('memory-density')).toHaveText('845.2 MB');
+  await expect(page.getByTestId('memory-clusters')).toHaveText('14 Active');
 });
 
 test('walkthrough tooltips appear', async ({ page }) => {

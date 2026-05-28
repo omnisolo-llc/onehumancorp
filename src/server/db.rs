@@ -859,6 +859,82 @@ pub async fn insert_autodream_memory(
         Ok(())
     }
 
+    pub async fn search_consolidated_memory(
+        &self,
+        embedding: &str,
+        limit: i32,
+    ) -> Result<Vec<(String, String, f64)>, Box<dyn std::error::Error>> {
+        let mut results = Vec::new();
+
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                let rows = sqlx::query("SELECT id, content FROM consolidated_memory ORDER BY created_at DESC LIMIT ?")
+                    .bind(limit)
+                    .fetch_all(sqlite_pool)
+                    .await?;
+
+                for row in rows {
+                    let id: String = row.get("id");
+                    let content: String = row.get("content");
+                    results.push((id, content, 1.0));
+                }
+            }
+            DbStore::Postgres => {
+                let rows = sqlx::query(
+                    "SELECT id, content, 1 - (embedding <=> $1::vector) AS score FROM consolidated_memory ORDER BY embedding <=> $1::vector LIMIT $2"
+                )
+                .bind(embedding)
+                .bind(limit)
+                .fetch_all(&self.pool)
+                .await?;
+
+                for row in rows {
+                    let id: String = row.get("id");
+                    let content: String = row.get("content");
+                    let score: f64 = row.try_get("score").unwrap_or(1.0);
+                    results.push((id, content, score));
+                }
+            }
+        }
+        Ok(results)
+    }
+
+    pub async fn insert_consolidated_memory(
+        &self,
+        id: &str,
+        org_id: &str,
+        agent_id: &str,
+        content: &str,
+        embedding: &str,
+        source_type: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match &self.store {
+            DbStore::Sqlite(sqlite_pool) => {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES (?, ?, ?, ?, ?, ?)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(sqlite_pool)
+                    .await?;
+            }
+            DbStore::Postgres => {
+                sqlx::query("INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type) VALUES ($1, $2, $3, $4, $5::vector, $6)")
+                    .bind(id)
+                    .bind(org_id)
+                    .bind(agent_id)
+                    .bind(content)
+                    .bind(embedding)
+                    .bind(source_type)
+                    .execute(&self.pool)
+                    .await?;
+            }
+        }
+        Ok(())
+    }
+
     pub async fn insert_knowledge_embedding(
         &self,
         id: &str,

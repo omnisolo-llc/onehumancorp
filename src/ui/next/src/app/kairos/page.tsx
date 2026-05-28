@@ -30,6 +30,19 @@ function KairosContent() {
     { id: "node-3", type: "Memory", status: "Online", load: "8%" },
   ]);
 
+  const [memoryStats, setMemoryStats] = useState<{ density: string; clusters: string } | null>(null);
+
+  useEffect(() => {
+    // Simulate fetching AutoDream memory stats
+    const timer = setTimeout(() => {
+      setMemoryStats({
+        density: "845.2 MB",
+        clusters: "14 Active"
+      });
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     if (searchParams.get('walkthrough') === 'true') {
       setTimeout(() => {
@@ -142,11 +155,19 @@ function KairosContent() {
                 <div className="space-y-4">
                     <div className="p-4 bg-purple-900/20 rounded-xl border border-purple-800">
                         <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-1">Knowledge Density</div>
-                        <div className="text-2xl font-bold text-purple-200">842.5 MB</div>
+                        {memoryStats ? (
+                            <div className="text-2xl font-bold text-purple-200 animate-in fade-in duration-500" data-testid="memory-density">{memoryStats.density}</div>
+                        ) : (
+                            <div className="h-8 w-32 bg-purple-800/50 rounded animate-pulse" data-testid="memory-density-skeleton"></div>
+                        )}
                     </div>
                     <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-800">
                         <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Semantic Clusters</div>
-                        <div className="text-2xl font-bold text-indigo-200">12 Active</div>
+                        {memoryStats ? (
+                            <div className="text-2xl font-bold text-indigo-200 animate-in fade-in duration-500" data-testid="memory-clusters">{memoryStats.clusters}</div>
+                        ) : (
+                            <div className="h-8 w-24 bg-indigo-800/50 rounded animate-pulse" data-testid="memory-clusters-skeleton"></div>
+                        )}
                     </div>
                 </div>
             </div>
