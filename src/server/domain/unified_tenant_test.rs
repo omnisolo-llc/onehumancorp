@@ -162,6 +162,9 @@ mod tests {
             metadata: None,
             created_at: None,
             updated_at: None,
+            dynamic_pricing_enabled: None,
+            min_price_cents: None,
+            max_price_cents: None,
         };
         assert_eq!(p.id, "p1");
 
@@ -187,6 +190,9 @@ mod tests {
             status: None,
             created_at: None,
             updated_at: None,
+            dynamic_pricing_enabled: None,
+            min_price_cents: None,
+            max_price_cents: None,
         };
         assert_eq!(b.id, "b1");
 

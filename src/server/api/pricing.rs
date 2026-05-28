@@ -8,7 +8,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 
 use crate::pricing::dynamic::engine::{AutonomousPricingEngine, DynamicPrice, LocalContext};
-use crate::harness::hub::Hub;
+use crate::hub::Hub;
 
 #[derive(Deserialize)]
 pub struct EvaluatePriceQuery {
@@ -92,7 +92,9 @@ pub async fn configure_dynamic_pricing_handler(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<ConfigurePricingRequest>,
 ) -> Json<ConfigurePricingResponse> {
-    let tenant_id = claims.tenant_id;
+    // Assuming organization_id is the tenant boundary here. Fallback to sub if none (depends on the repo's auth model).
+    // In this repo, tenant_id is often mapped to organization_id.
+    let tenant_id = claims.organization_id.unwrap_or_else(|| claims.sub.clone());
     let result = if payload.item_type == "product" {
         sqlx::query(
             r#"
