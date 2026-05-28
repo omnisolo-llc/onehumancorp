@@ -2553,6 +2553,22 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
                         }
+                        .animated-dropdown {
+                            transition: max-height 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), margin-top 250ms cubic-bezier(0.4, 0, 0.2, 1), padding-top 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                            overflow: hidden;
+                            max-height: 0;
+                            opacity: 0;
+                            margin-top: 0;
+                            padding-top: 0;
+                            border-top-color: transparent;
+                        }
+                        .animated-dropdown.open {
+                            max-height: 500px;
+                            opacity: 1;
+                            margin-top: 15px;
+                            padding-top: 15px;
+                            border-top-color: var(--border);
+                        }
                         nav { 
                             padding: 0 28px; 
                             display: flex; 
@@ -3577,8 +3593,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
-                                <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                <div id="ambassador-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
                                     <h4 style="margin-top: 0;">Settings</h4>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
@@ -3590,8 +3607,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
-                                <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                <div id="manager-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
                                     <h4 style="margin-top: 0;">Settings</h4>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for order refunds
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('manager', this.checked)">
@@ -3614,7 +3632,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
-                                settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
+                                settingsDiv.classList.toggle('open');
                             }
                         }
 
