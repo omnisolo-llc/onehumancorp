@@ -6,22 +6,22 @@ test.describe('Onboarding Wizard Flow', () => {
     await page.goto('http://localhost:3000/onboarding');
 
     // Step 1: Business Name
-    await expect(page.locator('text="Tell us about your business"')).toBeVisible();
-    await expect(page.locator('text="What\'s the name of your business?"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Tell us about your business/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: /What\'s the name of your business/i })).toBeVisible({ timeout: 15000 });
     await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').fill('Maya Cakes');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator('input[placeholder="e.g. Maya\'s Custom Cakes"]').press('Enter');
 
     // Step 2: What do you sell
-    await expect(page.locator('text="What do you sell?"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /What do you sell\?/i })).toBeVisible({ timeout: 15000 });
     await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').fill('I bake custom vegan cakes in Portland, OR...');
-    await page.locator('button:has-text("Next")').click();
+    await page.locator('textarea[placeholder="e.g. I bake custom vegan cakes for weddings and parties..."]').press('Enter');
 
     // Step 3: Location
-    await expect(page.locator('text="Where are you located?"')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Where are you located\?/i })).toBeVisible({ timeout: 15000 });
     await page.locator('input[placeholder="e.g. Portland, OR"]').fill('Portland, OR');
 
-    // Click Generate
-    await page.locator('button:has-text("Generate My Business")').click();
+    // Click Generate using Enter key
+    await page.locator('input[placeholder="e.g. Portland, OR"]').press('Enter');
 
     // 2. Wait for Review Details Step
     await expect(page.locator('text="Review Details"')).toBeVisible({ timeout: 5000 });
