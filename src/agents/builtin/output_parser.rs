@@ -150,11 +150,10 @@ impl<'a, T: DeserializeOwned + JsonSchema> RetryWithErrorOutputParser<'a, T> {
                     // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
                     if !msg.tool_calls.is_empty() {
                         current_req.messages.push(msg.clone());
-                        let detailed_error = format!("Parsing error: {}. Please correct your tool arguments to match the required schema.", parse_error_msg);
                         let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
                             tool_call_id: tc.id.clone(),
                             content: String::new(),
-                            error: detailed_error.clone(),
+                            error: parse_error_msg.clone(),
                         }).collect();
 
                         current_req.messages.push(Message {
@@ -167,11 +166,7 @@ impl<'a, T: DeserializeOwned + JsonSchema> RetryWithErrorOutputParser<'a, T> {
                         });
                     } else {
                         current_req.messages.push(msg.clone());
-                        let error_context = format!(
-                            "Your previous completion failed to parse.\nFailed completion: {}\nParsing error: {}\nPlease output valid JSON that matches the required schema.",
-                            msg.content, parse_error_msg
-                        );
-                        current_req.messages.push(Message::user(error_context));
+                        current_req.messages.push(Message::user(parse_error_msg));
                     }
                     attempt += 1;
                 }
