@@ -27,23 +27,33 @@ export default function Integrations() {
     sms: true,
   });
 
-  const handleConnect = (id: string) => {
-    if (id === 'calendly') {
-      alert("Connecting Calendly via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push("/dashboard");
-    }
-    if (id === 'manychat') {
-      alert("Connecting Manychat via OAuth...");
-      setIntegrations(prev => prev.map(integration =>
-        integration.id === id ? { ...integration, status: "connected" } : integration
-      ));
-      router.push('/inbox');
-    }
+  const handleConnect = async (id: string) => {
     if (id === 'twilio') {
       setShowTwilioModal(true);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/integrations/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ integration_id: id, base_url: "https://api." + id + ".com", api_token: "test_token" })
+      });
+
+      if (res.ok) {
+        setIntegrations(prev => prev.map(integration =>
+          integration.id === id ? { ...integration, status: "connected" } : integration
+        ));
+        if (id === 'manychat' || id === 'twilio') {
+          router.push('/inbox');
+        } else {
+          router.push('/dashboard');
+        }
+      } else {
+        alert(`Failed to connect ${id}`);
+      }
+    } catch (e) {
+      alert(`Failed to connect ${id}`);
     }
   };
 
