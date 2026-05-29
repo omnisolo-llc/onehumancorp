@@ -282,7 +282,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 }
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification:
+/// This fulfills the Master Catalog specification: Prompt Construction: OpenAI Codex Strict hierarchical priority stack
 /// 1. Server-controlled System Message (Highest Priority)
 /// 2. Tool Definitions
 /// 3. Developer Instructions
@@ -329,6 +329,8 @@ impl HierarchicalPromptBuilder {
     pub fn build(&self) -> String {
         let mut combined_system = String::new();
 
+        // Prompt Construction: OpenAI Codex Strict hierarchical priority stack
+        // 1. Server-controlled System Message (Highest Priority) -> 2. Tool Definitions -> 3. Developer Instructions -> 4. User Instructions
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
             combined_system.push_str("[Server System Message]\n");
@@ -1901,6 +1903,10 @@ impl Agent {
             }
         }
 
+        // 1. The Orchestration Loop: Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
+        // Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
+        // Termination conditions are layered: model returns text with no tool calls, max turn limit exceeded,
+        // token budget exhausted, guardrail tripwire fires, or safety refusal.
         let mut turn_count = 0;
         while turn_count < max_iterations {
             let iteration = turn_count;
@@ -4542,7 +4548,7 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object"}),
-            execute: std::sync::Arc::new(MockToolExecutor),
+            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
         };
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
@@ -6592,3 +6598,59 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
+
+#[cfg(test)]
+mod openai_codex_prompt_tests {
+    use super::*;
+    use crate::tools::Tool;
+
+    #[test]
+    fn test_openai_codex_strict_hierarchical_priority_stack() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "I am a server system message.".to_string();
+        cfg.developer_instructions = "I am developer instructions.".to_string();
+
+        // Create user instructions larger than 32 KiB
+        let long_user_instruction = "A".repeat(40000);
+        cfg.user_instructions = long_user_instruction;
+
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool.".to_string(),
+            parameters: serde_json::json!({"type": "object"}),
+            is_read_only: true,
+            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+        let tools = vec![tool];
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &tools);
+
+        // Verify Strict hierarchical priority stack
+
+        // 1. Server-controlled System Message (Highest Priority)
+        let server_idx = prompt.find("[Server System Message]").expect("Server System Message should be present");
+
+        // 2. Tool Definitions
+        let tool_idx = prompt.find("[Tool Definitions]").expect("Tool Definitions should be present");
+
+        // 3. Developer Instructions
+        let dev_idx = prompt.find("[Developer Instructions]").expect("Developer Instructions should be present");
+
+        // 4. User Instructions
+        let user_idx = prompt.find("[User Instructions]").expect("User Instructions should be present");
+
+        // Assert strictly ordered stack
+        assert!(server_idx < tool_idx, "Server System Message must come before Tool Definitions");
+        assert!(tool_idx < dev_idx, "Tool Definitions must come before Developer Instructions");
+        assert!(dev_idx < user_idx, "Developer Instructions must come before User Instructions");
+
+        // Assert User Instructions capped at 32 KiB
+        let user_instruction_content = &prompt[user_idx..];
+        assert!(
+            user_instruction_content.len() <= 32768 + "[User Instructions]\n".len() + "[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nI am a server system message.".len() + 100,
+            "User instructions should be capped at 32 KiB (actual length: {})", user_instruction_content.len()
+        );
+        assert!(user_instruction_content.contains(&"A".repeat(32768)));
+        assert!(!user_instruction_content.contains(&"A".repeat(32769)));
+    }
+}

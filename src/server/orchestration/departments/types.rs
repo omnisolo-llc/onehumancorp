@@ -59,7 +59,9 @@ pub struct DepartmentEvent {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActionRisk {
+    #[serde(rename = "LOW")]
     AutoExecute,
+    #[serde(rename = "HIGH")]
     DraftForReview,
 }
 
