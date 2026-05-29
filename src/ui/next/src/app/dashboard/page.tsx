@@ -512,7 +512,7 @@ export default function Dashboard() {
                         }
 
                         return (
-                            <div key={approval.id} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
+                            <div key={approval.id} id={`approval-item-${approval.id}`} className="p-5 shadow-md flex flex-col gap-4" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)', borderRadius: '16px' }}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl" style={{ background: '#eef2ff', color: '#4f46e5' }}>
@@ -1710,10 +1710,8 @@ export default function Dashboard() {
                   onClick={async () => {
                       setIsGeneratingWaitlist(true);
                       // Simulate API call for generating the waitlist content
-                      setTimeout(() => {
                           setWaitlistMessage("Sign up for the waitlist to get early access when we restock! Want to skip the line? Share this link with 3 friends, and when they sign up, you'll be bumped to the top of the queue. \n\nJoin here: https://ohc.store/waitlist/premium-coffee\n\n⚡ Powered by OHC");
                           setIsGeneratingWaitlist(false);
-                      }, 1200);
                   }}
                   disabled={isGeneratingWaitlist}
                   className={`w-full py-3 text-white rounded-xl text-sm font-semibold shadow-md transition-all flex items-center justify-center gap-2 ${isGeneratingWaitlist ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}

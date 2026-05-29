@@ -3858,7 +3858,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         data.pending_approvals.forEach(approval => {
                                             const payloadStr = approval.payload ? `<div style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap;">${JSON.stringify(approval.payload, null, 2)}</div>` : '';
                                             container.innerHTML += `
-                                                <div id="approval-card-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
+                                                <div id="approval-item-${approval.id}" class="card glass" style="margin-top: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; backdrop-filter: blur(10px); background: rgba(255, 255, 255, 0.4);">
                                                     <p style="margin: 0 0 5px 0; font-size: 14px; font-weight: 600; color: var(--text-primary);"><strong>${approval.department}</strong> - <span style="color: ${approval.action_risk === 'DraftForReview' || approval.action_risk === 'HIGH' ? 'var(--accent-orange)' : 'var(--accent-green)'}">${approval.action_risk} Risk</span></p>
                                                     <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-secondary);">${approval.description}</p>
                                                     ${payloadStr}
@@ -3879,7 +3879,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         async function decideApproval(id, approved) {
-                            const card = document.getElementById('approval-card-' + id);
+                            const card = document.getElementById('approval-item-' + id);
                             if (card) {
                                 card.style.display = 'none';
                             }
@@ -5503,12 +5503,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     }
 
                                     // Show builder screen directly
-                                    setTimeout(() => {
-                                        showScreen('storefront-builder-screen');
-                                        renderStorefrontPreview();
-                                    }, 2000); // Wait for the "generating" animation
+                                    showScreen('storefront-builder-screen');
+                                    renderStorefrontPreview();
                                 } else {
-                                    setTimeout(() => nextStep('launch-ai'), 2000);
+                                    nextStep('launch-ai');
                                 }
                             } catch(e) {
                                 console.error(e);

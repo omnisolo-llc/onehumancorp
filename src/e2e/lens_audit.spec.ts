@@ -218,10 +218,10 @@ test.describe('Lens Audit E2E Flow', () => {
     await page.goto('/dashboard');
     await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
 
-    const approvalText = page.getByText("Abandoned cart recovery");
+    const approvalText = page.getByText("Abandoned cart recovery: 10% discount for Sarah");
     await expect(approvalText).toBeVisible();
 
-    const rejectButton = page.locator('div.p-5').filter({ hasText: 'Abandoned cart recovery' }).getByRole('button', { name: 'Reject' });
+    const rejectButton = page.locator('div.p-5').filter({ hasText: 'Abandoned cart recovery: 10% discount for Sarah' }).getByRole('button', { name: 'Reject' });
     await rejectButton.click();
 
     // After clicking reject, the item should be removed
