@@ -20,5 +20,6 @@ export async function GET() {
     "checkout-tap-to-pay-tooltip": "Tap your card or phone on the reader to pay in person.",
     "checkout-cancel-tooltip": "Go back to the previous screen without buying anything.",
     "kairos-nav-link-tooltip": "Click here to see what your AI helpers are working on and how they plan."
+    ,"pricing-tier-tooltip": "Select the plan that best fits your business needs."
   });
 }

@@ -110,7 +110,7 @@ rust_library(
 
 rust_test(
     name = "server_services_chat_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_services_chat",
     edition = "2024",
     env = {

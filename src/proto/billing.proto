@@ -13,6 +13,7 @@ message TokenUsage {
   int64 completion_tokens = 5;
   double cost_usd = 6;
   int64 occurred_at_unix = 7;
+  int64 cached_tokens = 8;
 }
 
 message CostSummary {

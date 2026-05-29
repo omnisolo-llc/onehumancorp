@@ -23,7 +23,6 @@ rust_library(
 
 rust_test(
     name = "scout_unit_test",
-    size = "small",
     srcs = ["tests.rs"],
     edition = "2024",
     deps = [

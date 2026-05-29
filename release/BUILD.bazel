@@ -55,30 +55,9 @@ pkg_files(
     }),
 )
 
-pkg_files(
-    name = "ohc_windows_support_files",
-    srcs = [
-        "windows/README.txt",
-        "windows/run-ohc.cmd",
-    ],
-    renames = {
-        "windows/README.txt": "README.txt",
-        "windows/run-ohc.cmd": "run-ohc.cmd",
-    },
-    strip_prefix = strip_prefix.from_pkg(),
-    target_compatible_with = select({
-        "//:windows": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-)
-
 pkg_tar(
     name = "ohc_unix_archive",
-    srcs = [
-        ":ohc_unix_files",
-        "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
-    ],
+    srcs = [":ohc_unix_files"],
     extension = "tar.gz",
     package_file_name = "ohc-application.tar.gz",
     target_compatible_with = select({
@@ -90,10 +69,7 @@ pkg_tar(
 
 pkg_zip(
     name = "ohc_windows_archive",
-    srcs = [
-        ":ohc_windows_files",
-        ":ohc_windows_support_files",
-    ],
+    srcs = [":ohc_windows_files"],
     package_file_name = "ohc-application.zip",
     target_compatible_with = select({
         "//:windows": [],
@@ -110,29 +86,27 @@ pkg_deb(
     package = "ohc",
     priority = "optional",
     section = "utils",
-    package_file_name = "ohc_amd64.deb",
     target_compatible_with = select({
         "//:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version_file = "//.release:cloud_version.txt",
+    version = "0.4.45",
 )
 
 pkg_rpm(
     name = "ohc_rpm",
-    architecture = "x86_64",
-    data = [
-        "//src/agents/builtin:ohc-builtin-agent",
-        "//src/server",
-    ],
+    package_name = "ohc",
+    srcs = [":ohc_unix_files"],
+    description = "One Human Corp application bundle",
+    license = "Apache-2.0",
     release = "1",
-    spec_file = "ohc.spec",
+    summary = "One Human Corp application bundle",
     tags = ["manual"],
     target_compatible_with = select({
         ":linux_with_rpmbuild": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    version_file = "//.release:cloud_version.txt",
+    version = "0.4.45",
 )
 
 filegroup(
@@ -140,7 +114,6 @@ filegroup(
     srcs = select({
         "//:linux": [
             ":ohc_deb",
-            ":ohc_rpm",
             ":ohc_unix_archive",
         ],
         "//:macos": [

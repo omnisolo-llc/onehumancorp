@@ -3,6 +3,7 @@ pub enum PaymentMethod {
     CreditCard,
     Ach,
     Razorpay,
+    MercadoPago,
 }
 
 pub struct PaymentRouter;
@@ -24,6 +25,9 @@ impl PaymentRouter {
     pub fn optimize_payment_method_with_currency(amount: f64, currency: &str) -> PaymentMethod {
         if currency.eq_ignore_ascii_case("INR") {
             return PaymentMethod::Razorpay;
+        }
+        if currency.eq_ignore_ascii_case("BRL") || currency.eq_ignore_ascii_case("MXN") {
+            return PaymentMethod::MercadoPago;
         }
         let amount_usd = amount;
 
@@ -145,5 +149,18 @@ mod razorpay_tests {
     fn test_optimize_payment_method_inr() {
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "INR"), PaymentMethod::Razorpay);
         assert_eq!(PaymentRouter::optimize_payment_method_with_currency(10000.0, "inr"), PaymentMethod::Razorpay);
+    }
+}
+
+#[cfg(test)]
+mod mercadopago_tests {
+    use super::*;
+
+    #[test]
+    fn test_optimize_payment_method_mercadopago() {
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "BRL"), PaymentMethod::MercadoPago);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "MXN"), PaymentMethod::MercadoPago);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "brl"), PaymentMethod::MercadoPago);
+        assert_eq!(PaymentRouter::optimize_payment_method_with_currency(100.0, "mxn"), PaymentMethod::MercadoPago);
     }
 }

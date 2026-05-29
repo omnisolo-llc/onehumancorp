@@ -23,9 +23,6 @@ impl HybridSyncDaemon {
             if let Err(e) = self.sync_telemetry_step().await {
                 error!("Hybrid sync telemetry error: {}", e);
             }
-            if let Err(e) = self.sync_missions_step().await {
-                error!("Hybrid sync missions error: {}", e);
-            }
             tokio::time::sleep(Duration::from_secs(5)).await;
         }
     }
@@ -198,81 +195,6 @@ impl HybridSyncDaemon {
         if success_count > 0 {
             if let Err(e) = ::server_telemetry::record_sync_escalation(&self.pg_pool, success_count as f32, ::server_telemetry::get_deployment_mode()).await {
                 warn!("Failed to record sync escalation telemetry: {}", e);
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn sync_missions_step(&self) -> Result<(), Box<dyn std::error::Error>> {
-        // Find agent missions requiring cloud escalation
-        let rows = sqlx::query("SELECT id, status, payload, tenant_id FROM agent_missions WHERE synced_to_cloud = 0 OR synced_to_cloud IS NULL OR _sync_status = 'pending'")
-            .fetch_all(&self.sqlite_pool)
-            .await?;
-
-        let mut _success_count = 0;
-
-        for row in rows {
-            let id: String = row.get("id");
-            let status: String = row.get("status");
-            let payload_str: String = row.get("payload");
-            let tenant_id: String = row.try_get("tenant_id").unwrap_or_else(|_| "system".to_string());
-
-            // Sanitize PII
-            let parsed: Value = serde_json::from_str(&payload_str).unwrap_or(json!({ "raw": payload_str }));
-            let sanitized = ::server_telemetry::redact_interface_pii(parsed);
-
-            let mut tx = match self.pg_pool.begin().await {
-                Ok(t) => t,
-                Err(e) => {
-                    warn!("Failed to begin pg transaction for agent_missions: {}", e);
-                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                        .bind(e.to_string())
-                        .bind(&id)
-                        .execute(&self.sqlite_pool)
-                        .await;
-                    continue;
-                }
-            };
-
-            let res = sqlx::query("INSERT INTO agent_missions (id, status, payload, tenant_id) VALUES ($1, $2, $3, $4) ON CONFLICT(id) DO UPDATE SET status = EXCLUDED.status, payload = EXCLUDED.payload, tenant_id = EXCLUDED.tenant_id")
-                .bind(&id)
-                .bind(&status)
-                .bind(sanitized.to_string())
-                .bind(&tenant_id)
-                .execute(&mut *tx)
-                .await;
-
-            match res {
-                Ok(_) => {
-                    let commit_res = tx.commit().await;
-                    if let Err(e) = commit_res {
-                        warn!("Failed to commit pg transaction for mission id: {}. Error: {}", id, e);
-                        let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                            .bind(e.to_string())
-                            .bind(&id)
-                            .execute(&self.sqlite_pool)
-                            .await;
-                        continue;
-                    }
-
-                    // Update SQLite sync status
-                    sqlx::query("UPDATE agent_missions SET synced_to_cloud = 1, _sync_status = 'synced', sync_error = NULL, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                        .bind(&id)
-                        .execute(&self.sqlite_pool)
-                        .await?;
-                    info!("Successfully synced mission: {}", id);
-                    _success_count += 1;
-                }
-                Err(e) => {
-                    let _ = tx.rollback().await;
-                    warn!("Failed to sync mission: {}, gracefully degrading. Error: {}", id, e);
-                    let _ = sqlx::query("UPDATE agent_missions SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE id = ?")
-                        .bind(e.to_string())
-                        .bind(&id)
-                        .execute(&self.sqlite_pool)
-                        .await;
-                }
             }
         }
 

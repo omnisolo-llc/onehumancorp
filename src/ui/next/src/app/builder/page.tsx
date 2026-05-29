@@ -183,7 +183,7 @@ export default function BuilderPage() {
   if (status === "selection") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
            <div className="px-8 pt-12 pb-6 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">Pick your draft</h1>
               <p className="text-sm text-gray-500">The Architect generated 3 options for you.</p>
@@ -215,10 +215,10 @@ export default function BuilderPage() {
               ))}
            </div>
 
-           <div className="absolute bottom-0 w-full p-6 mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+           <div className="absolute bottom-0 w-full p-6 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
               <button
                 onClick={() => setStatus("draft")}
-                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 rounded-[8px] font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98] transition-all"
+                className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white p-4 mac-button font-bold font-outfit shadow-md hover:shadow-lg active:scale-[0.98]"
               >
                 Customize Selected Draft
               </button>
@@ -231,7 +231,7 @@ export default function BuilderPage() {
   if (status === "onboarding") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter overflow-hidden">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
           {/* Abstract Background Blur */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-[-10%] left-[-10%] w-[120%] h-[120%] bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400 blur-[80px] opacity-30 animate-pulse" />
@@ -255,7 +255,7 @@ export default function BuilderPage() {
                       setBusinessGoal(option.id as any);
                       setTimeout(() => setStatus("idle"), 300);
                     }}
-                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
+                    className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] group hover:bg-white/80 dark:hover:bg-black/50"
                   >
                     <span className="text-3xl group-hover:scale-110 transition-transform">{option.icon}</span>
                     <span className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">{option.label}</span>
@@ -272,7 +272,7 @@ export default function BuilderPage() {
   if (status === "idle") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
 
           <div className="px-8 pt-12 pb-4">
              <div className="flex justify-between mb-8">
@@ -315,12 +315,11 @@ export default function BuilderPage() {
                 )}
 
                 <button
-                  className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
+                  className={`w-full p-4 mac-button font-bold font-outfit text-lg ${
                     businessName.trim().length >= 3 && businessCategory.trim().length >= 5
                       ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
                       : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10"
                   }`}
-                  style={{ borderRadius: '8px' }}
                   onClick={handleStep1Next}
                 >
                   Next: Choose Vibe
@@ -340,10 +339,9 @@ export default function BuilderPage() {
                     <button
                       key={v}
                       onClick={() => setVibe(v)}
-                      className={`p-4 border text-left transition-all font-semibold backdrop-blur-md ${
+                      className={`p-4 border text-left mac-button font-semibold backdrop-blur-md ${
                         vibe === v ? "border-[#0066FF] bg-[#0066FF]/10 text-[#0066FF] shadow-sm" : "border-white/50 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-white/80 dark:hover:border-white/20 bg-white/40 dark:bg-black/20"
                       }`}
-                      style={{ borderRadius: '8px' }}
                     >
                       {v}
                     </button>
@@ -352,19 +350,17 @@ export default function BuilderPage() {
 
                 <div className="flex gap-4">
                   <button
-                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg transition-all hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md"
-                    style={{ borderRadius: '8px' }}
+                    className="flex-1 p-4 bg-white/40 dark:bg-black/20 text-gray-700 dark:text-gray-300 font-bold font-outfit text-lg hover:bg-white/60 dark:hover:bg-black/40 active:scale-[0.98] border border-white/50 dark:border-white/10 backdrop-blur-md mac-button"
                     onClick={() => setWizardStep(1)}
                   >
                     Back
                   </button>
                   <button
-                    className={`flex-1 p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`flex-1 p-4 mac-button font-bold font-outfit text-lg ${
                       vibe
                         ? "text-white shadow-md active:scale-[0.98] bg-gradient-to-r from-[#0066FF] to-[#0052cc]"
                         : "bg-white/40 dark:bg-black/20 text-gray-400 dark:text-gray-500 cursor-not-allowed border border-white/50 dark:border-white/10 backdrop-blur-md"
                     }`}
-                    style={{ borderRadius: '8px' }}
                     onClick={() => {
                        if (!bio.trim()) {
                          setBio(`I run a ${businessCategory} business called ${businessName}. We want a ${vibe.toLowerCase()} vibe.`);
@@ -434,7 +430,7 @@ export default function BuilderPage() {
   if (status === "generating") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
            <div className="px-8 pt-20 pb-4 text-center">
               <h1 className="text-2xl font-extrabold font-outfit text-gray-900 mb-2">AI Architect</h1>
               <p className="text-sm text-gray-500 animate-pulse">Designing your custom storefront...</p>
@@ -454,7 +450,7 @@ export default function BuilderPage() {
   if (status === "live") {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] mac-glass-container shadow-2xl px-6 pt-12 pb-8">
+        <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col items-center overflow-x-hidden overflow-y-auto hide-scrollbar sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl px-6 pt-12 pb-8">
           {/* Success Animation Background */}
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-green-50 via-white to-blue-50 -z-10 animate-fade-in" />
 
@@ -578,7 +574,7 @@ export default function BuilderPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#000] font-inter">
-      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] mac-glass-container shadow-2xl">
+      <div className="relative w-[375px] h-[812px] sm:h-[812px] min-h-[100dvh] sm:min-h-auto flex flex-col overflow-hidden sm:rounded-[16px] glass-container mac-glass-container backdrop-blur-xl bg-white/30 shadow-2xl">
 
         {/* Draft Preview Header */}
         <div className="absolute top-0 left-0 w-full bg-black/80 backdrop-blur-md text-white text-xs py-2 text-center font-medium z-50 flex justify-between px-4 items-center">
@@ -683,7 +679,7 @@ export default function BuilderPage() {
         </ActionSheet>
 
         {/* Bottom Action Bar */}
-        <div className="absolute bottom-0 w-full p-4 mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
+        <div className="absolute bottom-0 w-full p-4 glass-container mac-glass-container border-t border-white/40 dark:border-white/10 z-50">
           <div className="flex gap-3 mb-2">
             <button className="flex-1 py-2 text-sm font-medium text-gray-600 bg-white/50 dark:bg-black/20 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[8px]">Change Vibe</button>
             {!isPremium && (
@@ -698,7 +694,7 @@ export default function BuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 rounded-[8px] font-bold shadow-md hover:shadow-lg active:scale-[0.98] transition-all flex justify-center items-center gap-2"
+              className="w-full bg-gradient-to-r from-[#34C759] to-[#2eb350] text-white p-4 mac-button font-bold shadow-md hover:shadow-lg active:scale-[0.98] flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
@@ -747,7 +743,7 @@ export default function BuilderPage() {
                   setIsPremium(true);
                   setShowUpgradeModal(false);
                 }}
-                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 rounded-[8px] shadow-lg active:scale-[0.98] transition-all flex justify-between items-center"
+                className="w-full bg-gradient-to-r from-gray-900 to-black dark:from-gray-100 dark:to-white dark:text-black text-white font-bold p-4 mac-button shadow-lg active:scale-[0.98] flex justify-between items-center"
               >
                 <span>Upgrade Now</span>
                 <span className="font-normal opacity-80">$15 / mo</span>
