@@ -1979,6 +1979,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2041,6 +2043,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let queue = crate::queue::SqliteTaskQueue::new(sqlite_pool.clone());
+            queue.init().await?;
+            std::sync::Arc::new(queue)
+        }
+    };
+    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
+    let dynamic_workflow_manager = std::sync::Arc::new(
+        crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
+            dynamic_workflow_queue,
+            dynamic_workflow_state_dir,
+        ),
+    );
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2250,6 +2271,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -3776,7 +3798,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <h1>Connect Custom Software</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -4165,7 +4187,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
+                            <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -5965,7 +5987,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">

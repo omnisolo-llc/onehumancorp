@@ -2928,7 +2928,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
         }
 
         let mut modified_tc = tc.clone();
