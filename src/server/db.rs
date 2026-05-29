@@ -245,13 +245,20 @@ impl DB {
                 Ok(val) => return Ok(val),
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
-                    if self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy")) {
+                    let is_sqlite_lock = self.is_sqlite() && (err_str.contains("database is locked") || err_str.contains("sqlite_busy"));
+                    let is_postgres_lock = !self.is_sqlite() && (err_str.contains("serialization failure") || err_str.contains("deadlock detected") || err_str.contains("40001"));
+
+                    if is_sqlite_lock || is_postgres_lock {
                         attempt += 1;
                         if attempt >= max_attempts {
                             let _ = ::server_telemetry::record_sqlite_retry_exhausted(&self.pool, operation).await;
-                            return Err(E::from(format!("SQLite retry exhausted after {} attempts: {}", max_attempts, err)));
+                            return Err(E::from(format!("Database retry exhausted after {} attempts: {}", max_attempts, err)));
                         }
-                        let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        if is_postgres_lock {
+                            tracing::warn!("postgres_skip_locked contention in {}", operation);
+                        } else {
+                            let _ = ::server_telemetry::record_sqlite_lock_contention(&self.pool, operation).await;
+                        }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
                     } else {
