@@ -1903,6 +1903,10 @@ impl Agent {
             }
         }
 
+        // 1. The Orchestration Loop: Mechanically, it is a `while` loop executing the TAO (Thought-Action-Observation) cycle:
+        // Assemble prompt -> Call LLM API -> Parse output -> Execute tool calls -> Format results back -> Repeat.
+        // Termination conditions are layered: model returns text with no tool calls, max turn limit exceeded,
+        // token budget exhausted, guardrail tripwire fires, or safety refusal.
         let mut turn_count = 0;
         while turn_count < max_iterations {
             let iteration = turn_count;
