@@ -79,6 +79,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/campaign/generate-cart", post(handle_generate_cart))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -111,6 +112,17 @@ pub struct GenerateReviewRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateReviewResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartRequest {
+    pub customer_name: String,
+    pub cart_value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartResponse {
     pub message: String,
 }
 
@@ -180,6 +192,21 @@ async fn handle_generate_review(
     );
 
     Json(GenerateReviewResponse {
+        message: generated,
+    })
+}
+
+async fn handle_generate_cart(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCartRequest>,
+) -> impl IntoResponse {
+    // In a real implementation we would call an AI provider here.
+    let generated = format!(
+        "Hi {}, you left ${} worth of items in your cart! Here is a 10% discount code: COMEBACK10 to complete your purchase.",
+        req.customer_name, req.cart_value
+    );
+
+    Json(GenerateCartResponse {
         message: generated,
     })
 }

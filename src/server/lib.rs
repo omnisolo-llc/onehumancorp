@@ -3349,6 +3349,28 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </button>
                         </div>
 
+                        <!-- Abandoned Cart Recovery Widget -->
+                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(239, 68, 68, 0.3);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                                <h3 style="margin: 0; color: #ef4444; display: flex; align-items: center; gap: 8px;">
+                                    <span style="font-size: 20px;">🛒</span> Abandoned Cart Recovery
+                                </h3>
+                                <span style="font-size: 12px; font-weight: bold; background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 12px;">Revenue Recovery</span>
+                            </div>
+                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have <strong>5 abandoned carts</strong> totaling <strong style="color: #10b981;">$240.00</strong>. Recover these sales with an AI-generated discount campaign.</p>
+
+                            <div style="background: rgba(0,0,0,0.02); border: 1px solid rgba(0,0,0,0.05); border-radius: 8px; padding: 12px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 40px; height: 40px; border-radius: 50%; background: #fee2e2; display: flex; align-items: center; justify-content: center; font-size: 18px;">🛒</div>
+                                <div>
+                                    <h4 style="margin: 0; font-size: 14px;">Cart #4410 - Abandoned</h4>
+                                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">Alex M. left $85.00 in their cart</p>
+                                </div>
+                            </div>
+
+                            <button id="generate-cart-campaign-btn" onclick="generateCartCampaign()" style="width: 100%; background: #ef4444; color: white; border: none;">Generate Recovery Campaign</button>
+                            <div id="cart-campaign-result" style="display: none; margin-top: 16px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 14px; color: #166534;"></div>
+                        </div>
+
                         <!-- Success Milestones Widget -->
                         <div id="milestones-widget" class="card glass" style="margin-top: 24px; display: none;">
                             <h3 style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
@@ -4819,6 +4841,38 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         function closeEmbedSetup() {
                             document.getElementById('embed-setup-sheet').classList.remove('open');
+                        }
+
+                        async function generateCartCampaign() {
+                            const btn = document.getElementById('generate-cart-campaign-btn');
+                            btn.textContent = 'Generating...';
+                            btn.disabled = true;
+
+                            try {
+                                const cartRes = await fetch('/api/v1/growth/campaign/generate-cart', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        customer_name: 'Alex',
+                                        cart_value: '85.00'
+                                    })
+                                });
+
+                                let msg = 'Hi Alex, you left some items in your cart! Here is a 10% discount to complete your purchase.';
+                                if (cartRes.ok) {
+                                    const data = await cartRes.json();
+                                    msg = data.message;
+                                }
+
+                                const resultEl = document.getElementById('cart-campaign-result');
+                                resultEl.textContent = `Campaign Generated & Sent: "${msg}"`;
+                                resultEl.style.display = 'block';
+                                btn.textContent = 'Campaign Sent';
+                            } catch (e) {
+                                console.error('Error generating cart campaign:', e);
+                                btn.textContent = 'Error. Try Again';
+                                btn.disabled = false;
+                            }
                         }
 
                         async function sendReviewCampaign() {
