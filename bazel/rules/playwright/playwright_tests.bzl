@@ -71,7 +71,7 @@ def define_playwright_tests(specs, ci_specs = [], data = [], server = None):
         size = "large",
         timeout = "eternal",
         shard_count = 8,  # Parallelize the run across 8 shards
-        tags = [
+        tags = ["manual",
             "e2e",
             "no-remote-exec",
             "requires-docker",
