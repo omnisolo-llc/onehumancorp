@@ -19,7 +19,7 @@ impl Runner {
     /// Asynchronous execution mode
     pub async fn run_async(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
         let mut on_event = |_e| {};
-        self.agent.run(cfg, initial_message, &mut on_event).await
+        self.agent.run(&cfg, initial_message, &mut on_event).await
     }
 
     /// Synchronous execution mode (blocks the current thread)

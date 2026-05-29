@@ -64,34 +64,6 @@ async fn handle_webhook(
         }
     }
 
-    if payload.source == "mercadopago" {
-        if payload.message == "approved" {
-            tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
-            });
-
-            let event = crate::orchestration::departments::types::DepartmentEvent {
-                id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: payload.tenant_id.clone(),
-                event_type: "tenant.order.created".to_string(),
-                payload: serde_json::json!({"source": payload.source, "message": payload.message}),
-            };
-
-            match orchestrator.dispatch_event(event).await {
-                Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
-                Err(e) => {
-                    if e.contains("AI Budget exhausted") {
-                        return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                    } else {
-                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
-                    }
-                }
-            }
-        } else if payload.message == "pending" || payload.message == "rejected" {
-            return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
-        }
-    }
-
     let description = format!("Incoming message from {}: {}", payload.source, payload.message);
 
     // We route external messages (like DMs) to the Customer Success department
@@ -106,15 +78,7 @@ async fn handle_webhook(
             business_context, payload.message
         );
         let client = crate::minimax::MinimaxClient::new(api_key);
-        let mut result_msg = "Draft generation failed.".to_string();
-        for _ in 0..3 {
-            if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(&prompt)).await {
-                result_msg = res;
-                break;
-            }
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        }
-        result_msg
+        client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
     };

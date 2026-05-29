@@ -5,6 +5,7 @@ rust_library(
     srcs = [
         "mod.rs",
         "forecaster.rs",
+        "sandbox_violation.rs",
     ],
     crate_root = "mod.rs",
     edition = "2024",
@@ -18,7 +19,7 @@ rust_library(
         "@crates//:tracing",
         "@crates//:opentelemetry",
         "@crates//:tokio",
-        "@crates//:regex",
+        "@crates//:uuid",
     ],
 )
 

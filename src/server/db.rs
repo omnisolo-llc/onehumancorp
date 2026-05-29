@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
-    GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
+    GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
@@ -20,7 +20,7 @@ pub fn get_pool() -> PgPool {
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
-    })
+    }).clone()
 }
 
 #[derive(Clone)]
@@ -269,7 +269,14 @@ impl DB {
                     .await?;
 
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                migrator.run(&self.pool).await?;
+                match migrator.run(&self.pool).await {
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::warn!("Migration failed (likely concurrent): {}. Retrying in 2s...", e);
+                        tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                        migrator.run(&self.pool).await?;
+                    }
+                }
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
@@ -540,6 +547,7 @@ impl DB {
                         content TEXT NOT NULL,
                         embedding BLOB,
                         source_type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
@@ -901,9 +909,9 @@ pub async fn insert_autodream_memory(
 
 
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
-        match &self.store {
+        let res: Result<(), Box<dyn std::error::Error>> = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
+                let query_result = sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
                          mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
@@ -913,25 +921,58 @@ pub async fn insert_autodream_memory(
                 .bind(blockers)
                 .bind(mission_id)
                 .execute(sqlite_pool)
-                .await?;
+                .await;
+
+                query_result.map(|_| ()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
             },
             DbStore::Postgres => {
-                let mut tx = self.pool.begin().await?;
-                ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                sqlx::query(
-                    "UPDATE agent_missions
-                     SET status = 'blocked',
-                         mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                         updated_at = CURRENT_TIMESTAMP
-                     WHERE id = $2"
-                )
-                .bind(blockers)
-                .bind(mission_id)
-                .execute(&mut *tx)
-                .await?;
-                tx.commit().await?;
+                let tx_res = self.pool.begin().await;
+                match tx_res {
+                    Ok(mut tx) => {
+                        let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
+                        let query_result = sqlx::query(
+                            "UPDATE agent_missions
+                             SET status = 'blocked',
+                                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                                 updated_at = CURRENT_TIMESTAMP
+                             WHERE id = $2"
+                        )
+                        .bind(blockers)
+                        .bind(mission_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                        match query_result {
+                            Ok(_) => {
+                                tx.commit().await.map(|_| ()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                            },
+                            Err(e) => Err(Box::new(e) as Box<dyn std::error::Error>),
+                        }
+                    },
+                    Err(e) => Err(Box::new(e) as Box<dyn std::error::Error>),
+                }
             }
+        };
+
+        if let Err(e) = res {
+            tracing::error!("Failed to hand off mission {} to database: {}. Falling back to local file.", mission_id, e);
+            let fallback_path = "MISSION_BLOCKERS_FALLBACK.log";
+            let log_entry = format!(
+                "[{}] MISSION_ID: {}, BLOCKERS: {}, DB_ERROR: {}\n",
+                Utc::now().to_rfc3339(),
+                mission_id,
+                blockers,
+                e
+            );
+
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(fallback_path)?;
+            file.write_all(log_entry.as_bytes())?;
         }
+
         Ok(())
     }
 
@@ -939,7 +980,7 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?) LIMIT 1000)")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -947,7 +988,7 @@ pub async fn insert_autodream_memory(
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1)")
+                let affected = sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1) LIMIT 1000)")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();
@@ -1229,6 +1270,8 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
@@ -1264,6 +1307,34 @@ mod e2e_tenant_isolation_tests {
 
         // This verifies tenant access doesn't bleed across pools
         // (RLS logic inherently evaluated by postgres)
+    }
+
+    #[tokio::test]
+    async fn test_handoff_mission_fallback() {
+        let database_url = "postgres://nonexistent:password@localhost:5432/nonexistent";
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy(database_url)
+            .unwrap();
+        let db = DB { pool, store: DbStore::Postgres };
+
+        let mission_id = "test_mission_fallback";
+        let blockers = "test blockers";
+        let fallback_path = "MISSION_BLOCKERS_FALLBACK.log";
+
+        // Ensure fallback file is gone
+        let _ = std::fs::remove_file(fallback_path);
+
+        let result = db.handoff_mission(mission_id, blockers).await;
+        assert!(result.is_ok());
+
+        assert!(std::path::Path::new(fallback_path).exists());
+        let content = std::fs::read_to_string(fallback_path).unwrap();
+        assert!(content.contains(mission_id));
+        assert!(content.contains(blockers));
+
+        // Cleanup
+        let _ = std::fs::remove_file(fallback_path);
     }
 
     #[tokio::test]
