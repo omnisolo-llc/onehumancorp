@@ -32,7 +32,7 @@ impl Department for MarketingAgent {
         if event.event_type == "agent:marketing:approved" {
             // Actual logic to publish the case study to the storefront CDN when approved.
             // For now, we simulate invalidating cache and publishing.
-            tracing::info!("Simulating edge cache invalidation and portfolio publish for tenant: {}", event.tenant_id);
+            println!("Simulating edge cache invalidation and portfolio publish for tenant: {}", event.tenant_id);
             return Ok(());
         }
 

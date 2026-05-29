@@ -182,9 +182,6 @@ impl DB {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("PRAGMA secure_delete = ON").await?;
-                        conn.execute("PRAGMA foreign_keys = ON").await?;
-                        conn.execute("PRAGMA journal_mode = WAL").await?;
-                        conn.execute("PRAGMA synchronous = NORMAL").await?;
                         Ok(())
                     })
                 })
@@ -543,6 +540,7 @@ impl DB {
                         content TEXT NOT NULL,
                         embedding BLOB,
                         source_type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,

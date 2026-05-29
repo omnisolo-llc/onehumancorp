@@ -17,13 +17,6 @@ export async function POST(request: Request) {
         categories: ["food", "physical"],
         initial_products: [{ name: "Custom Vegan Cake", price: "45.00" }]
       });
-    } else if (desc.includes('alex')) {
-      return NextResponse.json({
-        business_name: "Alex Art",
-        business_type: "Retail",
-        categories: ["art"],
-        initial_products: [{ name: "Painting", price: "100.00" }]
-      });
     } else if (desc.includes('carlos')) {
       return NextResponse.json({
         business_name: "Carlos Plumbing",

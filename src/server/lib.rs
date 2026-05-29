@@ -1415,8 +1415,6 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
-            // Delegate the dependency validation to the TaskManager or Orchestrator logic
-            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
             
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
@@ -2050,27 +2048,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
-    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
-    } else {
-        match &db.store {
-            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
-            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone())),
-        }
-    };
-
-    let sub_agent_queue_clone = sub_agent_queue.clone();
-    tokio::spawn(async move {
-        loop {
-            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
-                tracing::info!("Processing sub-agent job: {}", job.id);
-                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
-            }
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        }
-    });
-
     let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
         crate::db::DbStore::Postgres => {
             std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
@@ -5466,12 +5443,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
                                         }
                                     });
-                                    let companyName = window.onboardingState?.company_name || document.getElementById('step-3-business-name')?.value || '';
-                                    let companyDesc = window.onboardingState?.company_description || document.getElementById('step-3-business-name-2')?.value || '';
-                                    let firstProductName = window.onboardingState?.first_product_name || document.getElementById('step-5-product-name')?.value || '';
-                                    let firstProductPrice = window.onboardingState?.first_product_price || document.getElementById('step-5-product-price')?.value || '';
-                                    let websiteTemplate = window.onboardingState?.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
-                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || '';
+                                    let companyName = document.querySelector('#step-3 input[type="text"]')?.value || '';
+                                    let companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1]?.value || '';
+                                    let firstProductName = document.querySelector('#step-5 input[type="text"]')?.value || '';
+                                    let firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1]?.value || '';
+                                    let websiteTemplate = document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
+                                    let domainChoice = document.querySelector('#step-9 button.selected')?.innerText || '';
 
                                     if (domainChoice.includes('Free')) {
                                         domainChoice = 'free';
@@ -5493,9 +5470,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         first_product_price: firstProductPrice,
                                         website_template: websiteTemplate,
                                         domain_choice: domainChoice,
-                                        admin_email: window.onboardingState?.admin_email || "admin@ohc.app",
-                                        admin_name: window.onboardingState?.admin_name || "Admin",
-                                        admin_password: window.onboardingState?.admin_password || "password123",
+                                        admin_email: "",
+                                        admin_name: "",
+                                        admin_password: "",
                                         price_type: "fixed",
                                         payment_pref: "online"
                                     };
