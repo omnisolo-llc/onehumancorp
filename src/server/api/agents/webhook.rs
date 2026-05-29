@@ -106,7 +106,15 @@ async fn handle_webhook(
             business_context, payload.message
         );
         let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+        let mut result_msg = "Draft generation failed.".to_string();
+        for _ in 0..3 {
+            if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(&prompt)).await {
+                result_msg = res;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+        result_msg
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
     };
