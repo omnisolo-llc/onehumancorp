@@ -32,6 +32,7 @@ rust_library(
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:sha2",
+        "@crates//:rand",
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
