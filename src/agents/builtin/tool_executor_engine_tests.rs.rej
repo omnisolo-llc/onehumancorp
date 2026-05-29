@@ -1,0 +1,11 @@
+--- tool_executor_engine_tests.rs
++++ tool_executor_engine_tests.rs
+@@ -102,7 +102,7 @@
+         };
+
+         let res = ToolExecutionEngine::execute_tool_with_langgraph_mechanics(&tool, &tc, 2).await;
+         assert!(res.is_err());
+         match res.unwrap_err() {
+             ToolError::Fatal(msg) => assert_eq!(msg, "fatal error"),
+-            _ => panic!("Expected Unexpected/Fatal error"),
++            _ => panic!("Expected Unexpected/Fatal error"),
