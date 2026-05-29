@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static PROMPT_COMPRESSION_CACHE: OnceLock<dashmap::DashMap<String, (String, usize)>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -81,9 +82,16 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let mut meetings = (*hub2.get_meetings().await).clone();
+                if mobile_optimized {
+                    for m in &mut meetings {
+                        m.transcript.clear();
+                    }
+                }
+                Ok::<_, String>(std::sync::Arc::new(meetings))
             }),
             tokio::task::spawn_blocking(move || {
+                if mobile_optimized { return Ok::<_, String>((0.0, 0, vec![])); }
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
@@ -360,38 +368,118 @@ impl DashboardService for MyDashboardService {
             .cloned()
             .collect();
 
-        let final_agents_payload = _filtered_agents
-            .into_iter()
-            .map(|a| {
-                let status_val = match a.status.to_uppercase().as_str() {
-                    "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
-                    "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
-                    "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
-                    "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
-                    _ => ::server_ohc::common::AgentStatus::Idle as i32,
-                };
+        let (final_agents_payload, optimized_total_tokens) = if req.mobile_optimized {
+            let payload = _filtered_agents
+                .into_iter()
+                .map(|a| {
+                    let status_val = match a.status.to_uppercase().as_str() {
+                        "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                        "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                        "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                        "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                        _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                    };
 
-                let role_val = match a.role.to_uppercase().as_str() {
-                    "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
-                    "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
-                    _ => ::server_ohc::common::Role::Unspecified as i32,
-                };
+                    let role_val = match a.role.to_uppercase().as_str() {
+                        "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                        "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                        _ => ::server_ohc::common::Role::Unspecified as i32,
+                    };
 
-                let name = if req.mobile_optimized {
-                    String::new()
-                } else {
-                    ::server_pricing::compression::reduce_tokens(&a.name)
-                };
+                    ::server_ohc::agent::Agent {
+                        id: a.id,
+                        name: String::new(),
+                        role: role_val,
+                        status: status_val,
+                        organization_id: a.organization_id,
+                    }
+                })
+                .collect::<Vec<_>>();
+            (payload, total_tokens)
+        } else {
+            let org_cloned = org.clone();
+            let total_tokens_cloned = total_tokens;
 
-                ::server_ohc::agent::Agent {
-                    id: a.id,
-                    name,
-                    role: role_val,
-                    status: status_val,
-                    organization_id: a.organization_id,
+            tokio::task::spawn_blocking(move || {
+                let mut original_prompts_len = 0;
+                let mut compressed_prompts_len = 0;
+
+                let payload = _filtered_agents
+                    .into_iter()
+                    .map(|a| {
+                        let status_val = match a.status.to_uppercase().as_str() {
+                            "IDLE" => ::server_ohc::common::AgentStatus::Idle as i32,
+                            "ACTIVE" => ::server_ohc::common::AgentStatus::Active as i32,
+                            "IN_MEETING" => ::server_ohc::common::AgentStatus::InMeeting as i32,
+                            "BLOCKED" => ::server_ohc::common::AgentStatus::Blocked as i32,
+                            _ => ::server_ohc::common::AgentStatus::Idle as i32,
+                        };
+
+                        let role_val = match a.role.to_uppercase().as_str() {
+                            "SOFTWARE_ENGINEER" => ::server_ohc::common::Role::SoftwareEngineer as i32,
+                            "QA_TESTER" => ::server_ohc::common::Role::QaTester as i32,
+                            _ => ::server_ohc::common::Role::Unspecified as i32,
+                        };
+
+                        let orig_len = a.name.len();
+                        let (name, compressed_len) = if orig_len > 0 {
+                            let cache = PROMPT_COMPRESSION_CACHE.get_or_init(dashmap::DashMap::new);
+
+                            if let Some(cached_val) = cache.get(&a.name) {
+                                cached_val.clone()
+                            } else {
+                                let compressed = ::server_pricing::compression::reduce_tokens(&a.name);
+                                let clen = compressed.len();
+                                cache.insert(a.name.clone(), (compressed.clone(), clen));
+                                (compressed, clen)
+                            }
+                        } else {
+                            (String::new(), 0)
+                        };
+
+                        if orig_len > 0 {
+                            original_prompts_len += orig_len;
+                            compressed_prompts_len += compressed_len;
+                        }
+
+                        ::server_ohc::agent::Agent {
+                            id: a.id,
+                            name,
+                            role: role_val,
+                            status: status_val,
+                            organization_id: a.organization_id,
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                if let Some(ref o) = org_cloned {
+                    let prompt = &o.name;
+                    let orig_len = prompt.len();
+                    if orig_len > 0 {
+                        original_prompts_len += orig_len;
+                        let cache = PROMPT_COMPRESSION_CACHE.get_or_init(dashmap::DashMap::new);
+
+                        let compressed_len = if let Some(cached_val) = cache.get(prompt) {
+                            cached_val.1
+                        } else {
+                            let compressed = ::server_pricing::compression::reduce_tokens(prompt);
+                            let clen = compressed.len();
+                            cache.insert(prompt.clone(), (compressed, clen));
+                            clen
+                        };
+                        compressed_prompts_len += compressed_len;
+                    }
                 }
-            })
-            .collect::<Vec<_>>();
+
+                let mut optimized_total_tokens = total_tokens_cloned;
+                if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
+                    let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
+                    optimized_total_tokens = (total_tokens_cloned as f64 * compression_ratio) as i64;
+                }
+
+                (payload, optimized_total_tokens)
+            }).await.unwrap()
+        };
 
         if !req.mobile_optimized {
             let mut status_map = std::collections::HashMap::new();
@@ -402,46 +490,6 @@ impl DashboardService for MyDashboardService {
                 .into_iter()
                 .map(|(status, count)| StatusCount { status, count })
                 .collect();
-
-            // AI Token Efficiency (Phase 5): Audit system prompts for redundancy and compress
-            let mut original_prompts_len = 0;
-            let mut compressed_prompts_len = 0;
-
-            let org_agents: Vec<_> = agents
-                .iter()
-                .filter(|a| {
-                    a.organization_id == req.organization_id
-                        || a.id.starts_with(&format!("{}-", req.organization_id))
-                })
-                .collect();
-
-            for agent in org_agents {
-                let prompt = &agent.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-
-                    compressed_prompts_len += compressed.len();
-                }
-            }
-
-            if let Some(ref o) = org {
-                let prompt = &o.name;
-                let orig_len = prompt.len();
-                if orig_len > 0 {
-                    original_prompts_len += orig_len;
-                    let compressed = ::server_pricing::compression::reduce_tokens(prompt);
-                    compressed_prompts_len += compressed.len();
-                }
-            }
-
-            let mut optimized_total_tokens = total_tokens;
-            if original_prompts_len > 0 && compressed_prompts_len < original_prompts_len {
-                let compression_ratio = compressed_prompts_len as f64 / original_prompts_len as f64;
-                optimized_total_tokens = (total_tokens as f64 * compression_ratio) as i64;
-            }
 
             let mut agent_summaries = Vec::new();
             for (agent_id, cost_usd, tokens_used, roi, efficiency, _storage) in _agent_costs_data {
