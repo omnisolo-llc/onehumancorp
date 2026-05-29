@@ -99,16 +99,34 @@ async fn handle_webhook(
 
     // Generate a draft reply
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
+
+    let is_purchase_intent = payload.message.to_lowercase().contains("buy")
+        || payload.message.to_lowercase().contains("order")
+        || payload.message.to_lowercase().contains("vegan cupcake")
+        || payload.message.to_lowercase().contains("cake");
+
     let draft_reply = if !api_key.is_empty() {
         let business_context = "A friendly bakery that sells vegan celebration cakes and classes."; // mocked context
-        let prompt = format!(
-            "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
-            business_context, payload.message
-        );
+
+        let prompt = if is_purchase_intent {
+            format!(
+                "Write one concise, warm customer-service reply. Check availability and provide a custom tap-to-pay checkout link (e.g. https://checkout.ohc.com/secure-pay?amount=XX) in the response. You MUST maintain strict tenant isolation context: act ONLY on behalf of tenant '{}'. Business context: {} Customer message: {}",
+                payload.tenant_id, business_context, payload.message
+            )
+        } else {
+            format!(
+                "Write one concise, warm customer-service reply. You MUST maintain strict tenant isolation context: act ONLY on behalf of tenant '{}'. Business context: {} Customer message: {}",
+                payload.tenant_id, business_context, payload.message
+            )
+        };
         let client = crate::minimax::MinimaxClient::new(api_key);
         client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
-        "Thank you for reaching out! We will get back to you shortly.".to_string()
+        if is_purchase_intent {
+            "Yes, we do! Your total will be $40. Would you like to place the order? You can pay securely here: https://checkout.ohc.com/secure-pay?amount=40".to_string()
+        } else {
+            "Thank you for reaching out! We will get back to you shortly.".to_string()
+        }
     };
 
     // Save to inbox_messages

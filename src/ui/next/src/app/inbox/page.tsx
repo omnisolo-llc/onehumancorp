@@ -21,7 +21,8 @@ export default function InboxPage() {
       icon: '📘',
       content: 'Do you have vegan birthday cake options?',
       date: '10:00 AM',
-      draft: 'Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.'
+      draft: 'Yes, we do! Your total will be $40. Would you like to place the order? You can pay securely here: https://checkout.ohc.com/secure-pay?amount=40',
+      paid: true,
     },
     {
       id: 2,
@@ -86,22 +87,22 @@ export default function InboxPage() {
   };
 
   return (
-    <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
-      <div className="flex items-center mb-4 border-b pb-2">
-        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700">
+    <div className="p-4 max-w-[375px] mx-auto bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
+      <div className="flex items-center mb-4 border-b border-gray-200 pb-2 bg-white/60 backdrop-blur-md sticky top-0 z-10 px-2 py-2 rounded-lg">
+        <Link href="/dashboard" className="mr-4 text-blue-500 hover:text-blue-700 font-semibold">
           &lt; Back
         </Link>
-        <h1 className="text-2xl font-bold">Customer Inbox</h1>
+        <h1 className="text-xl font-bold text-gray-900">Unified Inbox</h1>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setShowSettingsModal(true)}
-            className="p-2 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded text-sm font-semibold text-gray-700"
+            className="p-2 bg-white/80 border border-white/40 shadow-sm hover:bg-white rounded-lg text-sm font-semibold text-gray-700 backdrop-blur-sm transition-all"
             title="Channel Settings"
           >
             ⚙️
           </button>
-          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-gray-200 hover:bg-gray-300 rounded text-sm font-semibold text-black hidden sm:inline-block">
-            Audit Dashboard
+          <Link href="/agent-audit-dashboard" aria-label="Agent Audit Dashboard" title="Agent Audit Dashboard" className="p-2 bg-white/80 border border-white/40 shadow-sm hover:bg-white rounded-lg text-sm font-semibold text-gray-900 hidden sm:inline-block backdrop-blur-sm transition-all">
+            Audit
           </Link>
         </div>
       </div>
@@ -145,22 +146,27 @@ export default function InboxPage() {
         </div>
       )}
 
-      <div id="messages-list" className="bg-white rounded shadow p-4 mb-4 flex-1 overflow-y-auto text-black">
+      <div id="messages-list" className="bg-transparent flex-1 overflow-y-auto text-black pb-20">
         {messages.map(msg => (
-          <div key={msg.id} className={`mb-6 ${msg.sender === 'Me' ? 'text-right' : ''}`}>
-            <div className={`flex items-center gap-2 ${msg.sender === 'Me' ? 'justify-end' : ''}`}>
-              {msg.sender !== 'Me' && <span className="text-sm">{msg.icon}</span>}
-              <span className="font-semibold text-sm">{msg.sender}</span>
-              <span className="text-xs text-gray-500">{msg.date}</span>
+          <div key={msg.id} className={`mb-6 flex flex-col ${msg.sender === 'Me' ? 'items-end' : 'items-start'}`}>
+            <div className="flex items-center gap-2 mb-1 px-1">
+              {msg.sender !== 'Me' && <span className="text-sm bg-white shadow-sm p-1 rounded-full">{msg.icon}</span>}
+              <span className="font-semibold text-sm text-gray-700">{msg.sender}</span>
+              <span className="text-xs text-gray-400">{msg.date}</span>
+              {msg.paid && (
+                <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border border-green-200">
+                  Paid
+                </span>
+              )}
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+            <div className={`p-3 rounded-2xl max-w-[85%] text-left shadow-sm backdrop-blur-md ${msg.sender === 'Me' ? 'bg-blue-500 text-white rounded-br-sm' : 'bg-white/80 border border-white/60 text-gray-800 rounded-bl-sm'}`}>
+              <p className={`text-sm leading-relaxed ${msg.sender === 'Me' ? 'text-white' : 'text-gray-800'}`}>{msg.content}</p>
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
             {msg.draft && msg.sender !== 'Me' && (
-               <div className="mt-3 ml-4 bg-[#f9f5ff] border border-[#e9d8fd] rounded-xl p-3 shadow-sm relative">
-                  <div className="absolute -top-3 left-4 bg-[#e9d8fd] text-[#553c9a] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+               <div className="mt-3 ml-6 bg-white/90 backdrop-blur-xl border border-purple-100/50 rounded-2xl p-4 shadow-lg relative max-w-[90%]">
+                  <div className="absolute -top-3 left-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wide flex items-center gap-1 shadow-sm">
                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                      AI Draft
                   </div>
@@ -181,13 +187,13 @@ export default function InboxPage() {
                       </div>
                   ) : (
                       <>
-                        <p className="text-sm text-gray-800 mt-2 italic">"{msg.draft}"</p>
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e9d8fd]/50">
-                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-[#805ad5] text-white font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-[#6b46c1] transition-colors flex items-center justify-center gap-1">
+                        <p className="text-sm text-gray-800 mt-3 font-medium leading-relaxed">"{msg.draft}"</p>
+                        <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+                           <button onClick={() => sendReply(msg.id)} className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold py-2.5 rounded-xl text-sm shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-1.5 transform active:scale-95">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                               Send
+                               Send Now
                            </button>
-                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-[#805ad5] border border-[#d6bcfa] font-bold py-2 rounded-lg text-sm shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-1">
+                           <button onClick={() => { setEditingId(msg.id); setReplyInput(msg.draft || ''); }} className="flex-1 bg-white text-gray-700 border border-gray-200 font-bold py-2.5 rounded-xl text-sm shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-all flex items-center justify-center gap-1.5 transform active:scale-95">
                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                Edit
                            </button>

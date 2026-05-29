@@ -36,7 +36,7 @@ test.describe('Twilio Omnichannel Unified Inbox', () => {
 
   test('3. Test graceful error handling when attempting to connect with an invalid channel', async ({ page }) => {
     await page.goto('/inbox');
-    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unified Inbox' })).toBeVisible();
 
     // Open Settings Modal
     await page.getByTitle('Channel Settings').click();
@@ -57,7 +57,7 @@ test.describe('Twilio Omnichannel Unified Inbox', () => {
 
   test('4. Verify messages from different channels are correctly displayed in the unified inbox', async ({ page }) => {
     await page.goto('/inbox');
-    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unified Inbox' })).toBeVisible();
 
     // Ensure messages exist from Facebook, Instagram, and WhatsApp
     await expect(page.getByText('Facebook User')).toBeVisible();
@@ -72,7 +72,7 @@ test.describe('Twilio Omnichannel Unified Inbox', () => {
 
   test('5. Verify that a user can reply to a message from the unified inbox and the UI reflects the sent message', async ({ page }, testInfo) => {
     await page.goto('/inbox');
-    await expect(page.getByRole('heading', { name: 'Customer Inbox' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unified Inbox' })).toBeVisible();
 
     // Wait to ensure everything is mounted
     await page.waitForTimeout(500);
