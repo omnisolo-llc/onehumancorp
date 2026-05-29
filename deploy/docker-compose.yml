@@ -311,9 +311,6 @@ services:
           cpus: "0.05"
           memory: 64M
 
-
-
-
   pushgateway:
     logging:
       driver: "json-file"
@@ -329,6 +326,21 @@ services:
           cpus: "0.1"
           memory: 128M
 
+  spire-server:
+    image: gcr.io/spiffe-io/spire-server:1.5.1
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./docker/spire/server.conf:/opt/spire/conf/server/server.conf
+
+  spire-agent:
+    image: gcr.io/spiffe-io/spire-agent:1.5.1
+    depends_on:
+      - spire-server
+    volumes:
+      - ./docker/spire/agent.conf:/opt/spire/conf/agent/agent.conf
+      - /var/run/spire/sockets:/tmp/spire-agent/public
+
   telemetry-mcp-bridge:
     logging:
       driver: "json-file"
@@ -340,6 +352,9 @@ services:
       LOG_LEVEL: "info"
       PROMETHEUS_URL: http://prometheus:9090
       OHC_STANDALONE: $${OHC_STANDALONE:-false}
+      SPIFFE_ENDPOINT_SOCKET: unix:///var/run/spire/sockets/agent.sock
+    volumes:
+      - /var/run/spire/sockets:/var/run/spire/sockets
     depends_on:
       prometheus:
         condition: service_started
