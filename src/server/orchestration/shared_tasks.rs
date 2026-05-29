@@ -20,6 +20,9 @@ pub struct SharedTaskV4 {
     pub dependencies: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub ultraplan_phase: Option<String>,
+    pub deliberation_log: Option<String>,
+    pub depth: Option<i32>,
 }
 
 pub struct SharedTaskOrchestrator {
@@ -45,8 +48,9 @@ impl SharedTaskOrchestrator {
                     r#"
                     INSERT INTO shared_tasks_v4 (
                         id, organization_id, title, description, status, agent_id,
-                        priority, payload, parent_plan_id, dependencies, created_at, updated_at
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                        priority, payload, parent_plan_id, dependencies, created_at, updated_at,
+                        ultraplan_phase, deliberation_log, depth
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                     "#
                 )
                 .bind(&task_id)
@@ -61,6 +65,9 @@ impl SharedTaskOrchestrator {
                 .bind(&task.dependencies)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
+                .bind(&task.ultraplan_phase)
+                .bind(&task.deliberation_log)
+                .bind(task.depth)
                 .execute(&self.db.pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -70,8 +77,9 @@ impl SharedTaskOrchestrator {
                     r#"
                     INSERT INTO shared_tasks_v4 (
                         id, organization_id, title, description, status, agent_id,
-                        priority, payload, parent_plan_id, dependencies, created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        priority, payload, parent_plan_id, dependencies, created_at, updated_at,
+                        ultraplan_phase, deliberation_log, depth
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
                 .bind(&task_id)
@@ -86,6 +94,9 @@ impl SharedTaskOrchestrator {
                 .bind(&task.dependencies)
                 .bind(task.created_at.to_rfc3339())
                 .bind(task.updated_at.to_rfc3339())
+                .bind(&task.ultraplan_phase)
+                .bind(&task.deliberation_log)
+                .bind(task.depth)
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
@@ -105,7 +116,7 @@ impl SharedTaskOrchestrator {
                 let row = sqlx::query(
                     r#"
                     SELECT st.* FROM shared_tasks_v4 st
-                    WHERE st.status = 'PENDING' AND st.organization_id = $1
+                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED') AND st.organization_id = $1
                     AND NOT EXISTS (
                         SELECT 1 FROM json_array_elements_text(st.dependencies::json) AS dep_id
                         JOIN shared_tasks_v4 parent ON parent.id = dep_id
@@ -167,6 +178,9 @@ impl SharedTaskOrchestrator {
                         dependencies: row.get("dependencies"),
                         created_at: row.get("created_at"),
                         updated_at: Utc::now(),
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log: row.get("deliberation_log"),
+                        depth: row.get("depth"),
                     }))
                 } else {
                     tx.commit().await.map_err(|e| e.to_string())?;
@@ -180,7 +194,7 @@ impl SharedTaskOrchestrator {
                 let row = sqlx::query(
                     r#"
                     SELECT st.* FROM shared_tasks_v4 st
-                    WHERE st.status = 'PENDING' AND st.organization_id = ?
+                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED') AND st.organization_id = ?
                     AND NOT EXISTS (
                         SELECT 1 FROM json_each(st.dependencies) AS dep_id
                         JOIN shared_tasks_v4 parent ON parent.id = dep_id.value
@@ -247,6 +261,9 @@ impl SharedTaskOrchestrator {
                         dependencies: row.get("dependencies"),
                         created_at: dt_created,
                         updated_at: Utc::now(),
+                        ultraplan_phase: row.get("ultraplan_phase"),
+                        deliberation_log: row.get("deliberation_log"),
+                        depth: row.get("depth"),
                     }))
                 } else {
                     tx.commit().await.map_err(|e| e.to_string())?;
@@ -278,6 +295,9 @@ impl SharedTaskOrchestrator {
                     dependencies: row.get("dependencies"),
                     created_at: row.get("created_at"),
                     updated_at: row.get("updated_at"),
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: row.get("deliberation_log"),
+                    depth: row.get("depth"),
                 })
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -312,6 +332,9 @@ impl SharedTaskOrchestrator {
                     dependencies: row.get("dependencies"),
                     created_at: dt_created,
                     updated_at: dt_updated,
+                    ultraplan_phase: row.get("ultraplan_phase"),
+                    deliberation_log: row.get("deliberation_log"),
+                    depth: row.get("depth"),
                 })
             }
         }
