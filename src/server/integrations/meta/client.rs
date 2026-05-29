@@ -4,6 +4,13 @@ use reqwest::Client;
 #[async_trait]
 pub trait MetaClientWrapper: Send + Sync {
     async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String>;
+    async fn create_paid_ad_campaign(
+        &self,
+        ad_account_id: &str,
+        name: &str,
+        daily_budget_cents: i64,
+        objective: &str,
+    ) -> Result<String, String>;
 }
 
 pub struct RealMetaClient {
@@ -56,6 +63,56 @@ impl MetaClientWrapper for RealMetaClient {
                     Ok(())
                 } else {
                     Err(format!("Meta API error: {}", resp.status()))
+                }
+            }
+            Err(e) => Err(format!("Network error: {}", e)),
+        }
+    }
+
+    async fn create_paid_ad_campaign(
+        &self,
+        ad_account_id: &str,
+        name: &str,
+        daily_budget_cents: i64,
+        objective: &str,
+    ) -> Result<String, String> {
+        if ad_account_id.trim().is_empty() {
+            return Err("Meta ad account id is required".to_string());
+        }
+        if daily_budget_cents <= 0 {
+            return Err("daily budget must be positive".to_string());
+        }
+
+        let url = format!(
+            "https://graph.facebook.com/v19.0/{}/campaigns",
+            ad_account_id.trim()
+        );
+        let payload = serde_json::json!({
+            "name": name,
+            "objective": objective,
+            "status": "PAUSED",
+            "special_ad_categories": [],
+            "daily_budget": daily_budget_cents,
+        });
+
+        let res = self.http_client.post(&url)
+            .bearer_auth(&self.access_token)
+            .json(&payload)
+            .send()
+            .await;
+
+        match res {
+            Ok(resp) => {
+                let status = resp.status();
+                if status.is_success() {
+                    let body: serde_json::Value = resp.json().await.unwrap_or_else(|_| serde_json::json!({}));
+                    Ok(body
+                        .get("id")
+                        .and_then(|id| id.as_str())
+                        .unwrap_or("meta-campaign-created")
+                        .to_string())
+                } else {
+                    Err(format!("Meta Ads API error: {}", status))
                 }
             }
             Err(e) => Err(format!("Network error: {}", e)),

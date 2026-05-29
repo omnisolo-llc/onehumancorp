@@ -54,6 +54,10 @@ export default function Dashboard() {
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
   const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
+  const [adGoal, setAdGoal] = useState<string>("Get me 5 more custom cake orders this week");
+  const [adBudget, setAdBudget] = useState<number>(50);
+  const [isPlanningAds, setIsPlanningAds] = useState<boolean>(false);
+  const [adPlan, setAdPlan] = useState<any>(null);
 
   // Growth Loop: Automated Review Request State
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
@@ -247,6 +251,33 @@ export default function Dashboard() {
 
     setIsSendingCampaign(false);
     setCampaignSuccess(true);
+  };
+
+  const handlePlanPaidAds = async () => {
+    setIsPlanningAds(true);
+    setAdPlan(null);
+    try {
+      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+      const response = await fetch('/api/v1/growth/ads/autopilot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tenant_id: tenant,
+          goal: adGoal,
+          budget_usd: adBudget,
+          desired_outcome: 'new order',
+          timeframe_days: 7,
+          platforms: ['meta', 'google_ads', 'tiktok_ads']
+        })
+      });
+      if (response.ok) {
+        setAdPlan(await response.json());
+      }
+    } catch (e) {
+      console.error('Failed to plan paid ads', e);
+    } finally {
+      setIsPlanningAds(false);
+    }
   };
 
   const claimTrialExtension = () => {
@@ -963,6 +994,73 @@ export default function Dashboard() {
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
                    </div>
                 </div>
+            </div>
+         </section>
+
+         {/* Autonomous Paid Ads */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Ad Buying Autopilot</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                        <span className="text-xs font-medium text-blue-700">Meta + Google + TikTok</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl bg-white">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Plain-language goal</label>
+                        <textarea
+                            value={adGoal}
+                            onChange={(e) => setAdGoal(e.target.value)}
+                            className="w-full min-h-[92px] rounded-xl border border-gray-200 p-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-4">
+                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Budget</label>
+                        <div className="flex items-center rounded-xl border border-gray-200 overflow-hidden">
+                            <span className="px-3 text-gray-500">$</span>
+                            <input
+                                type="number"
+                                min="5"
+                                value={adBudget}
+                                onChange={(e) => setAdBudget(Number(e.target.value))}
+                                className="w-full py-3 pr-3 text-sm font-semibold outline-none"
+                            />
+                        </div>
+                        <button
+                            onClick={handlePlanPaidAds}
+                            disabled={isPlanningAds}
+                            className="w-full px-5 py-3 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 disabled:opacity-60"
+                        >
+                            {isPlanningAds ? 'Planning spend...' : 'Create Ad Plan'}
+                        </button>
+                    </div>
+                </div>
+                {adPlan && (
+                    <div className="mt-5 border-t border-gray-100 pt-5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">{adPlan.optimization_goal}</p>
+                                <p className="text-xs text-gray-500">Draft ready for owner approval before any spend is deployed.</p>
+                            </div>
+                            <span className="text-xs font-semibold px-2 py-1 rounded-md bg-amber-50 text-amber-700 border border-amber-100">{adPlan.status}</span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            {adPlan.channels?.map((channel: any) => (
+                                <div key={channel.platform} className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h3 className="text-sm font-bold text-gray-900">{channel.platform.replace('_', ' ')}</h3>
+                                        <span className="text-sm font-semibold text-blue-700">${channel.budget_usd}</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 mb-2">{channel.objective}</p>
+                                    <p className="text-xs text-gray-500">{channel.audience}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
          </section>
 

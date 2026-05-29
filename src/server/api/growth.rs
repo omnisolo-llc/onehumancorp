@@ -36,6 +36,37 @@ pub struct CampaignResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct PaidAdGoalRequest {
+    pub tenant_id: Option<String>,
+    pub goal: String,
+    pub budget_usd: f64,
+    pub desired_outcome: String,
+    pub timeframe_days: i32,
+    pub platforms: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaidAdChannelPlan {
+    pub platform: String,
+    pub budget_usd: f64,
+    pub objective: String,
+    pub audience: String,
+    pub creative_brief: String,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PaidAdCampaignResponse {
+    pub campaign_id: String,
+    pub status: String,
+    pub total_budget_usd: f64,
+    pub optimization_goal: String,
+    pub channels: Vec<PaidAdChannelPlan>,
+    pub tracking_plan: Vec<String>,
+    pub next_review_at_unix: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TrackVisitorRequest {
     pub page_url: String,
     pub referrer: Option<String>,
@@ -79,6 +110,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/ads/autopilot", post(handle_ads_autopilot))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -215,6 +247,117 @@ async fn handle_send_campaign(
         campaign_id: uuid::Uuid::new_v4().to_string(),
         emails_sent: target_emails,
     })
+}
+
+async fn handle_ads_autopilot(
+    Extension(state): Extension<GrowthState>,
+    Json(req): Json<PaidAdGoalRequest>,
+) -> impl IntoResponse {
+    if req.goal.trim().is_empty() || req.budget_usd <= 0.0 || req.timeframe_days <= 0 {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "goal, positive budget_usd, and positive timeframe_days are required"
+            })),
+        ).into_response();
+    }
+
+    let requested_platforms = req.platforms.clone().unwrap_or_else(|| {
+        vec!["meta".to_string(), "google_ads".to_string(), "tiktok_ads".to_string()]
+    });
+    let platforms: Vec<String> = requested_platforms
+        .into_iter()
+        .filter(|platform| matches!(platform.as_str(), "meta" | "google_ads" | "tiktok_ads"))
+        .collect();
+    let platforms = if platforms.is_empty() {
+        vec!["meta".to_string(), "google_ads".to_string(), "tiktok_ads".to_string()]
+    } else {
+        platforms
+    };
+
+    let total_weight: f64 = platforms.iter().map(|platform| channel_weight(platform)).sum();
+    let channels: Vec<PaidAdChannelPlan> = platforms
+        .iter()
+        .map(|platform| {
+            let budget = ((req.budget_usd * channel_weight(platform) / total_weight) * 100.0).round() / 100.0;
+            PaidAdChannelPlan {
+                platform: platform.clone(),
+                budget_usd: budget,
+                objective: objective_for(platform, &req.desired_outcome),
+                audience: audience_for(platform),
+                creative_brief: creative_brief_for(platform, &req.goal),
+                status: "ready_for_owner_approval".to_string(),
+            }
+        })
+        .collect();
+
+    let response = PaidAdCampaignResponse {
+        campaign_id: format!("ad-{}", uuid::Uuid::new_v4()),
+        status: "draft_ready_for_approval".to_string(),
+        total_budget_usd: req.budget_usd,
+        optimization_goal: format!("Minimize cost per {}", req.desired_outcome.trim()),
+        channels,
+        tracking_plan: vec![
+            "Install storefront conversion event for purchases, bookings, and lead forms".to_string(),
+            "Normalize spend, clicks, and conversions from Meta, Google Ads, and TikTok Ads hourly".to_string(),
+            "Pause channels whose projected CPA exceeds the blended target after the first learning window".to_string(),
+        ],
+        next_review_at_unix: (chrono::Utc::now() + chrono::Duration::hours(6)).timestamp(),
+    };
+
+    if let Ok(payload) = serde_json::to_string(&serde_json::json!({
+        "type": "paid_ad_campaign_planned",
+        "tenant_id": &req.tenant_id,
+        "campaign_id": &response.campaign_id,
+        "goal": &req.goal,
+        "budget_usd": req.budget_usd,
+        "timeframe_days": req.timeframe_days,
+        "channels": &response.channels,
+    })) {
+        state.hub.append_recent_event(crate::hub::HubEvent {
+            r#type: "growth.paid_ads.autopilot_planned".to_string(),
+            payload,
+            occurred_at: chrono::Utc::now(),
+        });
+    }
+
+    (StatusCode::ACCEPTED, Json(response)).into_response()
+}
+
+fn channel_weight(platform: &str) -> f64 {
+    match platform {
+        "google_ads" => 0.40,
+        "meta" => 0.35,
+        "tiktok_ads" => 0.25,
+        _ => 0.0,
+    }
+}
+
+fn objective_for(platform: &str, desired_outcome: &str) -> String {
+    match platform {
+        "google_ads" => format!("Capture high-intent searches for {}", desired_outcome),
+        "meta" => format!("Find local lookalike buyers likely to complete {}", desired_outcome),
+        "tiktok_ads" => format!("Test short-form creative that drives {}", desired_outcome),
+        _ => desired_outcome.to_string(),
+    }
+}
+
+fn audience_for(platform: &str) -> String {
+    match platform {
+        "google_ads" => "Nearby customers searching for matching products or services".to_string(),
+        "meta" => "Local shoppers similar to recent purchasers and engaged social visitors".to_string(),
+        "tiktok_ads" => "Mobile-first local discovery audience with interest and behavior expansion".to_string(),
+        _ => "Best-fit local acquisition audience".to_string(),
+    }
+}
+
+fn creative_brief_for(platform: &str, goal: &str) -> String {
+    match platform {
+        "google_ads" => format!("Use direct offer copy and sitelinks around: {}", goal),
+        "meta" => format!("Generate image and carousel variants that make this offer obvious: {}", goal),
+        "tiktok_ads" => format!("Generate a 9:16 hook, proof point, and CTA around: {}", goal),
+        _ => goal.to_string(),
+    }
 }
 
 async fn handle_track_visitor(

@@ -52,10 +52,12 @@ pub fn get_department_config(dep: Department) -> DepartmentConfig {
                 - Designs and publishes the business website (drag-and-drop, AI-assisted)\n\
                 - Optimizes the website so customers find it on Google (SEO)\n\
                 - Creates and schedules social media posts (Instagram, Facebook, TikTok)\n\
+                - Plans paid ad campaigns across Meta, Google Ads, and TikTok from plain-language goals\n\
+                - Allocates small-business budgets, tracks conversions, and recommends channel pauses or rebalancing\n\
                 - Generates promotional content: flyers, banners, email campaigns\n\
                 - Analyzes what marketing is working and what isn't\n\
                 - Creates QR codes, link-in-bio pages, and shareable storefront links",
-            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility"],
+            allowed_tools: vec!["write", "websearch", "webfetch", "qr_generate", "generative_visibility", "paid_ads_plan"],
             confidence_threshold: 0.70,
         },
         Department::Sales => DepartmentConfig {

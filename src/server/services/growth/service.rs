@@ -549,6 +549,98 @@ impl GrowthService for MyGrowthService {
         
         Ok(Response::new(entry))
     }
+
+    async fn plan_paid_ad_campaign(
+        &self,
+        request: Request<PaidAdGoalRequest>,
+    ) -> Result<Response<PaidAdCampaignResponse>, Status> {
+        let req = request.into_inner();
+        if req.goal.trim().is_empty() || req.budget_usd <= 0.0 || req.timeframe_days <= 0 {
+            return Err(Status::invalid_argument(
+                "goal, positive budget_usd, and positive timeframe_days are required",
+            ));
+        }
+
+        let platforms = if req.platforms.is_empty() {
+            vec!["meta".to_string(), "google_ads".to_string(), "tiktok_ads".to_string()]
+        } else {
+            req.platforms
+                .into_iter()
+                .filter(|platform| matches!(platform.as_str(), "meta" | "google_ads" | "tiktok_ads"))
+                .collect::<Vec<_>>()
+        };
+        let platforms = if platforms.is_empty() {
+            vec!["meta".to_string(), "google_ads".to_string(), "tiktok_ads".to_string()]
+        } else {
+            platforms
+        };
+
+        let total_weight: f64 = platforms.iter().map(|platform| paid_ad_channel_weight(platform)).sum();
+        let channels = platforms
+            .iter()
+            .map(|platform| {
+                let budget = ((req.budget_usd * paid_ad_channel_weight(platform) / total_weight) * 100.0).round() / 100.0;
+                PaidAdChannelPlan {
+                    platform: platform.clone(),
+                    budget_usd: budget,
+                    objective: paid_ad_objective_for(platform, &req.desired_outcome),
+                    audience: paid_ad_audience_for(platform),
+                    creative_brief: paid_ad_creative_brief_for(platform, &req.goal),
+                    status: "ready_for_owner_approval".to_string(),
+                }
+            })
+            .collect();
+
+        Ok(Response::new(PaidAdCampaignResponse {
+            campaign_id: format!("ad-{}", Utc::now().timestamp_millis()),
+            status: "draft_ready_for_approval".to_string(),
+            total_budget_usd: req.budget_usd,
+            optimization_goal: format!("Minimize cost per {}", req.desired_outcome.trim()),
+            channels,
+            tracking_plan: vec![
+                "Install storefront conversion event for purchases, bookings, and lead forms".to_string(),
+                "Normalize spend, clicks, and conversions from Meta, Google Ads, and TikTok Ads hourly".to_string(),
+                "Pause channels whose projected CPA exceeds the blended target after the first learning window".to_string(),
+            ],
+            next_review_at_unix: (Utc::now() + chrono::Duration::hours(6)).timestamp(),
+        }))
+    }
+}
+
+fn paid_ad_channel_weight(platform: &str) -> f64 {
+    match platform {
+        "google_ads" => 0.40,
+        "meta" => 0.35,
+        "tiktok_ads" => 0.25,
+        _ => 0.0,
+    }
+}
+
+fn paid_ad_objective_for(platform: &str, desired_outcome: &str) -> String {
+    match platform {
+        "google_ads" => format!("Capture high-intent searches for {}", desired_outcome),
+        "meta" => format!("Find local lookalike buyers likely to complete {}", desired_outcome),
+        "tiktok_ads" => format!("Test short-form creative that drives {}", desired_outcome),
+        _ => desired_outcome.to_string(),
+    }
+}
+
+fn paid_ad_audience_for(platform: &str) -> String {
+    match platform {
+        "google_ads" => "Nearby customers searching for matching products or services".to_string(),
+        "meta" => "Local shoppers similar to recent purchasers and engaged social visitors".to_string(),
+        "tiktok_ads" => "Mobile-first local discovery audience with interest and behavior expansion".to_string(),
+        _ => "Best-fit local acquisition audience".to_string(),
+    }
+}
+
+fn paid_ad_creative_brief_for(platform: &str, goal: &str) -> String {
+    match platform {
+        "google_ads" => format!("Use direct offer copy and sitelinks around: {}", goal),
+        "meta" => format!("Generate image and carousel variants that make this offer obvious: {}", goal),
+        "tiktok_ads" => format!("Generate a 9:16 hook, proof point, and CTA around: {}", goal),
+        _ => goal.to_string(),
+    }
 }
 
 #[cfg(test)]

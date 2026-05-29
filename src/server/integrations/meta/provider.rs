@@ -48,6 +48,16 @@ impl MetaProvider {
     pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
         self.client.send_message(platform, to, body).await
     }
+
+    pub async fn create_paid_ad_campaign(
+        &self,
+        ad_account_id: &str,
+        name: &str,
+        daily_budget_cents: i64,
+        objective: &str,
+    ) -> Result<String, String> {
+        self.client.create_paid_ad_campaign(ad_account_id, name, daily_budget_cents, objective).await
+    }
 }
 
 #[cfg(test)]
@@ -61,6 +71,16 @@ mod tests {
     impl MetaClientWrapper for MockMetaClient {
         async fn send_message(&self, _platform: &str, _to: &str, _body: &str) -> Result<(), String> {
             Ok(())
+        }
+
+        async fn create_paid_ad_campaign(
+            &self,
+            _ad_account_id: &str,
+            _name: &str,
+            _daily_budget_cents: i64,
+            _objective: &str,
+        ) -> Result<String, String> {
+            Ok("mock-meta-campaign".to_string())
         }
     }
 
@@ -92,5 +112,15 @@ mod tests {
         let provider = MetaProvider::with_client(mock_client);
         let result = provider.send_message("whatsapp", "user", "hello").await;
         assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_meta_provider_create_paid_ad_campaign() {
+        let mock_client = Arc::new(MockMetaClient);
+        let provider = MetaProvider::with_client(mock_client);
+        let result = provider
+            .create_paid_ad_campaign("act_123", "Cake orders", 1200, "OUTCOME_SALES")
+            .await;
+        assert_eq!(result.unwrap(), "mock-meta-campaign");
     }
 }

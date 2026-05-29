@@ -797,6 +797,34 @@ message WaitlistResponse {
   repeated WaitlistEntry entries = 1;
 }
 
+message PaidAdGoalRequest {
+  string tenant_id = 1;
+  string goal = 2;
+  double budget_usd = 3;
+  string desired_outcome = 4;
+  int32 timeframe_days = 5;
+  repeated string platforms = 6;
+}
+
+message PaidAdChannelPlan {
+  string platform = 1;
+  double budget_usd = 2;
+  string objective = 3;
+  string audience = 4;
+  string creative_brief = 5;
+  string status = 6;
+}
+
+message PaidAdCampaignResponse {
+  string campaign_id = 1;
+  string status = 2;
+  double total_budget_usd = 3;
+  string optimization_goal = 4;
+  repeated PaidAdChannelPlan channels = 5;
+  repeated string tracking_plan = 6;
+  int64 next_review_at_unix = 7;
+}
+
 service GrowthService {
   rpc GetLandingPageExperiments(EmptyRequest) returns (LandingPageExperimentsResponse);
   rpc CreateLandingPageExperiment(CreateExperimentRequest) returns (LandingPageExperiment);
@@ -825,6 +853,7 @@ service GrowthService {
   
   rpc GetWaitlist(EmptyRequest) returns (WaitlistResponse);
   rpc CreateWaitlistEntry(CreateWaitlistRequest) returns (WaitlistEntry);
+  rpc PlanPaidAdCampaign(PaidAdGoalRequest) returns (PaidAdCampaignResponse);
 }
 
 message ApprovalRequest {

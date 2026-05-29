@@ -19,15 +19,28 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec![
+            "tenant.insight.trending".to_string(),
+            "growth.paid_ads.autopilot_planned".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
-        let risk = ActionRisk::DraftForReview;
+        let (description, risk) = if event.event_type == "growth.paid_ads.autopilot_planned" {
+            (
+                "Review autonomous cross-channel paid ad plan before budget is deployed".to_string(),
+                ActionRisk::DraftForReview,
+            )
+        } else {
+            (
+                "Draft social media campaign for trending item".to_string(),
+                ActionRisk::DraftForReview,
+            )
+        };
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,
-            "Draft social media campaign for trending item".to_string(),
+            description,
             event.tenant_id.clone(),
             risk,
             event.payload.clone(),

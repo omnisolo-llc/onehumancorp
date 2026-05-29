@@ -32,6 +32,24 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let meta_provider = crate::integrations::meta::provider::MetaProvider::new("dummy_token".to_string());
     catalog.push(meta_provider.to_integration_provider());
 
+    catalog.push(crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "google_ads".to_string(),
+            name: "Google Ads".to_string(),
+            category: "paid_ads".to_string(),
+            base_url: "https://googleads.googleapis.com".to_string(),
+        }
+    });
+
+    catalog.push(crate::integrations::catalog::IntegrationProvider {
+        metadata: crate::integrations::catalog::ProviderMetadata {
+            id: "tiktok_ads".to_string(),
+            name: "TikTok Ads".to_string(),
+            category: "paid_ads".to_string(),
+            base_url: "https://business-api.tiktok.com".to_string(),
+        }
+    });
+
     let google_calendar_provider = crate::integrations::google_calendar::provider::GoogleCalendarProvider::new("dummy_token".to_string());
     catalog.push(google_calendar_provider.to_integration_provider());
 

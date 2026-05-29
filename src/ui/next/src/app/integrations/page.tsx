@@ -8,6 +8,9 @@ export default function Integrations() {
   const router = useRouter();
 
   const [integrations, setIntegrations] = useState([
+    { id: "meta", name: "Meta Ads", category: "marketing", status: "disconnected", icon: "📣", description: "Deploy approved Facebook and Instagram ads from AI-generated campaign plans." },
+    { id: "google_ads", name: "Google Ads", category: "marketing", status: "disconnected", icon: "🔎", description: "Capture high-intent search demand and report spend, clicks, and conversions." },
+    { id: "tiktok_ads", name: "TikTok Ads", category: "marketing", status: "disconnected", icon: "🎬", description: "Test short-form acquisition creatives and optimize budget by conversion cost." },
     { id: "manychat", name: "ManyChat", category: "marketing", status: "disconnected", icon: "💬", description: "Unified social media inbox for Instagram, Facebook, and WhatsApp." },
     { id: "cal_com", name: "Cal.com", category: "operations", status: "disconnected", icon: "📅", description: "Zero-Config Booking & Calendar Sync." },
     { id: "mailerlite", name: "MailerLite", category: "marketing", status: "disconnected", icon: "📨", description: "Embedded, No-Jargon Email Campaigns." },
@@ -44,6 +47,13 @@ export default function Integrations() {
     }
     if (id === 'twilio') {
       setShowTwilioModal(true);
+    }
+    if (['meta', 'google_ads', 'tiktok_ads'].includes(id)) {
+      alert("Connecting paid ads via OAuth...");
+      setIntegrations(prev => prev.map(integration =>
+        integration.id === id ? { ...integration, status: "connected" } : integration
+      ));
+      router.push('/dashboard');
     }
   };
 
