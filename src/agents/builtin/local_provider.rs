@@ -44,7 +44,8 @@ impl LocalLLMProvider {
         let optimized_prompt = if prompt.starts_with('{') {
             minify_json_prompt(prompt)
         } else {
-            truncate_by_word_count(prompt, 1500) // Slightly more conservative for local models
+            let partially_optimized = crate::llm::minify_json_string(prompt);
+            truncate_by_word_count(&partially_optimized, 1500) // Slightly more conservative for local models
         };
 
         let start = std::time::Instant::now();
