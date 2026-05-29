@@ -25,7 +25,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
     await page.goto('/team');
     await expect(page.getByText('The Ambassador')).toBeVisible();
     await page.getByText('The Ambassador').click();
-    await expect(page.getByText('All caught up!')).toBeHidden();
+    await expect(page.getByText('All Caught Up!')).toBeHidden();
   });
 
   test('Test 3: Operations default state', async ({ page }) => {
@@ -38,7 +38,7 @@ test.describe('Department Orchestration - AI Agent Approvals', () => {
     await page.goto('/team');
     await expect(page.getByText('The Manager')).toBeVisible();
     await page.getByText('The Manager').click();
-    await expect(page.getByText('All caught up!')).toBeVisible();
+    await expect(page.getByText('All Caught Up!')).toBeVisible();
   });
 
   test('Test 4: Trigger CUJ Webhook & Flow', async ({ page, request }) => {
