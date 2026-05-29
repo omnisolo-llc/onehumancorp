@@ -1,0 +1,22 @@
+--- src/ui/next/src/app/onboarding/page.test.tsx
++++ src/ui/next/src/app/onboarding/page.test.tsx
+@@ -21,7 +21,18 @@
+       startResult: null,
+     });
+
+-    global.fetch = vi.fn();
++    global.fetch = vi.fn().mockImplementation((url: string, options: any) => {
++      if (options?.method === 'POST') {
++        if (url === '/api/onboarding/intake') {
++          return Promise.resolve({ ok: true, json: () => Promise.resolve({ business_type: 'retail', categories: ['food'], initial_products: [] }) });
++        }
++        if (url === '/api/onboarding/start') {
++          return Promise.resolve({ ok: true, json: () => Promise.resolve({ storefront_url: 'my-business.ohc.store' }) });
++        }
++      }
++
++      return Promise.resolve({ ok: true, json: () => Promise.resolve({ wizardState: {} }) });
++    });
+   });
+
+   afterEach(() => {
