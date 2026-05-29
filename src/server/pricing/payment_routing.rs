@@ -1,9 +1,17 @@
+/// 💰 Miser Cost Analysis:
+/// Stripe charges a flat fee of $0.25 plus 0.25% for instant payouts,
+/// or a flat fee for standard payouts. By batching small payouts under $100,
+/// we save the fixed fee for every individual payout that would otherwise have been initiated.
 pub fn should_batch_payout(amount_cents: i64) -> bool {
     // Transaction Fee Optimization
     // To minimize Stripe transfer fees, small payouts under $100 are batched.
     amount_cents < 10000
 }
 
+/// 💰 Miser Cost Analysis:
+/// Stripe transaction fees are significantly lower for ACH compared to credit cards.
+/// Credit card fees are typically 2.9% + $0.30, whereas ACH fees are 0.8% capped at $5.00.
+/// By routing transactions over $50 via ACH, we substantially reduce payment processing costs.
 pub fn route_payment(amount_cents: i64) -> &'static str {
     // Transaction Fee Optimization
     // To minimize Stripe transaction fees, high-value transactions are routed via ACH instead of Credit Card.
