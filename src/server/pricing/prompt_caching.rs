@@ -9,7 +9,6 @@ pub struct CachedResponse {
     pub token_count: usize,
 }
 
-#[derive(Clone)]
 pub struct PromptCache {
     cache: Arc<DashMap<String, CachedResponse>>,
     ttl: Duration,

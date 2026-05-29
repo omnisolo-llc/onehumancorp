@@ -22,7 +22,6 @@ rust_library(
         "mod.rs",
         "marketplace.rs",
         "marketplace_tool.rs",
-        "claude_code_plugins.rs",
         "pydantic.rs",
         "claude_plugins.rs",
         "repo_map.rs",
