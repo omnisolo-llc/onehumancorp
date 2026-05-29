@@ -27,6 +27,7 @@ genrule(
         "next_out/404.html",
         "next_out/builder.html",
         "next_out/dashboard.html",
+        "next_out/swarm-observability.html",
     ],
     outs = [
         "tauri_out/acl-manifests.json",
