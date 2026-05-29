@@ -480,6 +480,59 @@ export default function Dashboard() {
            </section>
          )}
 
+         {/* Growth Loop: Interactive Business Analytics Widget */}
+         <section className="mb-6">
+           <div className="p-6 shadow-sm rounded-2xl border transition-all" style={{ background: '#ffffff', borderColor: 'rgba(0,0,0,0.05)' }}>
+             <div className="flex items-center justify-between mb-4">
+               <div className="flex items-center gap-2">
+                 <div className="text-2xl">📊</div>
+                 <h2 className="text-lg font-bold font-outfit" style={{ color: '#1D1D1F' }}>Store Analytics</h2>
+               </div>
+               <button
+                 onClick={() => setShowSoftPaywall(true)}
+                 className="px-4 py-1.5 font-semibold text-sm bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg hover:bg-indigo-100 transition-colors flex items-center gap-2"
+               >
+                 ✨ AI Insights
+               </button>
+             </div>
+
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+               <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Sales</p>
+                 <p className="text-xl font-bold text-gray-900">$4,250</p>
+                 <p className="text-xs text-green-600 mt-1 font-medium">↑ 12% vs last week</p>
+               </div>
+               <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Conversion</p>
+                 <p className="text-xl font-bold text-gray-900">3.8%</p>
+                 <p className="text-xs text-green-600 mt-1 font-medium">↑ 0.5% vs last week</p>
+               </div>
+               <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                 <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Top Product</p>
+                 <p className="text-xl font-bold text-gray-900 truncate">Premium Coffee...</p>
+                 <p className="text-xs text-gray-500 mt-1 font-medium">42 units sold</p>
+               </div>
+               <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100 relative overflow-hidden group cursor-pointer" onClick={() => setShowSoftPaywall(true)}>
+                 <div className="absolute inset-0 bg-gradient-to-r from-transparent to-white/50 group-hover:translate-x-full transition-transform duration-700"></div>
+                 <p className="text-xs text-indigo-600 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1"><span>✨</span> Smart Prediction</p>
+                 <p className="text-xl font-bold text-gray-900 blur-[4px] select-none">$8,000</p>
+                 <p className="text-xs text-indigo-600 mt-1 font-medium flex items-center gap-1 hover:underline">Unlock Pro to see forecast →</p>
+               </div>
+             </div>
+
+             <div className="h-32 w-full flex items-end gap-2 px-2 pt-8 relative border-t border-gray-100 mt-4">
+                 <div className="absolute top-2 left-2 text-xs font-semibold text-gray-400">7-Day Sales Trend</div>
+                 {[30, 45, 25, 60, 80, 50, 95].map((height, i) => (
+                   <div key={i} className="flex-1 bg-indigo-100 rounded-t-sm relative group hover:bg-indigo-200 transition-colors" style={{ height: `${height}%` }}>
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
+                          ${height * 10}
+                      </div>
+                   </div>
+                 ))}
+             </div>
+           </div>
+         </section>
+
          {/* Action Required (Approvals) */}
          {(approvals.length > 0) && (
             <section className="mb-6">
@@ -1943,6 +1996,50 @@ export default function Dashboard() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+      {/* Soft Paywall Modal */}
+      {showSoftPaywall && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-8 shadow-2xl relative overflow-hidden font-inter border border-indigo-100 text-center">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center text-3xl shadow-inner text-indigo-600 mx-auto mb-4">
+              ✨
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Insights</h2>
+            <p className="text-gray-600 mb-6 text-sm leading-relaxed">
+              Upgrade to <strong className="text-gray-900">OHC Pro</strong> to see your predictive sales forecasts, personalized growth recommendations, and AI-driven customer sentiment analysis.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => { setShowSoftPaywall(false); window.location.href = '/pricing'; }}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all bg-gray-900 text-white hover:bg-black shadow-md flex items-center justify-center gap-2"
+              >
+                Upgrade to Pro
+              </button>
+              <button
+                onClick={() => setShowSoftPaywall(false)}
+                className="w-full py-3 rounded-xl text-sm font-semibold transition-all text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+              >
+                Maybe Later
+              </button>
             </div>
           </div>
         </div>
