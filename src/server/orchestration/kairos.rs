@@ -34,7 +34,6 @@ use tokio::sync::Mutex;
 pub struct SwarmTask {
     pub id: String,
     pub mission_id: String,
-    pub parent_plan_id: Option<String>,
     pub title: String,
     pub status: String,
     pub dependencies: String,
@@ -197,7 +196,7 @@ impl KairosOrchestrator {
 
                 let row = sqlx::query(
                     r#"
-                    SELECT t.id, t.mission_id, t.title, t.status, t.dependencies::text, t.assigned_agent_id, t.parent_plan_id
+                    SELECT t.id, t.mission_id, t.title, t.status, t.dependencies::text, t.assigned_agent_id
                     FROM swarm_tasks t
                     WHERE t.status = 'PENDING'
                     AND NOT EXISTS (
@@ -247,7 +246,6 @@ impl KairosOrchestrator {
                     Ok(Some(SwarmTask {
                         id: id_str,
                         mission_id: r.get(1),
-                        parent_plan_id: r.try_get("parent_plan_id").unwrap_or(None),
                         title: r.get(2),
                         status: "IN_PROGRESS".to_string(),
                         dependencies: r.get(4),
@@ -277,7 +275,7 @@ impl KairosOrchestrator {
                         )
                         LIMIT 1
                     )
-                    RETURNING id, mission_id, title, status, dependencies, assigned_agent_id, parent_plan_id
+                    RETURNING id, mission_id, title, status, dependencies, assigned_agent_id
                     "#
                 )
                 .bind(agent_id)
@@ -290,7 +288,6 @@ impl KairosOrchestrator {
                     let task = SwarmTask {
                         id: r.get("id"),
                         mission_id: r.get("mission_id"),
-                        parent_plan_id: r.try_get("parent_plan_id").unwrap_or(None),
                         title: r.get("title"),
                         status: r.get("status"),
                         dependencies: r.get("dependencies"),

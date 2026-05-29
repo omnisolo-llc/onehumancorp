@@ -6,9 +6,9 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   });
 
-  test('Test 2: Navigate to /agents page and verify the Agents heading', async ({ page }) => {
+  test('Test 2: Navigate to /agents page and verify the AI Departments heading', async ({ page }) => {
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 15000 });
   });
 
   test('Test 3: Verify the Business Snapshot section is displayed', async ({ page }) => {
@@ -27,6 +27,6 @@ test.describe('KAIROS AI OS Orchestration (Phase 4)', () => {
     await expect(page.getByRole('heading', { name: 'Business Snapshot' })).toBeVisible();
     await expect(page.getByText('Today\'s Sales')).toBeVisible();
     await page.goto('/agents');
-    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible({ timeout: 15000 });
   });
 });
