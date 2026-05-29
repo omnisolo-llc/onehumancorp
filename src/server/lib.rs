@@ -1766,7 +1766,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
+    let resolver = std::sync::Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver);
+    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo, resolver);
     consolidation_worker.start();
 
     // Start Competitor Audit Worker
@@ -1981,6 +1982,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
