@@ -132,17 +132,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         // Structured scratchpad
         let mut scratchpad = ProgressFile::default();
-        if let Some(obj) = checkpoint.metadata.get("current_objective").and_then(|v| v.as_str()) {
-            scratchpad.current_objective = obj.to_string();
-        } else {
-            scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-        }
-        if let Some(status) = checkpoint.metadata.get("status").and_then(|v| v.as_str()) {
-            scratchpad.status = status.to_string();
-        }
-        if let Some(notes_arr) = checkpoint.metadata.get("notes").and_then(|v| v.as_array()) {
-            scratchpad.notes = notes_arr.iter().filter_map(|n| n.as_str().map(String::from)).collect();
-        }
+        scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
         let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
         tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
 

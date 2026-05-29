@@ -9,6 +9,7 @@ rust_library(
         "@crates//:config",
         "@crates//:serde",
         "@crates//:tracing",
+        "@crates//:temp-env",
     ],
 )
 

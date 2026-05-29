@@ -9,8 +9,7 @@ pub struct ListmonkProvider {
 
 impl ListmonkProvider {
     pub fn new(api_key: String) -> Self {
-        let base_url = "http://localhost:9000/api".to_string();
-        let client = ListmonkClient::new(api_key, base_url.clone());
+        let client = ListmonkClient::new(api_key);
 
         Self {
             _client: Arc::new(client),
@@ -18,7 +17,7 @@ impl ListmonkProvider {
                 id: "listmonk".to_string(),
                 name: "Listmonk".to_string(),
                 category: "email_marketing".to_string(),
-                base_url,
+                base_url: "http://localhost:9000/api".to_string(),
             },
         }
     }

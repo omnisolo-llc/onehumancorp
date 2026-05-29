@@ -167,6 +167,7 @@ rust_library(
         "@crates//:tokio-tungstenite",
         "@crates//:tonic",
         "@crates//:tracing",
+        "@crates//:temp-env",
         "@crates//:tracing-subscriber",
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
