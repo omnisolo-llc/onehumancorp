@@ -460,7 +460,7 @@ async fn http_login_handler(
         }
     };
 
-    let claims = ::server_common::Claims {
+    let _claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -748,7 +748,7 @@ async fn draft_reply_handler(
     );
     let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
+    let _prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
