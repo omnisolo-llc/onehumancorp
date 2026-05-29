@@ -5,6 +5,7 @@ exports_files(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "epic_task_repo.rs",
     ],
     visibility = ["//visibility:public"],
 )
@@ -16,6 +17,7 @@ rust_library(
         "mod.rs",
         "models.rs",
         "task_repo.rs",
+        "epic_task_repo.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -61,7 +63,6 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
-        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",

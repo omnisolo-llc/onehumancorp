@@ -53,12 +53,7 @@ export default function Dashboard() {
   const [isGeneratingReferral, setIsGeneratingReferral] = useState<boolean>(false);
 
   const [isGeneratingPromo, setIsGeneratingPromo] = useState<boolean>(false);
-  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before theyre gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
-
-  // Growth Loop: Wall of Love Generator State
-  const [showWallOfLoveModal, setShowWallOfLoveModal] = useState<boolean>(false);
-  const [isGeneratingWallOfLove, setIsGeneratingWallOfLove] = useState<boolean>(false);
-  const [wallOfLoveCopied, setWallOfLoveCopied] = useState<boolean>(false);
+  const [promoMessage, setPromoMessage] = useState<string>("Hey there! 🎉 We're running an exclusive flash sale this weekend. Grab your favorite items before they're gone! Shop now and get 10% off: https://ohc.store/shop/acme-corp");
 
   // Growth Loop: Automated Review Request State
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
@@ -251,7 +246,9 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    const referralLink = `ohc://join?ref=${tenant}`;
+    const shareCardUrl = `https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('One Human Corp')}&description=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today.')}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + shareCardUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -621,36 +618,6 @@ export default function Dashboard() {
                            Great job! You sold 20 more lunches than last week. Chicken was your top seller. Consider adjusting your pricing by 5% to maximize profits.
                        </p>
                    </div>
-                </div>
-            </div>
-         </section>
-
-         {/* Growth Loop: Wall of Love Generator */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Wall of Love Widget</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
-                        <span className="text-xs font-medium text-purple-600">Trust Building Loop</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center" style={{ background: 'rgba(255, 255, 255, 0.03)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.08)', borderColor: 'rgba(0,0,0,0.05)', backgroundColor: '#ffffff' }}>
-                <div className="flex-1">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900 mb-2">Build trust and increase sales</h3>
-                    <p className="text-sm text-gray-600 mb-4 leading-relaxed">Turn your best 5-star reviews into a beautiful, embeddable Wall of Love widget for your storefront to boost conversions.</p>
-                    <button
-                        onClick={() => setShowWallOfLoveModal(true)}
-                        className="px-5 py-2.5 bg-purple-600 text-white rounded-xl text-sm font-semibold hover:bg-purple-700 transition-colors shadow-sm whitespace-nowrap"
-                    >
-                        Generate Widget
-                    </button>
-                </div>
-                <div className="w-full md:w-1/3 bg-purple-50 rounded-xl p-4 flex flex-col items-center justify-center border border-purple-100 min-h-[160px] relative overflow-hidden">
-                    <div className="absolute top-2 right-2 text-3xl opacity-20">⭐⭐⭐⭐⭐</div>
-                    <div className="absolute bottom-2 left-2 text-3xl opacity-20">💖</div>
-                    <div className="text-4xl mb-3 z-10">🌟</div>
-                    <span className="text-sm font-medium text-purple-800 text-center z-10">Preview: Wall of Love</span>
                 </div>
             </div>
          </section>
@@ -1812,16 +1779,11 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                try {
-                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-                                    await fetch('/api/v1/dashboard/metrics', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ data: { tenant_id: tenant } })
-                                    });
-                                } catch (e) { console.error(e); }
+                                // Simulate sending email
                                 setCustomerReferralSent(true);
-                                setShowCustomerReferralModal(false);
+                                setTimeout(() => {
+                                    setShowCustomerReferralModal(false);
+                                }, 3000);
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
@@ -1830,92 +1792,6 @@ export default function Dashboard() {
                     )}
                 </>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Wall of Love Modal */}
-      {showWallOfLoveModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-6 md:p-8 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
-            {/* Background embellishment */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-gradient-to-bl from-purple-100/50 to-transparent rounded-bl-full -z-10"></div>
-
-            <div className="flex justify-between items-start mb-6">
-              <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-purple-600 border border-purple-200">
-                    🌟
-                  </div>
-                  <div>
-                      <h2 className="text-2xl font-bold font-outfit text-gray-900">Your Wall of Love</h2>
-                      <p className="text-sm text-gray-500 font-medium">Embed this on your website</p>
-                  </div>
-              </div>
-              <button
-                onClick={() => setShowWallOfLoveModal(false)}
-                className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 shadow-inner">
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Preview</h3>
-                  <div className="bg-white border border-gray-200 p-4 rounded-lg shadow-sm">
-                      <div className="flex gap-4">
-                          <div className="flex-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
-                              <div className="flex text-yellow-400 text-xs mb-1">★★★★★</div>
-                              <p className="text-xs text-gray-700 italic">"Absolutely amazing product! Changed my life."</p>
-                              <p className="text-[10px] text-gray-500 mt-2 font-medium">— Sarah M.</p>
-                          </div>
-                          <div className="flex-1 bg-yellow-50/50 p-3 rounded-lg border border-yellow-100/50">
-                              <div className="flex text-yellow-400 text-xs mb-1">★★★★★</div>
-                              <p className="text-xs text-gray-700 italic">"Best customer service and top quality."</p>
-                              <p className="text-[10px] text-gray-500 mt-2 font-medium">— Alex J.</p>
-                          </div>
-                      </div>
-                      <div className="text-center mt-3">
-                          <a href="#" className="text-[10px] text-gray-400 hover:text-gray-600 font-semibold uppercase tracking-wider transition-colors">⚡ Powered by OHC</a>
-                      </div>
-                  </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Embed Code (HTML)</label>
-                <div className="relative">
-                  <textarea
-                    readOnly
-                    className="w-full bg-gray-900 text-green-400 font-mono text-xs p-4 rounded-xl h-32 focus:outline-none border border-gray-800 shadow-inner resize-none"
-                    value={`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`}
-                  />
-                  <div className="absolute top-3 right-3 flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsGeneratingWallOfLove(true);
-                        setTimeout(() => {
-                           setIsGeneratingWallOfLove(false);
-                        }, 800);
-                      }}
-                      className="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 transition-colors shadow-sm"
-                    >
-                      {isGeneratingWallOfLove ? "Refreshing..." : "Refresh"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(`<!-- Wall of Love Widget -->\n<div id="ohc-wall-of-love" data-store="${businessName}"></div>\n<script src="https://ohc.app/widgets/wall-of-love.js" async></script>\n<!-- ⚡ Powered by OHC -->`);
-                        setWallOfLoveCopied(true);
-                        setTimeout(() => setWallOfLoveCopied(false), 2000);
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm ${wallOfLoveCopied ? 'bg-green-500 text-white' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
-                    >
-                      {wallOfLoveCopied ? 'Copied!' : 'Copy Code'}
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 mt-2 font-medium">Paste this code anywhere in your website's HTML to display your top reviews.</p>
-              </div>
             </div>
           </div>
         </div>

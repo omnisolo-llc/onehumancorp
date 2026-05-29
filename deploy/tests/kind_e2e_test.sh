@@ -349,9 +349,6 @@ helm upgrade --install redis bitnami/redis \
   --namespace "${NAMESPACE}" \
   --set architecture=standalone \
   --set auth.enabled=false \
-  --set image.registry=public.ecr.aws \
-  --set image.repository=bitnami/redis \
-  --set global.security.allowInsecureImages=true \
   --wait --timeout 120s
 
 # ── Cloud/web mode ─────────────────────────────────────────────────────────────

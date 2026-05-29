@@ -22,26 +22,7 @@ impl TaskDecompositionService {
         }
     }
 
-
-    pub async fn check_circular_dependency(&self, task_id: &str, dependencies: &[String]) -> Result<(), String> {
-        let mut to_visit = dependencies.to_vec();
-        let mut visited = std::collections::HashSet::new();
-
-        while let Some(dep_id) = to_visit.pop() {
-            if dep_id == task_id {
-                return Err("Circular dependency detected".to_string());
-            }
-            if visited.insert(dep_id.clone()) {
-                if let Ok(dep_task) = self.get_task(&dep_id).await {
-                    to_visit.extend(dep_task.dependencies);
-                }
-            }
-        }
-        Ok(())
-    }
-
     pub async fn create_task(&self, task: SharedTask) -> Result<SharedTask, String> {
-        self.check_circular_dependency(&task.id, &task.dependencies).await?;
         let tracer = global::tracer("ohc.orchestration");
         let _span = tracer.start("create_task");
         match &self.db.store {
@@ -148,7 +129,7 @@ impl TaskDecompositionService {
                 let row_opt = sqlx::query(
                     r#"
                     SELECT st.id FROM shared_tasks_decomposition st
-                    WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                    WHERE st.status = 'PENDING'
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_array_elements_text(st.dependencies) AS dep_id
@@ -243,7 +224,7 @@ impl TaskDecompositionService {
                     SET status = 'EXECUTING', assigned_agent_id = ?, updated_at = ?
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
-                        WHERE (st.status = 'PENDING' OR st.ultraplan_phase = 'APPROVED')
+                        WHERE st.status = 'PENDING'
                         AND NOT EXISTS (
                             SELECT 1
                             FROM json_each(st.dependencies) AS dep_id

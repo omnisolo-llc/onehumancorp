@@ -128,7 +128,6 @@ impl TaskManager {
 
     pub fn create_task_with_plan(&self, org_id: String, mission_id: String, parent_plan_id: String, dependencies: Vec<String>, title: String, description: String, priority: String) -> Result<SharedTask, String> {
         let id = uuid::Uuid::new_v4().to_string();
-        self.check_circular_dependency(&id, &dependencies)?;
         let now = Utc::now();
         
         let approval_status = if priority == "P1" || priority == "HIGH" {
@@ -173,26 +172,6 @@ impl TaskManager {
         Ok(task)
     }
 
-
-    pub fn check_circular_dependency(&self, task_id: &str, dependencies: &[String]) -> Result<(), String> {
-        let tasks = self.tasks.read().unwrap();
-        let mut to_visit = dependencies.to_vec();
-        let mut visited = std::collections::HashSet::new();
-
-        while let Some(dep_id) = to_visit.pop() {
-            if dep_id == task_id {
-                return Err("Circular dependency detected".to_string());
-            }
-            if visited.insert(dep_id.clone()) {
-                if let Some(dep_task) = tasks.get(&dep_id) {
-                    to_visit.extend(dep_task.dependencies.clone());
-                }
-            }
-        }
-        Ok(())
-    }
-
-
     pub fn insert_task(&self, task: SharedTask) {
         let mut tasks = self.tasks.write().unwrap();
         tasks.insert(task.id.clone(), task);
@@ -218,8 +197,7 @@ impl TaskManager {
     pub fn claim_task(&self, task_id: &str, agent_id: String) -> Result<Option<SharedTask>, String> {
         let mut tasks = self.tasks.write().unwrap();
         if let Some(task) = tasks.get_mut(task_id) {
-            let is_valid_state = task.status == "PENDING" || task.ultraplan_phase.as_deref() == Some("APPROVED");
-            if is_valid_state && task.approval_status.as_deref() != Some("PENDING") {
+            if task.status == "PENDING" && task.approval_status.as_deref() != Some("PENDING") {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
