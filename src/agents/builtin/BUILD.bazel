@@ -87,6 +87,7 @@ rust_library(
         "tools_gating.rs",
         "tool_executor_engine.rs",
         "verification_loops.rs",
+        "agentic_seek.rs",
         "visual_workflow.rs",
         "visual_orchestration.rs",
     ],
