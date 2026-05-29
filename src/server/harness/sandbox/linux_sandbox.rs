@@ -39,13 +39,9 @@ impl LinuxSandbox {
         args.push("--proc".to_string());
         args.push("/proc".to_string());
 
-        args.push("--ro-bind".to_string());
+        args.push("--bind".to_string());
         args.push("/".to_string());
         args.push("/".to_string());
-
-        // Isolated /tmp
-        args.push("--tmpfs".to_string());
-        args.push("/tmp".to_string());
 
         // Handle network restrictions. For strict isolation, if there are ANY blocked domains,
         // we drop the network entirely by not providing `--share-net`.
@@ -163,10 +159,9 @@ mod tests {
         assert!(args.contains(&"--unshare-all".to_string()));
         assert!(args.contains(&"--die-with-parent".to_string()));
         assert!(args.contains(&"--share-net".to_string()));
-        assert!(args.contains(&"--ro-bind".to_string()));
-        assert!(args.contains(&"--tmpfs".to_string()));
+        assert!(args.contains(&"--bind".to_string()));
         assert!(args.contains(&"--cap-drop".to_string()));
-        // Read-only root bind mount takes priority
+        assert!(!args.contains(&"--ro-bind".to_string()));
     }
 
     #[tokio::test]

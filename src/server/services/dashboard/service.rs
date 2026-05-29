@@ -94,7 +94,7 @@ impl DashboardService for MyDashboardService {
                 cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
                 Ok::<_, String>(meetings)
             }),
-            tokio::task::spawn_blocking(move || {
+            tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
@@ -787,4 +787,3 @@ mod tests {
         // without panicking.
     }
 }
-// Parallel Execution Optimization verified
