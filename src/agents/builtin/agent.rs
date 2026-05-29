@@ -505,7 +505,7 @@ impl Agent {
                     // Anthropic Mechanic: 3-Stage Tool Gating
                     let gating_res = crate::tools_gating::ToolGater::check_gating(&tc_clone, true, &cfg_clone);
                     let res = match gating_res {
-                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries).await,
+                        Ok(_) => self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, cfg.max_retries, 1).await,
                         Err(e) => Err(e),
                     };
                     (tc_clone, res)
@@ -566,7 +566,7 @@ impl Agent {
                 // Anthropic Mechanic: 3-Stage Tool Gating
                 let gating_res = crate::tools_gating::ToolGater::check_gating(tc, false, cfg);
                 let res = match gating_res {
-                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries).await,
+                    Ok(_) => self.execute_tool(tc, session_tools, &messages, cfg.max_retries, 1).await,
                     Err(e) => Err(e),
                 };
 
@@ -1311,7 +1311,7 @@ impl Agent {
             read_only_futures.push(async move {
                 let mut retry_count = 0;
                 loop {
-                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries, 1).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1388,7 +1388,7 @@ impl Agent {
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
             let result = loop {
-                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
+                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries, 1).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -2241,7 +2241,7 @@ impl Agent {
                         return (tc_clone, Err(e));
                     }
                     loop {
-                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
+                        match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries, 1).await {
                             Ok(r) => {
                                 return (tc_clone, Ok(r));
                             }
@@ -2449,7 +2449,8 @@ impl Agent {
                         agent_id = %final_cfg.agent_id,
                         tool_name = %tc.name,
                     );
-                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries).instrument(tool_span).await {
+                    let current_attempt = *tool_error_counts.get(&tc.name).unwrap_or(&0) + 1;
+                    match self.execute_tool(&tc, &session_tools, &messages, final_cfg.max_retries, current_attempt).instrument(tool_span).await {
                         Ok(r) => {
                             tool_error_counts.remove(&tc.name);
                             self.progress.record_tool_use();
@@ -2878,6 +2879,7 @@ impl Agent {
         session_tools: &[Tool],
         current_messages: &[Message],
         max_retries: usize,
+        current_attempt: usize,
     ) -> Result<String, ToolError> {
         let tool = session_tools
             .iter()
@@ -2904,7 +2906,7 @@ impl Agent {
 
         let mut modified_tc = tc.clone();
         modified_tc.arguments = args;
-        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries).await
+        crate::tool_executor_engine::ToolExecutionEngine::execute_tool_with_langgraph_mechanics(tool, &modified_tc, max_retries, current_attempt).await
     }
 }
 
@@ -3278,7 +3280,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": "hello", "int_param": 42 }),
         };
-        let res = agent.execute_tool(&valid_call, &tools, &[], 2).await;
+        let res = agent.execute_tool(&valid_call, &tools, &[], 2, 1).await;
         assert!(res.is_ok());
 
         // Test missing required
@@ -3287,7 +3289,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "int_param": 42 }),
         };
-        let res = agent.execute_tool(&missing_call, &tools, &[], 2).await;
+        let res = agent.execute_tool(&missing_call, &tools, &[], 2, 1).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -3302,7 +3304,7 @@ mod tests {
             name: "schema_tool".to_string(),
             arguments: serde_json::json!({ "str_param": 123 }),
         };
-        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2).await;
+        let res = agent.execute_tool(&wrong_type_call, &tools, &[], 2, 1).await;
         assert!(res.is_err());
         match res.unwrap_err() {
             ToolError::LlmRecoverable(msg) => {
@@ -4271,7 +4273,7 @@ mod tests {
         let _ = agent2.run(&cfg, "Run llm recoverable", &mut on_event2).await;
         let llm_recoverable_handled = events2.iter().any(|e| {
             if let AgentEvent::ToolCall { name, result, .. } = e {
-                name == "llm_recoverable_tool" && result == "missing parameter X"
+                name == "llm_recoverable_tool" && result.contains("missing parameter X")
             } else {
                 false
             }
@@ -4285,7 +4287,7 @@ mod tests {
         // Wait, mutating tools do `messages.push(Message { role: Role::Tool, tool_results, ... })`?
         // Let's actually check the `messages` array in the last request.
         let tool_msg = reqs.iter().flat_map(|r| &r.messages).find(|m| m.role == Role::Tool && !m.tool_results.is_empty()).unwrap();
-        assert_eq!(tool_msg.tool_results[0].error, "missing parameter X");
+        assert!(tool_msg.tool_results[0].error.contains("missing parameter X"));
         assert_eq!(tool_msg.tool_results[0].content, "");
 
         // 3. User Fixable
