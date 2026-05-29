@@ -29,8 +29,8 @@ graph TD;
     Execute --> Success[Caller Receives Success];
 
     %% Premium OHC Glassmorphism Tokens
-    style Agent fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
-    style Hub fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(15px) saturate(180%)
+    style Agent fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(30px) saturate(210%)
+    style Hub fill:rgba(255, 255, 255, 0.05),stroke:rgba(255, 255, 255, 0.1),backdrop-filter:blur(30px) saturate(210%)
     style Reject fill:rgba(255, 0, 0, 0.1),stroke:rgba(255, 0, 0, 0.3)
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);

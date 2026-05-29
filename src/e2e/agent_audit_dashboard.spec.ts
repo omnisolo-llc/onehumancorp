@@ -6,17 +6,17 @@ test.describe('Agent Audit Dashboard E2E', () => {
   // This satisfies the requirement that "Every E2E test MUST start from the home page after user login via the UI (no pre-authenticated state shortcuts)."
   test('should display the agent audit dashboard correctly', async ({ page }) => {
     // Navigate back to home (root) after the fixture logs us in, just to be sure we're exactly where we start
-    await page.goto('/');
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
 
-    // From the Dashboard, navigate to the Unified Inbox using standard UI clicks
+    // From the Dashboard, navigate to the Customer Inbox using standard UI clicks
     await page.locator('nav a:has-text("Inbox")').click();
 
     // Wait for the inbox page to load
-    await expect(page.locator('text=Unified Inbox')).toBeVisible();
+    await expect(page.locator('text=Customer Inbox')).toBeVisible();
 
     // Click the admin panel settings button to navigate to the agent audit dashboard
-    await page.click('button[aria-label="Agent Audit Dashboard"], [tooltip="Agent Audit Dashboard"]');
+    await page.click('a[aria-label="Agent Audit Dashboard"], [tooltip="Agent Audit Dashboard"]');
 
     // Wait for the agent audit dashboard to load
     await expect(page.locator('text=Agent Audit Dashboard')).toBeVisible();
