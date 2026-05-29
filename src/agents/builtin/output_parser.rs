@@ -296,8 +296,8 @@ mod tests {
 
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success after retry");
     }
 
     #[tokio::test]
@@ -343,8 +343,8 @@ mod tests {
 
         let req = create_test_req();
         let result: Result<TestOutput, _> = parse_structured_output(&(client as Arc<dyn LlmClientForParser>), req, 3).await;
-        assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ToolError::LlmRecoverable(_)));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().result, "success_tool_call_retry");
     }
 
     #[tokio::test]
