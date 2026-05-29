@@ -5,9 +5,9 @@ rust_library(
     srcs = glob(["*.rs"]),
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server:server_lib",
         "@crates//:serde",
         "@crates//:uuid",
         "@crates//:sqlx",
     ],
 )
+exports_files(glob(["*.rs"]))

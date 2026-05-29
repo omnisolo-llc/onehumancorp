@@ -120,7 +120,6 @@ export function HelpWidget() {
     a.desc.toLowerCase().includes(searchQuery.toLowerCase())
   );
   const [videos, setVideos] = useState<{id: number, title: string, duration: string}[]>([]);
-  const [activeVideo, setActiveVideo] = useState<{id: number, title: string, duration: string} | null>(null);
 
   useEffect(() => {
     fetch("/api/videos")
@@ -274,7 +273,7 @@ export function HelpWidget() {
                 <h3 className="font-bold text-gray-900 mb-4 text-lg">Tutorials</h3>
                 <div className="grid grid-cols-2 gap-4">
                   {videos.map((v) => (
-                    <div key={v.id} onClick={() => setActiveVideo(v)} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
+                    <div key={v.id} className="aspect-[9/16] bg-gray-200 rounded-xl flex items-center justify-center relative overflow-hidden group cursor-pointer">
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/20 transition-all"></div>
                       <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg z-10 group-hover:scale-110 transition-transform">
                         <svg className="w-5 h-5 text-blue-600 ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
@@ -307,119 +306,6 @@ export function HelpWidget() {
                 </WithTooltip>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Video Player Modal */}
-      {activeVideo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-black rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-800 w-full max-w-sm aspect-[9/16] relative animate-pop-in">
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/80 to-transparent z-10 flex justify-between items-start">
-              <h3 className="text-white font-bold text-sm line-clamp-2 drop-shadow-md">{activeVideo.title}</h3>
-              <button onClick={() => setActiveVideo(null)} className="text-white/80 hover:text-white bg-black/40 rounded-full p-1.5 transition-colors">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-
-            {/* Fake Video Player area */}
-            <div className="flex-1 flex items-center justify-center relative bg-gray-900">
-               <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg animate-pulse">
-                  <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
-               </div>
-            </div>
-
-            {/* Controls */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent z-10 flex flex-col gap-2">
-              <div className="h-1 bg-white/30 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 w-1/3"></div>
-              </div>
-              <div className="flex justify-between text-white/80 text-[10px] font-medium">
-                <span>0:00</span>
-                <span>{activeVideo.duration}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-// --- Scribe: Implementation of all 7 Required Features ---
-// This component aggregates the required documentation infrastructure
-import { TooltipProvider } from './TooltipRegistry';
-import { HelpChat } from './HelpChat';
-import { WalkthroughProvider } from './Walkthrough';
-
-export function ScribeDocumentationSystem({ children }: { children: React.ReactNode }) {
-  return (
-    <TooltipProvider>
-
-        {children}
-        <HelpChat />
-        <ScribeFloatingHelpCenter />
-
-    </TooltipProvider>
-  );
-}
-
-function ScribeFloatingHelpCenter() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <>
-      <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-24 right-6 p-4 bg-indigo-600 text-white rounded-full shadow-lg z-50 hover:bg-indigo-700"
-        title="Open Help Center"
-      >
-        ❓
-      </button>
-
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 relative">
-            <button onClick={() => setIsOpen(false)} className="absolute top-4 right-4 text-gray-500 text-xl font-bold">✕</button>
-            <h1 className="text-3xl font-bold mb-6">OneHumanCorp Help Center</h1>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <section className="border p-4 rounded-lg">
-                <h2 className="text-xl font-bold mb-2 text-indigo-600">Guides</h2>
-                <ul className="space-y-2">
-                  <li><a href="/help/getting-started" className="text-blue-600 hover:underline">Getting Started</a></li>
-                  <li><a href="/help/my-store" className="text-blue-600 hover:underline">My Store</a></li>
-                  <li><a href="/help/payments" className="text-blue-600 hover:underline">Payments</a></li>
-                  <li><a href="/help/ai-agents" className="text-blue-600 hover:underline">AI Agents</a></li>
-                  <li><a href="/help/marketing" className="text-blue-600 hover:underline">Marketing</a></li>
-                  <li><a href="/help/account-billing" className="text-blue-600 hover:underline">Account & Billing</a></li>
-                </ul>
-              </section>
-
-              <section className="border p-4 rounded-lg">
-                <h2 className="text-xl font-bold mb-2 text-indigo-600">Video Tutorials</h2>
-                <ul className="space-y-2">
-                  <li>▶️ How to set up your first store easily</li>
-                  <li>▶️ Linking your own website name</li>
-                  <li>▶️ Hiring your first AI helper</li>
-                </ul>
-              </section>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <section className="border p-4 rounded-lg bg-gray-50">
-                <h2 className="text-xl font-bold mb-2">Advanced API Docs</h2>
-                <p className="text-sm mb-2">For developers wanting to integrate directly.</p>
-                <a href="/api-docs" className="text-blue-600 font-bold hover:underline">View API Reference →</a>
-              </section>
-
-               <section className="border p-4 rounded-lg bg-gray-50">
-                <h2 className="text-xl font-bold mb-2">Release Notes</h2>
-                <p className="text-sm mb-2">See what's new in the latest OHC updates.</p>
-                <a href="/changelog" className="text-blue-600 font-bold hover:underline">View Changelog →</a>
-              </section>
-            </div>
           </div>
         </div>
       )}

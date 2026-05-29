@@ -22,7 +22,7 @@ impl SendGridProvider {
         }
     }
 
-    pub fn into_integration_provider(self) -> IntegrationProvider {
+    pub fn to_integration_provider(&self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
