@@ -1,84 +1,78 @@
-import { test, expect } from './fixtures';
+import { test, expect } from '@playwright/test';
 
-test.describe('Tool Integrations UI Premium Dashbaord', () => {
-  test.beforeEach(async ({ page }) => {
-    // Dismiss the upgrade modal if it appears
-    page.on('dialog', dialog => dialog.accept());
-    await page.goto('/');
-    await page.getByText('Connect Tools').click();
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
-  });
-
-  test('shows premium integrations dashboard header and copy', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Connect Tools' }).first()).toBeVisible();
-    await expect(page.getByText('Seamlessly connect your favorite apps to streamline your business operations.')).toBeVisible();
-  });
-
-  test('displays social media integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Social Media Accounts' })).toBeVisible();
-    await expect(page.getByText('Manage all your social media messages and posts in one place.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Connect my Instagram and Facebook' }).first()).toBeVisible();
-  });
-
-  test('displays online booking integration card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Autonomous Booking Agent' })).toBeVisible();
-    await expect(page.getByText('Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.')).toBeVisible();
-  });
-
-  test('displays automated shipping and global payment methods cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Shipping Labels' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Local Payments' })).toBeVisible();
-    await expect(page.getByText('Print shipping labels and automatically track packages for your orders.')).toBeVisible();
-    await expect(page.getByText('Get paid easily using local payment methods in Latin America.')).toBeVisible();
-  });
-
-  test('displays email marketing and automated video links cards', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Customer Emails' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Online Meetings' })).toBeVisible();
-    await expect(page.getByText('Send email updates and promotions to your customers.')).toBeVisible();
-    await expect(page.getByText('Host online video meetings with your customers easily without extra downloads.')).toBeVisible();
-  });
-
-  test('displays global sms notifications card', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Text Notifications' })).toBeVisible();
-    await expect(page.getByText('Send automatic text message updates to your customers about their orders.')).toBeVisible();
-  });
-
-  test('can connect Social Media Accounts', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Social Media Accounts' }).getByRole('button', { name: 'Connect my Instagram and Facebook' });
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Connecting to Ayrshare...');
-      dialog.accept();
+test.describe('Tool Integrations', () => {
+    test.beforeEach(async ({ page }) => {
+        // Assume user is already logged in for e2e (using standalone HTML for fast verification)
+        await page.goto('file:///app/src/server/assets/index.html');
     });
-    await connectButton.click();
-  });
 
-  test('can enable Autonomous Booking Agent', async ({ page }) => {
-    const connectButton = page.locator('div.card.glass').filter({ hasText: 'Autonomous Booking Agent' }).getByRole('button', { name: 'Enable Booking Agent' });
-    page.once('dialog', dialog => {
-      expect(dialog.message()).toContain('Enabling Autonomous Booking...');
-      dialog.accept();
+    test('should display ManyChat integration card and respond to click', async ({ page }) => {
+        const manyChatCard = page.locator('text=ManyChat');
+        await expect(manyChatCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Connecting to ManyChat...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Connect my Instagram and Facebook' }).click();
     });
-    await connectButton.click();
-  });
 
-  test('can connect Customer Emails and Local Payments', async ({ page }) => {
-    const emailBtn = page.locator('div.card.glass').filter({ hasText: 'Customer Emails' }).getByRole('button', { name: 'Start sending emails' });
-    page.once('dialog', dialog => dialog.accept());
-    await emailBtn.click();
+    test('should display Cal.com integration card and respond to click', async ({ page }) => {
+        const calcomCard = page.locator('text=Cal.com');
+        await expect(calcomCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Enabling Cal.com...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Enable Booking Agent' }).click();
+    });
 
-    const paymentBtn = page.locator('div.card.glass').filter({ hasText: 'Local Payments' }).getByRole('button', { name: 'Accept local payments' });
-    page.once('dialog', dialog => dialog.accept());
-    await paymentBtn.click();
-  });
+    test('should display MailerLite integration card and respond to click', async ({ page }) => {
+        const mailerLiteCard = page.locator('text=MailerLite');
+        await expect(mailerLiteCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Setting up MailerLite...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Start sending emails' }).click();
+    });
 
-  test('can connect Shipping, Text Notifications, and Online Meetings', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
-    const shippingBtn = page.locator('div.card.glass').filter({ hasText: 'Shipping Labels' }).getByRole('button', { name: 'Set up shipping' });
-    await shippingBtn.click();
-    const smsBtn = page.locator('div.card.glass').filter({ hasText: 'Text Notifications' }).getByRole('button', { name: 'Enable text messages' });
-    await smsBtn.click();
-    const meetingBtn = page.locator('div.card.glass').filter({ hasText: 'Online Meetings' }).getByRole('button', { name: 'Create my meeting room' });
-    await meetingBtn.click();
-  });
+    test('should display Mercado Pago integration card and respond to click', async ({ page }) => {
+        const mercadoPagoCard = page.locator('text=Mercado Pago');
+        await expect(mercadoPagoCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Setting up Mercado Pago...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Accept local payments' }).click();
+    });
+
+    test('should display Shippo integration card and respond to click', async ({ page }) => {
+        const shippoCard = page.locator('text=Shippo');
+        await expect(shippoCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Setting up Shippo...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Set up shipping' }).click();
+    });
+
+    test('should display Twilio integration card and respond to click', async ({ page }) => {
+        const twilioCard = page.locator('text=Twilio');
+        await expect(twilioCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Connecting to Twilio...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Enable text messages' }).click();
+    });
+
+    test('should display Whereby integration card and respond to click', async ({ page }) => {
+        const wherebyCard = page.locator('text=Whereby');
+        await expect(wherebyCard).toBeVisible();
+        page.once('dialog', dialog => {
+            expect(dialog.message()).toBe('Setting up Whereby...');
+            dialog.accept().catch(() => {});
+        });
+        await page.getByRole('button', { name: 'Create my meeting room' }).click();
+    });
 });

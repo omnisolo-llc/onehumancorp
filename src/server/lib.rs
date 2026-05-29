@@ -3504,9 +3504,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="font-family: 'Outfit', sans-serif; margin-bottom: 24px;">AI Service Booking</h1>
 
                         <div class="card glass" style="border-radius: 16px; padding: 16px; margin-bottom: 16px;">
-                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Autonomous Booking Agent</h3>
+                            <h3 style="font-family: 'Outfit', sans-serif; margin-top: 0; margin-bottom: 12px;">Cal.com</h3>
                             <p style="font-size: 14px; margin-bottom: 16px; color: var(--text-secondary);">Enable your AI agent to auto-schedule appointments from the unified inbox without any third-party tools.</p>
-                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                            <button style="min-width: 44px; min-height: 44px; border-radius: 8px; font-family: 'Inter', sans-serif; padding: 0 16px; background: #0066FF; color: white; border: none; width: 100%;" onclick="alert('Enabling Cal.com...')">Enable Booking Agent</button>
                         </div>
 
                         <button id="meetings-title" style="display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; margin-bottom: 20px; cursor: pointer; color: #0066FF; font-size: 1.5em; font-family: 'Outfit', sans-serif; font-weight: 600;"
@@ -3740,34 +3740,34 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- Ayrshare Integration -->
+                            <!-- ManyChat Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
                             </div>
 
-                            <!-- Autonomous Booking Agent -->
+                            <!-- Cal.com -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                    <h3 style="margin: 0;">Autonomous Booking Agent</h3>
+                                    <h3 style="margin: 0;">Cal.com</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📅</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Let your AI agent negotiate meeting times with clients over text, update your calendar, and send payment links.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Cal.com...')">Enable Booking Agent</button>
                             </div>
 
-                            <!-- Listmonk Integration -->
+                            <!-- MailerLite Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Customer Emails</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3780,14 +3780,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
                             </div>
 
-                            <!-- EasyPost Integration -->
+                            <!-- Shippo Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Shipping Labels</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3800,14 +3800,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Jitsi Meet Integration -->
+                            <!-- Whereby Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
                             </div>
                         </div>
 
