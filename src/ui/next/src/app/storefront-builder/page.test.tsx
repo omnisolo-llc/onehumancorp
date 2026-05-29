@@ -2,19 +2,24 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import StorefrontBuilderPage from './page';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
+// Mock TooltipRegistry and help components
+vi.mock('../../components/TooltipRegistry', () => ({
   WithTooltip: ({ children }: any) => <div>{children}</div>
 }));
+vi.mock('../../components/help', () => ({
   useWalkthrough: () => ({ startWalkthrough: vi.fn() })
 }));
 
 describe('StorefrontBuilderPage', () => {
   beforeEach(() => {
+    global.fetch = vi.fn().mockResolvedValue({
         json: () => Promise.resolve({ data: {} })
     });
     localStorage.clear();
   });
 
   afterEach(() => {
+    vi.resetAllMocks();
   });
 
   it('renders initial setup state', () => {
@@ -38,6 +43,7 @@ describe('StorefrontBuilderPage', () => {
     const button = screen.getByText('Build My Storefront');
     expect(button.className).not.toContain('cursor-not-allowed');
 
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{
@@ -64,6 +70,7 @@ describe('StorefrontBuilderPage', () => {
     const textarea = screen.getByPlaceholderText(/e.g. I run a mobile dog grooming service/i);
     fireEvent.change(textarea, { target: { value: 'Valid long business bio' } });
 
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         pages: [{
@@ -80,6 +87,7 @@ describe('StorefrontBuilderPage', () => {
       expect(screen.getByText('1-Tap Launch')).toBeTruthy();
     });
 
+    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ domain: 'test' })
     });

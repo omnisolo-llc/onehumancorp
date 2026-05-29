@@ -253,6 +253,8 @@ export default function BuilderPage() {
                     key={option.id}
                     onClick={() => {
                       setBusinessGoal(option.id as any);
+                      setTimeout(() => setStatus("idle"), 0);
+                      setStatus("idle");
 
                     }}
                     className="w-full p-6 bg-white/60 dark:bg-black/30 backdrop-blur-sm rounded-[16px] border border-white/50 dark:border-white/10 flex flex-col items-center gap-2 active:scale-[0.98] transition-all duration-200 group hover:bg-white/80 dark:hover:bg-black/50"
