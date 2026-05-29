@@ -55,6 +55,7 @@ rust_library(
         "deerflow_subagents.rs",
         "departments.rs",
         "gpt_researcher.rs",
+        "gather_act_verify.rs",
         "guardrails.rs",
         "harness.rs",
         "hibernation.rs",
@@ -218,6 +219,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "tools_gating",
     "registry",
     "gpt_researcher",
+    "gather_act_verify",
     "local_provider",
     "sona_patterns",
 ]
