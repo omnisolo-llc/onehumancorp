@@ -1,3 +1,10 @@
+
+use opentelemetry::global;
+use opentelemetry::metrics::{Counter, Histogram};
+use opentelemetry::KeyValue;
+use std::time::Instant;
+
+
 use crate::db::DB;
 use std::sync::Arc;
 use sqlx::Row;
@@ -8,15 +15,42 @@ pub struct AutoDreamPipeline {
     db: Arc<DB>,
     llm_client: Arc<dyn LLMClient>,
     pub cache: Option<Arc<crate::pricing::cache::LocalEmbeddingCache>>,
+    memories_processed: Counter<u64>,
+    consolidation_errors: Counter<u64>,
+    batch_duration: Histogram<f64>,
 }
 
 impl AutoDreamPipeline {
     pub fn new(db: Arc<DB>, llm_client: Arc<dyn LLMClient>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: None }
+        let meter = global::meter("ohc.autodream");
+        let memories_processed = meter.u64_counter("ohc_autodream_memories_processed_total").build();
+        let consolidation_errors = meter.u64_counter("ohc_autodream_consolidation_errors_total").build();
+        let batch_duration = meter.f64_histogram("ohc_autodream_batch_processing_duration_seconds").build();
+
+        AutoDreamPipeline {
+            db,
+            llm_client,
+            cache: None,
+            memories_processed,
+            consolidation_errors,
+            batch_duration,
+        }
     }
 
     pub fn new_with_cache(db: Arc<DB>, llm_client: Arc<dyn LLMClient>, cache: Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Self {
-        AutoDreamPipeline { db, llm_client, cache: Some(cache) }
+        let meter = global::meter("ohc.autodream");
+        let memories_processed = meter.u64_counter("ohc_autodream_memories_processed_total").build();
+        let consolidation_errors = meter.u64_counter("ohc_autodream_consolidation_errors_total").build();
+        let batch_duration = meter.f64_histogram("ohc_autodream_batch_processing_duration_seconds").build();
+
+        AutoDreamPipeline {
+            db,
+            llm_client,
+            cache: Some(cache),
+            memories_processed,
+            consolidation_errors,
+            batch_duration,
+        }
     }
 
     pub fn start_worker(&self) {
@@ -26,15 +60,11 @@ impl AutoDreamPipeline {
 
         tokio::spawn(async move {
             loop {
-                let pipeline = AutoDreamPipeline {
-                    db: db.clone(),
-                    llm_client: llm_client.clone(),
-                    cache: cache.clone(),
-                };
+                let pipeline = AutoDreamPipeline::new_with_cache(db.clone(), llm_client.clone(), cache.clone().unwrap_or_else(|| Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(60)))));
                 if let Err(e) = pipeline.process_closed_tasks().await {
                     tracing::error!("AutoDreamPipeline worker error: {}", e);
                 }
-                sleep(Duration::from_secs(60)).await;
+                sleep(std::time::Duration::from_secs(60)).await;
             }
         });
     }
@@ -64,6 +94,10 @@ impl AutoDreamPipeline {
     }
 
     pub async fn process_closed_tasks(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let start_time = Instant::now();
+        let mode_str = if self.db.is_sqlite() { "standalone" } else { "cloud" };
+        let mode_label = KeyValue::new("mode", mode_str);
+
         // Find tasks that are COMPLETED but not yet in autodream_memories
         let query = "
             SELECT t.id, t.organization_id, t.assigned_agent_id, t.payload, t.deliberation_log
@@ -130,15 +164,18 @@ impl AutoDreamPipeline {
                         if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
                             tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
                         }
+                        self.memories_processed.add(1, &[mode_label.clone()]);
                     }
                     Err(e) => {
                         tracing::error!("AutoDreamPipeline: Failed to generate embedding for task {}: {}", task_id, e);
+                        self.consolidation_errors.add(1, &[mode_label.clone()]);
                     }
                 }
             }
             tracing::info!("AutoDreamPipeline: Consolidated task {}", task_id);
         }
 
+        self.batch_duration.record(start_time.elapsed().as_secs_f64(), &[mode_label.clone()]);
         Ok(())
     }
 }
@@ -205,7 +242,7 @@ mod tests {
 
         let tracking_llm = Arc::new(TrackingMockLLMClient::new(vec![0.5, 0.6, 0.7]));
 
-        let cache = Arc::new(LocalEmbeddingCache::new(Duration::from_secs(60)));
+        let cache = Arc::new(LocalEmbeddingCache::new(std::time::Duration::from_secs(60)));
 
         // Clean up
         sqlx::query("DELETE FROM autodream_memories").execute(&pool).await.unwrap();

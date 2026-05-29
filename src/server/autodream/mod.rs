@@ -8,25 +8,35 @@ use tokio::time::{sleep, Duration};
 use chrono::Utc;
 
 use opentelemetry::global;
-use opentelemetry::metrics::Counter;
+use opentelemetry::metrics::{Counter, Histogram};
+use opentelemetry::KeyValue;
+use std::time::Instant;
 use opentelemetry::trace::Tracer;
 
 pub struct AutoDreamWorker {
     db: Arc<DB>,
     embedded_counter: Counter<u64>,
     cache: Arc<crate::pricing::cache::LocalEmbeddingCache>,
+    memories_processed: Counter<u64>,
+    consolidation_errors: Counter<u64>,
+    batch_duration: Histogram<f64>,
 }
 
 impl AutoDreamWorker {
     pub fn new(db: Arc<DB>) -> Self {
         let meter = global::meter("ohc.autodream");
         let embedded_counter = meter.u64_counter("autodream.tasks.embedded").build();
+        let memories_processed = meter.u64_counter("ohc_autodream_memories_processed_total").build();
+        let consolidation_errors = meter.u64_counter("ohc_autodream_consolidation_errors_total").build();
+        let batch_duration = meter.f64_histogram("ohc_autodream_batch_processing_duration_seconds").build();
         let cache = Arc::new(crate::pricing::cache::LocalEmbeddingCache::new(std::time::Duration::from_secs(3600)));
-        AutoDreamWorker { db, embedded_counter, cache }
+        AutoDreamWorker { db, embedded_counter, cache, memories_processed, consolidation_errors, batch_duration }
     }
 
 
     pub fn start(&self) {
+        let mode_str = if self.db.is_sqlite() { "standalone" } else { "cloud" };
+        let mode_label = KeyValue::new("mode", mode_str);
         info!("Starting AutoDream worker");
         
         let db = self.db.clone();
@@ -57,11 +67,15 @@ impl AutoDreamWorker {
         let db = self.db.clone();
         let counter = self.embedded_counter.clone();
         let cache_for_ingest = self.cache.clone();
+        let memories_processed = self.memories_processed.clone();
+        let consolidation_errors = self.consolidation_errors.clone();
+        let batch_duration = self.batch_duration.clone();
+        let mode_label = mode_label.clone();
         tokio::spawn(async move {
             loop {
                 debug!("AutoDream: running completed tasks ingestion pipeline...");
                 let cache_ref = cache_for_ingest.clone();
-                if let Err(e) = Self::ingest_completed_tasks(&db, &counter, &cache_ref).await {
+                if let Err(e) = Self::ingest_completed_tasks(&db, &counter, &cache_ref, &memories_processed, &consolidation_errors, &batch_duration, &mode_label).await {
                     debug!("AutoDream: tasks ingestion failed: {}", e);
                 }
 
@@ -99,7 +113,7 @@ impl AutoDreamWorker {
         });
     }
 
-    async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn prune_stale_sessions(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let threshold = Utc::now() - chrono::Duration::hours(24);
         
         let stale_sessions = db.delete_stale_sessions(threshold).await?;
@@ -175,7 +189,8 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn ingest_completed_tasks(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>, memories_processed: &Counter<u64>, consolidation_errors: &Counter<u64>, batch_duration: &Histogram<f64>, mode_label: &KeyValue) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let start_time = Instant::now();
         let tasks = db.get_completed_tasks().await?;
 
         for (id, org_id, payload, table) in tasks {
@@ -210,12 +225,20 @@ impl AutoDreamWorker {
             let source_type = format!("TASK_{}", table.to_uppercase());
             
             // Insert into the proper KAIROS knowledge_embeddings table
-            db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await?;
-            db.mark_task_auto_dreamed(&id, &table).await?;
-
-            debug!("AutoDream: ingested completed task {} from {}", id, table);
+            let res = db.insert_knowledge_embedding(&mem_id, &org_id, "system_agent", &id, &summary, &embedding, &source_type).await;
+            if let Err(e) = res {
+                debug!("AutoDream: failed to insert knowledge embedding: {}", e);
+                consolidation_errors.add(1, &[mode_label.clone()]);
+            } else {
+                if let Err(e) = db.mark_task_auto_dreamed(&id, &table).await {
+                    debug!("AutoDream: failed to mark task auto dreamed: {}", e);
+                }
+                memories_processed.add(1, &[mode_label.clone()]);
+                debug!("AutoDream: ingested completed task {} from {}", id, table);
+            }
         }
         
+        batch_duration.record(start_time.elapsed().as_secs_f64(), &[mode_label.clone()]);
         Ok(())
     }
 
@@ -275,7 +298,7 @@ impl AutoDreamWorker {
     }
 
 
-    async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn compress_session_contexts(db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         // Fetch sessions that aren't compressed yet
         let rows = sqlx::query("SELECT session_id, context_data FROM agent_session_data WHERE context_data NOT LIKE 'gz_b64:%' LIMIT 100")
             .fetch_all(&db.pool)
@@ -302,7 +325,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_db_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let rows = sqlx::query("SELECT session_id, agent_id, context_data FROM agent_session_data ORDER BY last_accessed ASC LIMIT 100")
             .fetch_all(&db.pool)
             .await?;
@@ -376,7 +399,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_fs_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let memory_dir = std::env::var("OHC_MEMORY_DIR").unwrap_or_else(|_| ".ohc/runtime/memory".to_string());
         let path = std::path::Path::new(&memory_dir);
         
@@ -448,7 +471,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn consolidate_agent_task_memories(db: &Arc<DB>, counter: &Counter<u64>, cache: &Arc<crate::pricing::cache::LocalEmbeddingCache>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let memory_dir = std::path::Path::new(".agent-task/memory");
 
         if !memory_dir.exists() {
@@ -521,7 +544,7 @@ impl AutoDreamWorker {
         Ok(())
     }
 
-    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error>> {
+    async fn process_mesh_messages(_db: &Arc<DB>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         debug!("AutoDreamWorker: stub for process_mesh_messages");
         Ok(())
     }
