@@ -27,7 +27,7 @@ impl UserRepository for PgUserRepository {
 
         sqlx::query(
             r#"
-            INSERT INTO users (id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at)
+            INSERT INTO users (id, username, email, password_hash, roles, active, tenant_id, oidc_subject, created_at, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             "#
         )
@@ -51,7 +51,7 @@ impl UserRepository for PgUserRepository {
     }
 
     async fn get_by_id(&self, id: &str, org_id: &str) -> Result<User, String> {
-        let query = "SELECT id, username, email, password_hash, roles, active, organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1";
+        let query = "SELECT id, username, email, password_hash, roles, active, tenant_id as organization_id, oidc_subject, created_at, updated_at FROM users WHERE id = $1 AND tenant_id = $2";
 
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         let tenant_id = org_id;
