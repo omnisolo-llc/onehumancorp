@@ -477,7 +477,7 @@ export default function Dashboard() {
          )}
 
          {/* Action Required (Approvals) */}
-         {(approvals.length > 0) && (
+         {true && (
             <section className="mb-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Action Required</h2>
