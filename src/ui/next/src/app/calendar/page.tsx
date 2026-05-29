@@ -16,6 +16,7 @@ export default function CalendarPage() {
 
   const [aiEnabled, setAiEnabled] = useState(true);
   const [calSynced, setCalSynced] = useState(false);
+  const [calSynced, setCalSynced] = useState(false);
 
   return (
     <div className="min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>

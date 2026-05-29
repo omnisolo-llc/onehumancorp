@@ -11,6 +11,7 @@ export default function CheckoutPage() {
   const [referralLink, setReferralLink] = useState("");
   const [copied, setCopied] = useState(false);
   const [region, setRegion] = useState("US");
+  const [region, setRegion] = useState("US");
 
   const handlePayment = async () => {
     setIsProcessing(true);

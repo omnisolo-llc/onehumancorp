@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 export default function InboxPage() {
   const [ayrshareConnected, setAyrshareConnected] = useState(false);
+  const [ayrshareConnected, setAyrshareConnected] = useState(false);
   const [messages, setMessages] = useState([
     { id: 1, sender: 'Facebook User', source: 'Facebook', icon: '📘', content: 'Do you have vegan birthday cake options?', date: '10:00 AM' },
     { id: 2, sender: 'Instagram User', source: 'Instagram', icon: '📸', content: 'When will my order be shipped?', date: 'Yesterday' },
