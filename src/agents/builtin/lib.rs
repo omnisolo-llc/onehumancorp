@@ -55,6 +55,7 @@ pub mod langgraph;
 pub mod codex_runner;
 pub mod json_rpc_server;
 pub mod progressive_skills;
+pub mod agentic_seek;
 pub mod consolidation_worker;
 pub mod sqlite_memory;
 pub mod hibernation;

@@ -109,6 +109,7 @@ pub struct AgentRunConfig {
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
+    pub is_local_execution: bool,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
@@ -166,6 +167,7 @@ impl Default for AgentRunConfig {
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
+            is_local_execution: false,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             enable_observation_masking: true,
@@ -1702,6 +1704,13 @@ impl Agent {
         let mut final_cfg = cfg.clone();
         if final_cfg.max_retries > 2 {
             final_cfg.max_retries = 2;
+        }
+
+        // Enforce agenticSeek local execution constraint if configured in config
+        if final_cfg.is_local_execution {
+            if let Err(e) = crate::agentic_seek::AgenticSeekLocalHarness::enforce_local_execution(&mut final_cfg) {
+                return Err(e.into());
+            }
         }
 
         // DeerFlow Unique Harness Innovations: Progressive skills

@@ -45,6 +45,7 @@ rust_library(
     srcs = [
         "actor_model.rs",
         "agent.rs",
+        "agentic_seek.rs",
         "agent_protocol.rs",
         "auth.rs",
         "autogen.rs",
@@ -221,6 +222,7 @@ AGENT_UNIT_TEST_FILTERS = [
     "gather_act_verify",
     "local_provider",
     "sona_patterns",
+    "agentic_seek",
 ]
 
 rust_test(

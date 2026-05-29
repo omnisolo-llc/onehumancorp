@@ -588,7 +588,7 @@ impl AgentServiceImpl {
             0.0
         };
 
-        AgentRunConfig {
+        let mut run_cfg = AgentRunConfig {
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             max_retries: 2,
@@ -606,6 +606,7 @@ impl AgentServiceImpl {
             max_task_tokens: 100_000,
             confidence_threshold,
             enable_acon_context_strategy: false,
+            is_local_execution: false,
             enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
             enable_observation_masking: true,
@@ -642,7 +643,17 @@ impl AgentServiceImpl {
             hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
             permission_architecture: Default::default(),
             manually_approved_tool_calls: vec![],
+        };
+
+        // Enforce agenticSeek local execution constraint if configured
+        if std::env::var("OHC_AGENTIC_SEEK_ENABLED").unwrap_or_default() == "true" {
+            run_cfg.is_local_execution = true;
+            if let Err(e) = crate::agentic_seek::AgenticSeekLocalHarness::enforce_local_execution(&mut run_cfg) {
+                tracing::error!("AgenticSeek Error: {}", e);
+            }
         }
+
+        run_cfg
     }
 
     fn workspace_path() -> PathBuf {
@@ -1024,6 +1035,7 @@ impl AgentService for AgentServiceImpl {
                 max_task_tokens: 100_000,
                 confidence_threshold: 0.0,
                 enable_acon_context_strategy: false,
+                is_local_execution: false,
             enable_harness_thickness_optimization: false,
             enable_llmcompiler_plan_and_execute: false,
                 enable_observation_masking: true,
