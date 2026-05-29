@@ -348,6 +348,8 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
+        "//src/server/integrations/daily:server_integrations_daily",
+        "//src/server/integrations/resend:server_integrations_resend",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
@@ -461,6 +463,7 @@ SERVER_LIB_TEST_GROUPS = {
         "db::",
         "scheduler::",
         "settings::",
+        "autodream_sync::tests::test_autodream_sync_service_sqlite",
         "autodream_pipeline::pipeline::tests::test_chunk_content",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks_with_cache",
@@ -487,6 +490,12 @@ SERVER_LIB_TEST_GROUPS = {
     "interop": [
         "msgbus::",
     ],
+}
+
+SERVER_LIB_TEST_SIZES = {
+    "agents": "small",
+    "core": "medium",
+    "interop": "small",
 }
 
 SERVER_LIB_SUBCRATE_TESTS = [
@@ -531,7 +540,7 @@ SERVER_LIB_SPLIT_TESTS = [
 [
     rust_test(
         name = "server_lib_%s_unit_test" % group,
-        size = "large",
+        size = SERVER_LIB_TEST_SIZES[group],
         args = filters,
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
@@ -617,7 +626,7 @@ test_suite(
 
 rust_test(
     name = "queue_test",
-    size = "large",
+    size = "small",
     srcs = ["queue_test.rs"],
     edition = "2024",
     target_compatible_with = select({
@@ -636,7 +645,7 @@ rust_test(
 
 rust_test(
     name = "telemetry_test",
-    size = "large",
+    size = "small",
     srcs = ["telemetry_test.rs"],
     data = ["//deploy/scripts:ohc-standalone.sh"] + SERVER_RS_SRCS,
     edition = "2024",

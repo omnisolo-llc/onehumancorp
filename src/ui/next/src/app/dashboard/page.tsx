@@ -38,10 +38,6 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
-
-  // Growth Loop: Post-Purchase Social Share State
-  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
-  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
@@ -1007,56 +1003,6 @@ export default function Dashboard() {
             </div>
          </section>
 
-         {/* Growth Loop: Post-Purchase Social Share */}
-         {showSaleCelebration && (
-         <section className="mb-8 mt-8">
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
-                        🎉
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">New Order Received!</h3>
-                        <p className="text-sm text-gray-800 font-medium">Alex just bought "Premium Coffee Beans" for $24.99</p>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
-                            navigator.clipboard.writeText(message);
-                            setSaleShareCopied(true);
-                            setTimeout(() => setSaleShareCopied(false), 2000);
-                        }}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
-                    >
-                        {saleShareCopied ? (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                Copied!
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                Copy Share Message
-                            </>
-                        )}
-                    </button>
-                    <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
-                        onClick={() => setShowSaleCelebration(false)}
-                    >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                        Share on X
-                    </a>
-                </div>
-            </div>
-         </section>
-         )}
-
          {/* Growth Loop: Milestone Celebration */}
          {showMilestoneBanner && (
            <section className="mb-8 animate-fade-in">
@@ -1134,12 +1080,20 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowAddItemModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
-                >
-                    <span>+ Add Item</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowAddItemModal(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-[8px] shadow-md hover:bg-black transition-all font-inter text-sm"
+                    >
+                        <span>+ Add Item</span>
+                    </button>
+                    <Link
+                        href="/products/new"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-[8px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm border border-blue-400/50"
+                    >
+                        <span>✨ Auto-Catalog</span>
+                    </Link>
+                </div>
             </div>
          </section>
 
@@ -1777,7 +1731,18 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    await fetch('/api/v1/growth/campaign/send', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            target_segment: 'vip_customers',
+                                            message: customerReferralMessage
+                                        })
+                                    });
+                                } catch (e) {
+                                    console.error("Failed to send VIP referral campaign", e);
+                                }
                                 setCustomerReferralSent(true);
                                 setTimeout(() => {
                                     setShowCustomerReferralModal(false);
@@ -1871,9 +1836,9 @@ export default function Dashboard() {
             </div>
 
             <div className="text-5xl mb-4">✨</div>
-            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Unlock AI Power</h2>
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Pro</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
+              Unlock AI Business Insights and start seeing actionable trends in your sales data. Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.
             </p>
 
             <button
