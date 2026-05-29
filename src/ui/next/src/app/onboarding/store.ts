@@ -11,6 +11,7 @@ interface OnboardingState {
   businessType: string;
   categories: string[];
   websiteTemplate: string;
+  domainChoice: string;
   firstProductName: string;
   firstProductPrice: string;
   isLoading: boolean;
@@ -25,6 +26,7 @@ interface OnboardingState {
   setBusinessType: (type: string) => void;
   setCategories: (categories: string[]) => void;
   setWebsiteTemplate: (template: string) => void;
+  setDomainChoice: (domain: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
   setIsLoading: (loading: boolean) => void;
@@ -44,6 +46,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       businessType: 'Online Store',
       categories: [],
       websiteTemplate: 'Modern',
+  domainChoice: 'subdomain',
       firstProductName: '',
       firstProductPrice: '',
       isLoading: false,
@@ -58,6 +61,7 @@ export const useOnboardingStore = create<OnboardingState>()(
       setBusinessType: (businessType) => set({ businessType }),
       setCategories: (categories) => set({ categories }),
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
+  setDomainChoice: (domainChoice) => set({ domainChoice }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
       setIsLoading: (isLoading) => set({ isLoading }),
