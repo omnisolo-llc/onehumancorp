@@ -74,6 +74,7 @@ rust_library(
         "plan_and_execute.rs",
         "plane.rs",
         "progressive_skills.rs",
+        "prompt_construction.rs",
         "proto.rs",
         "provider.rs",
         "ralph_loop.rs",
