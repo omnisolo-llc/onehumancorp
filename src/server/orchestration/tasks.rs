@@ -31,6 +31,7 @@ impl TaskDecompositionService {
                 let payload = serde_json::from_str::<serde_json::Value>(&task.payload).unwrap_or(serde_json::json!({}));
                 let deliberation = serde_json::from_str::<serde_json::Value>(task.deliberation_log.as_deref().unwrap_or("[]")).unwrap_or(serde_json::json!([]));
 
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
@@ -54,15 +55,26 @@ impl TaskDecompositionService {
                 .bind(task.depth)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                for dep in &task.dependencies {
+                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                        .bind(&task.id)
+                        .bind(dep)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let deps_str = serde_json::to_string(&task.dependencies).map_err(|e| e.to_string())?;
                 let payload_str = if task.payload.is_empty() { "{}" } else { &task.payload };
                 let deliberation_str = task.deliberation_log.as_deref().unwrap_or("[]");
 
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_decomposition (
@@ -86,9 +98,19 @@ impl TaskDecompositionService {
                 .bind(task.depth)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(sqlite_pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                for dep in &task.dependencies {
+                    sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?) ON CONFLICT DO NOTHING")
+                        .bind(&task.id)
+                        .bind(dep)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
 
@@ -132,9 +154,9 @@ impl TaskDecompositionService {
                     WHERE st.status = 'PENDING'
                     AND NOT EXISTS (
                         SELECT 1
-                        FROM json_array_elements_text(st.dependencies) AS dep_id
-                        JOIN shared_tasks_decomposition parent ON parent.id::text = dep_id
-                        WHERE parent.status != 'COMPLETED'
+                        FROM task_dependencies td
+                        JOIN shared_tasks_decomposition parent ON parent.id::text = td.depends_on_task_id
+                        WHERE td.task_id = st.id::text AND parent.status != 'COMPLETED'
                     )
                     LIMIT 1
                     FOR UPDATE SKIP LOCKED
@@ -227,9 +249,9 @@ impl TaskDecompositionService {
                         WHERE st.status = 'PENDING'
                         AND NOT EXISTS (
                             SELECT 1
-                            FROM json_each(st.dependencies) AS dep_id
-                            JOIN shared_tasks_decomposition parent ON parent.id = dep_id.value
-                            WHERE parent.status != 'COMPLETED'
+                            FROM task_dependencies td
+                            JOIN shared_tasks_decomposition parent ON parent.id = td.depends_on_task_id
+                            WHERE td.task_id = st.id AND parent.status != 'COMPLETED'
                         )
                         LIMIT 1
                     )
@@ -753,6 +775,9 @@ mod tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
+            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
@@ -853,6 +878,9 @@ mod tests {
 
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
@@ -1150,6 +1178,9 @@ mod chaos_tests {
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
         sqlx::query(
+            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
 
@@ -1215,6 +1246,9 @@ mod chaos_tests {
         // Setup tables
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
+        ).execute(&pool).await.unwrap();
+        sqlx::query(
+            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
         ).execute(&pool).await.unwrap();
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"

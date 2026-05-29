@@ -41,6 +41,7 @@ impl SharedTaskOrchestrator {
 
         match &self.db.store {
             DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_v4 (
@@ -49,7 +50,7 @@ impl SharedTaskOrchestrator {
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                     "#
                 )
-                .bind(&task_id)
+                .bind(&task.id)
                 .bind(&task.organization_id)
                 .bind(&task.title)
                 .bind(&task.description)
@@ -61,11 +62,24 @@ impl SharedTaskOrchestrator {
                 .bind(&task.dependencies)
                 .bind(&task.created_at)
                 .bind(&task.updated_at)
-                .execute(&self.db.pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                if let Ok(deps) = serde_json::from_str::<Vec<String>>(&task.dependencies) {
+                    for dep in deps {
+                        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
+                            .bind(&task.id)
+                            .bind(&dep)
+                            .execute(&mut *tx)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             DbStore::Sqlite(sqlite_pool) => {
+                let mut tx = sqlite_pool.begin().await.map_err(|e| e.to_string())?;
                 sqlx::query(
                     r#"
                     INSERT INTO shared_tasks_v4 (
@@ -74,7 +88,7 @@ impl SharedTaskOrchestrator {
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     "#
                 )
-                .bind(&task_id)
+                .bind(&task.id)
                 .bind(&task.organization_id)
                 .bind(&task.title)
                 .bind(&task.description)
@@ -86,9 +100,21 @@ impl SharedTaskOrchestrator {
                 .bind(&task.dependencies)
                 .bind(task.created_at.to_rfc3339())
                 .bind(task.updated_at.to_rfc3339())
-                .execute(sqlite_pool)
+                .execute(&mut *tx)
                 .await
                 .map_err(|e| e.to_string())?;
+
+                if let Ok(deps) = serde_json::from_str::<Vec<String>>(&task.dependencies) {
+                    for dep in deps {
+                        sqlx::query("INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES (?, ?) ON CONFLICT DO NOTHING")
+                            .bind(&task.id)
+                            .bind(&dep)
+                            .execute(&mut *tx)
+                            .await
+                            .map_err(|e| e.to_string())?;
+                    }
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
 
@@ -107,9 +133,9 @@ impl SharedTaskOrchestrator {
                     SELECT st.* FROM shared_tasks_v4 st
                     WHERE st.status = 'PENDING' AND st.organization_id = $1
                     AND NOT EXISTS (
-                        SELECT 1 FROM json_array_elements_text(st.dependencies::json) AS dep_id
-                        JOIN shared_tasks_v4 parent ON parent.id = dep_id
-                        WHERE parent.status != 'COMPLETED'
+                        SELECT 1 FROM task_dependencies td
+                        JOIN shared_tasks_v4 parent ON parent.id::text = td.depends_on_task_id
+                        WHERE td.task_id = st.id::text AND parent.status != 'COMPLETED'
                     )
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -182,9 +208,9 @@ impl SharedTaskOrchestrator {
                     SELECT st.* FROM shared_tasks_v4 st
                     WHERE st.status = 'PENDING' AND st.organization_id = ?
                     AND NOT EXISTS (
-                        SELECT 1 FROM json_each(st.dependencies) AS dep_id
-                        JOIN shared_tasks_v4 parent ON parent.id = dep_id.value
-                        WHERE parent.status != 'COMPLETED'
+                        SELECT 1 FROM task_dependencies td
+                        JOIN shared_tasks_v4 parent ON parent.id = td.depends_on_task_id
+                        WHERE td.task_id = st.id AND parent.status != 'COMPLETED'
                     )
                     LIMIT 1
                     "#
