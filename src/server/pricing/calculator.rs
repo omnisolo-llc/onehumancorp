@@ -13,13 +13,13 @@ pub fn get_pricing(model: &str) -> ModelPricing {
         // Anthropic — Claude 3.5 family
         "claude-3.5-sonnet" | "claude-3-5-sonnet-20241022" | "claude-3-5-sonnet-20240620" => 
             ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
-        "claude-3.5-haiku" | "claude-3-5-haiku-20241022" => ModelPricing { input_cost: 0.80, output_cost: 4.00, cached_cost: 0.08 },
+        "claude-3.5-haiku" => ModelPricing { input_cost: 0.80, output_cost: 4.00, cached_cost: 0.08 },
         // Anthropic — Claude 3.7 family
         "claude-3.7-sonnet" => ModelPricing { input_cost: 3.00, output_cost: 15.00, cached_cost: 0.30 },
         // OpenAI — GPT-4 family
         "gpt-4" => ModelPricing { input_cost: 30.00, output_cost: 60.00, cached_cost: 0.0 },
         "gpt-4-turbo" => ModelPricing { input_cost: 10.00, output_cost: 30.00, cached_cost: 0.0 },
-        "gpt-4o" | "gpt-4o-2024-08-06" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
+        "gpt-4o" => ModelPricing { input_cost: 5.00, output_cost: 15.00, cached_cost: 2.50 },
         "gpt-4o-mini" => ModelPricing { input_cost: 0.15, output_cost: 0.60, cached_cost: 0.075 },
         // OpenAI — GPT-4.1 family
         "gpt-4.1" => ModelPricing { input_cost: 2.00, output_cost: 8.00, cached_cost: 0.0 },
@@ -122,14 +122,6 @@ pub fn calculate_efficiency(cost: f64, output_tokens: i64) -> f64 {
     (output_tokens as f64) / cost
 }
 
-pub fn calculate_projected_monthly_cost(current_cost: f64, days_elapsed: u32, total_days: u32) -> f64 {
-    if days_elapsed == 0 {
-        return 0.0;
-    }
-    let projected = (current_cost / days_elapsed as f64) * total_days as f64;
-    (projected * 10000.0).round() / 10000.0
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -216,13 +208,5 @@ mod tests {
 
         let efficiency = calculate_efficiency(cost, output_tokens);
         assert_eq!(efficiency, 25.0); // 250 / 10
-    }
-
-    #[test]
-    fn test_calculate_projected_monthly_cost() {
-        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
-        assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
     }
 }
