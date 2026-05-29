@@ -32,14 +32,16 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
         let completion = msg.content.clone();
 
         // Output Parsing: Primary mechanic is extracting from native tool_calls
+        // Pydantic-first tool schema -> validation errors fed back to LLM for self-correction
         if !msg.tool_calls.is_empty() {
             if let Some(call) = msg.tool_calls.iter().find(|t| t.name == "structured_output") {
                 if let Some(data) = call.arguments.get("data") {
                     return match serde_json::from_value::<T>(data.clone()) {
                         Ok(parsed) => Ok(parsed),
                         Err(e) => {
+                            // Provide a detailed error message specifically tailored for LLM self-correction
                             Err(format!(
-                                "Failed to parse tool call arguments as valid JSON matching the schema. Error: {}. Please fix the JSON and retry calling the tool.", e
+                                "Failed to parse tool call arguments as valid JSON matching the requested schema. \n\nValidation Error: {}\n\nPlease fix the JSON payload. Ensure all required fields are present and types match the schema exactly, then retry calling the 'structured_output' tool.", e
                             ))
                         }
                     };
@@ -48,6 +50,10 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
                         "Missing required 'data' parameter in tool call arguments. Please include the data matching the schema inside the 'data' property and retry calling the tool.".to_string()
                     );
                 }
+            } else {
+                return Err(
+                    "You provided tool calls, but did not call the required 'structured_output' tool to return your final answer. Please call 'structured_output' with the correct schema.".to_string()
+                );
             }
         }
 
@@ -89,7 +95,7 @@ impl<T: DeserializeOwned> OutputParser<T> for StructuredOutputParser<T> {
             Ok(parsed) => Ok(parsed),
             Err(e) => {
                 Err(format!(
-                    "Failed to parse output as valid JSON matching the schema. Error: {}. Please fix the JSON and return only the raw JSON without markdown formatting. Your raw text was: {}", e, completion
+                    "Failed to parse output as valid JSON matching the schema. \n\nValidation Error: {}\n\nPlease fix the JSON and return only the raw JSON without markdown formatting, or preferably use the 'structured_output' tool.", e
                 ))
             }
         }
@@ -147,7 +153,9 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         )));
                     }
 
-                    // Feed the original prompt, the failed completion, and the parsing error back to the model as an LLM-recoverable ToolMessage
+                    // Pydantic-first tool schema mechanic:
+                    // Feed the failed completion and the parsing error back to the model as an LLM-recoverable ToolMessage.
+                    // This allows the model to self-correct and output a correct `structured_output` payload.
                     if !msg.tool_calls.is_empty() {
                         current_req.messages.push(msg.clone());
                         let tool_results = msg.tool_calls.iter().map(|tc| crate::types::ToolResult {
@@ -166,7 +174,11 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
                         });
                     } else {
                         current_req.messages.push(msg.clone());
-                        current_req.messages.push(Message::user(parse_error_msg));
+                        // If there are no tool calls, simulate a system-level rejection message
+                        // so it knows it *must* use the `structured_output` tool
+                        let mut system_feedback = Message::user(parse_error_msg);
+                        system_feedback.role = crate::types::Role::User; // Ensure role is correctly set for feedback
+                        current_req.messages.push(system_feedback);
                     }
                     attempt += 1;
                 }
