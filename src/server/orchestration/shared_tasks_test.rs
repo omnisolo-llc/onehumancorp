@@ -38,6 +38,9 @@ async fn test_shared_task_orchestrator() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     let result = orchestrator.create_task(task).await;
@@ -83,7 +86,10 @@ async fn test_shared_task_orchestrator_sqlite() {
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -121,6 +127,9 @@ async fn test_shared_task_orchestrator_sqlite() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     let created_task = orchestrator.create_task(task).await.unwrap();
@@ -155,7 +164,10 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
             parent_plan_id TEXT,
             dependencies TEXT NOT NULL DEFAULT '[]',
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ultraplan_phase TEXT,
+            deliberation_log TEXT,
+            depth INTEGER
         );
 
         CREATE TABLE IF NOT EXISTS state_machine_transitions (
@@ -192,6 +204,9 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
     orchestrator.create_task(task1).await.unwrap();
 
@@ -209,6 +224,9 @@ async fn test_shared_task_orchestrator_sqlite_dependencies() {
         dependencies: "[\"task_1\"]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
     orchestrator.create_task(task2).await.unwrap();
 
@@ -258,6 +276,9 @@ async fn test_shared_task_orchestrator_dependencies() {
         dependencies: "[]".to_string(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
     };
 
     // Test compilation and basic structure. Like `test_shared_task_orchestrator`,
@@ -279,6 +300,9 @@ async fn test_shared_task_orchestrator_dependencies() {
             dependencies: "[\"task_1_pg\"]".to_string(),
             created_at: Utc::now(),
             updated_at: Utc::now(),
+        ultraplan_phase: None,
+        deliberation_log: None,
+        depth: None,
         };
         orchestrator.create_task(task2).await.unwrap();
 
