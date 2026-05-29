@@ -49,13 +49,13 @@ impl ObservabilityProvider for LangSmithProvider {
 }
 
 pub struct LangfuseProvider {
-    public_key: String,
-    secret_key: String,
+    _public_key: String,
+    _secret_key: String,
 }
 
 impl LangfuseProvider {
-    pub fn new(public_key: String, secret_key: String) -> Self {
-        Self { public_key, secret_key }
+    pub fn new(_public_key: String, secret_key: String) -> Self {
+        Self { _public_key: public_key, _secret_key: secret_key }
     }
 }
 

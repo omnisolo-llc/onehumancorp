@@ -7,7 +7,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use ::server_lib::autodream::AutoDreamWorker;
+use crate::autodream::AutoDreamWorker;
 
 #[derive(Deserialize)]
 pub struct QueryRequest {
