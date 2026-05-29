@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{Message, Role};
+use crate::types::{Message, Role};
 
 /// Configuration for the ACON Context Window Strategy.
 #[derive(Debug, Clone)]
@@ -53,7 +53,7 @@ pub fn apply_acon_strategy(messages: &mut Vec<Message>, config: &AconConfig) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ohc_builtin_agent_core::types::ToolResult;
+    use crate::types::ToolResult;
 
     #[test]
     fn test_apply_acon_strategy() {
