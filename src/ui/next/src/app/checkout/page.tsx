@@ -65,7 +65,7 @@ export default function CheckoutPage() {
                 if (!amount) return;
 
                 if (navigator.onLine) {
-                  alert(`Payment of $${amount} successful!`);
+                  alert(`Payment of ${amount} successful!`);
                   router.push('/dashboard');
                 } else {
                   let queue = [];
@@ -81,7 +81,7 @@ export default function CheckoutPage() {
                     idempotency_key: 'idempotency_' + Date.now() + Math.random().toString(36).substring(7)
                   });
                   localStorage.setItem('ohc_offline_queue', JSON.stringify(queue));
-                  alert(`You are offline. Payment of $${amount} saved locally and will process when reconnected.`);
+                  alert(`You are offline. Payment of ${amount} saved locally and will process when reconnected.`);
                   router.push('/dashboard');
                 }
               }}

@@ -9,7 +9,27 @@ struct ChatRequest {
     message: String,
 }
 
+#[derive(Clone, serde::Serialize)]
+struct WorkflowRecord {
+    id: String,
+    name: String,
+    workflow: String,
+    task: String,
+    status: String,
+    command: String,
+    created_at: String,
+    output: Option<String>,
+    error: Option<String>,
+}
+
+#[derive(serde::Deserialize)]
+struct CreateWorkflowRequest {
+    name: String,
+    task: String,
+}
+
 static TOOLTIPS_REGISTRY: std::sync::OnceLock<RwLock<HashMap<String, String>>> = std::sync::OnceLock::new();
+static WORKFLOW_REGISTRY: std::sync::OnceLock<RwLock<Vec<WorkflowRecord>>> = std::sync::OnceLock::new();
 
 fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     TOOLTIPS_REGISTRY.get_or_init(|| {
@@ -32,6 +52,126 @@ fn get_tooltips_registry() -> &'static RwLock<HashMap<String, String>> {
     m.insert("ask-ai-tooltip".to_string(), "Open the AI Chat to get answers instantly. The AI reads our entire Help Center for you.".to_string());
     RwLock::new(m)
     })
+}
+
+fn get_workflow_registry() -> &'static RwLock<Vec<WorkflowRecord>> {
+    WORKFLOW_REGISTRY.get_or_init(|| RwLock::new(Vec::new()))
+}
+
+fn workflow_agent_binary() -> String {
+    std::env::var("OHC_BUILTIN_AGENT_BINARY")
+        .or_else(|_| std::env::var("OHC_AGENT_BINARY"))
+        .unwrap_or_else(|_| "ohc_builtin_agent".to_string())
+}
+
+fn workflow_agent_task(task: &str) -> String {
+    let args = serde_json::json!({
+        "workflow": "ohc_review_branch",
+        "task": task,
+    });
+    format!(
+        "Use the built-in RunWorkflow tool. Arguments: {}. Return the final synthesized report.",
+        args
+    )
+}
+
+fn set_workflow_result(id: &str, status: &str, output: Option<String>, error: Option<String>) {
+    let registry = get_workflow_registry();
+    if let Ok(mut workflows) = registry.write() {
+        if let Some(record) = workflows.iter_mut().find(|record| record.id == id) {
+            record.status = status.to_string();
+            record.output = output;
+            record.error = error;
+        }
+    }
+}
+
+fn dispatch_workflow(record: WorkflowRecord) {
+    let id = record.id.clone();
+    let binary = workflow_agent_binary();
+    let task = workflow_agent_task(&record.task);
+
+    tokio::spawn(async move {
+        let output = tokio::process::Command::new(&binary)
+            .arg("--task")
+            .arg(task)
+            .output()
+            .await;
+
+        match output {
+            Ok(output) if output.status.success() => {
+                set_workflow_result(
+                    &id,
+                    "completed",
+                    Some(String::from_utf8_lossy(&output.stdout).trim().to_string()),
+                    None,
+                );
+            }
+            Ok(output) => {
+                set_workflow_result(
+                    &id,
+                    "failed",
+                    Some(String::from_utf8_lossy(&output.stdout).trim().to_string()),
+                    Some(String::from_utf8_lossy(&output.stderr).trim().to_string()),
+                );
+            }
+            Err(err) => {
+                set_workflow_result(
+                    &id,
+                    "failed",
+                    None,
+                    Some(format!("Failed to start {}: {}", binary, err)),
+                );
+            }
+        }
+    });
+}
+
+async fn list_workflows_handler() -> axum::Json<serde_json::Value> {
+    let workflows = get_workflow_registry()
+        .read()
+        .map(|records| records.clone())
+        .unwrap_or_default();
+    axum::Json(serde_json::json!({ "workflows": workflows }))
+}
+
+async fn create_workflow_handler(
+    axum::Json(payload): axum::Json<CreateWorkflowRequest>,
+) -> impl axum::response::IntoResponse {
+    use axum::http::StatusCode;
+
+    let name = payload.name.trim();
+    let task = payload.task.trim();
+    if name.is_empty() || task.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({ "error": "Workflow name and task are required" })),
+        );
+    }
+
+    let binary = workflow_agent_binary();
+    let agent_task = workflow_agent_task(task);
+    let record = WorkflowRecord {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: name.to_string(),
+        workflow: "ohc_review_branch".to_string(),
+        task: task.to_string(),
+        status: "running".to_string(),
+        command: format!("{} --task {}", binary, serde_json::to_string(&agent_task).unwrap_or_default()),
+        created_at: Utc::now().to_rfc3339(),
+        output: None,
+        error: None,
+    };
+
+    if let Ok(mut workflows) = get_workflow_registry().write() {
+        workflows.insert(0, record.clone());
+    }
+    dispatch_workflow(record.clone());
+
+    (
+        StatusCode::ACCEPTED,
+        axum::Json(serde_json::json!({ "workflow": record })),
+    )
 }
 pub mod db;
 pub use ::server_auth as auth;
@@ -1415,6 +1555,8 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
+            // Delegate the dependency validation to the TaskManager or Orchestrator logic
+            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
             
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
@@ -1512,7 +1654,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -2048,6 +2190,27 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let is_standalone = std::env::var("STANDALONE_MODE").unwrap_or_else(|_| "true".to_string()) == "true";
+    let sub_agent_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = if !is_standalone && std::env::var("REDIS_URL").is_ok() {
+        std::sync::Arc::new(crate::queue::RedisTaskQueue::new(&std::env::var("REDIS_URL").unwrap(), "sub_agent_jobs").unwrap())
+    } else {
+        match &db.store {
+            crate::db::DbStore::Postgres => std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone())),
+            crate::db::DbStore::Sqlite(sqlite_pool) => std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone())),
+        }
+    };
+
+    let sub_agent_queue_clone = sub_agent_queue.clone();
+    tokio::spawn(async move {
+        loop {
+            if let Ok(Some(job)) = sub_agent_queue_clone.dequeue(vec!["sub_agent".to_string(), "specialized_sub_agent".to_string(), "general_sub_agent".to_string()]).await {
+                tracing::info!("Processing sub-agent job: {}", job.id);
+                let _ = sub_agent_queue_clone.complete(&job.id, &job.tenant_id).await;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+    });
+
     let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
         crate::db::DbStore::Postgres => {
             std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
@@ -2427,6 +2590,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
+        .route("/api/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
@@ -3767,6 +3931,23 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <p style="color: var(--text-secondary); margin-bottom: 20px;">Manage your AI departments and review their recent activities.</p>
                         <button style="margin-bottom: 20px;" onclick="alert('Agent hiring flow started')">Hire Agent</button>
 
+                        <div class="card glass" id="workflow-builder" style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+                                <div>
+                                    <h2 class="outfit" style="margin: 0;">Create Workflow</h2>
+                                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: 6px;">Create a branch review workflow and send it to the backend agent CLI.</p>
+                                </div>
+                                <span style="font-size: 12px; font-weight: 700; color: var(--primary); background: var(--primary-soft); padding: 6px 8px; border-radius: 8px; white-space: nowrap;">RunWorkflow</span>
+                            </div>
+                            <label for="workflow-name" style="display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Name</label>
+                            <input id="workflow-name" value="Branch review" style="width: 100%; min-height: 44px; margin-bottom: 12px;" />
+                            <label for="workflow-task" style="display: block; font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px;">Task</label>
+                            <textarea id="workflow-task" style="width: 100%; min-height: 112px; border-radius: 8px; border: 1px solid var(--border); padding: 12px; font-family: 'Inter', sans-serif; resize: vertical;">Review the current branch for correctness, security, deployment, and test coverage issues.</textarea>
+                            <button id="create-workflow-button" style="width: 100%; margin-top: 12px;" onclick="createWorkflow()">Create & Run Workflow</button>
+                            <p id="workflow-status-message" style="font-size: 13px; color: var(--text-secondary); margin: 12px 0 0 0;"></p>
+                            <div id="workflow-list" style="margin-top: 14px;"></div>
+                        </div>
+
                         <div id="departments-container">
                             <div class="card glass" onclick="toggleDepartment('ambassador')" style="cursor: pointer;">
                                 <h3 class="outfit">Marketing Pro</h3>
@@ -3832,6 +4013,78 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                         }
 
+                        function renderWorkflows(workflows) {
+                            const list = document.getElementById('workflow-list');
+                            if (!list) return;
+                            if (!workflows || workflows.length === 0) {
+                                list.innerHTML = '<p style="font-size: 13px; color: var(--text-secondary);">No workflows yet.</p>';
+                                return;
+                            }
+                            list.innerHTML = workflows.map(workflow => `
+                                <div class="card glass" style="padding: 12px; margin-top: 10px; border: 1px solid var(--border);">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                                        <div>
+                                            <h3 class="outfit" style="margin: 0; font-size: 16px;">${workflow.name}</h3>
+                                            <p style="margin: 4px 0 0 0; font-size: 12px; color: var(--primary); font-weight: 700;">${workflow.workflow}</p>
+                                        </div>
+                                        <span style="font-size: 12px; font-weight: 700; color: ${workflow.status === 'failed' ? '#b91c1c' : workflow.status === 'completed' ? '#166534' : 'var(--primary)'};">${workflow.status}</span>
+                                    </div>
+                                    <p style="font-size: 13px; color: var(--text-secondary); margin: 10px 0;">${workflow.task}</p>
+                                    <div style="background: rgba(255,255,255,0.55); border: 1px solid var(--border); border-radius: 8px; padding: 10px;">
+                                        <p style="margin: 0 0 4px 0; font-size: 11px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">Backend CLI</p>
+                                        <p style="margin: 0; font-size: 12px; word-break: break-word; font-family: monospace;">${workflow.command || 'Preparing command...'}</p>
+                                    </div>
+                                    ${workflow.error ? `<p style="font-size: 13px; color: #b91c1c; margin-bottom: 0;">${workflow.error}</p>` : ''}
+                                </div>
+                            `).join('');
+                        }
+
+                        async function fetchWorkflows() {
+                            try {
+                                const res = await fetch('/api/agents/workflows');
+                                if (!res.ok) return;
+                                const data = await res.json();
+                                renderWorkflows(data.workflows || []);
+                            } catch (e) {
+                                console.error('Error fetching workflows:', e);
+                            }
+                        }
+
+                        async function createWorkflow() {
+                            const nameInput = document.getElementById('workflow-name');
+                            const taskInput = document.getElementById('workflow-task');
+                            const status = document.getElementById('workflow-status-message');
+                            const button = document.getElementById('create-workflow-button');
+                            const name = nameInput ? nameInput.value.trim() : '';
+                            const task = taskInput ? taskInput.value.trim() : '';
+                            if (!name || !task) {
+                                if (status) status.textContent = 'Workflow name and task are required.';
+                                return;
+                            }
+
+                            if (button) button.disabled = true;
+                            if (status) status.textContent = 'Creating workflow...';
+                            try {
+                                const res = await fetch('/api/agents/workflows', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ name, task })
+                                });
+                                const data = await res.json();
+                                if (!res.ok) {
+                                    if (status) status.textContent = data.error || 'Workflow could not be created.';
+                                    return;
+                                }
+                                if (status) status.textContent = 'Workflow sent to backend agent CLI.';
+                                renderWorkflows([data.workflow]);
+                                fetchWorkflows();
+                            } catch (e) {
+                                if (status) status.textContent = 'Workflow service is unavailable.';
+                                console.error('Error creating workflow:', e);
+                            } finally {
+                                if (button) button.disabled = false;
+                            }
+                        }
 
                         async function fetchActivityFeed() {
                             try {
@@ -5444,12 +5697,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
                                         }
                                     });
-                                    let companyName = document.querySelector('#step-3 input[type="text"]')?.value || '';
-                                    let companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1]?.value || '';
-                                    let firstProductName = document.querySelector('#step-5 input[type="text"]')?.value || '';
-                                    let firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1]?.value || '';
-                                    let websiteTemplate = document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
-                                    let domainChoice = document.querySelector('#step-9 button.selected')?.innerText || '';
+                                    let companyName = window.onboardingState?.company_name || document.getElementById('step-3-business-name')?.value || '';
+                                    let companyDesc = window.onboardingState?.company_description || document.getElementById('step-3-business-name-2')?.value || '';
+                                    let firstProductName = window.onboardingState?.first_product_name || document.getElementById('step-5-product-name')?.value || '';
+                                    let firstProductPrice = window.onboardingState?.first_product_price || document.getElementById('step-5-product-price')?.value || '';
+                                    let websiteTemplate = window.onboardingState?.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
+                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || '';
 
                                     if (domainChoice.includes('Free')) {
                                         domainChoice = 'free';
@@ -5471,9 +5724,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         first_product_price: firstProductPrice,
                                         website_template: websiteTemplate,
                                         domain_choice: domainChoice,
-                                        admin_email: "",
-                                        admin_name: "",
-                                        admin_password: "",
+                                        admin_email: window.onboardingState?.admin_email || "admin@ohc.app",
+                                        admin_name: window.onboardingState?.admin_name || "Admin",
+                                        admin_password: window.onboardingState?.admin_password || "password123",
                                         price_type: "fixed",
                                         payment_pref: "online"
                                     };
@@ -5764,6 +6017,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         document.getElementById('advisory-dashboard-summary').innerText = data.summary;
                                     })
                                     .catch(err => console.error('Error fetching advisory insights:', err));
+                            }
+
+                            if (id === 'team-screen') {
+                                fetchWorkflows();
                             }
 
                             if (id === 'dashboard-screen' || id === 'team-screen' || id === 'api-screen' || id === 'settings-screen' || id === 'my-plan-screen' || id === 'pricing-screen' || id === 'checkout-screen' || id === 'diagnostics-screen' || id === 'services-screen' || id === 'scaling-screen' || id === 'checklist-screen' || id === 'users-screen' || id === 'referral-dashboard-screen' || id === 'seasonal-promo-screen' || id === 'inbox-screen' || id === 'meetings-screen' || id === 'meeting-room-screen' || id === 'cost-dashboard-screen' || id === 'setup-screen' || id === 'advisory-dashboard-screen') {
