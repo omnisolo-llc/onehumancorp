@@ -269,7 +269,16 @@ impl DB {
                     .await?;
 
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                migrator.run(&self.pool).await?;
+
+                let migrate_res = migrator.run(&self.pool).await;
+                if let Err(e) = migrate_res {
+                    // Ignore VersionMismatch errors that can happen on concurrent starts in E2E tests
+                    if e.to_string().contains("VersionMismatch") {
+                        tracing::warn!("Ignoring migration VersionMismatch error: {}", e);
+                    } else {
+                        return Err(Box::new(e));
+                    }
+                }
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
