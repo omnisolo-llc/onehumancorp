@@ -43,7 +43,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
         tenant_id: "maya_bakery".to_string(),
         agent_id: "marketing_agent".to_string(),
         content: "We sell old cupcakes.".to_string(),
-        embedding: vec![0.1, 0.2, 0.3], // Same dimensions as others to mock query
+        embedding: vec![1.0, -1.0, 0.5], // Same dimensions as others to mock query
         source_type: "TASK_SUMMARY".to_string(),
         created_at: old_stale_time,
         last_referenced_at: old_stale_time,
@@ -112,7 +112,7 @@ async fn test_full_consolidated_memory_e2e_journey() {
     assert_eq!(count, 4, "Initial state should have 4 records");
 
     // Run Auto-resolution (resolves the conflict between sales_day1 and sales_day3)
-    let resolved = repo.auto_resolve_conflicts().await.expect("Failed to auto-resolve conflicts");
+    let resolved = repo.auto_resolve_conflicts(&ohc_builtin_agent::memory_store::MockConflictResolver).await.expect("Failed to auto-resolve conflicts");
     assert_eq!(resolved, 1, "Exactly 1 conflict should be resolved");
 
     // Run Pruning process (removes stale note older than 180 days)

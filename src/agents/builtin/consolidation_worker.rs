@@ -8,20 +8,22 @@ pub struct ConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: Duration,
     pub pruning_threshold_days: i64,
+    pub resolver: Arc<dyn crate::memory_store::ConflictResolver>,
 }
 
 impl ConsolidationWorker {
-    pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64) -> Self {
+    pub fn new(repository: Arc<VectorRepository>, poll_interval: Duration, pruning_threshold_days: i64, resolver: Arc<dyn crate::memory_store::ConflictResolver>) -> Self {
         Self {
             repository,
             poll_interval,
             pruning_threshold_days,
+            resolver,
         }
     }
 
     /// Run a single consolidation pass manually. Useful for testing.
     pub async fn run_once(&self) -> Result<(usize, bool), String> {
-        let conflicts_resolved = self.repository.auto_resolve_conflicts().await?;
+        let conflicts_resolved = self.repository.auto_resolve_conflicts(&*self.resolver).await?;
 
         let threshold_date = Utc::now() - chrono::Duration::days(self.pruning_threshold_days);
         let pruning_success = self.repository.prune_stale(threshold_date).await.is_ok();
@@ -75,7 +77,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_run_once() {
         let repo = setup_sqlite_repo().await;
-        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180);
+        let worker = ConsolidationWorker::new(repo.clone(), Duration::from_secs(1), 180, Arc::new(crate::memory_store::MockConflictResolver));
 
         // Insert a stale record that should be pruned
         let mut v1 = vec![0.0; 10];
@@ -113,7 +115,7 @@ mod tests {
     #[tokio::test]
     async fn test_consolidation_worker_spawn() {
         let repo = setup_sqlite_repo().await;
-        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_millis(50), 180));
+        let worker = Arc::new(ConsolidationWorker::new(repo.clone(), Duration::from_millis(50), 180, Arc::new(crate::memory_store::MockConflictResolver)));
 
         let handle = worker.spawn_background_task();
 
