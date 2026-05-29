@@ -38,11 +38,14 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.workflow }}
           repository-cache: true
           bazelrc: |
             # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
