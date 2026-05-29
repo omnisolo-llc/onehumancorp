@@ -182,9 +182,6 @@ impl DB {
                     Box::pin(async move {
                         use sqlx::Executor;
                         conn.execute("PRAGMA secure_delete = ON").await?;
-                        conn.execute("PRAGMA foreign_keys = ON").await?;
-                        conn.execute("PRAGMA journal_mode = WAL").await?;
-                        conn.execute("PRAGMA synchronous = NORMAL").await?;
                         Ok(())
                     })
                 })

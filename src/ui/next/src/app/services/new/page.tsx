@@ -1,10 +1,8 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function NewServicePage() {
-  const router = useRouter();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
@@ -12,19 +10,12 @@ export default function NewServicePage() {
   const [price, setPrice] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!title) return;
     setSaved(true);
-    try {
-      const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
-      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'anon' : 'anon';
-      await fetch('/api/onboarding/state', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenant, 'X-User-ID': userId },
-         body: JSON.stringify({ services: [{ title, description, price }] })
-      });
-    } catch (e) { console.error(e); }
-    router.push('/dashboard');
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 1500);
   };
 
   const generateDescription = () => {
