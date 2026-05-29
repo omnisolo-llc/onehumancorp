@@ -35,6 +35,8 @@ pub struct IntegrationsRegistry {
     listmonk_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::listmonk::provider::ListmonkProvider>>>,
     easypost_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::easypost::provider::EasyPostProvider>>>,
     sendgrid_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::sendgrid::provider::SendGridProvider>>>,
+    resend_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::resend::provider::ResendProvider>>>,
+    daily_clients: std::sync::RwLock<std::collections::HashMap<String, std::sync::Arc<crate::integrations::daily::provider::DailyProvider>>>,
 }
 
 impl IntegrationsRegistry {
@@ -75,6 +77,8 @@ impl IntegrationsRegistry {
             listmonk_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             easypost_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
             sendgrid_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            resend_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
+            daily_clients: std::sync::RwLock::new(std::collections::HashMap::new()),
         }
     }
 
@@ -278,6 +282,16 @@ impl IntegrationsRegistry {
             clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::sendgrid::provider::SendGridProvider::new(creds.api_token.clone())));
         }
 
+        if integration_id == "resend" {
+            let mut clients = self.resend_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::resend::provider::ResendProvider::new(creds.api_token.clone())));
+        }
+
+        if integration_id == "daily" {
+            let mut clients = self.daily_clients.write().unwrap();
+            clients.insert(integration_id.to_string(), std::sync::Arc::new(crate::integrations::daily::provider::DailyProvider::new(creds.api_token.clone())));
+        }
+
         Ok(inst)
     }
 
@@ -392,22 +406,6 @@ impl IntegrationsRegistry {
         };
         if let Some(c) = client {
             return c.get_free_busy(time_min, time_max).await;
-        }
-        Err("integration not found or not supported".to_string())
-    }
-
-
-    pub async fn fetch_conversations(&self, integration_id: &str) -> Result<Vec<String>, String> {
-        let client = {
-            if integration_id == "manychat" {
-                let clients = self.manychat_clients.read().unwrap();
-                clients.get(integration_id).cloned()
-            } else {
-                None
-            }
-        };
-        if let Some(c) = client {
-            return c.fetch_conversations().await;
         }
         Err("integration not found or not supported".to_string())
     }
@@ -676,6 +674,18 @@ impl IntegrationsRegistry {
             return c.create_meeting(topic).await;
         }
 
+        let client_daily = {
+            if integration_id == "daily" {
+                let clients = self.daily_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_daily {
+            return c.create_meeting(topic).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 
@@ -710,7 +720,7 @@ impl IntegrationsRegistry {
     }
 
     pub async fn send_email(&self, integration_id: &str, to: &str, subject: &str, body: &str) -> Result<(), String> {
-        let client = {
+        let client_sendgrid = {
             if integration_id == "sendgrid" {
                 let clients = self.sendgrid_clients.read().unwrap();
                 clients.get(integration_id).cloned()
@@ -718,9 +728,22 @@ impl IntegrationsRegistry {
                 None
             }
         };
-        if let Some(c) = client {
+        if let Some(c) = client_sendgrid {
             return c.send_email(to, subject, body).await;
         }
+
+        let client_resend = {
+            if integration_id == "resend" {
+                let clients = self.resend_clients.read().unwrap();
+                clients.get(integration_id).cloned()
+            } else {
+                None
+            }
+        };
+        if let Some(c) = client_resend {
+            return c.send_email(to, subject, body).await;
+        }
+
         Err("integration not found or not supported".to_string())
     }
 

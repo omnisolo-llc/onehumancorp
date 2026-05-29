@@ -12,7 +12,7 @@ use std::sync::OnceLock;
 static GLOBAL_POOL: OnceLock<PgPool> = OnceLock::new();
 
 pub fn get_pool() -> PgPool {
-    GLOBAL_POOL.get().cloned().unwrap_or_else(|| {
+    GLOBAL_POOL.get_or_init(|| {
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
         sqlx::postgres::PgPoolOptions::new()
             .before_acquire(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("SET app.current_tenant = ''").await?; Ok(true) }) })
@@ -20,7 +20,7 @@ pub fn get_pool() -> PgPool {
             .acquire_timeout(std::time::Duration::from_millis(500))
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB pool lazily")
-    })
+    }).clone()
 }
 
 #[derive(Clone)]
@@ -540,6 +540,7 @@ impl DB {
                         content TEXT NOT NULL,
                         embedding BLOB,
                         source_type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
@@ -939,7 +940,7 @@ pub async fn insert_autodream_memory(
         let threshold = Utc::now() - chrono::Duration::seconds(timeout_secs);
         let affected = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?)")
+                sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < ?) LIMIT 1000)")
                     .bind(threshold.to_rfc3339())
                     .execute(sqlite_pool)
                     .await?.rows_affected()
@@ -947,7 +948,7 @@ pub async fn insert_autodream_memory(
             DbStore::Postgres => {
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                let affected = sqlx::query("UPDATE agent_missions SET status = 'FAILED' WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1)")
+                let affected = sqlx::query("DELETE FROM agent_missions WHERE id IN (SELECT id FROM agent_missions WHERE status = 'STUCK' OR ((status = 'PENDING' OR status = 'RUNNING') AND updated_at < $1) LIMIT 1000)")
                     .bind(threshold)
                     .execute(&mut *tx)
                     .await?.rows_affected();

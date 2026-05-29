@@ -1,0 +1,4 @@
+build --config=local
+test --config=local
+build --remote_executor=
+build --remote_cache=

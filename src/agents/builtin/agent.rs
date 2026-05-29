@@ -282,7 +282,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 }
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification:
+/// This fulfills the Master Catalog specification: Prompt Construction: OpenAI Codex Strict hierarchical priority stack
 /// 1. Server-controlled System Message (Highest Priority)
 /// 2. Tool Definitions
 /// 3. Developer Instructions
@@ -329,6 +329,8 @@ impl HierarchicalPromptBuilder {
     pub fn build(&self) -> String {
         let mut combined_system = String::new();
 
+        // Prompt Construction: OpenAI Codex Strict hierarchical priority stack
+        // 1. Server-controlled System Message (Highest Priority) -> 2. Tool Definitions -> 3. Developer Instructions -> 4. User Instructions
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
             combined_system.push_str("[Server System Message]\n");
@@ -362,17 +364,12 @@ impl HierarchicalPromptBuilder {
             combined_system.push_str(&self.user_instructions);
         }
 
-        // 5. Conversation History (happens at run loop outside this builder)
-
-        // Lost in the Middle prevention: High-signal context at the very beginning and very end
-        if self.enable_lost_in_the_middle_prevention {
-            if !self.server_system_message.is_empty() {
-                if !combined_system.is_empty() {
-                    combined_system.push_str("\n\n");
-                }
-                combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
-                combined_system.push_str(&self.server_system_message);
+        if self.enable_lost_in_the_middle_prevention && !self.server_system_message.is_empty() {
+            if !combined_system.is_empty() {
+                combined_system.push_str("\n\n");
             }
+            combined_system.push_str("[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\n");
+            combined_system.push_str(&self.server_system_message);
         }
 
         combined_system
@@ -1314,15 +1311,10 @@ impl Agent {
                  return Err(Box::new(e));
             }
 
-            let llm_clone = self.llm.clone();
-            let model_clone = cfg.model.clone();
-
             read_only_futures.push(async move {
                 let mut retry_count = 0;
-                let mut current_tc = tc_clone.clone();
-                let mut llm_recovery_attempts = 0;
                 loop {
-                    match self.execute_tool(&current_tc, &session_tools_clone, &[], cfg.max_retries).await {
+                    match self.execute_tool(&tc_clone, &session_tools_clone, &[], cfg.max_retries).await {
                         Ok(res) => break Ok(res),
                         Err(crate::types::ToolError::Transient(msg)) => {
                             if retry_count < max_retries {
@@ -1335,36 +1327,6 @@ impl Agent {
                             }
                         }
                         Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                            if llm_recovery_attempts < max_retries {
-                                llm_recovery_attempts += 1;
-
-                                // Error Handling (Compounding Error Prevention): LLM-recoverable
-                                // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                                let recovery_system = format!(
-                                    "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
-                                    current_tc.name, msg, current_tc.arguments
-                                );
-
-                                let recovery_req = ChatRequest {
-                                    model: model_clone.clone(),
-                                    system: recovery_system,
-                                    messages: vec![Message::user("Please fix the JSON arguments.")],
-                                    tools: vec![],
-                                    max_tokens: 1000,
-                                    temperature: 0.0,
-                                };
-
-                                match llm_clone.chat(recovery_req).await {
-                                    Ok(resp) => {
-                                        let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                                        if let Ok(fixed_args) = serde_json::from_str(json_text) {
-                                            current_tc.arguments = fixed_args;
-                                            continue; // Retry with fixed args
-                                        }
-                                    }
-                                    Err(_) => {}
-                                }
-                            }
                             break Ok(format!("Error executing planned step (LlmRecoverable): {}", msg));
                         }
                         Err(e) => {
@@ -1428,10 +1390,8 @@ impl Agent {
 
             let mut retry_count = 0;
             let max_retries = cfg.max_retries;
-            let mut current_tc = tc.clone();
-            let mut llm_recovery_attempts = 0;
             let result = loop {
-                match self.execute_tool(&current_tc, session_tools, &[], cfg.max_retries).await {
+                match self.execute_tool(&tc, session_tools, &[], cfg.max_retries).await {
                     Ok(res) => break res,
                     Err(crate::types::ToolError::Transient(msg)) => {
                         if retry_count < max_retries {
@@ -1444,36 +1404,6 @@ impl Agent {
                         }
                     }
                     Err(crate::types::ToolError::LlmRecoverable(msg)) => {
-                        if llm_recovery_attempts < max_retries {
-                            llm_recovery_attempts += 1;
-
-                            // Error Handling (Compounding Error Prevention): LLM-recoverable
-                            // (return the raw error as a ToolMessage directly to the model so it can self-correct)
-                            let recovery_system = format!(
-                                "You are an expert self-correcting agent. The tool '{}' failed with the following error:\n\n{}\n\nYour previous arguments were:\n{}\n\nPlease fix the arguments. Return ONLY a valid JSON object representing the corrected arguments.",
-                                current_tc.name, msg, current_tc.arguments
-                            );
-
-                            let recovery_req = ChatRequest {
-                                model: cfg.model.clone(),
-                                system: recovery_system,
-                                messages: vec![Message::user("Please fix the JSON arguments.")],
-                                tools: vec![],
-                                max_tokens: 1000,
-                                temperature: 0.0,
-                            };
-
-                            match self.llm.chat(recovery_req).await {
-                                Ok(resp) => {
-                                    let json_text = resp.message.content.trim().trim_start_matches("```json").trim_start_matches("```").trim_end_matches("```").trim();
-                                    if let Ok(fixed_args) = serde_json::from_str(json_text) {
-                                        current_tc.arguments = fixed_args;
-                                        continue; // Retry with fixed args
-                                    }
-                                }
-                                Err(_) => {}
-                            }
-                        }
                         break format!("Error executing planned step (LlmRecoverable): {}", msg);
                     }
                     Err(crate::types::ToolError::UserFixable(msg)) => {
@@ -2707,6 +2637,18 @@ impl Agent {
             // 1. Configured Checkpointer (Database or Git)
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
+
+                let current_objective = final_cfg.user_instructions.clone();
+                let mut notes = vec![];
+                if let Some(last_msg) = messages.last() {
+                    if !last_msg.content.is_empty() {
+                        notes.push(format!("Last msg: {:.50}...", last_msg.content));
+                    }
+                    if !last_msg.tool_calls.is_empty() {
+                        notes.push(format!("Tool calls: {}", last_msg.tool_calls.len()));
+                    }
+                }
+
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
                     checkpoint_id: checkpoint_id.clone(),
@@ -2716,6 +2658,9 @@ impl Agent {
                         "iteration": iteration,
                         "turn_input_tokens": turn_input_tokens,
                         "turn_output_tokens": output_tokens,
+                        "current_objective": current_objective,
+                        "status": "running",
+                        "notes": notes,
                     }),
                     created_at: chrono::Utc::now(),
                 };
@@ -2983,7 +2928,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
         let mut modified_tc = tc.clone();
@@ -4599,7 +4544,7 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object"}),
-            execute: std::sync::Arc::new(MockToolExecutor),
+            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
         };
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
@@ -6649,3 +6594,59 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
+
+#[cfg(test)]
+mod openai_codex_prompt_tests {
+    use super::*;
+    use crate::tools::Tool;
+
+    #[test]
+    fn test_openai_codex_strict_hierarchical_priority_stack() {
+        let mut cfg = AgentRunConfig::default();
+        cfg.server_system_message = "I am a server system message.".to_string();
+        cfg.developer_instructions = "I am developer instructions.".to_string();
+
+        // Create user instructions larger than 32 KiB
+        let long_user_instruction = "A".repeat(40000);
+        cfg.user_instructions = long_user_instruction;
+
+        let tool = Tool {
+            name: "test_tool".to_string(),
+            description: "A test tool.".to_string(),
+            parameters: serde_json::json!({"type": "object"}),
+            is_read_only: true,
+            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
+        };
+        let tools = vec![tool];
+
+        let prompt = build_hierarchical_system_prompt(&cfg, &tools);
+
+        // Verify Strict hierarchical priority stack
+
+        // 1. Server-controlled System Message (Highest Priority)
+        let server_idx = prompt.find("[Server System Message]").expect("Server System Message should be present");
+
+        // 2. Tool Definitions
+        let tool_idx = prompt.find("[Tool Definitions]").expect("Tool Definitions should be present");
+
+        // 3. Developer Instructions
+        let dev_idx = prompt.find("[Developer Instructions]").expect("Developer Instructions should be present");
+
+        // 4. User Instructions
+        let user_idx = prompt.find("[User Instructions]").expect("User Instructions should be present");
+
+        // Assert strictly ordered stack
+        assert!(server_idx < tool_idx, "Server System Message must come before Tool Definitions");
+        assert!(tool_idx < dev_idx, "Tool Definitions must come before Developer Instructions");
+        assert!(dev_idx < user_idx, "Developer Instructions must come before User Instructions");
+
+        // Assert User Instructions capped at 32 KiB
+        let user_instruction_content = &prompt[user_idx..];
+        assert!(
+            user_instruction_content.len() <= 32768 + "[User Instructions]\n".len() + "[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nI am a server system message.".len() + 100,
+            "User instructions should be capped at 32 KiB (actual length: {})", user_instruction_content.len()
+        );
+        assert!(user_instruction_content.contains(&"A".repeat(32768)));
+        assert!(!user_instruction_content.contains(&"A".repeat(32769)));
+    }
+}
