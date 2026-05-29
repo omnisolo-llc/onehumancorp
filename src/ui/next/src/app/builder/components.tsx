@@ -202,13 +202,51 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
     );
   }
 
+  if (type === "Testimonials") {
+    return (
+      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+        <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] border-b border-white/40 dark:border-white/10 pb-2">What Our Customers Say</h2>
+        <div className="flex flex-col gap-4">
+          {(props.items || []).map((item: any, i: number) => (
+            <div key={i} className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-5 rounded-[16px]">
+              <div className="flex text-[#FF9500] dark:text-[#FF9F1A] mb-2 text-sm">
+                {"★".repeat(item.rating || 5)}{"☆".repeat(5 - (item.rating || 5))}
+              </div>
+              <p className="text-sm text-[#1D1D1F] dark:text-[#F5F5F7] italic mb-3">"{item.review}"</p>
+              <p className="text-xs font-bold text-gray-500 dark:text-[#A1A1A6]">- {item.author}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (type === "Contact") {
     return (
-      <div className="p-6 bg-white/40 dark:bg-black/40 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] font-inter text-center border-y border-white/50 dark:border-white/10">
-        <h2 className="text-lg font-bold font-outfit mb-4">Get in Touch</h2>
-        <div className="space-y-2 text-sm text-gray-700 dark:text-[#A1A1A6]">
-          <p>Email: <a href={`mailto:${props.email}`} className="text-[#0066FF] hover:underline">{props.email}</a></p>
-          <p>Phone: <a href={`tel:${props.phone}`} className="text-[#0066FF] hover:underline">{props.phone}</a></p>
+      <div className="p-6 bg-transparent font-inter min-w-[375px]">
+        <div className="backdrop-blur-md bg-white/40 dark:bg-black/20 border border-white/50 dark:border-white/10 shadow-sm p-6 rounded-[16px]">
+          <h2 className="text-xl font-bold font-outfit mb-4 text-[#1D1D1F] dark:text-[#F5F5F7] text-center">Contact Us</h2>
+          <div className="space-y-4 mb-6 text-sm text-center text-gray-700 dark:text-[#A1A1A6]">
+            {props.email && <p>Email: <a href={`mailto:${props.email}`} className="text-[#0066FF] hover:underline font-medium">{props.email}</a></p>}
+            {props.phone && <p>Phone: <a href={`tel:${props.phone}`} className="text-[#0066FF] hover:underline font-medium">{props.phone}</a></p>}
+          </div>
+          <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-[#A1A1A6] mb-1">Name</label>
+              <input type="text" placeholder="Your Name" className="w-full bg-white/50 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:ring-2 focus:ring-[#0066FF] outline-none transition-all placeholder-gray-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-[#A1A1A6] mb-1">Email</label>
+              <input type="email" placeholder="your@email.com" className="w-full bg-white/50 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:ring-2 focus:ring-[#0066FF] outline-none transition-all placeholder-gray-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 dark:text-[#A1A1A6] mb-1">Message</label>
+              <textarea placeholder="How can we help?" rows={4} className="w-full bg-white/50 dark:bg-black/30 backdrop-blur-sm border border-white/50 dark:border-white/10 rounded-[8px] p-3 text-sm text-[#1D1D1F] dark:text-[#F5F5F7] focus:ring-2 focus:ring-[#0066FF] outline-none transition-all placeholder-gray-400 resize-none"></textarea>
+            </div>
+            <button className="w-full bg-gradient-to-r from-[#0066FF] to-[#0052cc] text-white font-bold py-3 rounded-[8px] shadow-md hover:shadow-lg active:scale-[0.98] transition-all font-outfit mt-2">
+              Send Message
+            </button>
+          </form>
         </div>
       </div>
     );

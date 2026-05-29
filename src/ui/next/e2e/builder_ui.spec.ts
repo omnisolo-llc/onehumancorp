@@ -3,7 +3,11 @@ import { test, expect } from '@playwright/test';
 test('builder flow completes successfully', async ({ page }) => {
   await page.route('**/api/v1/builder/generate', route => route.fulfill({
     status: 200,
-    json: { pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Test' } }] }] }
+    json: { pages: [{ blocks: [
+      { block_type: 'HeroBlock', content: { headline: 'Test' } },
+      { block_type: 'TestimonialBlock', content: { items: [{ author: 'Alice', review: 'Great!', rating: 5 }] } },
+      { block_type: 'Contact', content: { email: 'test@example.com' } }
+    ] }] }
   }));
   await page.route('**/api/v1/builder/publish_draft', route => route.fulfill({
     status: 200,
@@ -41,6 +45,16 @@ test('builder flow completes successfully', async ({ page }) => {
   await page.getByRole('button', { name: /Customize Selected Draft/i }).click();
 
   await expect(page.getByText(/1-Tap Launch/i)).toBeVisible({ timeout: 5000 });
+
+  // Verify Testimonials block is rendered
+  await expect(page.getByText(/What Our Customers Say/i)).toBeVisible();
+  await expect(page.getByText(/Great!/i)).toBeVisible();
+  await expect(page.getByText(/- Alice/i)).toBeVisible();
+
+  // Verify Contact Form block is rendered
+  await expect(page.getByText(/Contact Us/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/Your Name/i)).toBeVisible();
+  await expect(page.getByPlaceholder(/How can we help\?/i)).toBeVisible();
 
   await page.getByRole('button', { name: /1-Tap Launch/i }).click();
 
