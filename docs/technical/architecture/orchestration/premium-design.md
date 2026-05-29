@@ -91,7 +91,7 @@ CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivffla
 ```
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`src/server/orchestration/queue/queue.go`) with Redis or SQLite implementations for spawning isolated sub-agents.
+Background worker system (`src/server/orchestration/queue/queue.rs`) with Redis or SQLite implementations for spawning isolated sub-agents.
 
 ### 5.1 Sub-Agent Task Queue Payload (BullMQ / Celery)
 When KAIROS decomposes a mission, it submits jobs to a distributed background queue.
