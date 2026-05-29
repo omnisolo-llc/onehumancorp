@@ -1,0 +1,11 @@
+--- src/server/lib.rs
++++ src/server/lib.rs
+@@ -460,7 +460,7 @@
+ }
+
+ async fn generate_claims(_req: axum::extract::Request) -> impl axum::response::IntoResponse {
+-    let claims = ::server_common::Claims {
++    let _claims = ::server_common::Claims {
+         sub: "test-user".to_string(),
+         organization_id: "test-org".to_string(),
+         exp: 0,

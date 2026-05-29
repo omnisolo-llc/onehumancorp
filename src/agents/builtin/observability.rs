@@ -13,13 +13,13 @@ pub trait ObservabilityProvider: Send + Sync {
 }
 
 pub struct LangSmithProvider {
-    _api_key: String,
-    _project_name: String,
+    __api_key: String,
+    __project_name: String,
 }
 
 impl LangSmithProvider {
-    pub fn new(api_key: String, project_name: String) -> Self {
-        Self { _api_key: api_key, _project_name: project_name }
+    pub fn new(_api_key: String, project_name: String) -> Self {
+        Self { _api_key: _api_key: api_key, _project_name: project_name }
     }
 }
 
@@ -48,12 +48,12 @@ impl ObservabilityProvider for LangSmithProvider {
 }
 
 pub struct LangfuseProvider {
-    _public_key: String,
-    _secret_key: String,
+    __public_key: String,
+    __secret_key: String,
 }
 
 impl LangfuseProvider {
-    pub fn new(public_key: String, secret_key: String) -> Self {
+    pub fn new(_public_key: String, secret_key: String) -> Self {
         Self { _public_key: public_key, _secret_key: secret_key }
     }
 }

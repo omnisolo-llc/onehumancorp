@@ -300,7 +300,7 @@ impl SwarmCoordinator {
                 // Lead agent delegates to workers (simulated here by simply passing the task to each)
                 let mut futures = Vec::new();
                 for worker in &self.workers {
-                    let task_clone = task.to_string();
+                    let _task_clone = task.to_string();
                     let instruction = "Provide a specialized solution for this task.";
                     futures.push(Box::pin(async move {
                         worker.process_task(&task_clone, instruction).await
@@ -333,7 +333,7 @@ impl SwarmCoordinator {
                 }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);
 
                 for worker in &self.workers {
-                    let task_clone = task.to_string();
+                    let _task_clone = task.to_string();
                     futures.push(Box::pin(async move {
                         worker.process_task(&task_clone, "Analyze the task and provide your independent solution.").await
                     }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);

@@ -1,0 +1,20 @@
+--- src/agents/builtin/visual_orchestration.rs
++++ src/agents/builtin/visual_orchestration.rs
+@@ -47,7 +47,7 @@
+     }
+
+     #[async_recursion]
+-    pub async fn execute(&self, mut inputs: HashMap<String, String>) -> Result<String, String> {
++    pub async fn execute(&self, inputs: HashMap<String, String>) -> Result<String, String> {
+         let mut current_node_id = self.graph.nodes.iter().find(|n| matches!(n.data, OrchestrationNode::Input { .. })).map(|n| n.id.clone());
+
+         let mut variables = inputs.clone();
+@@ -72,7 +72,7 @@
+             let mut next_nodes = vec![];
+
+             match &node.data {
+-                OrchestrationNode::Input { name } => {
++                OrchestrationNode::Input { name: _ } => {
+                     // Variables already populated from execute input
+                 }
+                 OrchestrationNode::Llm { prompt, output_var } => {
