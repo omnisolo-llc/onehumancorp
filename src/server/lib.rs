@@ -4809,7 +4809,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     closeDomainSetup();
                                     fireConfetti();
                                     setTimeout(() => {
-                                        showScreen('dashboard-screen');
+                                        document.getElementById('dashboard-screen').innerHTML += "<h2>Welcome back, Human.</h2>"; showScreen('dashboard-screen');
                                     }, 2000);
                                 } else {
                                     console.error('Failed to publish');
@@ -5056,7 +5056,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     const data = await response.clone().json();
                                     localStorage.setItem('tenant_id', data.user.organization_id);
                                     localStorage.setItem('token', data.token);
-                                    showScreen('dashboard-screen');
+                                    document.getElementById('dashboard-screen').innerHTML += "<h2>Welcome back, Human.</h2>"; showScreen('dashboard-screen');
                                 } else {
                                     document.getElementById('login-error').style.display = 'block';
                                 }

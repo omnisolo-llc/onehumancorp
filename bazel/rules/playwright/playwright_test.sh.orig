@@ -39,7 +39,7 @@ done
 # Resolve browsers path to absolute
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-  
+
   # Resolve relative to runfiles root if it starts with ../
   if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
       if [[ -L bazel-out ]]; then
@@ -52,7 +52,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
           fi
       fi
   fi
-  
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
@@ -60,7 +60,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
       fi
   fi
-  
+
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
   fi
@@ -180,7 +180,6 @@ VK_PORT="$(docker port "$VALKEY_NAME" 6379/tcp | sed -E 's/.*:([0-9]+)$/\1/' | h
 echo "[playwright] E2E infrastructure ports (PG:$PG_PORT VK:$VK_PORT)"
 
 echo "[playwright] Waiting for postgres on port $PG_PORT..."
-sleep 5
 for i in $(seq 1 120); do
   if docker exec "$POSTGRES_NAME" psql -U ohc -d ohc -c "SELECT 1;" >/dev/null 2>&1; then
     break
@@ -272,7 +271,7 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   SHARD_INDEX=$((TEST_SHARD_INDEX + 1))
   PLAYWRIGHT_SHARD_ARG="--shard=${SHARD_INDEX}/${TEST_TOTAL_SHARDS}"
   echo "[playwright] Bazel sharding active: running shard ${SHARD_INDEX} of ${TEST_TOTAL_SHARDS}"
-  
+
   # Advertise sharding support to Bazel by touching the status file
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
     touch "$TEST_SHARD_STATUS_FILE"
