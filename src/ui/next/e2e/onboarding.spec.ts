@@ -9,13 +9,18 @@ test.describe('Onboarding Wizard Flow', () => {
     await expect(page.locator('text="Tell us about your business"')).toBeVisible();
 
     // Fill in the description
-    const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
-    await descriptionInput.fill('I am a freelance handyman in Miami');
+    const descriptionInput = page.locator('textarea[placeholder="e.g. I am Maya. I bake vegan cakes in Austin. Prices start at $50."]');
+    await descriptionInput.fill('I am Maya. I bake vegan cakes in Austin. Prices start at $50.');
 
     // Intercept API calls
     await page.route('**/api/onboarding/intake', route => route.fulfill({
       status: 200,
-      json: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
+      json: {
+        business_name: "Maya's Cakes",
+        business_type: "Bakery",
+        categories: ["food", "physical"],
+        initial_products: [{ name: 'Custom Vegan Cake', price: '45.00' }]
+      }
     }));
 
     await page.route('**/api/onboarding/start', route => route.fulfill({
