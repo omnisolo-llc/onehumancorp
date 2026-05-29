@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "chaos_test.rs",
+        "dynamic_workflows.rs",
         "handoff.rs",
         "health.rs",
         "hierarchical.rs",
@@ -30,6 +31,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "chaos_test.rs",
+        "dynamic_workflows.rs",
         "handoff.rs",
         "health.rs",
         "hierarchical.rs",
