@@ -73,7 +73,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}-${{ matrix.name }}
+          disk-cache: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, matrix.name, github.event.pull_request.number) || format('{0}-{1}', github.workflow, matrix.name) }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -84,13 +84,15 @@ jobs:
             - src/server/Cargo.lock
             - src/ui/next/package-lock.json
           external-cache: true
+          # Same-repo PRs should save cache, but use a PR-scoped disk-cache key to avoid overwriting other PR caches.
+          # Fork PRs can still restore from the shared cache but do not save remote cache.
           cache-save: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
           bazelrc: |
-            common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
-            build --config=buildbuddy
-            build --remote_download_minimal
+            # common --remote_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_header=x-nativelink-api-key=${{ secrets.NATIVELINK_API_KEY }}
+            common --bes_header=x-buildbuddy-api-key=${{ secrets.BUILDBUDDY_API_KEY }}
+            common --remote_upload_local_results=true
             build --build_metadata=ROLE=CI
-            build --color=yes
             build --show_timestamps
 
       - name: Build non-test artifacts
