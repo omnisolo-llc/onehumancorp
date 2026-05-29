@@ -1,4 +1,4 @@
-use super::{StateManager, standalone::StandaloneStateManager};
+use crate::orchestration::state::{StateManager, standalone::StandaloneStateManager, cloud::CloudStateManager};
 use crate::db::{DB, DbStore};
 
 use std::sync::Arc;
@@ -172,8 +172,6 @@ async fn test_dag_workflow() {
     assert!(tasks_after.iter().any(|t| t.id == child_id));
 }
 
-use super::cloud::CloudStateManager;
-
 // Mock testing CloudStateManager for test coverage requirements without hitting SQLite syntax panics
 #[tokio::test]
 async fn test_cloud_dag_workflow_mock() {
@@ -249,5 +247,31 @@ async fn test_degradation_fallback_standalone() {
     assert!(elapsed > std::time::Duration::from_millis(59000));
 
     // And returned empty list fail-safe
+    assert_eq!(tasks.len(), 0);
+}
+
+#[tokio::test]
+async fn test_degradation_fallback_postgres() {
+    let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .acquire_timeout(std::time::Duration::from_millis(50))
+        .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+        .unwrap();
+
+    let db = Arc::new(DB {
+        pool: dummy_pg_pool,
+        store: DbStore::Postgres,
+    });
+
+    let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+    let state_manager = CloudStateManager::new(db.clone(), mesh);
+
+    let start = std::time::Instant::now();
+    let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+    let elapsed = start.elapsed();
+
+    assert!(elapsed < std::time::Duration::from_millis(62000));
+    assert!(elapsed > std::time::Duration::from_millis(59000));
+
     assert_eq!(tasks.len(), 0);
 }
