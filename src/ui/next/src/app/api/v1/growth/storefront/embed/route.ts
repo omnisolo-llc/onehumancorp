@@ -20,6 +20,9 @@ export async function GET(request: Request) {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Storefront Embed</title>
+      <meta property="og:title" content="Premium Collection - Powered by OHC" />
+      <meta property="og:description" content="Discover our exclusive, high-quality products curated just for you." />
+      <meta property="og:image" content="/api/v1/growth/storefront/og-card?tenant=${tenant}&product_name=Premium%20Collection" />
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
       <style>
         body { font-family: 'Inter', sans-serif; margin: 0; padding: 16px; background: transparent; }
