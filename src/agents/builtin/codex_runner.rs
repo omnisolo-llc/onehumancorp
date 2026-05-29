@@ -7,58 +7,37 @@ use tokio::sync::mpsc;
 /// "Code-first" approach natively expressed in code (not DSLs).
 /// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
 /// Uses a `Runner` class with async, sync, and streamed modes.
-/// Uses a 3-layer architecture: Codex Core (agent code + runtime), App Server (bidirectional JSON-RPC API), and client surfaces sharing the exact same harness.
-
-// 1. Codex Core layer
-pub struct CodexCore {
-    pub agent: Arc<Agent>,
-    pub runtime_config: AgentRunConfig,
-}
-
-impl CodexCore {
-    pub fn new(agent: Arc<Agent>, runtime_config: AgentRunConfig) -> Self {
-        Self { agent, runtime_config }
-    }
-
-    pub async fn execute(&self, message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        let mut on_event = |_e| {};
-        self.agent.run(&self.runtime_config, message, &mut on_event).await
-    }
-}
-
 pub struct Runner {
-    pub core: Arc<CodexCore>,
+    pub agent: Arc<Agent>,
 }
 
 impl Runner {
     pub fn new(agent: Arc<Agent>) -> Self {
-        let core = Arc::new(CodexCore::new(agent, AgentRunConfig::default()));
-        Self { core }
-    }
-
-    pub fn new_with_core(core: Arc<CodexCore>) -> Self {
-        Self { core }
+        Self { agent }
     }
 
     /// Asynchronous execution mode
-    pub async fn run_async(&self, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
-        self.core.execute(initial_message).await
+    pub async fn run_async(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let mut on_event = |_e| {};
+        self.agent.run(cfg, initial_message, &mut on_event).await
     }
 
     /// Synchronous execution mode (blocks the current thread)
-    pub fn run_sync_blocking(&self, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn run_sync_blocking(&self, cfg: &AgentRunConfig, initial_message: &str) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let cfg = cfg.clone();
         let initial_message = initial_message.to_string();
-        let core = self.core.clone();
+        let agent = self.agent.clone();
 
         let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
         rt.block_on(async move {
-            core.execute(&initial_message).await
+            let mut on_event = |_e| {};
+            agent.run(&cfg, &initial_message, &mut on_event).await
         })
     }
 
     /// Streamed execution mode (returns a receiver for AgentEvents)
-    pub fn run_streamed(&self, initial_message: &str) -> mpsc::UnboundedReceiver<AgentEvent> {
-        self.core.agent.clone().query(self.core.runtime_config.clone(), initial_message.to_string())
+    pub fn run_streamed(&self, cfg: &AgentRunConfig, initial_message: &str) -> mpsc::UnboundedReceiver<AgentEvent> {
+        self.agent.clone().query(cfg.clone(), initial_message.to_string())
     }
 }
 
@@ -113,7 +92,7 @@ impl AppServer {
         if req.method == "run_agent" {
             let initial_message = req.params.get("message").and_then(|v| v.as_str()).unwrap_or("").to_string();
             let cfg = AgentRunConfig::default();
-            match self.runner.run_async(&initial_message).await {
+            match self.runner.run_async(&cfg, &initial_message).await {
                 Ok(result) => {
                     let resp = JsonRpcResponse {
                         jsonrpc: "2.0".to_string(),
@@ -152,7 +131,7 @@ impl AppServer {
             impl crate::scalable_multi_agent::AgentNode for AgentNodeAdapter {
                 async fn execute(&self, chunk: crate::scalable_multi_agent::TaskChunk) -> Result<crate::scalable_multi_agent::TaskResult, String> {
                     let cfg = AgentRunConfig::default();
-                    match self.runner.run_async(&chunk.payload).await {
+                    match self.runner.run_async(&cfg, &chunk.payload).await {
                         Ok(res) => Ok(crate::scalable_multi_agent::TaskResult {
                             chunk_id: chunk.id,
                             output: res,
@@ -251,7 +230,7 @@ mod tests {
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
         let cfg = AgentRunConfig::default();
-        let result = runner.run_async("test").await.unwrap();
+        let result = runner.run_async(&cfg, "test").await.unwrap();
         assert_eq!(result, "async success");
     }
 
@@ -268,7 +247,7 @@ mod tests {
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
         let cfg = AgentRunConfig::default();
-        let result = runner.run_sync_blocking("test").unwrap();
+        let result = runner.run_sync_blocking(&cfg, "test").unwrap();
         assert_eq!(result, "sync success");
     }
 
@@ -285,7 +264,7 @@ mod tests {
         let agent = Arc::new(Agent::new(client, vec![]));
         let runner = Runner::new(agent);
         let cfg = AgentRunConfig::default();
-        let mut rx = runner.run_streamed("test");
+        let mut rx = runner.run_streamed(&cfg, "test");
 
         let mut events = vec![];
         while let Some(event) = rx.recv().await {
