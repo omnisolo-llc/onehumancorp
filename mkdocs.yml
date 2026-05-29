@@ -39,7 +39,6 @@ nav:
       - KAIROS Distributed State Machine: features/kairos/distributed_state_machine.md
       - KAIROS AutoDream Pipelines: features/kairos/autodream_pipelines.md
       - KAIROS Memory Consolidation: features/kairos/memory_consolidation.md
-      - Dynamic Workflows: features/dynamic_workflows.md
       - Hybrid MCP Config Sync: features/hybrid_mcp_config_sync.md
       - Storefront Builder Architecture: features/storefront_builder_architecture.md
   - Technical:
@@ -66,7 +65,6 @@ nav:
       - OneHumanCorp (OHC) SMB Market Research Report: reports/ohc_smb_market_research_report.md
       - Global SMB Market Research Report: reports/ohc_global_smb_market_research_report.md
       - SMB Platform Research Report: reports/ohc_smb_platform_research_report.md
-      - Small Business Platform Strategic Research Report: reports/ohc_small_business_platform_strategic_research_report.md
       - Market Research Report: reports/ohc_market_research_report.md
       - OHC Market Dominance & SMB Research Report: reports/ohc_market_dominance_and_smb_research_report.md
       - Market Dominance & AI Differentiation Strategic Report: reports/ohc_market_dominance_ai_differentiation_strategic_report.md

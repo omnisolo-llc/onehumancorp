@@ -187,7 +187,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -284,7 +284,8 @@ pub async fn razorpay_webhook_handler(
 
 #[derive(Debug, Deserialize)]
 pub struct CalComEvent {
-    pub triggerEvent: String,
+    #[serde(rename = "triggerEvent")]
+    pub trigger_event: String,
     pub payload: CalComPayload,
 }
 
@@ -292,8 +293,10 @@ pub struct CalComEvent {
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
-    pub startTime: String,
-    pub endTime: String,
+    #[serde(rename = "startTime")]
+    pub start_time: String,
+    #[serde(rename = "endTime")]
+    pub end_time: String,
     pub attendees: Vec<CalComAttendee>,
 }
 
@@ -304,10 +307,10 @@ pub struct CalComAttendee {
 }
 
 pub async fn calcom_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
-    match payload.triggerEvent.as_str() {
+    match payload.trigger_event.as_str() {
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 
@@ -335,7 +338,7 @@ pub struct ResendEventData {
 }
 
 pub async fn resend_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ResendEvent>,
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
@@ -358,7 +361,7 @@ pub struct AyrshareEvent {
 }
 
 pub async fn ayrshare_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<AyrshareEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -384,37 +387,11 @@ pub struct ManychatMessage {
 }
 
 pub async fn manychat_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
         "ok" => StatusCode::OK.into_response(),
         _ => StatusCode::OK.into_response()
     }
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct CalendlyEvent {
-    pub event: String,
-    pub payload: serde_json::Value,
-}
-
-pub async fn calendly_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<CalendlyEvent>,
-) -> impl axum::response::IntoResponse {
-    axum::http::StatusCode::OK.into_response()
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub struct MailchimpEvent {
-    pub r#type: String,
-    pub data: serde_json::Value,
-}
-
-pub async fn mailchimp_webhook_handler(
-    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
-    axum::Json(_payload): axum::Json<MailchimpEvent>,
-) -> impl axum::response::IntoResponse {
-    axum::http::StatusCode::OK.into_response()
 }
