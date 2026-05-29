@@ -557,11 +557,9 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
-    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&optimized_prompt).await {
+    match client.reason(&prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -638,11 +636,9 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
-    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&optimized_prompt).await {
+    match client.reason(&prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -1469,9 +1465,8 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
         
-        let prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&prompt).await {
+        match client.reason(&req.prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -1989,6 +1984,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2051,6 +2048,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let queue = crate::queue::SqliteTaskQueue::new(sqlite_pool.clone());
+            queue.init().await?;
+            std::sync::Arc::new(queue)
+        }
+    };
+    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
+    let dynamic_workflow_manager = std::sync::Arc::new(
+        crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
+            dynamic_workflow_queue,
+            dynamic_workflow_state_dir,
+        ),
+    );
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2408,6 +2424,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -3593,15 +3610,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff;">🐦 Share 10% Off on X (Twitter)</button>
                         </div>
 
-                        <!-- Seasonal Promotion Generator -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Seasonal Promotion Generator <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Automatically generate a seasonal promotional banner and share link.</p>
-                            <button id="generate-seasonal-promo-btn" onclick="generateSeasonalPromo()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); color: #fff;">🏖️ Generate Summer Sale Promo</button>
-                        </div>
-
                         <!-- Growth Loop: Interactive Analytics Soft Paywall -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(255, 165, 0, 0.3); position: relative; overflow: hidden;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -3921,7 +3929,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <h1>Connect Custom Software</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -4310,7 +4318,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
+                            <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -5296,38 +5304,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        async function generateSeasonalPromo() {
-                            const btn = document.getElementById('generate-seasonal-promo-btn');
-                            if (btn) {
-                                btn.textContent = 'Generating...';
-                                btn.disabled = true;
-                            }
-                            try {
-                                const response = await fetch('/api/v1/growth/campaign/generate-seasonal-promo', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        theme: 'Summer',
-                                        discount: '20%'
-                                    })
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    const text = encodeURIComponent(data.message);
-                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                                } else {
-                                    alert('Failed to generate seasonal promo');
-                                }
-                            } catch (e) {
-                                alert('Network error');
-                            } finally {
-                                if (btn) {
-                                    btn.textContent = '🏖️ Generate Summer Sale Promo';
-                                    btn.disabled = false;
-                                }
-                            }
-                        }
-
                         let currentStep = 1;
 
 
@@ -6104,7 +6080,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">
