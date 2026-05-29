@@ -21,7 +21,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation(() => Promise.resolve({ json: () => Promise.resolve({}) }));
   });
 
   afterEach(() => {
