@@ -18,6 +18,7 @@ export default function KairosDashboard() {
 function KairosContent() {
   const searchParams = useSearchParams();
   const { startWalkthrough } = useWalkthrough();
+  const [isUndercover, setIsUndercover] = useState(false);
   const [activeTasks, setActiveTasks] = useState([
     { id: "task-1", name: "Inventory Reorder Strategy", status: "In Progress", priority: "High" },
     { id: "task-2", name: "Customer Sentiment Analysis", status: "Queued", priority: "Medium" },
@@ -52,9 +53,23 @@ function KairosContent() {
              </Link>
              <h1 className="text-2xl font-bold font-outfit" style={{ color: '#F5F5F7', letterSpacing: '-0.02em' }}>KAIROS Orchestration</h1>
          </div>
-         <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#0066FF' }}></div>
-            <span className="text-xs font-medium text-blue-600">System Synchronized</span>
+         <div className="flex items-center gap-4">
+             <button
+                 onClick={() => setIsUndercover(!isUndercover)}
+                 className="px-4 py-1.5 rounded-full text-xs font-bold transition-all border"
+                 style={{
+                     background: isUndercover ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.05)',
+                     backdropFilter: 'blur(20px) saturate(200%)',
+                     borderColor: isUndercover ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.1)',
+                     color: isUndercover ? '#FFF' : '#A0A0AB'
+                 }}
+             >
+                 {isUndercover ? '🕵️ Undercover Active' : 'Undercover Mode'}
+             </button>
+             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 rounded-full border border-blue-100">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#0066FF' }}></div>
+                <span className="text-xs font-medium text-blue-600">System Synchronized</span>
+             </div>
          </div>
       </header>
 
@@ -75,7 +90,7 @@ function KairosContent() {
                         <div key={task.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-gray-800 shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className={`w-2 h-2 rounded-full ${task.status === 'Completed' ? 'bg-green-500' : task.status === 'In Progress' ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
-                                <span className="text-sm font-semibold text-gray-200">{task.name}</span>
+                                <span className={`text-sm font-semibold text-gray-200 transition-all duration-500 ${isUndercover ? 'blur-sm opacity-60 select-none' : ''}`}>{task.name}</span>
                             </div>
                             <div className="flex items-center gap-4">
                                 <span className="text-xs font-medium text-gray-400">{task.status}</span>
@@ -104,10 +119,10 @@ function KairosContent() {
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{node.type}</span>
                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                             </div>
-                            <div className="text-lg font-bold text-gray-200">{node.status}</div>
+                            <div className={`text-lg font-bold text-gray-200 transition-all duration-500 ${isUndercover ? 'blur-sm opacity-60 select-none' : ''}`}>{node.status}</div>
                             <div className="flex items-center justify-between mt-2">
                                 <span className="text-xs text-gray-400">Load</span>
-                                <span className="text-xs font-bold text-gray-300">{node.load}</span>
+                                <span className={`text-xs font-bold text-gray-300 transition-all duration-500 ${isUndercover ? 'blur-sm opacity-60 select-none' : ''}`}>{node.load}</span>
                             </div>
                             <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
                                 <div className="h-full bg-blue-500 transition-all duration-1000" style={{ width: node.load }}></div>
@@ -142,11 +157,11 @@ function KairosContent() {
                 <div className="space-y-4">
                     <div className="p-4 bg-purple-900/20 rounded-xl border border-purple-800">
                         <div className="text-xs font-bold text-purple-600 uppercase tracking-widest mb-1">Knowledge Density</div>
-                        <div className="text-2xl font-bold text-purple-200">842.5 MB</div>
+                        <div className={`text-2xl font-bold text-purple-200 transition-all duration-500 ${isUndercover ? 'blur-md opacity-60 select-none' : ''}`}>842.5 MB</div>
                     </div>
                     <div className="p-4 bg-indigo-900/20 rounded-xl border border-indigo-800">
                         <div className="text-xs font-bold text-indigo-600 uppercase tracking-widest mb-1">Semantic Clusters</div>
-                        <div className="text-2xl font-bold text-indigo-200">12 Active</div>
+                        <div className={`text-2xl font-bold text-indigo-200 transition-all duration-500 ${isUndercover ? 'blur-md opacity-60 select-none' : ''}`}>12 Active</div>
                     </div>
                 </div>
             </div>
