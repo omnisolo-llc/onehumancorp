@@ -22,7 +22,7 @@ impl JitsiProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -37,5 +37,23 @@ impl JitsiProvider {
 impl JitsiProvider {
     pub async fn create_meeting(&self, meeting_name: &str) -> Result<String, String> {
         self._client.create_meeting(meeting_name).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jitsi_provider_new() {
+        let provider = JitsiProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "jitsi");
+    }
+
+    #[test]
+    fn test_jitsi_provider_into() {
+        let provider = JitsiProvider::new("test_token".to_string());
+        let integration = provider.into_integration_provider();
+        assert_eq!(integration.metadata.id, "jitsi");
     }
 }
