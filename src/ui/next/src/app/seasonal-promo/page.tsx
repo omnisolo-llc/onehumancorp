@@ -38,10 +38,7 @@ export default function SeasonalPromoPage() {
     }
     setHasPro(true);
     setShowSoftPaywall(false);
-    setTimeout(() => {
-      alert('Your 7-day Pro trial has been activated.');
-      handleGenerate();
-    }, 500);
+    handleGenerate();
   };
 
   return (

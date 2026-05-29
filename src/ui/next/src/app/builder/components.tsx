@@ -217,21 +217,16 @@ export function SmartBlock({ type, props }: { type: string; props: any }) {
   if (type === "PoweredBy") {
     const tenantId = props.tenantId || "storefront";
     return (
-      <div className="py-8 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-8 font-inter">
+      <div className="py-6 bg-transparent flex flex-col items-center justify-center border-t border-white/40 dark:border-white/10 mt-6">
         <a
           href={`ohc://join?ref=${tenantId}`}
-          className="group flex flex-col items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-all transform hover:scale-105"
+          className="group flex items-center gap-2 text-sm text-gray-500 dark:text-[#A1A1A6] hover:text-[#1D1D1F] dark:hover:text-white transition-colors"
         >
-          <div className="flex items-center gap-2 bg-white/60 dark:bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all">
-            <span className="font-inter text-xs font-semibold">Powered by</span>
-            <span className="font-outfit font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#0066FF] to-[#00C24B]">OHC</span>
-            <svg className="w-4 h-4 text-[#0066FF] opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </div>
-          <span className="text-xs font-medium text-gray-400 group-hover:text-[#0066FF] transition-colors mt-1">
-            Launch your own AI-powered business for free
-          </span>
+          <span className="font-inter">Powered by</span>
+          <span className="font-outfit font-bold tracking-tight">OHC</span>
+          <svg className="w-4 h-4 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
         </a>
       </div>
     );

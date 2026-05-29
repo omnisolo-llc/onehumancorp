@@ -392,3 +392,29 @@ pub async fn manychat_webhook_handler(
         _ => StatusCode::OK.into_response()
     }
 }
+
+#[derive(Debug, serde::Deserialize)]
+pub struct CalendlyEvent {
+    pub event: String,
+    pub payload: serde_json::Value,
+}
+
+pub async fn calendly_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(_payload): axum::Json<CalendlyEvent>,
+) -> impl axum::response::IntoResponse {
+    axum::http::StatusCode::OK.into_response()
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct MailchimpEvent {
+    pub r#type: String,
+    pub data: serde_json::Value,
+}
+
+pub async fn mailchimp_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    axum::Json(_payload): axum::Json<MailchimpEvent>,
+) -> impl axum::response::IntoResponse {
+    axum::http::StatusCode::OK.into_response()
+}

@@ -1,4 +1,4 @@
-
+use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
 use ohc_builtin_agent_tools::Tool;
@@ -13,14 +13,14 @@ impl ToolExecutionEngine {
         tc: &ToolCall,
         max_retries: usize,
     ) -> Result<String, ToolError> {
-        let max_retries = std::cmp::min(max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2
+        let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut retry_count = 0;
 
         loop {
             match tool.execute.execute(tc.arguments.clone()).await {
                 Ok(res) => return Ok(res),
                 Err(ToolError::Transient(msg)) => {
-                    // Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 1) Transient (retry with backoff)
+                    // 1) Transient errors: orchestrator should retry with backoff.
                     if retry_count < max_retries {
                         retry_count += 1;
                         let backoff = Duration::from_millis(500 * (1 << retry_count));
@@ -33,15 +33,15 @@ impl ToolExecutionEngine {
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
-                    // Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 2) LLM-recoverable (return the raw error as a ToolMessage directly to the model so it can self-correct)
+                    // 2) LLM-recoverable: returned to the model so it can self-correct.
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
-                    // Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 3) User-fixable (interrupt execution and ask user for input)
+                    // 3) User-fixable: interrupt execution and ask user for input.
                     return Err(ToolError::UserFixable(msg));
                 }
                 Err(ToolError::Fatal(msg)) => {
-                    // Error Handling (Compounding Error Prevention): LangGraph Mechanic (4-types): 4) Unexpected/Fatal (bubble up to debug)
+                    // 4) Fatal: bubbles up to debug/halt immediately.
                     return Err(ToolError::Fatal(msg));
                 }
                 Err(ToolError::Unexpected(msg)) => {

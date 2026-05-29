@@ -20,33 +20,15 @@ body {
 }
 
 .mac-glass-container {
-  background: rgba(255, 255, 255, 0.65) !important;
-  backdrop-filter: blur(30px) saturate(210%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  border-radius: 16px;
-  color: #1D1D1F;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(210%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   .mac-glass-container {
-    background: rgba(22, 22, 26, 0.7) !important;
-    backdrop-filter: blur(30px) saturate(210%) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 16px;
-    color: #F5F5F7;
+    background: rgba(22, 22, 26, 0.7);
+    backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
-}
-
-.mac-button {
-  border-radius: 8px;
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.mac-input {
-  border-radius: 8px;
-  transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.mac-motion-exit {
-  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
