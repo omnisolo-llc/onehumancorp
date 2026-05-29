@@ -1,3 +1,4 @@
+pub mod plugins;
 pub mod scalable_multi_agent;
 // ohc-builtin-agent: Rust reimplementation of the OHC builtin agent.
 //
@@ -35,7 +36,6 @@ pub mod memory_store;
 pub mod json_store;
 pub mod memory_exhaustive_tests;
 pub mod autogen;
-pub mod gather_act_verify;
 pub mod ralph_loop;
 pub mod ruflo;
 
@@ -49,7 +49,6 @@ pub mod provider;
 pub mod registry;
 pub mod plane;
 pub mod checkpointer;
-pub mod plan_and_execute;
 pub mod harness;
 pub mod langgraph;
 pub mod codex_runner;
@@ -70,3 +69,5 @@ pub mod gpt_researcher;
 pub mod deerflow_subagents;
 
 pub mod tool_executor_engine;
+pub mod ruflo_plugins;
+pub mod agentic_seek;
