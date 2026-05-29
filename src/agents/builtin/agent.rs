@@ -968,6 +968,7 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
+                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -2158,7 +2159,8 @@ impl Agent {
 
             // Layered Termination Condition: Safety Refusal
             if stop_reason == "content_filter" || stop_reason == "safety" {
-                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
+                let term_cond = crate::types::TerminationCondition::SafetyRefusal(stop_reason.to_string());
+                let err_msg = term_cond.to_string();
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -2180,6 +2182,8 @@ impl Agent {
                 );
 
                 if decision.action == BudgetAction::Stop {
+                    let term_cond = crate::types::TerminationCondition::TokenBudgetExhausted(decision.budget);
+                    tracing::info!("{}", term_cond);
                     let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                     on_event(AgentEvent::TextChunk { content: msg.clone() });
                     on_event(AgentEvent::TaskComplete { content: msg.clone() });
@@ -2209,8 +2213,8 @@ impl Agent {
                 ]);
             }
 
-            // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
+                tracing::info!("{}", crate::types::TerminationCondition::NoToolCalls);
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2294,6 +2298,8 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
+                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
+                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2301,6 +2307,7 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
+                let cfg_max_retries = final_cfg.max_retries;
 
                 let tool_span = info_span!(
                     "tool_execution",
@@ -2312,6 +2319,8 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
+                    let mut retry_count = 0;
+                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
@@ -2476,6 +2485,8 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
+                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
+                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2825,7 +2836,8 @@ impl Agent {
         }
 
         // Hit max iterations.
-        let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
+        let term_cond = crate::types::TerminationCondition::MaxTurnLimitExceeded(max_iterations);
+        let err_msg = term_cond.to_string();
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
         return Err(err_msg.into());
     }
@@ -2971,7 +2983,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
         let mut modified_tc = tc.clone();
@@ -4040,7 +4052,6 @@ mod tests {
             ]),
         });
 
-        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -6107,7 +6118,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6340,7 +6351,6 @@ mod hierarchical_prompt_tests {
 }
 
 
-    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }
@@ -6382,6 +6392,7 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
+        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
         let tool = Tool {
             name: "test_tool".to_string(),
@@ -6407,7 +6418,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6481,7 +6492,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]

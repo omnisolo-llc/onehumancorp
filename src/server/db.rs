@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 use std::str::FromStr;
 use std::env;
 use sqlx::Row;
+use ::server_common::auth_utils::set_org_context;
 use chrono::{DateTime, Utc};
 use std::path::Path;
 use std::sync::OnceLock;
@@ -539,6 +540,7 @@ impl DB {
                         content TEXT NOT NULL,
                         embedding BLOB,
                         source_type TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
