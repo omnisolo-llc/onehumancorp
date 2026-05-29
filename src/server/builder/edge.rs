@@ -35,28 +35,24 @@ pub async fn handle_edge_request(
         return Ok(Html(cached_html));
     }
 
-    let site = match super::db::list_sites(&state.pool, tenant_id).await {
-        Ok(sites) => sites.into_iter().find(|s| s.id == site_id),
+    let site = match super::db::get_site(&state.pool, tenant_id, site_id).await {
+        Ok(s) => s,
         Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
     };
 
-    if site.is_none() {
+    let site_draft: super::api::SiteDraft = match site.published_state {
+        Some(state) => match serde_json::from_value(state) {
+            Ok(draft) => draft,
+            Err(_) => return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+        },
+        None => return Err(axum::http::StatusCode::NOT_FOUND),
+    };
+
+    if site_draft.pages.is_empty() {
         return Err(axum::http::StatusCode::NOT_FOUND);
     }
 
-    let pages = super::db::list_pages(&state.pool, tenant_id, site_id)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    if pages.is_empty() {
-        return Err(axum::http::StatusCode::NOT_FOUND);
-    }
-
-    let page = &pages[0];
-
-    let blocks = super::db::list_blocks(&state.pool, tenant_id, page.id)
-        .await
-        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let page = &site_draft.pages[0];
 
     let mut html = String::new();
     html.push_str("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n");
@@ -104,7 +100,7 @@ pub async fn handle_edge_request(
     <div class="glass-container">
     "#);
 
-    for block in blocks {
+    for block in &page.blocks {
         html.push_str("<div class=\"block\">\n");
         match block.block_type.as_str() {
             "HeroBlock" | "Hero" => {

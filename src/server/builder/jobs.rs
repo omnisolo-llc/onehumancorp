@@ -39,10 +39,14 @@ async fn execute_publish_site_job(
     let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
     let minimax = crate::minimax::MinimaxClient::new(api_key);
 
+    let mut site_draft_pages = Vec::new();
+
     for page in &pages {
         let blocks = super::db::list_blocks(pool, tenant_id, page.id).await?;
 
         let should_generate_seo = page.seo_metadata.get("name").is_none() || page.seo_metadata.as_object().map(|o| o.is_empty()).unwrap_or(true);
+
+        let mut final_seo_metadata = page.seo_metadata.clone();
 
         if should_generate_seo {
             info!("Generating SEO metadata for page {}...", page.id);
@@ -71,14 +75,42 @@ async fn execute_publish_site_job(
                         .bind(page.id)
                         .execute(pool)
                         .await?;
+
+                    final_seo_metadata = seo_json;
                 }
             }
         }
+
+        let draft_blocks: Vec<super::api::DraftBlock> = blocks.into_iter().map(|b| super::api::DraftBlock {
+            block_type: b.block_type,
+            content: b.content,
+            sort_order: b.sort_order,
+        }).collect();
+
+        site_draft_pages.push(super::api::DraftPage {
+            path: page.path.clone(),
+            title: page.title.clone(),
+            blocks: draft_blocks,
+            seo_metadata: final_seo_metadata,
+        });
     }
 
+    let site = super::db::get_site(pool, tenant_id, site_id).await?;
+
+    let site_draft = super::api::SiteDraft {
+        domain: site.domain.clone(),
+        pages: site_draft_pages,
+    };
+
+    let published_state = serde_json::to_value(&site_draft).map_err(|e| {
+        tracing::error!("Failed to serialize site draft: {}", e);
+        sqlx::Error::Protocol("Serialization failed".to_string())
+    })?;
+
     sqlx::query(
-        "UPDATE builder_sites SET published_at = NOW(), updated_at = NOW() WHERE tenant_id = $1 AND id = $2",
+        "UPDATE builder_sites SET published_state = $1, published_at = NOW(), updated_at = NOW() WHERE tenant_id = $2 AND id = $3",
     )
+    .bind(published_state)
     .bind(tenant_id)
     .bind(site_id)
     .execute(pool)

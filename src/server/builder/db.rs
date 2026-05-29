@@ -7,11 +7,12 @@ pub struct Site {
     pub id: Uuid,
     pub tenant_id: Uuid,
     pub domain: Option<String>,
+    pub published_state: Option<serde_json::Value>,
 }
 
 pub async fn list_sites(pool: &PgPool, tenant_id: Uuid) -> Result<Vec<Site>, sqlx::Error> {
     sqlx::query_as::<_, Site>(
-        "SELECT id, tenant_id, domain FROM builder_sites WHERE tenant_id = $1",
+        "SELECT id, tenant_id, domain, published_state FROM builder_sites WHERE tenant_id = $1",
     )
     .bind(tenant_id)
     .fetch_all(pool)
@@ -20,10 +21,20 @@ pub async fn list_sites(pool: &PgPool, tenant_id: Uuid) -> Result<Vec<Site>, sql
 
 pub async fn create_site(pool: &PgPool, tenant_id: Uuid, domain: Option<String>) -> Result<Site, sqlx::Error> {
     sqlx::query_as::<_, Site>(
-        "INSERT INTO builder_sites (tenant_id, domain) VALUES ($1, $2) RETURNING id, tenant_id, domain",
+        "INSERT INTO builder_sites (tenant_id, domain) VALUES ($1, $2) RETURNING id, tenant_id, domain, published_state",
     )
     .bind(tenant_id)
     .bind(domain)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn get_site(pool: &PgPool, tenant_id: Uuid, site_id: Uuid) -> Result<Site, sqlx::Error> {
+    sqlx::query_as::<_, Site>(
+        "SELECT id, tenant_id, domain, published_state FROM builder_sites WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(tenant_id)
+    .bind(site_id)
     .fetch_one(pool)
     .await
 }
@@ -112,6 +123,17 @@ pub async fn update_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid, conten
     .bind(block_id)
     .fetch_one(pool)
     .await
+}
+
+pub async fn delete_block(pool: &PgPool, tenant_id: Uuid, block_id: Uuid) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "DELETE FROM builder_blocks WHERE tenant_id = $1 AND id = $2"
+    )
+    .bind(tenant_id)
+    .bind(block_id)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 pub async fn reorder_blocks(pool: &PgPool, tenant_id: Uuid, page_id: Uuid, block_ids: Vec<Uuid>) -> Result<(), sqlx::Error> {

@@ -88,7 +88,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
             "/pages/{page_id}/blocks",
             get(list_blocks).post(create_block),
         )
-        .route("/blocks/{block_id}", put(update_block))
+        .route("/blocks/{block_id}", put(update_block).delete(delete_block))
         .route("/pages/{page_id}/blocks/reorder", post(reorder_blocks))
         .route("/sites/{site_id}/publish", post(publish_site))
         .route("/generate", post(generate_storefront))
@@ -356,6 +356,20 @@ async fn update_block(
         content: block.content,
         sort_order: block.sort_order,
     }))
+}
+
+async fn delete_block(
+    State(pool): State<PgPool>,
+    Path(block_id): Path<Uuid>,
+    Extension(claims): Extension<Claims>,
+) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
+    let tenant_id = Uuid::parse_str(&claims.organization_id.unwrap_or_default()).map_err(|_| axum::http::StatusCode::UNAUTHORIZED)?;
+
+    db::delete_block(&pool, tenant_id, block_id)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]

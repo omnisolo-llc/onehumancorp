@@ -74,6 +74,12 @@ async fn test_builder_db_crud() {
     assert_eq!(reordered_blocks[0].id, block2.id); // block2 should now be first
     assert_eq!(reordered_blocks[1].id, block1.id);
 
+    // 6. Delete Block
+    db::delete_block(&pool, tenant_id, block1.id).await.expect("Failed to delete block");
+    let blocks_after_delete = db::list_blocks(&pool, tenant_id, page.id).await.expect("Failed to list blocks");
+    assert_eq!(blocks_after_delete.len(), 1);
+    assert_eq!(blocks_after_delete[0].id, block2.id);
+
     // Clean up
     let _ = sqlx::query("DELETE FROM builder_sites WHERE id = $1").bind(site.id).execute(&pool).await;
 }
@@ -186,6 +192,11 @@ async fn test_builder_api() {
         .json(&serde_json::json!({"content": {"headline": "Updated Hero", "subtitle": "Sub"}}))
         .send().await.unwrap();
     assert_eq!(res.status(), 200);
+
+    // Delete Block
+    let res = client.delete(&format!("{}/builder/blocks/{}", base_url, block.id))
+        .send().await.unwrap();
+    assert_eq!(res.status(), 204);
 
     // Publish Site
     let res = client.post(&format!("{}/builder/sites/{}/publish", base_url, site.id))
