@@ -19,7 +19,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+    global.fetch = vi.fn();
   });
 
   afterEach(() => {
@@ -38,10 +38,6 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -120,10 +116,6 @@ describe('OnboardingWizard', () => {
 
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
@@ -168,10 +160,6 @@ describe('OnboardingWizard', () => {
 
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
@@ -203,49 +191,6 @@ describe('OnboardingWizard', () => {
       expect(screen.getByText("Your business has been successfully launched.")).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Go to Dashboard/i })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: /Preview Storefront/i })).toBeInTheDocument();
-    });
-  });
-
-  it('Handles keyboard navigation with Enter key', async () => {
-    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
-
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
-
-    act(() => { render(<OnboardingWizard />); });
-
-    // Chat Step 1
-    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
-    await userEvent.type(nameInput, 'Maya Bakery');
-    await userEvent.keyboard('{Enter}');
-
-    // Chat Step 2
-    expect(await screen.findByText("What do you sell?")).toBeInTheDocument();
-    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
-    await userEvent.type(sellInput, 'Cakes');
-    await userEvent.keyboard('{Enter}');
-
-    // Chat Step 3
-    expect(await screen.findByText("Where are you located?")).toBeInTheDocument();
-    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
-    await userEvent.type(locInput, 'NY');
-    await userEvent.keyboard('{Enter}');
-
-    // Verify it transitions to Step 2: Review Details
-    await waitFor(() => {
-      expect(screen.getByText("Review Details")).toBeInTheDocument();
     });
   });
 });

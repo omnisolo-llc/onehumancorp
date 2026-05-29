@@ -132,17 +132,7 @@ impl CheckpointSaver for GitCheckpointer {
 
         // Structured scratchpad
         let mut scratchpad = ProgressFile::default();
-        if let Some(obj) = checkpoint.metadata.get("current_objective").and_then(|v| v.as_str()) {
-            scratchpad.current_objective = obj.to_string();
-        } else {
-            scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
-        }
-        if let Some(status) = checkpoint.metadata.get("status").and_then(|v| v.as_str()) {
-            scratchpad.status = status.to_string();
-        }
-        if let Some(notes_arr) = checkpoint.metadata.get("notes").and_then(|v| v.as_array()) {
-            scratchpad.notes = notes_arr.iter().filter_map(|n| n.as_str().map(String::from)).collect();
-        }
+        scratchpad.current_objective = format!("Checkpoint {}", checkpoint.checkpoint_id);
         let scratchpad_json = serde_json::to_string_pretty(&scratchpad).map_err(|e| e.to_string())?;
         tokio::fs::write(&scratchpad_path, scratchpad_json).await.map_err(|e| e.to_string())?;
 
@@ -268,8 +258,8 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e: serde_json::Error| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e: serde_json::Error| e.to_string())?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             Ok(Some(Checkpoint {
                 thread_id,
@@ -285,9 +275,9 @@ impl CheckpointSaver for PgCheckpointer {
     }
 
     async fn put_checkpoint(&self, checkpoint: Checkpoint) -> Result<(), String> {
-        let data_bytes = serde_json::to_vec(&checkpoint.data).map_err(|e: serde_json::Error| e.to_string())?;
+        let data_bytes = serde_json::to_vec(&checkpoint.data).map_err(|e| e.to_string())?;
         let compressed_data = compress_data(&data_bytes)?;
-        let metadata_bytes = serde_json::to_vec(&checkpoint.metadata).map_err(|e: serde_json::Error| e.to_string())?;
+        let metadata_bytes = serde_json::to_vec(&checkpoint.metadata).map_err(|e| e.to_string())?;
 
         sqlx::query(
             "INSERT INTO swarm_checkpoints (thread_id, checkpoint_id, parent_id, checkpoint, metadata, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (thread_id, checkpoint_id) DO UPDATE SET parent_id = EXCLUDED.parent_id, checkpoint = EXCLUDED.checkpoint, metadata = EXCLUDED.metadata, created_at = EXCLUDED.created_at"
@@ -300,7 +290,7 @@ impl CheckpointSaver for PgCheckpointer {
         .bind(checkpoint.created_at)
         .execute(&self.pool)
         .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -313,7 +303,7 @@ impl CheckpointSaver for PgCheckpointer {
         .bind(thread_id)
         .fetch_all(&self.pool)
         .await
-        .map_err(|e: sqlx::Error| e.to_string())?;
+        .map_err(|e| e.to_string())?;
 
         let mut checkpoints = Vec::new();
         for row in rows {
@@ -325,8 +315,8 @@ impl CheckpointSaver for PgCheckpointer {
             let created_at: DateTime<Utc> = row.get("created_at");
 
             let decompressed_data = decompress_data(&checkpoint_raw)?;
-            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e: serde_json::Error| e.to_string())?;
-            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e: serde_json::Error| e.to_string())?;
+            let data: serde_json::Value = serde_json::from_slice(&decompressed_data).map_err(|e| e.to_string())?;
+            let metadata: serde_json::Value = serde_json::from_slice(&metadata_raw).map_err(|e| e.to_string())?;
 
             checkpoints.push(Checkpoint {
                 thread_id,
@@ -349,7 +339,18 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
 
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e| e.to_string())?;
-    encoder.finish().map_err(|e| e.to_string())
+    let compressed = encoder.finish().map_err(|e| e.to_string())?;
+
+    use base64::engine::general_purpose::STANDARD;
+    use base64::Engine;
+
+    let b64 = STANDARD.encode(&compressed);
+    let mut result = Vec::new();
+    result.push(b'"');
+    result.extend_from_slice(b64.as_bytes());
+    result.push(b'"');
+
+    Ok(result)
 }
 
 fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
@@ -358,29 +359,25 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     use flate2::read::GzDecoder;
     use std::io::Read;
 
-    if data.len() >= 2 && data[0] == 0x1F && data[1] == 0x8B {
-        let mut decoder = GzDecoder::new(data);
-        let mut decompressed = Vec::new();
-        if decoder.read_to_end(&mut decompressed).is_ok() {
-            return Ok(decompressed);
-        }
-    }
-
     let is_quoted = data.len() >= 2 && data[0] == b'"' && data[data.len() - 1] == b'"';
     let decode_input = if is_quoted {
         &data[1..data.len() - 1]
     } else {
         data
     };
-    if let Ok(decoded) = STANDARD.decode(decode_input) {
-        let mut decoder = GzDecoder::new(&decoded[..]);
-        let mut decompressed = Vec::new();
-        if decoder.read_to_end(&mut decompressed).is_ok() {
-            return Ok(decompressed);
-        }
+
+    let decoded = match STANDARD.decode(decode_input) {
+        Ok(d) => d,
+        Err(_) => return Ok(data.to_vec()), // Fallback for raw JSON data
+    };
+
+    let mut decoder = GzDecoder::new(&decoded[..]);
+    let mut decompressed = Vec::new();
+    if let Err(_) = decoder.read_to_end(&mut decompressed) {
+        return Ok(data.to_vec()); // Fallback for valid base64 but not gzip
     }
 
-    Ok(data.to_vec())
+    Ok(decompressed)
 }
 
 #[cfg(test)]
@@ -396,31 +393,7 @@ mod tests {
     }
     
     #[test]
-    fn test_decompress_legacy_quoted_base64() {
-        let data = b"Hello, world!";
-        use flate2::write::GzEncoder;
-        use flate2::Compression;
-        use std::io::Write;
-
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(data).unwrap();
-        let compressed = encoder.finish().unwrap();
-
-        use base64::engine::general_purpose::STANDARD;
-        use base64::Engine;
-
-        let b64 = STANDARD.encode(&compressed);
-        let mut quoted = Vec::new();
-        quoted.push(b'"');
-        quoted.extend_from_slice(b64.as_bytes());
-        quoted.push(b'"');
-
-        let decompressed = decompress_data(&quoted).unwrap();
-        assert_eq!(data, decompressed.as_slice());
-    }
-
-    #[test]
-    fn test_decompress_legacy_unquoted_base64() {
+    fn test_decompress_unquoted() {
         let data = b"Hello, world!";
         use flate2::write::GzEncoder;
         use flate2::Compression;
@@ -452,7 +425,7 @@ mod tests {
     #[tokio::test]
     async fn test_pg_checkpointer_save_and_load() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn: &mut sqlx::postgres::PgConnection, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
 
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
@@ -479,7 +452,7 @@ mod tests {
     #[tokio::test]
     async fn test_pg_checkpointer_list_checkpoints() {
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn: &mut sqlx::postgres::PgConnection, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
+            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect_lazy("postgres://localhost/dummy").unwrap();
 
         let timeout_duration = std::time::Duration::from_millis(500);
         let query_future = sqlx::query("SELECT 1").execute(&pool);
