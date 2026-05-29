@@ -5426,12 +5426,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                             businessType = b.textContent.replace(/[^\w\s]/gi, '').trim();
                                         }
                                     });
-                                    let companyName = document.querySelector('#step-3 input[type="text"]')?.value || '';
-                                    let companyDesc = document.querySelectorAll('#step-3 input[type="text"]')[1]?.value || '';
-                                    let firstProductName = document.querySelector('#step-5 input[type="text"]')?.value || '';
-                                    let firstProductPrice = document.querySelectorAll('#step-5 input[type="text"]')[1]?.value || '';
-                                    let websiteTemplate = document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
-                                    let domainChoice = document.querySelector('#step-9 button.selected')?.innerText || '';
+                                    let companyName = window.onboardingState?.company_name || document.getElementById('step-3-business-name')?.value || '';
+                                    let companyDesc = window.onboardingState?.company_description || document.getElementById('step-3-business-name-2')?.value || '';
+                                    let firstProductName = window.onboardingState?.first_product_name || document.getElementById('step-5-product-name')?.value || '';
+                                    let firstProductPrice = window.onboardingState?.first_product_price || document.getElementById('step-5-product-price')?.value || '';
+                                    let websiteTemplate = window.onboardingState?.website_template || document.querySelector('#step-8 button.selected')?.innerText || 'Modern';
+                                    let domainChoice = window.onboardingState?.domain_choice || document.querySelector('#step-9 button.selected')?.innerText || '';
 
                                     if (domainChoice.includes('Free')) {
                                         domainChoice = 'free';
@@ -5453,9 +5453,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                         first_product_price: firstProductPrice,
                                         website_template: websiteTemplate,
                                         domain_choice: domainChoice,
-                                        admin_email: "",
-                                        admin_name: "",
-                                        admin_password: "",
+                                        admin_email: window.onboardingState?.admin_email || "admin@ohc.app",
+                                        admin_name: window.onboardingState?.admin_name || "Admin",
+                                        admin_password: window.onboardingState?.admin_password || "password123",
                                         price_type: "fixed",
                                         payment_pref: "online"
                                     };
