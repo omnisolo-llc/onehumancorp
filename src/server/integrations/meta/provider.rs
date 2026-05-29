@@ -34,7 +34,7 @@ impl MetaProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn test_meta_provider_to_integration_provider() {
         let provider = MetaProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
+        let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "meta");
     }
 
