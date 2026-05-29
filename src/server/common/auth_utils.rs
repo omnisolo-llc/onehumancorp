@@ -29,9 +29,6 @@ where
             .execute(executor)
             .await?;
     } else {
-        if org_id.trim().is_empty() && ::server_config::get().multitenant {
-            return Err(sqlx::Error::Configuration("empty tenant_id is not allowed in multi-tenant mode".into()));
-        }
         // No need to RESET ROLE since SET LOCAL is transaction scoped.
         query("SELECT set_config('app.current_tenant', $1, true)")
             .bind(org_id)
