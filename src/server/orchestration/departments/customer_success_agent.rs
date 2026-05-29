@@ -47,7 +47,20 @@ impl Department for CustomerSuccessAgent {
             // Actual logic to send the message when approved.
             // For now, we simulate sending the message.
             tracing::info!("Simulating sending approved message for tenant");
+            if let Some(request_id) = event.payload.get("request_id").and_then(|v| v.as_str()) {
+                let _ = self.orchestrator.mark_approval_executed(request_id, &event.tenant_id).await;
+            }
             return Ok(());
+        }
+
+        if event.event_type == "tenant.order.fulfillment_ready" {
+            return self.orchestrator.execute_action(
+                DepartmentType::CustomerSuccess,
+                "Send personalized thank you & shipping ETA".to_string(),
+                event.tenant_id.clone(),
+                risk.clone(),
+                event.payload.clone(),
+            ).await.map(|_| ());
         }
 
         if event.event_type == "tenant.message.received" {
@@ -63,7 +76,9 @@ impl Department for CustomerSuccessAgent {
                 "No relevant memory found.".to_string()
             };
 
-            let generated_response = if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
+            let generated_response = if message.to_lowercase().contains("order") {
+                "Your order is being processed and will ship soon."
+            } else if message.to_lowercase().contains("vegan") && context_summary.to_lowercase().contains("vegan") {
                 "Yes, we do vegan cakes!"
             } else {
                 "Thank you for your message. We will get back to you shortly."
@@ -93,13 +108,7 @@ impl Department for CustomerSuccessAgent {
             return Ok(());
         }
 
-        self.orchestrator.execute_action(
-            DepartmentType::CustomerSuccess,
-            "Send personalized thank you & shipping ETA".to_string(),
-            event.tenant_id.clone(),
-            risk,
-            event.payload.clone(),
-        ).await.map(|_| ())
+        Ok(())
     }
 
     fn get_config(&self, tenant_id: &str) -> Option<DepartmentConfig> {

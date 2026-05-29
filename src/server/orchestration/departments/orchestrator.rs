@@ -550,6 +550,34 @@ impl DepartmentOrchestrator {
         results
     }
 
+    pub async fn mark_approval_executed(&self, request_id: &str, tenant_id: &str) -> Result<(), String> {
+        let now = Utc::now();
+        match &self.db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = $2 WHERE id = $3 AND tenant_id = $4")
+                    .bind("EXECUTED")
+                    .bind(now)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(&self.db.pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = ? WHERE id = ? AND tenant_id = ?")
+                    .bind("EXECUTED")
+                    .bind(now)
+                    .bind(request_id)
+                    .bind(tenant_id)
+                    .execute(pool)
+                    .await
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            }
+        }
+    }
+
     pub async fn decide_approval(&self, request_id: &str, tenant_id: &str, approved: bool) -> Result<(), String> {
         let new_status = if approved { "APPROVED" } else { "REJECTED" };
         let now = Utc::now();

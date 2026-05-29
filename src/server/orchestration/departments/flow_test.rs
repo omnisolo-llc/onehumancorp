@@ -142,7 +142,7 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             tenant_id: tenant_id.clone(),
             event_type: "tenant.message.received".to_string(),
-            payload: serde_json::json!({"message": "Do you do vegan cakes?"}),
+            payload: serde_json::json!({"message": "Where is my order?"}),
         };
 
         let res = orchestrator.dispatch_event(event).await;
@@ -153,11 +153,76 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
             if pending.iter().any(|req| req.description.contains("Draft email for review")) {
+                let payload = pending.iter().find(|req| req.description.contains("Draft email for review")).unwrap().payload.as_ref().unwrap();
+                assert_eq!(payload.get("generated_response").unwrap().as_str().unwrap(), "Your order is being processed and will ship soon.");
                 has_draft = true;
                 break;
             }
         }
-        assert!(has_draft, "Should generate a draft for review");
+        assert!(has_draft, "Should generate a draft for review for order inquiry");
+    }
+
+    #[tokio::test]
+    async fn test_customer_success_approval_execution() {
+        use crate::orchestration::departments::orchestrator::Department;
+        use crate::orchestration::departments::types::ActionRisk;
+        if std::env::var("DATABASE_URL").is_err() {
+            return;
+        }
+
+        let db = Arc::new(crate::db::DB::new().await.unwrap());
+        let transport = Arc::new(InProcessTransport::new());
+        let mesh = Arc::new(CentrifugeNode::new(transport));
+
+        let orchestrator = Arc::new(DepartmentOrchestrator::new(db.clone(), mesh));
+        let cs_agent = Arc::new(RwLock::new(CustomerSuccessAgent::new(orchestrator.clone())));
+        orchestrator.register_department(cs_agent.clone()).await;
+
+        let tenant_id = "test-tenant-exec".to_string();
+
+        match &db.store {
+            DbStore::Postgres => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES ($1, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(&db.pool)
+                    .await;
+            }
+            DbStore::Sqlite(pool) => {
+                let _ = sqlx::query("INSERT INTO tenants (tenant_id, ai_budget) VALUES (?, 100) ON CONFLICT (tenant_id) DO UPDATE SET ai_budget = 100")
+                    .bind(&tenant_id)
+                    .execute(pool)
+                    .await;
+            }
+        }
+
+        // 1. Create a draft action manually
+        let req = orchestrator.execute_action(
+            crate::orchestration::departments::types::DepartmentType::CustomerSuccess,
+            "Send personalized thank you".to_string(),
+            tenant_id.clone(),
+            ActionRisk::DraftForReview,
+            serde_json::json!({}),
+        ).await.unwrap();
+
+        // 2. Approve it
+        orchestrator.decide_approval(&req.id, &tenant_id, true).await.unwrap();
+
+        // 3. Dispatch the approved event (which would normally happen via msgbus)
+        let event = DepartmentEvent {
+            id: Uuid::new_v4().to_string(),
+            tenant_id: tenant_id.clone(),
+            event_type: "agent:customer_success:approved".to_string(),
+            payload: serde_json::json!({"request_id": req.id, "tenant_id": tenant_id}),
+        };
+
+        orchestrator.dispatch_event(event).await.unwrap();
+
+        // 4. Verify it moved to EXECUTED (so it's no longer pending)
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let activity = orchestrator.get_activity_feed(&tenant_id, None, 100).await;
+        let executed = activity.iter().find(|a| a.id == req.id);
+        assert!(executed.is_some(), "Request should be in activity feed");
+        assert_eq!(executed.unwrap().status, crate::orchestration::departments::types::ApprovalStatus::Executed, "Status should be EXECUTED");
     }
 
     #[tokio::test]
