@@ -9,11 +9,6 @@ exports_files([
 sh_binary(
     name = "repo_hygiene",
     srcs = ["check_repo_hygiene.sh"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "@platforms//os:macos": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     visibility = ["//visibility:public"],
 )
 
