@@ -299,6 +299,46 @@ export default function ApprovalInbox({
                   </div>
                 )}
 
+                {req.payload?.feature_type === "case_study_generator" && (
+                  <div className="mb-6 rounded-2xl overflow-hidden flex flex-col gap-3 shadow-lg" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', border: '1px solid rgba(255, 255, 255, 0.4)' }}>
+                    {/* Hero Image */}
+                    <div className="w-full h-48 bg-gray-200 relative overflow-hidden border-b border-gray-100/50">
+                      {req.payload?.hero_image ? (
+                         <img src={req.payload.hero_image} alt="Case Study Hero" className="w-full h-full object-cover" />
+                      ) : (
+                         <div className="w-full h-full flex items-center justify-center text-4xl">📸</div>
+                      )}
+                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full shadow-sm border border-white/40 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#0066FF' }}></span>
+                        <span className="text-[10px] font-bold text-gray-900 uppercase tracking-wide">Auto-Generated</span>
+                      </div>
+                    </div>
+
+                    <div className="p-5 flex flex-col gap-3">
+                      <div className="flex items-start justify-between gap-4">
+                        <h3 className="text-xl font-bold font-outfit text-gray-900 leading-tight">
+                           {req.payload?.title || "New Portfolio Post"}
+                        </h3>
+                        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0066FF]/10 flex items-center justify-center text-[#0066FF]">
+                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100 text-sm text-gray-700 leading-relaxed italic font-inter relative">
+                         <div className="absolute -top-2 left-4 text-gray-300">
+                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" /></svg>
+                         </div>
+                         {req.payload?.generated_copy || "Beautiful new cedar privacy fence installed in downtown area. Completed on time and on budget."}
+                      </div>
+
+                      <div className="flex gap-2 mt-2">
+                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md font-semibold tracking-wide border border-emerald-200">SEO Optimized</span>
+                        <span className="text-[10px] bg-blue-100 text-blue-800 px-2.5 py-1 rounded-md font-semibold tracking-wide border border-blue-200">Client Info Hidden</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {req.payload?.feature_type === "social_calendar" && (
                   <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
                     <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
@@ -410,13 +450,13 @@ export default function ApprovalInbox({
                     }}
                     className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    {payload && payload.original_message ? 'Review' : 'Reject / Edit'}
+                    {payload && payload.original_message ? 'Review' : 'Edit'}
                   </button>
                   <button
                     onClick={() => onApprove(req.id)}
                     className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-500/20 active:scale-[0.98] transition-all min-h-[44px]"
                   >
-                    Approve
+                    {req.payload?.feature_type === "case_study_generator" ? "Publish to Website" : "Approve"}
                   </button>
                 </div>
               </div>

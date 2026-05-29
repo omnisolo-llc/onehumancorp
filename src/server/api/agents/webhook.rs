@@ -64,6 +64,31 @@ async fn handle_webhook(
         }
     }
 
+    // Handle job completion from inbox, which has media attached
+    if payload.source == "inbox" && payload.message == "job_completed" {
+        let event = crate::orchestration::departments::types::DepartmentEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            tenant_id: payload.tenant_id.clone(),
+            event_type: "tenant.job.completed_with_media".to_string(),
+            payload: serde_json::json!({
+                "source": payload.source,
+                "message": payload.message,
+                "media_url": "https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800&q=80" // placeholder for cedar fence
+            }),
+        };
+
+        match orchestrator.dispatch_event(event).await {
+            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Err(e) => {
+                if e.contains("AI Budget exhausted") {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                } else {
+                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                }
+            }
+        }
+    }
+
     if payload.source == "mercadopago" {
         if payload.message == "approved" {
             tokio::spawn(async move {

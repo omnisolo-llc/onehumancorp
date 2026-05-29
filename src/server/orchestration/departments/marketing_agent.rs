@@ -19,11 +19,43 @@ impl Department for MarketingAgent {
     }
 
     fn subscribed_events(&self) -> Vec<String> {
-        vec!["tenant.insight.trending".to_string()]
+        vec![
+            "tenant.insight.trending".to_string(),
+            "tenant.job.completed_with_media".to_string(),
+            "agent:marketing:approved".to_string(),
+        ]
     }
 
     async fn handle_event(&self, event: &DepartmentEvent) -> Result<(), String> {
         let risk = ActionRisk::DraftForReview;
+
+        if event.event_type == "agent:marketing:approved" {
+            // Actual logic to publish the case study to the storefront CDN when approved.
+            // For now, we simulate invalidating cache and publishing.
+            tracing::info!("Simulating edge cache invalidation and portfolio publish for tenant: {}", event.tenant_id);
+            return Ok(());
+        }
+
+        if event.event_type == "tenant.job.completed_with_media" {
+            let hero_image = event.payload.get("media_url").and_then(|v| v.as_str()).unwrap_or("");
+
+            let action_payload = serde_json::json!({
+                "feature_type": "case_study_generator",
+                "title": "Cedar Fence Install",
+                "generated_copy": "Beautiful new cedar privacy fence installed in downtown area. Completed on time and on budget.",
+                "hero_image": hero_image
+            });
+
+            self.orchestrator.execute_action(
+                DepartmentType::Marketing,
+                "Draft new portfolio post for review".to_string(),
+                event.tenant_id.clone(),
+                risk,
+                action_payload,
+            ).await.map(|_| ())?;
+
+            return Ok(());
+        }
 
         self.orchestrator.execute_action(
             DepartmentType::Marketing,
