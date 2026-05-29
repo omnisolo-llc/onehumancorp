@@ -50,8 +50,8 @@ pub async fn bench_db_query_time() {
     for _ in 0..iterations {
         let start = std::time::Instant::now();
         let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
-    println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
-}
+        sqlite_times.push(start.elapsed().as_micros());
+    }
     sqlite_times.sort();
     println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
 }
