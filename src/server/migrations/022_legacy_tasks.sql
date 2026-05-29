@@ -1,10 +1,4 @@
--- Check if legacy_tasks exists. RENAME TO does not have an IF NOT EXISTS for the target table
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_class WHERE relname = 'legacy_tasks') THEN
-        ALTER TABLE IF EXISTS tasks RENAME TO legacy_tasks;
-    END IF;
-END $$;
+ALTER TABLE IF EXISTS tasks RENAME TO legacy_tasks;
 
 CREATE TABLE IF NOT EXISTS epics (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
