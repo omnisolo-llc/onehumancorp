@@ -20,7 +20,7 @@ Currently, OHC lacks:
 
 ## Design Doc
 ### Architecture: KAIROS Harness Implementation
-1.  **Harness Executor (`src/server/harness/executor.go`)**: Create a centralized execution engine that wraps agent tasks, providing isolation, timeouts, and standardized I/O routing.
+1.  **Harness Executor (`src/server/harness/executor.rs`)**: Create a centralized execution engine that wraps agent tasks, providing isolation, timeouts, and standardized I/O routing.
 2.  **Telemetry & Cost Interceptor**: Integrate OpenTelemetry (as requested in #5280) directly into the harness to automatically record metrics (`ohc_harness_command_duration_seconds`, `ohc_harness_io_bytes_total`) and proxy token costs.
 3.  **Durable Context Manager**: Implement a state preservation mechanism that periodically flushes harness state (history, intermediate outputs) to the OHC Central Database or Vector DB (AutoDream, #5279) for resilience.
 4.  **Safe Termination Protocol**: Port concepts from `killShellTasks.ts` to ensure orphaned processes and long-running shell commands are aggressively cleaned up upon task cancellation or failure.

@@ -389,6 +389,12 @@ async fn handle_check_milestones(
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
         },
+        Milestone {
+            id: "100th_order".to_string(),
+            title: "🎉 100th Order!".to_string(),
+            description: "You've successfully processed your 100th order on OHC.".to_string(),
+            reached: reached_types.contains(&"100th_order".to_string()),
+        },
     ];
     Json(MilestonesResponse { milestones })
 }
