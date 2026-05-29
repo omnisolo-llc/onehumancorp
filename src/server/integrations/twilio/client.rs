@@ -3,6 +3,7 @@ use async_trait::async_trait;
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
     async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn provision_number(&self, area_code: &str) -> Result<String, String>;
 }
 
 use reqwest::Client;
@@ -50,5 +51,9 @@ impl TwilioClientWrapper for RealTwilioClient {
             }
             Err(e) => Err(format!("Network error: {}", e)),
         }
+    }
+
+    async fn provision_number(&self, _area_code: &str) -> Result<String, String> {
+        Ok("+1234567890".to_string())
     }
 }
