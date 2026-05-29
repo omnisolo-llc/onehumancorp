@@ -69,4 +69,5 @@ pub mod gpt_researcher;
 pub mod deerflow_subagents;
 
 pub mod tool_executor_engine;
+pub mod agentic_seek;
 pub mod ruflo_plugins;
