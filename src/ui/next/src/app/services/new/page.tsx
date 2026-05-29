@@ -14,7 +14,7 @@ export default function NewServicePage() {
     if (!title) return;
     setSaved(true);
     setTimeout(() => {
-      window.location.href = '/dashboard';
+        window.location.href = '/dashboard';
     }, 1500);
   };
 
