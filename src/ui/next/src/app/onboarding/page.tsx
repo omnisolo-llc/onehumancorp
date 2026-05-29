@@ -23,9 +23,59 @@ export default function OnboardingWizard() {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
+
+
+  const [hasLoadedState, setHasLoadedState] = useState(false);
+
   useEffect(() => {
     setIsLoaded(true);
   }, []);
+
+  // 1. Fetch existing state on mount for seamless cross-device resumes
+  useEffect(() => {
+    if (isLoaded && !hasLoadedState) {
+      const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+      const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+      fetch('/api/onboarding/state', {
+        method: 'GET',
+        headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed");
+        return res.json();
+      })
+      .then(data => {
+        if (data && Object.keys(data).length > 0 && !data.error) {
+          // Merge state to resume
+          useOnboardingStore.setState(data);
+        }
+        setHasLoadedState(true);
+      })
+      .catch(e => {
+        // Safe fail, proceed with default state
+        setHasLoadedState(true);
+      });
+    }
+  }, [isLoaded, hasLoadedState]);
+
+  // 2. Sync state to backend on changes (only after we've loaded initial state to prevent overwrite)
+  useEffect(() => {
+    if (hasLoadedState) {
+      const timeoutId = setTimeout(() => {
+        try {
+          const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+          const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+          fetch('/api/onboarding/state', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+            body: JSON.stringify({ step, chatStep, businessDescription, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice })
+          }).catch(() => {});
+        } catch(e) {}
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [step, chatStep, businessDescription, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, hasLoadedState]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -157,7 +207,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -190,7 +240,7 @@ export default function OnboardingWizard() {
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
-                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-1 focus:ring-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -198,7 +248,7 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(3)}
-                      disabled={!whatYouSell.trim()}
+                      disabled={!whatYouSell.trim() || whatYouSell.trim().length < 3}
                       className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
@@ -224,7 +274,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none bg-white/60 dark:bg-black/30 backdrop-blur-sm text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -306,7 +356,7 @@ export default function OnboardingWizard() {
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => setStep(3)}
-                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
+                  disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim() || isNaN(Number(firstProductPrice))}
                   className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
