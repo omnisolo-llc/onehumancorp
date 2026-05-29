@@ -12,16 +12,16 @@ As the OHC Swarm handles more complex workloads, we require a distributed execut
 
 ```mermaid
 graph TD
-    subgraph Cloud Native Mode [Cloud Native Mode]
+    subgraph Cloud Native Mode
         A1[Task Manager] -->|Enqueue Job| R1[(Redis Task Queue)]
-        R1 -->|Dequeue via Redis<br/>(roles, vram, tokens)| W1[Sub-Agent Worker Pod]
-        W1 -->|Complete/Fail via TaskQueue Trait| C1[Task Status Update]
+        R1 -->|Dequeue via redis| W1[Sub-Agent Worker Pod]
+        W1 -->|Execute| C1[Task Complete]
     end
 
-    subgraph Standalone Mode [Standalone Mode]
-        A2[Task Manager] -->|Enqueue Job| S2[(SQLite/Postgres Queue)]
-        S2 -->|Dequeue via SQL Locks<br/>FOR UPDATE SKIP LOCKED| W2[Local Sub-Agent Worker]
-        W2 -->|Complete/Fail via TaskQueue Trait| C2[Task Status Update]
+    subgraph Standalone Mode
+        A2[Task Manager] -->|Enqueue Job| S2[(SQLite Task Queue)]
+        S2 -->|Dequeue via SQL Locks| W2[Local Sub-Agent Worker]
+        W2 -->|Execute| C2[Task Complete]
     end
 
     classDef premium fill:rgba(255,255,255,0.03),stroke:rgba(255,255,255,0.08),stroke-width:1px,color:#fff,backdrop-filter:blur(20px) saturate(200%);
@@ -32,26 +32,26 @@ graph TD
 
 The job lifecycle guarantees at-least-once delivery. This ensures resilient task execution and places poisoned messages in a dead-letter queue.
 
-1. **Enqueue**: The parent agent delegates a sub-task. The `TaskQueue::enqueue` method inserts a `Job` struct with `status="QUEUED"`.
-2. **Dequeue**: Worker sub-agents poll the queue for jobs matching their role via `TaskQueue::dequeue`, providing constraints like `estimated_vram` and `estimated_tokens`.
+1. **Enqueue**: The parent agent delegates a sub-task. The `TaskManager` inserts a `Job` record with `status='QUEUED'`.
+2. **Dequeue**: Worker sub-agents poll the queue for jobs matching their role.
 3. **Execution**: The worker agent attempts the task, communicating progress over the Teammate Mesh.
-4. **Completion/Failure**: The task transitions to `COMPLETED` on success via `TaskQueue::complete`, or `FAILED` (after retrying up to `max_attempts` via `TaskQueue::fail`).
+4. **Completion/Failure**: The task transitions to `COMPLETED` on success, or `FAILED` (after retrying up to `max_attempts`).
 
 ```mermaid
 stateDiagram-v2
-    [*] --> QUEUED : TaskQueue::enqueue(Job)
-    QUEUED --> RUNNING : TaskQueue::dequeue(roles, vram, tokens) -> Lock Acquired
-    RUNNING --> COMPLETED : TaskQueue::complete(job_id)
-    RUNNING --> QUEUED : Fail & Attempts < max_attempts
-    RUNNING --> FAILED : TaskQueue::fail(job_id, reason) -> Poison Pill (Attempts >= max)
+    [*] --> QUEUED : Enqueue
+    QUEUED --> RUNNING : Dequeue (Lock Acquired)
+    RUNNING --> COMPLETED : Success
+    RUNNING --> QUEUED : Retry (Fail & Attempts < Max)
+    RUNNING --> FAILED : Poison Pill (Attempts >= Max)
     COMPLETED --> [*]
     FAILED --> [*]
 ```
 
 ## 3. Implementation Details
 
-- **Cloud Mode (`redis_queue.rs`)**: Employs Redis Lists and Sets for robust delayed and immediate execution of `Job` structs.
-- **Standalone Mode (`sqlite_queue.rs` / `pg_queue.rs`)**: Utilizes internal SQL tables. Dequeuing relies on explicit transactions with concurrent read/write locks (`FOR UPDATE SKIP LOCKED`) to prevent contention during parallel local processing.
-- **Interface (`queue.rs`)**: The Rust `TaskQueue` trait unifies operations, allowing seamless transitions and strong compile-time type safety via `async_trait`.
+- **Cloud Mode**: Employs Redis Lists (`RPUSH`/`LPOP`) and Sorted Sets for delayed execution.
+- **Standalone Mode**: Utilizes an internal `sub_agent_jobs` SQLite table. Dequeuing relies on explicit transactions with concurrent read/write locks (`FOR UPDATE SKIP LOCKED` logic simulation) to prevent `SQLITE_BUSY` contention during parallel local processing.
+- **Observability**: Both queues integrate natively with OpenTelemetry, emitting queue length and processing time metrics for Grafana visualization.
 
 </div>
