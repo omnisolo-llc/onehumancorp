@@ -111,4 +111,4 @@ BEGIN
     END LOOP;
 END
 $$;
-CREATE INDEX CONCURRENTLY IF NOT EXISTS agent_memories_embedding_hnsw_idx ON agent_memories USING hnsw (context_embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS agent_memories_embedding_hnsw_idx ON agent_memories USING hnsw (context_embedding vector_cosine_ops);
