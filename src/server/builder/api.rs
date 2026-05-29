@@ -80,8 +80,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
     let edge_state = std::sync::Arc::new(super::edge::EdgeWorkerState { pool: pool.clone(), cache });
 
     Router::new()
-        .route("/edge/:tenant_id/:site_id", get(super::edge::handle_edge_request))
-        .layer(axum::extract::Extension(edge_state))
+        .route("/edge/{tenant_id}/{site_id}", get(super::edge::handle_edge_request))
         .route("/sites", get(list_sites).post(create_site))
 
         .route("/sites/{site_id}/pages", get(list_pages).post(create_page))
@@ -96,6 +95,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(pool: PgPool) -> axum::Router<S>
         .route("/publish_draft", post(publish_draft))
         .route("/geo_score", post(geo_score))
         .route("/auto_seo", post(auto_seo))
+        .layer(axum::Extension(edge_state))
         .with_state(pool)
 }
 
