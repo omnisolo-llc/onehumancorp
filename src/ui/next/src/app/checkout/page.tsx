@@ -150,7 +150,7 @@ export default function CheckoutPage() {
 
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('Amazing Product on OHC')}&description=${encodeURIComponent('Get 10% off your first order when you use my invite link!')}`)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-[#25D366] text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-[#20bd5a] transition-all"
@@ -159,7 +159,7 @@ export default function CheckoutPage() {
                   WhatsApp
                 </a>
                 <a
-                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('Amazing Product on OHC')}&description=${encodeURIComponent('Get 10% off your first order when you use my invite link!')}`)}`}
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just bought an amazing product from this store! Use my link to get 10% off your first order: ${referralLink}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 bg-black text-white p-3 rounded-xl font-semibold text-sm shadow-sm hover:bg-gray-800 transition-all"
