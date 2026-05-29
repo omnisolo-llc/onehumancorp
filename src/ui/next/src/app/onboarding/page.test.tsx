@@ -19,11 +19,64 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockImplementation(() => {
+      const p = Promise.resolve({ ok: true, json: async () => ({}) });
+      (p as any).catch = vi.fn();
+      return p;
+    });
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+
+  it('Advances steps using Enter key', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
+
+    // Mock intake success
+    (global.fetch as any).mockImplementationOnce(() => {
+        const p = Promise.resolve({
+            ok: true,
+            json: async () => ({
+                business_type: 'Bakery',
+                business_name: 'Maya Bakery',
+                categories: ['food'],
+                initial_products: [{ name: 'Cake', price: '20' }]
+            })
+        });
+        (p as any).catch = vi.fn();
+        return p;
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    // Chat Step 1
+    const nameInput = screen.getByPlaceholderText(/Maya's Custom Cakes/i);
+    await userEvent.type(nameInput, 'Maya Bakery{Enter}');
+
+    // Should move to Chat Step 2
+    await waitFor(() => {
+        expect(screen.getByPlaceholderText(/I bake custom vegan cakes/i)).toBeInTheDocument();
+    });
+
+    // Chat Step 2
+    const sellInput = screen.getByPlaceholderText(/I bake custom vegan cakes/i);
+    await userEvent.type(sellInput, 'Cakes{Enter}');
+
+    // Should move to Chat Step 3
+    await waitFor(() => {
+        expect(screen.getByPlaceholderText(/Portland, OR/i)).toBeInTheDocument();
+    });
+
+    // Chat Step 3
+    const locInput = screen.getByPlaceholderText(/Portland, OR/i);
+    await userEvent.type(locInput, 'NY{Enter}');
+
+    // Should trigger Intake and move to Review Details
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+    });
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
@@ -38,7 +91,8 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as any).mockImplementationOnce(() => {
+      const p = Promise.resolve({
       ok: true,
       json: async () => ({
         business_type: 'Bakery',
@@ -47,11 +101,18 @@ describe('OnboardingWizard', () => {
         initial_products: [{ name: 'Cake', price: '20' }]
       })
     });
+      (p as any).catch = vi.fn();
+      return p;
+    });
 
     // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as any).mockImplementationOnce(() => {
+      const p = Promise.resolve({
       ok: true,
       json: async () => ({ message: "Success!" })
+    });
+      (p as any).catch = vi.fn();
+      return p;
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -115,8 +176,12 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as any).mockImplementationOnce(() => {
+      const p = Promise.resolve({
       ok: false
+    });
+      (p as any).catch = vi.fn();
+      return p;
     });
 
     act(() => { render(<OnboardingWizard />); });
@@ -159,8 +224,12 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
+    (global.fetch as any).mockImplementationOnce(() => {
+      const p = Promise.resolve({
       ok: false
+    });
+      (p as any).catch = vi.fn();
+      return p;
     });
 
     act(() => { render(<OnboardingWizard />); });
