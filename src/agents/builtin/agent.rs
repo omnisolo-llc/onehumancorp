@@ -2517,7 +2517,7 @@ impl Agent {
                                 parent_id: None,
                                 data,
                                 metadata: serde_json::Value::Null,
-                                created_at: chrono::Utc::now().to_rfc3339(),
+                                created_at: chrono::Utc::now(),
                             };
                             if let Err(e) = cp.put_checkpoint(cp_obj).await {
                                 tracing::error!("Failed to save user-fixable checkpoint: {}", e);
@@ -2729,7 +2729,7 @@ impl Agent {
                                     parent_id: None,
                                     data,
                                     metadata: serde_json::Value::Null,
-                                    created_at: chrono::Utc::now().to_rfc3339(),
+                                    created_at: chrono::Utc::now(),
                                 };
                                 if let Err(e) = cp.put_checkpoint(cp_obj).await {
                                     tracing::error!("Failed to save user-fixable checkpoint: {}", e);
@@ -5961,7 +5961,7 @@ mod stream_tests {
                         parent_id: None,
                         data: serde_json::from_slice(bytes).unwrap(),
                         metadata: serde_json::Value::Null,
-                        created_at: String::new(),
+                        created_at: chrono::Utc::now(),
                     }))
                 } else {
                     Ok(None)
