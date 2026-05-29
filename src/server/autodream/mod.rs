@@ -482,7 +482,7 @@ impl AutoDreamWorker {
 
                         let embedding_vec: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_else(|_| vec![0.0; 1536]);
 
-                        let record = ::ohc_builtin_agent::memory_store::EmbeddingRecord {
+                        let record = crate::ohc::orchestration::EmbeddingRecord {
                             id: mem_id,
                             tenant_id: "system".to_string(),
                             agent_id: "system_agent".to_string(),
@@ -498,8 +498,8 @@ impl AutoDreamWorker {
                         };
 
                         let repository = match &db.store {
-                            crate::db::DbStore::Postgres => ::ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
-                            crate::db::DbStore::Sqlite(sqlite_pool) => ::ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
+                            crate::db::DbStore::Postgres => crate::ohc::orchestration::VectorRepository::new(db.pool.clone()),
+                            crate::db::DbStore::Sqlite(sqlite_pool) => crate::ohc::orchestration::VectorRepository::new_sqlite(sqlite_pool.clone()),
                         };
 
                         if let Err(e) = repository.upsert(&record).await {
