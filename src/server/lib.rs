@@ -89,6 +89,7 @@ pub mod services {
     pub mod agent;
     pub mod autodream;
     pub mod booking;
+    pub mod finance;
 }
 
 use tonic::{transport::Server, Request, Response, Status};
@@ -2489,6 +2490,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }))
         }))
         .merge(webhook_router)
+        .merge(api::finance_api::finance_routes().with_state(std::sync::Arc::new(db_for_sales.clone())))
         .merge(health_router)
         .fallback(ui_handler);
 
