@@ -33,7 +33,7 @@ export default function ReferralsPage() {
                   onClick={() => {
                     navigator.clipboard.writeText(referralLink);
                     setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
+
                   }}
                   className={`px-6 py-3 rounded-xl text-sm font-bold transition-all sm:w-auto w-full ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                 >
@@ -49,7 +49,7 @@ export default function ReferralsPage() {
                   onClick={() => {
                     navigator.clipboard.writeText(inviteMessage);
                     setCopiedMessage(true);
-                    setTimeout(() => setCopiedMessage(false), 2000);
+
                   }}
                   className="flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 p-4 rounded-xl font-semibold text-sm hover:bg-indigo-100 transition-colors"
                 >

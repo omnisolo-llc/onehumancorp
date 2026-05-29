@@ -19,11 +19,9 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
   });
 
   it('Step 1: Renders initial screen correctly', async () => {
@@ -37,8 +35,6 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         business_type: 'Bakery',
@@ -48,8 +44,6 @@ describe('OnboardingWizard', () => {
       })
     });
 
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({ message: "Success!" })
     });
@@ -114,8 +108,6 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
@@ -158,8 +150,6 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 

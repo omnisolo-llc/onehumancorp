@@ -13,9 +13,9 @@ export default function NewServicePage() {
   const handleSave = () => {
     if (!title) return;
     setSaved(true);
-    setTimeout(() => {
+
       window.location.href = '/dashboard';
-    }, 1500);
+
   };
 
   const generateDescription = () => {

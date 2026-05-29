@@ -1495,7 +1495,7 @@ export default function Dashboard() {
                     onClick={() => {
                       navigator.clipboard.writeText(promoMessage);
                       setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
+
                     }}
                     className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                   >
@@ -1725,9 +1725,10 @@ export default function Dashboard() {
                             onClick={async () => {
                                 // Simulate sending email
                                 setCustomerReferralSent(true);
-                                setTimeout(() => {
-                                    setShowCustomerReferralModal(false);
-                                }, 3000);
+
+                                    await fetch("/api/referrals", { method: "POST" });
+                                setShowCustomerReferralModal(false);
+
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
@@ -1881,7 +1882,7 @@ export default function Dashboard() {
                     onClick={() => {
                       navigator.clipboard.writeText(`<iframe src="https://ohc.app/api/v1/growth/storefront/embed?tenant=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}&theme=light" width="320" height="400" frameborder="0" scrolling="no"></iframe>`);
                       setEmbedCopied(true);
-                      setTimeout(() => setEmbedCopied(false), 2000);
+
                     }}
                     className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${embedCopied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                   >
@@ -1936,7 +1937,7 @@ export default function Dashboard() {
                     onClick={() => {
                       navigator.clipboard.writeText(referralLink);
                       setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
+
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-900 text-white hover:bg-black'}`}
                   >

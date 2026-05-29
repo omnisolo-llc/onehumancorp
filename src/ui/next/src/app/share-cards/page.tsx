@@ -89,7 +89,7 @@ export default function ShareCardsPage() {
                         onClick={() => {
                             navigator.clipboard.writeText(shareText);
                             setCopied(true);
-                            setTimeout(() => setCopied(false), 2000);
+
                         }}
                         className={`w-full py-2 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-800 hover:bg-gray-300'}`}
                     >

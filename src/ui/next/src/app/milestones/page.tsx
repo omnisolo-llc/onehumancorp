@@ -123,7 +123,7 @@ export default function MilestonesPage() {
                                     onClick={() => {
                                         navigator.clipboard.writeText(shareText);
                                         setCopied(true);
-                                        setTimeout(() => setCopied(false), 2000);
+
                                     }}
                                     className={`w-full py-3 rounded-xl text-sm font-bold transition-all shadow-sm ${copied ? 'bg-green-100 text-green-700' : 'bg-white border border-gray-200 text-gray-800 hover:bg-gray-50'}`}
                                 >

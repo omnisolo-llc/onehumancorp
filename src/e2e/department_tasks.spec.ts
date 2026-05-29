@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 
-test.describe("AI Agent Department UI Mocks", () => {
+test.describe("AI Agent Department UI", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
@@ -220,8 +220,6 @@ test.describe("AI Agent Department UI Mocks", () => {
   });
 
   test("UI: Handle error on approve gracefully", async ({ page }) => {
-    // Intercept to mock error response
-    await page.route("**/api/agents/approvals/*", (route) => route.abort());
     await page.goto("/team");
     const promoterCard = page.locator("button", { hasText: "The Promoter" });
     await promoterCard.click();

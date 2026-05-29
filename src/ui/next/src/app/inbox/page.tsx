@@ -79,7 +79,7 @@ export default function InboxPage() {
     // Simulate graceful error handling
     if (key === 'facebook' && !twilioChannels.facebook) {
         setChannelError("Could not connect to Facebook at this time. Please try again later.");
-        setTimeout(() => setChannelError(null), 3000);
+
         return;
     }
     setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
