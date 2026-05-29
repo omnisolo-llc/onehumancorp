@@ -651,12 +651,12 @@ impl Agent {
     {
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-
-            // Workaround to call the generic closure since on_event is a generic F.
-            // Wait, we can just return the error directly.
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+        if cfg.enable_single_agent_maximization {
+            let decision = crate::agent_splitter::AgentSplitter::decide_split(&session_tools);
+            if decision == crate::agent_splitter::SplitDecision::MultiAgent {
+                let err_msg = "Task requires multi-agent split: >10 overlapping tools provided or multiple domains detected".to_string();
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            }
         }
 
         // Add initial message if needed
@@ -1771,10 +1771,13 @@ impl Agent {
 
         // Architectural Decision 1: Single-agent vs Multi-agent: Maximize single-agent first.
         // Mechanic: Split into multi-agent ONLY when overlapping tools exceed ~10.
-        if cfg.enable_single_agent_maximization && session_tools.len() > 10 {
-            let err_msg = "Task requires multi-agent split: >10 overlapping tools provided".to_string();
-            on_event(AgentEvent::TaskError { error: err_msg.clone() });
-            return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+        if final_cfg.enable_single_agent_maximization {
+            let decision = crate::agent_splitter::AgentSplitter::decide_split(&session_tools);
+            if decision == crate::agent_splitter::SplitDecision::MultiAgent {
+                let err_msg = "Task requires multi-agent split: >10 overlapping tools provided or multiple domains detected".to_string();
+                on_event(AgentEvent::TaskError { error: err_msg.clone() });
+                return Err(Box::new(crate::types::ToolError::HandoffRequested(err_msg)));
+            }
         }
 
         // OpenAI Mechanic: Input Guardrails
@@ -3668,7 +3671,7 @@ mod tests {
 
         assert!(res.is_err());
         let err_str = res.unwrap_err().to_string();
-        assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided"));
+        assert!(err_str.contains("Handoff requested to: Task requires multi-agent split: >10 overlapping tools provided or multiple domains detected"));
     }
 
     #[tokio::test]
