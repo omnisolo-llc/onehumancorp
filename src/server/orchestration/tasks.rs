@@ -1,7 +1,7 @@
 use sqlx::Row;
 use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use crate::tasks::SharedTask;
+use SharedTask;
 use chrono::Utc;
 
 use opentelemetry::global;
@@ -348,7 +348,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -394,7 +394,7 @@ impl TaskDecompositionService {
             depth: row.get("depth"),
             created_at: dt_created,
             updated_at: dt_updated,
-            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+            action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ActionRisk::from_str(&s)),
             approval_status: row.get("approval_status"),
             proposed_content: row.get("proposed_content"),
         })
@@ -448,7 +448,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -498,7 +498,7 @@ impl TaskDecompositionService {
                     depth: row.get("depth"),
                     created_at: dt_created,
                     updated_at: dt_updated,
-                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| crate::tasks::ActionRisk::from_str(&s)),
+                    action_risk: row.get::<Option<String>, _>("action_risk").map(|s| ActionRisk::from_str(&s)),
                     approval_status: row.get("approval_status"),
                     proposed_content: row.get("proposed_content"),
                 })
@@ -774,9 +774,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
-        ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
@@ -803,7 +801,7 @@ mod tests {
         let service = TaskDecompositionService::new(db, mesh);
 
         let task_id = "test-mission-123";
-        let task = crate::tasks::SharedTask {
+        let task = SharedTask {
             id: task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-123".to_string(),
@@ -840,7 +838,7 @@ mod tests {
 
         // Simulate failure
         let fail_task_id = "test-fail-123";
-        let fail_task = crate::tasks::SharedTask {
+        let fail_task = SharedTask {
             id: fail_task_id.to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -879,9 +877,7 @@ mod tests {
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
-        ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
@@ -908,7 +904,7 @@ mod tests {
         let service = TaskDecompositionService::new(db.clone(), mesh.clone());
 
         // Create task 1
-        let task1 = crate::tasks::SharedTask {
+        let task1 = SharedTask {
             id: "task-1".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -933,7 +929,7 @@ mod tests {
         service.create_task(task1).await.unwrap();
 
         // Create task 2 depending on task 1
-        let task2 = crate::tasks::SharedTask {
+        let task2 = SharedTask {
             id: "task-2".to_string(),
             organization_id: "org-123".to_string(),
             mission_id: "mission-456".to_string(),
@@ -1014,7 +1010,7 @@ mod tests {
         let service = TaskDecompositionService::new(db_pg.clone(), mesh.clone());
 
         // Create task 1
-        let task1 = crate::tasks::SharedTask {
+        let task1 = SharedTask {
             id: "task-pg-1".to_string(),
             organization_id: "org-pg".to_string(),
             mission_id: "mission-pg".to_string(),
@@ -1040,7 +1036,7 @@ mod tests {
 
         // If creation succeeded (DB migrated), let's proceed to task 2
         if let Ok(_) = service.get_task("task-pg-1").await {
-            let task2 = crate::tasks::SharedTask {
+            let task2 = SharedTask {
                 id: "task-pg-2".to_string(),
                 organization_id: "org-pg".to_string(),
                 mission_id: "mission-pg".to_string(),
@@ -1177,9 +1173,7 @@ mod chaos_tests {
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
-        ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();
@@ -1247,9 +1241,7 @@ mod chaos_tests {
         sqlx::query(
             "CREATE TABLE shared_tasks_decomposition (id TEXT PRIMARY KEY, status TEXT, dependencies TEXT, assigned_agent_id TEXT, updated_at TEXT, payload TEXT, title TEXT, description TEXT, priority TEXT, locked_until TEXT, ultraplan_phase TEXT, deliberation_log TEXT, depth INTEGER, created_at TEXT, action_risk TEXT, approval_status TEXT, proposed_content TEXT, organization_id TEXT, mission_id TEXT, parent_plan_id TEXT)"
         ).execute(&pool).await.unwrap();
-        sqlx::query(
-            "CREATE TABLE task_dependencies (task_id TEXT NOT NULL, depends_on_task_id TEXT NOT NULL, PRIMARY KEY (task_id, depends_on_task_id))"
-        ).execute(&pool).await.unwrap();
+
         sqlx::query(
             "CREATE TABLE state_machine_transitions (id TEXT PRIMARY KEY, task_id TEXT, from_state TEXT, to_state TEXT, agent_id TEXT, transitioned_at TEXT)"
         ).execute(&pool).await.unwrap();

@@ -1,3 +1,4 @@
+use crate::hub::Hub;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
 use ::server_ohc::orchestration::TeammateMeshEvent;
 use opentelemetry::global;
@@ -28,12 +29,12 @@ pub trait TeammateMesh: Send + Sync {
 
 
 pub struct LocalTeammateMesh {
-    hub: Arc<crate::hub::Hub>,
+    hub: Arc<Hub>,
     inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl LocalTeammateMesh {
-    pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(hub: Arc<Hub>) -> Self {
         Self {
             hub,
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
@@ -283,7 +284,7 @@ mod tests {
             .connect_lazy(&db_url)
             .unwrap();
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(Hub::new(tx, pool));
 
         let mesh = LocalTeammateMesh::new(hub.clone());
 
