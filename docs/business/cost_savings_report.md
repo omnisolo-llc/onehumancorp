@@ -27,3 +27,8 @@ As part of our continuous effort to make OneHumanCorp accessible to small busine
 These changes collectively support a sustainable free entry tier and provide a clear, plain-language value proposition to all OHC tier subscribers.
 
 All cost optimization features have been verified as implemented.
+
+### 5. Detailed Model Version Pricing Tracking
+- **Before:** Generic model aliases (e.g., `claude-3.5-haiku` and `gpt-4o`) were tracked, but explicit new versions like `claude-3-5-haiku-20241022` and `gpt-4o-2024-08-06` fell back to default or generic pricing, reducing cost estimation accuracy for billing.
+- **After:** We explicitly track precise model versions such as `claude-3-5-haiku-20241022` and `gpt-4o-2024-08-06` in our internal `calculator.rs` pricing engine.
+- **Cost Impact:** This guarantees highly accurate LLM cost forecasting, avoiding under-billing or over-billing, and keeping tenant cost transparency dashboards highly precise.
