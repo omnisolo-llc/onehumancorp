@@ -3593,15 +3593,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="generateDiscountShare()" style="width: 100%; background: #000; color: #fff;">🐦 Share 10% Off on X (Twitter)</button>
                         </div>
 
-                        <!-- Seasonal Promotion Generator -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Seasonal Promotion Generator <span style="font-size: 12px; background: rgba(16, 185, 129, 0.1); color: #10b981; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">New Growth Loop</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">Automatically generate a seasonal promotional banner and share link.</p>
-                            <button id="generate-seasonal-promo-btn" onclick="generateSeasonalPromo()" style="width: 100%; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); color: #fff;">🏖️ Generate Summer Sale Promo</button>
-                        </div>
-
                         <!-- Growth Loop: Interactive Analytics Soft Paywall -->
                         <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(255, 165, 0, 0.3); position: relative; overflow: hidden;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -5293,38 +5284,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 }
                             } catch (e) {
                                 alert('Network error');
-                            }
-                        }
-
-                        async function generateSeasonalPromo() {
-                            const btn = document.getElementById('generate-seasonal-promo-btn');
-                            if (btn) {
-                                btn.textContent = 'Generating...';
-                                btn.disabled = true;
-                            }
-                            try {
-                                const response = await fetch('/api/v1/growth/campaign/generate-seasonal-promo', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        theme: 'Summer',
-                                        discount: '20%'
-                                    })
-                                });
-                                if (response.ok) {
-                                    const data = await response.json();
-                                    const text = encodeURIComponent(data.message);
-                                    window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
-                                } else {
-                                    alert('Failed to generate seasonal promo');
-                                }
-                            } catch (e) {
-                                alert('Network error');
-                            } finally {
-                                if (btn) {
-                                    btn.textContent = '🏖️ Generate Summer Sale Promo';
-                                    btn.disabled = false;
-                                }
                             }
                         }
 
