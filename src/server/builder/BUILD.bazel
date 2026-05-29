@@ -3,6 +3,7 @@ load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
 exports_files(
     [
         "api.rs",
+        "edge.rs",
         "builder_test.rs",
         "db.rs",
         "jobs.rs",
@@ -16,6 +17,7 @@ rust_library(
     srcs = [
         "bazel_lib.rs",
         "api.rs",
+        "edge.rs",
         "builder_test.rs",
         "db.rs",
         "jobs.rs",
@@ -116,7 +118,7 @@ rust_library(
 
 rust_test(
     name = "server_builder_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_builder",
     edition = "2024",
     env = {

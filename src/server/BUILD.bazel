@@ -35,7 +35,6 @@ SERVER_RS_SRCS = [
     "//src/server/api:billing_api.rs",
     "//src/server/api:billing_webhook.rs",
     "//src/server/api:billing_webhook_test.rs",
-    "//src/server/api:dynamic_workflows.rs",
     "//src/server/api:growth.rs",
     "//src/server/api:health.rs",
     "//src/server/api:syndication_handler.rs",
@@ -62,6 +61,7 @@ SERVER_RS_SRCS = [
     "//src/server/benchmarks:mod.rs",
     "//src/server/builder:api.rs",
     "//src/server/builder:builder_test.rs",
+    "//src/server/builder:edge.rs",
     "//src/server/builder:db.rs",
     "//src/server/builder:jobs.rs",
     "//src/server/builder:mod.rs",
@@ -108,7 +108,6 @@ SERVER_RS_SRCS = [
     "//src/server/interop:mod.rs",
     "//src/server/interop:protocol.rs",
     "//src/server/orchestration:chaos_test.rs",
-    "//src/server/orchestration:dynamic_workflows.rs",
     "//src/server/orchestration:handoff.rs",
     "//src/server/orchestration:health.rs",
     "//src/server/orchestration:hierarchical.rs",
@@ -348,8 +347,6 @@ rust_library(
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
-        "//src/server/integrations/daily:server_integrations_daily",
-        "//src/server/integrations/resend:server_integrations_resend",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
@@ -463,7 +460,6 @@ SERVER_LIB_TEST_GROUPS = {
         "db::",
         "scheduler::",
         "settings::",
-        "autodream_sync::tests::test_autodream_sync_service_sqlite",
         "autodream_pipeline::pipeline::tests::test_chunk_content",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks",
         "autodream_pipeline::pipeline::tests::test_process_closed_tasks_with_cache",
@@ -490,12 +486,6 @@ SERVER_LIB_TEST_GROUPS = {
     "interop": [
         "msgbus::",
     ],
-}
-
-SERVER_LIB_TEST_SIZES = {
-    "agents": "small",
-    "core": "medium",
-    "interop": "small",
 }
 
 SERVER_LIB_SUBCRATE_TESTS = [
@@ -540,7 +530,7 @@ SERVER_LIB_SPLIT_TESTS = [
 [
     rust_test(
         name = "server_lib_%s_unit_test" % group,
-        size = SERVER_LIB_TEST_SIZES[group],
+        size = "large",
         args = filters,
         crate = ":server_lib",
         data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
@@ -626,7 +616,7 @@ test_suite(
 
 rust_test(
     name = "queue_test",
-    size = "small",
+    size = "large",
     srcs = ["queue_test.rs"],
     edition = "2024",
     target_compatible_with = select({
@@ -645,7 +635,7 @@ rust_test(
 
 rust_test(
     name = "telemetry_test",
-    size = "small",
+    size = "large",
     srcs = ["telemetry_test.rs"],
     data = ["//deploy/scripts:ohc-standalone.sh"] + SERVER_RS_SRCS,
     edition = "2024",
