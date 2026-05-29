@@ -210,7 +210,7 @@ impl HybridSyncDaemon {
             .fetch_all(&self.sqlite_pool)
             .await?;
 
-        let mut success_count = 0;
+        let mut _success_count = 0;
 
         for row in rows {
             let id: String = row.get("id");
@@ -262,7 +262,7 @@ impl HybridSyncDaemon {
                         .execute(&self.sqlite_pool)
                         .await?;
                     info!("Successfully synced mission: {}", id);
-                    success_count += 1;
+                    _success_count += 1;
                 }
                 Err(e) => {
                     let _ = tx.rollback().await;

@@ -332,7 +332,7 @@ kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply
 log "Installing PostgreSQL ..."
 kubectl run postgres \
   --namespace "${NAMESPACE}" \
-  --image pgvector/pgvector:pg16 \
+  --image ankane/pgvector:v0.5.1 \
   --env POSTGRES_USER=ohc \
   --env POSTGRES_PASSWORD=ohc \
   --env POSTGRES_DB=ohc \
