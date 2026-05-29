@@ -6,11 +6,9 @@ exports_files(
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
-        "dynamic_workflows.rs",
         "growth.rs",
         "health.rs",
         "syndication_handler.rs",
-        "fulfillment.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -28,11 +26,9 @@ rust_library(
         "billing_api.rs",
         "billing_webhook.rs",
         "billing_webhook_test.rs",
-        "dynamic_workflows.rs",
         "growth.rs",
         "health.rs",
         "syndication_handler.rs",
-        "fulfillment.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -144,7 +140,7 @@ rust_library(
 
 rust_test(
     name = "server_api_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_api",
     edition = "2024",
     env = {

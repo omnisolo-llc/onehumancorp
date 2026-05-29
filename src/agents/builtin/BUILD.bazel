@@ -32,7 +32,6 @@ rust_library(
         "@crates//:serde",
         "@crates//:serde_json",
         "@crates//:sha2",
-        "@crates//:rand",
         "@crates//:sqlx",
         "@crates//:tokio",
         "@crates//:tracing",
@@ -223,7 +222,7 @@ AGENT_UNIT_TEST_FILTERS = [
 
 rust_test(
     name = "ohc_builtin_agent_lib_unit_test",
-    size = "large",
+    size = "small",
     args = AGENT_UNIT_TEST_FILTERS,
     crate = ":ohc_builtin_agent_lib",
     edition = "2024",
