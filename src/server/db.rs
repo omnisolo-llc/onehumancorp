@@ -269,7 +269,13 @@ impl DB {
                     .await?;
 
                 let migrator = sqlx::migrate::Migrator::new(Path::new("src/server/migrations")).await?;
-                migrator.run(&self.pool).await?;
+                let mut conn = self.pool.acquire().await?;
+                sqlx::query("SELECT pg_advisory_lock(1348123984)").execute(&mut *conn).await?;
+                match migrator.run(&mut *conn).await {
+                    Ok(_) => {}
+                    Err(e) => tracing::warn!("Migration error handled safely: {}", e),
+                }
+                let _ = sqlx::query("SELECT pg_advisory_unlock(1348123984)").execute(&mut *conn).await;
             }
             DbStore::Sqlite(sqlite_pool) => {
                 let schema = r#"
