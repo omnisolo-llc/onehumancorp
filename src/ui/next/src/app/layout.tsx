@@ -5,6 +5,7 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
+import { ScribeDocumentationSystem } from "../components/help";
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
@@ -18,10 +19,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+        <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+      </head>
       <body>
         <TooltipProvider>
                   <WalkthroughProvider>
-            {children}
+            <ScribeDocumentationSystem>{children}</ScribeDocumentationSystem>
             <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
             <HelpChat />
           </WalkthroughProvider>

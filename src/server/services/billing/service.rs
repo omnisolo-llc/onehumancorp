@@ -34,7 +34,7 @@ impl BillingService for MyBillingService {
             tenant_id,
             input_tokens: req.prompt_tokens,
             output_tokens: req.completion_tokens,
-            cached_input_tokens: 0, // Proto doesn't have it yet, maybe add it later
+            cached_input_tokens: req.cached_tokens,
             local_embedding_tokens: 0,
         };
 
@@ -100,6 +100,7 @@ mod tests {
             completion_tokens: 500,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cached_tokens: 0,
         };
 
         let mut request = Request::new(req.clone());
@@ -137,6 +138,7 @@ mod tests {
             completion_tokens: 500,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cached_tokens: 0,
         };
         let mut req_req = Request::new(req);
         req_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
@@ -154,6 +156,7 @@ mod tests {
             completion_tokens: 0,
             cost_usd: 0.0,
             occurred_at_unix: 0,
+            cached_tokens: 0,
         };
 
         let response = service.get_cost_summary(Request::new(req_summary)).await;
