@@ -284,7 +284,7 @@ pub async fn razorpay_webhook_handler(
 
 #[derive(Debug, Deserialize)]
 pub struct CalComEvent {
-    pub triggerEvent: String,
+    pub trigger_event: String,
     pub payload: CalComPayload,
 }
 
@@ -292,8 +292,8 @@ pub struct CalComEvent {
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
-    pub startTime: String,
-    pub endTime: String,
+    pub start_time: String,
+    pub end_time: String,
     pub attendees: Vec<CalComAttendee>,
 }
 
@@ -307,7 +307,7 @@ pub async fn calcom_webhook_handler(
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
-    match payload.triggerEvent.as_str() {
+    match payload.trigger_event.as_str() {
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 

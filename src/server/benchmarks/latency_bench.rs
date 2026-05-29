@@ -377,11 +377,11 @@ pub async fn bench_advisory_insights_latency() {
     if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let db = std::sync::Arc::new(crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres });
-        let store = std::sync::Arc::new(crate::auth::Store::new());
+        let _store = std::sync::Arc::new(crate::auth::Store::new());
 
         let mut fetch_times = Vec::new();
         for _ in 0..iterations {
-            let mut headers = axum::http::HeaderMap::new();
+            let _headers = axum::http::HeaderMap::new();
             // Create a valid mock JWT token or rely on internal logic handling if token is invalid
             // The handler will return 401 Unauthorized if the token is invalid, which bypasses the parallel SQL queries.
             // We need to simulate the SQL query latency directly or provide a valid auth context.
