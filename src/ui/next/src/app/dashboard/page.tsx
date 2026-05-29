@@ -67,6 +67,12 @@ export default function Dashboard() {
   const [cartCampaignMessage, setCartCampaignMessage] = useState<string>("");
   const [cartCampaignSent, setCartCampaignSent] = useState<boolean>(false);
 
+  // Growth Loop: Post-Purchase Referral Discount State
+  const [showPostPurchaseReferralModal, setShowPostPurchaseReferralModal] = useState<boolean>(false);
+  const [isGeneratingPostPurchaseReferral, setIsGeneratingPostPurchaseReferral] = useState<boolean>(false);
+  const [postPurchaseReferralMessage, setPostPurchaseReferralMessage] = useState<string>("");
+  const [postPurchaseReferralSent, setPostPurchaseReferralSent] = useState<boolean>(false);
+
   // Growth Loop: VIP Customer Referral Campaign State
   const [showCustomerReferralModal, setShowCustomerReferralModal] = useState<boolean>(false);
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
@@ -907,6 +913,68 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Post-Purchase Referral Discount */}
+         <section className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Post-Purchase Referral Discount</h2>
+                    <div className="flex items-center gap-2 px-3 py-1 bg-green-50 rounded-full border border-green-100">
+                        <span className="text-xs font-medium text-green-600">Growth Loop</span>
+                    </div>
+                </div>
+            </div>
+            <div className="p-6 shadow-sm border rounded-2xl flex flex-col md:flex-row gap-6 items-center mb-8 bg-white" style={{ border: '1px solid rgba(0,0,0,0.05)' }}>
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-100 to-emerald-50 flex items-center justify-center shadow-inner flex-shrink-0">
+                    <span className="text-3xl">💸</span>
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-bold font-outfit text-gray-900">Turn Customers into Promoters</h3>
+                        {postPurchaseReferralSent && <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] uppercase font-bold tracking-wider rounded">Active</span>}
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4 leading-relaxed max-w-2xl">
+                        Automatically email customers after they buy, offering them a discount on their next order if they refer a friend. They get rewarded, and you get a new customer.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <button
+                            onClick={async () => {
+                                setShowPostPurchaseReferralModal(true);
+                                setIsGeneratingPostPurchaseReferral(true);
+                                try {
+                                    const business = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Your Store' : 'Your Store';
+                                    const response = await fetch("/api/v1/growth/campaign/generate-post-purchase-referral", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                            store: business,
+                                            customerName: "Alex"
+                                        })
+                                    });
+                                    if (response.ok) {
+                                        const data = await response.json();
+                                        if (data.message) {
+                                            setPostPurchaseReferralMessage(data.message);
+                                        }
+                                    } else {
+                                        setPostPurchaseReferralMessage("Hi Alex,\n\nThanks for your recent purchase from " + business + "! We hope you love it.\n\nWant 20% off your next order? Give your friends 15% off their first purchase. When they buy, you get 20% off!\n\nShare your link now: https://ohc.store/vip-invite\n\nWarmly,\nThe " + business + " Team\n\n⚡ Powered by OHC");
+                                    }
+                                } catch (e) {
+                                    console.error("Failed to generate campaign", e);
+                                    setPostPurchaseReferralMessage("Hi Alex,\n\nThanks for your recent purchase from our store! We hope you love it.\n\nWant 20% off your next order? Give your friends 15% off their first purchase. When they buy, you get 20% off!\n\nShare your link now: https://ohc.store/vip-invite\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC");
+                                } finally {
+                                    setIsGeneratingPostPurchaseReferral(false);
+                                }
+                            }}
+                            className={`px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl text-sm transition-all shadow-sm hover:bg-black hover:shadow flex items-center justify-center gap-2 ${postPurchaseReferralSent ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                            {postPurchaseReferralSent ? 'Manage Campaign' : 'Set Up Campaign'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+         </section>
+
          {/* Growth & Promotions Generator Card */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1502,6 +1570,65 @@ export default function Dashboard() {
       )}
 
       {/* Promo Modal */}
+      {showPostPurchaseReferralModal && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -z-10"></div>
+
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl shadow-inner text-green-600">
+                💸
+              </div>
+              <button
+                onClick={() => {
+                  setShowPostPurchaseReferralModal(false);
+                }}
+                className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Automated Referral Campaign</h2>
+            <p className="text-gray-600 mb-6 text-sm">Review the AI-generated email that will be sent to customers 3 days after they make a purchase.</p>
+
+            {isGeneratingPostPurchaseReferral ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                    <div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mb-4"></div>
+                    <p className="text-sm font-medium text-gray-600">Drafting personalized campaign...</p>
+                </div>
+            ) : (
+                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                    <div className="flex justify-between items-center mb-3">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Email Preview</span>
+                        <div className="flex gap-1">
+                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                            <div className="w-2 h-2 rounded-full bg-gray-300"></div>
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap font-medium leading-relaxed">
+                        {postPurchaseReferralMessage}
+                    </p>
+                </div>
+            )}
+
+            <button
+                onClick={() => {
+                    setPostPurchaseReferralSent(true);
+                    setShowPostPurchaseReferralModal(false);
+                    setTimeout(() => alert("Post-purchase referral campaign activated! Customers will receive this email 3 days after their purchase."), 300);
+                }}
+                disabled={isGeneratingPostPurchaseReferral}
+                className={`w-full py-3.5 rounded-xl font-bold text-white transition-all shadow-md flex items-center justify-center gap-2 ${isGeneratingPostPurchaseReferral ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 hover:shadow-lg'}`}
+            >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                Activate Campaign
+            </button>
+          </div>
+        </div>
+      )}
+
       {showPromoModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter">

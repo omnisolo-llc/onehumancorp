@@ -21,7 +21,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({ wizardState: {} }), ok: true })) as unknown as typeof fetch;
   });
 
   afterEach(() => {
