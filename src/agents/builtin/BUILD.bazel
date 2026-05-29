@@ -36,6 +36,7 @@ rust_library(
         "@crates//:tokio",
         "@crates//:tracing",
         "@crates//:uuid",
+        "@crates//:schemars",
     ],
 )
 
@@ -145,6 +146,7 @@ rust_library(
         "@crates//:tracing-subscriber",
         "@crates//:urlencoding",
         "@crates//:uuid",
+        "@crates//:schemars",
     ],
 )
 
@@ -190,6 +192,7 @@ rust_binary(
         "@crates//:tracing-subscriber",
         "@crates//:urlencoding",
         "@crates//:uuid",
+        "@crates//:schemars",
     ],
 )
 

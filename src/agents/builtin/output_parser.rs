@@ -1,6 +1,7 @@
 use crate::types::{ChatRequest, Message, ToolError, ChatResponse};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+use schemars::JsonSchema;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -101,7 +102,7 @@ pub struct RetryWithErrorOutputParser<'a, T> {
     llm: Arc<dyn LlmClientForParser>,
 }
 
-impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
+impl<'a, T: DeserializeOwned + JsonSchema> RetryWithErrorOutputParser<'a, T> {
     pub fn new(parser: Box<dyn OutputParser<T> + Send + Sync + 'a>, llm: Arc<dyn LlmClientForParser>) -> Self {
         Self { parser, llm }
     }
@@ -110,16 +111,15 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         let mut current_req = req.clone();
 
         // Inject the schema as a tool definition to encourage the model to use tool_calls API
+        let schema = schemars::schema_for!(T);
+        let schema_json = serde_json::to_value(&schema).unwrap_or_else(|_| serde_json::json!({}));
         let schema_tool = crate::types::ToolDefinition {
             name: "structured_output".to_string(),
-            description: "Call this tool to output the parsed structured data.".to_string(),
+            description: "Call this tool to output the parsed structured data matching the schema.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
-                    "data": {
-                        "type": "object",
-                        "description": "The structured data matching the requested schema."
-                    }
+                    "data": schema_json
                 },
                 "required": ["data"]
             }),
@@ -178,7 +178,7 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
 /// Implements the Output Parsing mechanic from the Master Catalog:
 /// "Fallback mechanic: Legacy RetryWithErrorOutputParser (feed the original prompt,
 /// the failed completion, and the parsing error back to the model)."
-pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
+pub async fn parse_structured_output<T: DeserializeOwned + JsonSchema + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
     max_retries: usize,
@@ -195,7 +195,7 @@ mod tests {
     use serde::Deserialize;
     use tokio::sync::Mutex;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, Debug, PartialEq, schemars::JsonSchema)]
     struct TestOutput {
         result: String,
     }

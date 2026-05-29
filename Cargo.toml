@@ -13,6 +13,8 @@ name = "server"
 path = "src/server/main.rs"
 
 [dependencies]
+schemars = "0.8"
+schemars = "0.8"
 tokio = { workspace = true, features = ["full"] }
 tokio-stream = { version = "0.1", features = ["full"] }
 tonic = { workspace = true, features = ["transport"] }
@@ -71,6 +73,8 @@ tonic-build = "0.12"
 members = ["src/ui/tauri"]
 
 [workspace.dependencies]
+schemars = "0.8"
+schemars = "0.8"
 tokio = { version = "1", features = ["full"] }
 tonic = "0.12"
 prost = "0.13"

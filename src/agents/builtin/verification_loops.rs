@@ -77,7 +77,7 @@ pub struct LlmJudgeSensor {
     pub llm: Arc<dyn LlmClient>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 struct JudgeEvaluation {
     status: String,
     reason: String,
