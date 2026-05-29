@@ -1777,11 +1777,16 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    await fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ data: { tenant_id: tenant } })
+                                    });
+                                } catch (e) { console.error(e); }
                                 setCustomerReferralSent(true);
-                                setTimeout(() => {
-                                    setShowCustomerReferralModal(false);
-                                }, 3000);
+                                setShowCustomerReferralModal(false);
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
