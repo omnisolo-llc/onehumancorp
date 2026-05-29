@@ -19,6 +19,7 @@ pub enum ProviderType {
     Builtin,
     Scout,
     MiniMaxi,
+    AgenticSeek,
 }
 
 impl std::fmt::Display for ProviderType {
@@ -32,6 +33,7 @@ impl std::fmt::Display for ProviderType {
             ProviderType::Builtin => "builtin",
             ProviderType::Scout => "scout",
             ProviderType::MiniMaxi => "minimaxi",
+            ProviderType::AgenticSeek => "agentic_seek",
         };
         write!(f, "{}", s)
     }
