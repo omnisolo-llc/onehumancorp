@@ -122,7 +122,7 @@ rust_library(
 
 rust_test(
     name = "server_services_growth_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_services_growth",
     edition = "2024",
     env = {

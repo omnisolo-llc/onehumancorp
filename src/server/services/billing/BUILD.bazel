@@ -112,7 +112,7 @@ rust_library(
 
 rust_test(
     name = "server_services_billing_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_services_billing",
     edition = "2024",
     env = {

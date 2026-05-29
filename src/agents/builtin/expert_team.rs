@@ -1,5 +1,4 @@
-use std::sync::Arc;
-use crate::types::{ChatRequest, Message, Role, ToolCall};
+use crate::types::{ChatRequest, Message};
 use futures::future::join_all;
 
 #[async_trait::async_trait]
