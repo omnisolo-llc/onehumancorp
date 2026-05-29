@@ -1,6 +1,6 @@
 use ohc_builtin_agent_core::types::ToolError;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::Value;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::process::Command;

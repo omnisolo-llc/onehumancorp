@@ -1,4 +1,3 @@
-use crate::memory_store::MockConflictResolver;
 #[cfg(test)]
 mod exhaustive_tests {
     use crate::memory_store::{VectorRepository, EmbeddingRecord};

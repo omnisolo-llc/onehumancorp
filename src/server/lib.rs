@@ -1,3 +1,4 @@
+use crate::ohc::orchestration::*;
 pub use ::server_harness as harness;
 pub mod api;
 
@@ -67,7 +68,6 @@ pub mod benchmarks;
 pub use ::server_config as config;
 pub use ::server_common as common;
 pub use crate::proto as ohc;
-use crate::ohc::orchestration::*;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -191,7 +191,6 @@ pub mod proto {
 use crate::ohc::orchestration::hub_service_server::{HubService, HubServiceServer};
 use crate::ohc::orchestration::growth_service_server::GrowthServiceServer;
 use crate::ohc::billing::billing_service_server::BillingServiceServer;
-use crate::ohc::orchestration::*;
 
 pub struct MyHubService {
     hub: Arc<Hub>,

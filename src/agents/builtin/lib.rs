@@ -33,6 +33,7 @@ pub mod departments;
 pub mod guardrails;
 pub mod memory_store;
 pub mod json_store;
+#[cfg(test)]
 pub mod memory_exhaustive_tests;
 pub mod autogen;
 pub mod gather_act_verify;

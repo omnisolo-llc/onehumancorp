@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 #[path = "store.rs"]
 pub mod store;
 use crate::db::DB;

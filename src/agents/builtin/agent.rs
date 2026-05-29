@@ -6275,6 +6275,8 @@ mod hierarchical_prompt_tests {
 
 
     #[allow(dead_code)]
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }
