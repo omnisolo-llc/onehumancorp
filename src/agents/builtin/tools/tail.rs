@@ -48,12 +48,7 @@ impl ToolExecutor for TailExecutor {
         let mut current_pos = len as i64;
         let mut buffer = vec![0; chunk_size];
 
-        let max_bytes = 16 * 1024; // 16KB limit
-
         while current_pos > 0 && num_lines_found <= lines_to_read {
-            if len as i64 - current_pos > max_bytes as i64 {
-                return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Requested tail is too large (> 16KB). Never load full files.".to_string()));
-            }
             let read_size = if current_pos >= chunk_size as i64 {
                 chunk_size as i64
             } else {
@@ -76,9 +71,6 @@ impl ToolExecutor for TailExecutor {
                     num_lines_found += 1;
                     if num_lines_found == lines_to_read {
                         let final_start = current_pos as u64 + i as u64 + 1;
-                        if len - final_start > max_bytes as u64 {
-                             return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Requested tail is too large (> 16KB). Never load full files.".to_string()));
-                        }
                         file.seek(std::io::SeekFrom::Start(final_start)).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
                         let mut final_content = String::new();
                         file.read_to_string(&mut final_content).await.map_err(|e| ToolError::LlmRecoverable(e.to_string()))?;
@@ -86,11 +78,6 @@ impl ToolExecutor for TailExecutor {
                     }
                 }
             }
-        }
-
-
-        if len > max_bytes as u64 {
-             return Err(ToolError::LlmRecoverable("JIT Retrieval Error: Requested tail is too large (> 16KB). Never load full files.".to_string()));
         }
 
         // If we reached here, we couldn't find enough newlines, so return the whole file
@@ -190,30 +177,4 @@ mod tests {
         let expected = "This is line number 9998\nThis is line number 9999\nThis is line number 10000";
         assert_eq!(result, expected);
     }
-
-    #[tokio::test]
-    async fn test_tail_jit_retrieval_limit() {
-        use tempfile::tempdir;
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("tail_jit_test.txt");
-        let mut file = std::fs::File::create(&file_path).unwrap();
-
-        use std::io::Write;
-        let long_line = "a".repeat(10000); // 10KB line
-        writeln!(file, "{}", long_line).unwrap();
-        writeln!(file, "{}", long_line).unwrap();
-
-        let executor = TailExecutor { working_dir: Some(dir.path().to_path_buf()) };
-
-        let args = serde_json::json!({ "path": "tail_jit_test.txt", "lines": 5 });
-        let result = executor.execute(args).await;
-
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("JIT Retrieval Error: Requested tail is too large (> 16KB)"));
-        } else {
-            panic!("Expected JIT Retrieval Error");
-        }
-    }
-
 }
