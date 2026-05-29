@@ -41,9 +41,9 @@ pub async fn bench_db_query_time() {
     // Only run if the database URL actually points to postgres, otherwise skip
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
-        let mut pg_times: Vec<u128> = Vec::new();
+        let mut pg_times = Vec::new();
         for _ in 0..iterations {
-            let start = std::time::Instant::now();
+            let start = Instant::now();
             let _ = sqlx::query("SELECT 1").execute(&pg_pool).await;
             pg_times.push(start.elapsed().as_micros());
         }
@@ -53,9 +53,9 @@ pub async fn bench_db_query_time() {
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
-    let mut sqlite_times: Vec<u128> = Vec::new();
+    let mut sqlite_times = Vec::new();
     for _ in 0..iterations {
-        let start = std::time::Instant::now();
+        let start = Instant::now();
         let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
         sqlite_times.push(start.elapsed().as_micros());
     }
@@ -77,12 +77,12 @@ pub async fn bench_api_response_time() {
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
-        let mut cloud_times: Vec<u128> = Vec::new();
+        let mut cloud_times = Vec::new();
         for _ in 0..iterations {
             let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
             let mut request = tonic::Request::new(req);
             request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-            let start = std::time::Instant::now();
+            let start = Instant::now();
 
 
             let _ = dashboard_service_cloud.get_dashboard(request).await;
@@ -92,28 +92,30 @@ pub async fn bench_api_response_time() {
         println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
     }
 
-    // Standalone setup for API Response Time benchmark (SQLite)
-    let sqlite_pool_api = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS meetings (id TEXT PRIMARY KEY, agenda TEXT, participants TEXT, transcript TEXT)").execute(&sqlite_pool_api).await;
-    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS agents (id TEXT PRIMARY KEY, name TEXT, role TEXT, organization_id TEXT, status TEXT, provider_type TEXT)").execute(&sqlite_pool_api).await;
+    // Standalone setup
+    let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS products (id TEXT, organization_id TEXT, title TEXT, type TEXT, price REAL)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS orders (id TEXT, tenant_id TEXT, total_amount REAL, status TEXT)").execute(&sqlite_pool).await;
+    let _ = sqlx::query("CREATE TABLE IF NOT EXISTS tenants (tenant_id TEXT, business_name TEXT, tier TEXT)").execute(&sqlite_pool).await;
 
     let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
-    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool_api) };
+    let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
     let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
-    let mut standalone_times: Vec<u128> = Vec::new();
+    let mut standalone_times = Vec::new();
     for _ in 0..iterations {
         let req = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
         let mut request = tonic::Request::new(req);
         request.extensions_mut().insert(::server_auth::orchestration::AuthInfo { spiffe_id: "test".to_string(), org_id: "system".to_string(), agent_id: "test".to_string() });
-        let start = std::time::Instant::now();
+        let start = Instant::now();
+
 
         let _ = dashboard_service_standalone.get_dashboard(request).await;
         standalone_times.push(start.elapsed().as_micros());
     }
     standalone_times.sort();
-    println!("API Response Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+    println!("API Response Time Standalone Mode: p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
 }
 
 pub async fn bench_dashboard_snapshot() {
@@ -144,7 +146,7 @@ pub async fn bench_dashboard_snapshot() {
     let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
 
     let iterations = 100;
-    let mut fetch_times: Vec<u128> = Vec::new();
+    let mut fetch_times = Vec::new();
 
     let meeting_id = format!("meeting-{}", Uuid::new_v4());
     hub.open_meeting(meeting_id.clone(), vec!["test_agent".to_string()], "Agenda".to_string());
@@ -181,7 +183,7 @@ pub async fn bench_dashboard_snapshot() {
     }
 
     for _ in 0..iterations {
-        let start = std::time::Instant::now();
+        let start = Instant::now();
 
         let req_desktop = ::server_ohc::app::GetDashboardRequest { organization_id: "system".to_string(), mobile_optimized: false };
 
@@ -235,8 +237,8 @@ pub async fn bench_dashboard_snapshot() {
 }
 
 pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
-    let mut enqueue_times: Vec<u128> = Vec::new();
-    let mut dequeue_times: Vec<u128> = Vec::new();
+    let mut enqueue_times = Vec::new();
+    let mut dequeue_times = Vec::new();
     let iterations = if name.contains("Memory") { 10 } else { 100 };
 
     let run_id = Uuid::new_v4().to_string();
@@ -264,7 +266,7 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
                 updated_at: Utc::now(),
             };
 
-            let start = std::time::Instant::now();
+            let start = Instant::now();
             q.enqueue_batch(vec![job]).await.unwrap();
             let elapsed_enqueue = start.elapsed();
 
