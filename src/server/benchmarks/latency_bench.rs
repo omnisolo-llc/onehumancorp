@@ -49,6 +49,8 @@ pub async fn bench_db_query_time() {
         }
         pg_times.sort();
         println!("Database Query Time Cloud Mode (Postgres): p50: {} us, p95: {} us, p99: {} us", pg_times[iterations / 2], pg_times[(iterations as f32 * 0.95) as usize], pg_times[(iterations as f32 * 0.99) as usize]);
+        let top_3_slowest_pg: Vec<u128> = pg_times.iter().rev().take(3).cloned().collect();
+        println!("Database Query Time Cloud Mode (Postgres) - Top 3 slowest: {:?}", top_3_slowest_pg);
     }
 
     // Standalone Mode (SQLite)
@@ -61,6 +63,8 @@ pub async fn bench_db_query_time() {
     }
     sqlite_times.sort();
     println!("Database Query Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", sqlite_times[iterations / 2], sqlite_times[(iterations as f32 * 0.95) as usize], sqlite_times[(iterations as f32 * 0.99) as usize]);
+    let top_3_slowest_sqlite: Vec<u128> = sqlite_times.iter().rev().take(3).cloned().collect();
+    println!("Database Query Time Standalone Mode (SQLite) - Top 3 slowest: {:?}", top_3_slowest_sqlite);
 }
 
 pub async fn bench_api_response_time() {
@@ -90,6 +94,8 @@ pub async fn bench_api_response_time() {
         }
         cloud_times.sort();
         println!("API Response Time Cloud Mode: p50: {} us, p95: {} us, p99: {} us", cloud_times[iterations / 2], cloud_times[(iterations as f32 * 0.95) as usize], cloud_times[(iterations as f32 * 0.99) as usize]);
+        let top_3_slowest_cloud: Vec<u128> = cloud_times.iter().rev().take(3).cloned().collect();
+        println!("API Response Time Cloud Mode - Top 3 slowest: {:?}", top_3_slowest_cloud);
     }
 
     // Standalone setup for API Response Time benchmark (SQLite)
@@ -114,6 +120,8 @@ pub async fn bench_api_response_time() {
     }
     standalone_times.sort();
     println!("API Response Time Standalone Mode (SQLite): p50: {} us, p95: {} us, p99: {} us", standalone_times[iterations / 2], standalone_times[(iterations as f32 * 0.95) as usize], standalone_times[(iterations as f32 * 0.99) as usize]);
+    let top_3_slowest_standalone: Vec<u128> = standalone_times.iter().rev().take(3).cloned().collect();
+    println!("API Response Time Standalone Mode (SQLite) - Top 3 slowest: {:?}", top_3_slowest_standalone);
 }
 
 pub async fn bench_dashboard_snapshot() {
@@ -294,7 +302,11 @@ pub async fn bench_queue(name: &str, queue: Arc<dyn TaskQueue>) {
     let deq_p99 = if iterations > 0 { dequeue_times[(iterations as f32 * 0.99) as usize] } else { 0 };
 
     println!("{}: Batch Enqueue p50: {} us, p95: {} us, p99: {} us", name, enq_p50, enq_p95, enq_p99);
+    let top_3_slowest_enq: Vec<u128> = enqueue_times.iter().rev().take(3).cloned().collect();
+    println!("{}: Batch Enqueue - Top 3 slowest: {:?}", name, top_3_slowest_enq);
     println!("{}: Dequeue p50: {} us, p95: {} us, p99: {} us", name, deq_p50, deq_p95, deq_p99);
+    let top_3_slowest_deq: Vec<u128> = dequeue_times.iter().rev().take(3).cloned().collect();
+    println!("{}: Dequeue - Top 3 slowest: {:?}", name, top_3_slowest_deq);
 }
 
 #[cfg(test)]
