@@ -21,7 +21,11 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      return { ok: true, json: async () => ({}) };
+    });
+
   });
 
   afterEach(() => {
@@ -39,26 +43,25 @@ describe('OnboardingWizard', () => {
   it('Handles multi-step successful onboarding flow', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('intake')) {
+        return {
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        };
+      }
+      if (url.includes('start')) {
+        return { ok: true, json: async () => ({ message: "Success!" }) };
+      }
+      return { ok: true, json: async () => ({}) };
     });
 
-    // Mock start success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: "Success!" })
-    });
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -120,14 +123,12 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('intake')) return { ok: false };
+      return { ok: true, json: async () => ({}) };
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -168,14 +169,12 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('start')) return { ok: false };
+      return { ok: true, json: async () => ({}) };
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false
-    });
+
 
     act(() => { render(<OnboardingWizard />); });
 
@@ -264,20 +263,22 @@ describe('OnboardingWizard', () => {
   it('Handles keyboard navigation with Enter key', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
+
+    global.fetch = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('intake')) {
+        return {
+          ok: true,
+          json: async () => ({
+            business_type: 'Bakery',
+            business_name: 'Maya Bakery',
+            categories: ['food'],
+            initial_products: [{ name: 'Cake', price: '20' }]
+          })
+        };
+      }
+      return { ok: true, json: async () => ({}) };
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        business_type: 'Bakery',
-        business_name: 'Maya Bakery',
-        categories: ['food'],
-        initial_products: [{ name: 'Cake', price: '20' }]
-      })
-    });
+
 
     act(() => { render(<OnboardingWizard />); });
 

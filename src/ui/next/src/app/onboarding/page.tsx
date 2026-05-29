@@ -127,7 +127,12 @@ export default function OnboardingWizard() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
       <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
-        <div className="p-6 flex-1 flex flex-col overflow-y-auto">
+        <div className="p-4 sm:p-6 flex-1 flex flex-col overflow-y-auto">
+          {validationError && (
+            <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
+              {validationError}
+            </div>
+          )}
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
@@ -166,7 +171,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -245,7 +250,7 @@ export default function OnboardingWizard() {
                           }
                         }}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -324,12 +329,28 @@ export default function OnboardingWizard() {
                 </div>
               </div>
 
-              {validationError && <p className="text-red-500 text-sm font-semibold mb-2">{validationError}</p>}
+
               <div className="mt-auto pt-6">
                 <button
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
+                      return;
+                    }
+                    if (businessType.trim().length < 2) {
+                      setValidationError('Business Type must be at least 2 characters.');
+                      return;
+                    }
+                    if (categories.length === 0 || categories.some(c => c.trim().length === 0)) {
+                      setValidationError('At least one valid category is required.');
+                      return;
+                    }
+                    if (firstProductName.trim().length < 2) {
+                      setValidationError('First Product name must be at least 2 characters.');
+                      return;
+                    }
+                    if (firstProductPrice.trim().length === 0 || isNaN(Number(firstProductPrice))) {
+                      setValidationError('Valid Product Price is required.');
                       return;
                     }
                     setValidationError('');
