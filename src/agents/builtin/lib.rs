@@ -61,6 +61,7 @@ pub mod agent_protocol;
 pub mod actor_model;
 pub mod visual_workflow;
 pub mod visual_orchestration;
+pub mod agentic_seek;
 pub mod marketplace;
 pub mod swarm_topology;
 pub mod sona_patterns;
