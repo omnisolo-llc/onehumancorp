@@ -78,9 +78,13 @@ jobs:
             build --show_timestamps
 
       - name: Build packaged application
+        env:
+          MSYS2_ARG_CONV_EXCL: "*"
         run: bazelisk build //release:all_release_artifacts --config=${{ matrix.bazel_config }}
 
       - name: Collect artifacts
+        env:
+          MSYS2_ARG_CONV_EXCL: "*"
         run: |
           mkdir -p dist
           bazelisk cquery --output=files //release:all_release_artifacts --config=${{ matrix.bazel_config }} > artifact-files.txt
