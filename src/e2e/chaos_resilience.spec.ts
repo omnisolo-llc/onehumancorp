@@ -67,4 +67,9 @@ test.describe('E2E Chaos Resilience', () => {
     await expect(page.getByText('Enable Email Notifications')).toBeVisible();
     await expect(page.getByText('Timezone')).toBeVisible();
   });
+
+  test('keeps chaos report functional', async ({ page }) => {
+    await page.goto('/chaos-report');
+    await expect(page.getByRole('heading', { name: 'Chaos Resilience Report' })).toBeVisible();
+  });
 });
