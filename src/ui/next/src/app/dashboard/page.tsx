@@ -61,11 +61,6 @@ export default function Dashboard() {
   const [reviewMessage, setReviewMessage] = useState<string>("");
   const [reviewSent, setReviewSent] = useState<boolean>(false);
 
-  // Growth Loop: Viral Waitlist State
-  const [showWaitlistModal, setShowWaitlistModal] = useState<boolean>(false);
-  const [isGeneratingWaitlist, setIsGeneratingWaitlist] = useState<boolean>(false);
-  const [waitlistMessage, setWaitlistMessage] = useState<string>("");
-
   // Growth Loop: Abandoned Cart Recovery State
   const [showCartModal, setShowCartModal] = useState<boolean>(false);
   const [isGeneratingCartCampaign, setIsGeneratingCartCampaign] = useState<boolean>(false);
@@ -1094,37 +1089,6 @@ export default function Dashboard() {
            </section>
          )}
 
-         {/* Growth Loop: Viral Waitlist Campaign */}
-         <section className="mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Viral Waitlist & Restock</h2>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-purple-50 rounded-full border border-purple-100">
-                        <span className="text-xs font-medium text-purple-600">Pre-Launch Demand</span>
-                    </div>
-                </div>
-            </div>
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: '#ffffff', borderColor: 'rgba(0,0,0,0.05)' }}>
-                <div className="flex-1 flex flex-col gap-3">
-                    <h3 className="text-lg font-bold font-outfit text-gray-900">Build Hype for Out-of-Stock Items</h3>
-                    <p className="text-sm text-gray-600 leading-relaxed max-w-xl">
-                        Let customers join a waitlist for sold-out products. They can move up the queue and get priority access by sharing their unique referral link with friends.
-                    </p>
-                    <button
-                        onClick={() => setShowWaitlistModal(true)}
-                        className="mt-2 w-fit px-5 py-2.5 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-all flex items-center justify-center gap-2"
-                    >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                        Create Waitlist Campaign
-                    </button>
-                </div>
-                <div className="hidden md:flex w-32 h-32 items-center justify-center relative">
-                   <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full opacity-50"></div>
-                   <div className="relative text-5xl">⏳</div>
-                </div>
-            </div>
-         </section>
-
          {/* Growth Loop: Embeddable Storefront Widget */}
          <section className="mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
@@ -1689,67 +1653,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Viral Waitlist Modal */}
-      {showWaitlistModal && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl relative overflow-hidden font-inter border border-purple-100">
-            <button onClick={() => setShowWaitlistModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-            </button>
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-2xl shadow-inner">
-                    ⏳
-                </div>
-                <h2 className="text-xl font-bold font-outfit text-gray-900">Waitlist Campaign</h2>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">Generate a viral waitlist for your out-of-stock products. Customers can share their link to move up the queue.</p>
-
-              <button
-                  onClick={async () => {
-                      setIsGeneratingWaitlist(true);
-                      // Simulate API call for generating the waitlist content
-                      setTimeout(() => {
-                          setWaitlistMessage("Sign up for the waitlist to get early access when we restock! Want to skip the line? Share this link with 3 friends, and when they sign up, you'll be bumped to the top of the queue. \n\nJoin here: https://ohc.store/waitlist/premium-coffee\n\n⚡ Powered by OHC");
-                          setIsGeneratingWaitlist(false);
-                      }, 1200);
-                  }}
-                  disabled={isGeneratingWaitlist}
-                  className={`w-full py-3 text-white rounded-xl text-sm font-semibold shadow-md transition-all flex items-center justify-center gap-2 ${isGeneratingWaitlist ? 'bg-purple-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'}`}
-              >
-                  {isGeneratingWaitlist ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        Generating...
-                      </>
-                  ) : "Generate Waitlist Copy"}
-              </button>
-
-              {waitlistMessage && (
-                  <div className="mt-4 animate-fade-in space-y-4">
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                          <p className="text-sm text-gray-700 whitespace-pre-wrap font-medium">{waitlistMessage}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                            onClick={() => {
-                                navigator.clipboard.writeText(waitlistMessage);
-                                alert("Waitlist copy copied to clipboard!");
-                                setShowWaitlistModal(false);
-                            }}
-                            className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold shadow-md hover:bg-black transition-colors"
-                        >
-                            Copy to Clipboard
-                        </button>
-                      </div>
-                  </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Review Request Modal */}
       {showReviewModal && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4">
@@ -1874,11 +1777,16 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    await fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ data: { tenant_id: tenant } })
+                                    });
+                                } catch (e) { console.error(e); }
                                 setCustomerReferralSent(true);
-                                setTimeout(() => {
-                                    setShowCustomerReferralModal(false);
-                                }, 3000);
+                                setShowCustomerReferralModal(false);
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
