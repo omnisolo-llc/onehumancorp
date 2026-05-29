@@ -2635,6 +2635,18 @@ impl Agent {
             // 1. Configured Checkpointer (Database or Git)
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
+
+                let current_objective = final_cfg.user_instructions.clone();
+                let mut notes = vec![];
+                if let Some(last_msg) = messages.last() {
+                    if !last_msg.content.is_empty() {
+                        notes.push(format!("Last msg: {:.50}...", last_msg.content));
+                    }
+                    if !last_msg.tool_calls.is_empty() {
+                        notes.push(format!("Tool calls: {}", last_msg.tool_calls.len()));
+                    }
+                }
+
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
                     checkpoint_id: checkpoint_id.clone(),
@@ -2644,6 +2656,9 @@ impl Agent {
                         "iteration": iteration,
                         "turn_input_tokens": turn_input_tokens,
                         "turn_output_tokens": output_tokens,
+                        "current_objective": current_objective,
+                        "status": "running",
+                        "notes": notes,
                     }),
                     created_at: chrono::Utc::now(),
                 };
