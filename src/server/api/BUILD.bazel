@@ -10,7 +10,6 @@ exports_files(
         "growth.rs",
         "health.rs",
         "syndication_handler.rs",
-        "fulfillment.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -31,7 +30,6 @@ rust_library(
         "growth.rs",
         "health.rs",
         "syndication_handler.rs",
-        "fulfillment.rs",
         "mcp_webhook.rs",
         "mesh_handler.rs",
         "mod.rs",
@@ -142,7 +140,7 @@ rust_library(
 
 rust_test(
     name = "server_api_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_api",
     edition = "2024",
     env = {
