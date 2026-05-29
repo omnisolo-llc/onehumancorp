@@ -20,9 +20,15 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Fill in the description (incorporating Maya to trigger mock)
+    const intakePromise1 = page.waitForRequest(request =>
+      request.url().includes('/api/onboarding/intake') && request.method() === 'POST'
+    );
+
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Maya's Custom Cakes");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    const intakeReq1 = await intakePromise1;
+    expect(JSON.parse(intakeReq1.postData() || '{}').description).toBe("Maya's Custom Cakes");
 
     // Step 1 - Chat 2
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
@@ -33,8 +39,14 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Where are you located?' })).toBeVisible();
     await page.getByPlaceholder('e.g. Portland, OR').fill('Portland, OR');
 
+    const startPromise = page.waitForRequest(request =>
+      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
+    );
+
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    await startPromise;
 
     // Step 2 - Review
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
@@ -79,9 +91,15 @@ test.describe('Onboarding Wizard', () => {
     // Wait for the Smart Builder welcome screen (Step 1 - Chat 1)
     await expect(page.getByRole('heading', { name: "What's the name of your business?" })).toBeVisible();
 
-    // Fill in the description (incorporating Carlos to trigger mock)
+    const intakePromise2 = page.waitForRequest(request =>
+      request.url().includes('/api/onboarding/intake') && request.method() === 'POST'
+    );
+
     await page.getByPlaceholder("e.g. Maya's Custom Cakes").fill("Carlos Plumbing");
     await page.getByRole('button', { name: 'Next', exact: true }).click();
+
+    const intakeReq2 = await intakePromise2;
+    expect(JSON.parse(intakeReq2.postData() || '{}').description).toBe("Carlos Plumbing");
 
     // Step 1 - Chat 2
     await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
@@ -92,8 +110,14 @@ test.describe('Onboarding Wizard', () => {
     await expect(page.getByRole('heading', { name: 'Where are you located?' })).toBeVisible();
     await page.getByPlaceholder('e.g. Portland, OR').fill('Miami, FL');
 
+    const startPromise2 = page.waitForRequest(request =>
+      request.url().includes('/api/onboarding/start') && request.method() === 'POST'
+    );
+
     // Click Generate
     await page.getByRole('button', { name: /Generate My Business/i }).click();
+
+    await startPromise2;
 
     // Step 2 - Review
     await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
