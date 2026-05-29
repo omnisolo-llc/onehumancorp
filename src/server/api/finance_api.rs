@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Path},
+    extract::{State},
     routing::{post, get},
     Json, Router,
 };
@@ -33,7 +33,7 @@ async fn create_advance(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateAdvanceRequest>,
 ) -> Result<Json<CapitalAdvance>, axum::http::StatusCode> {
-    let tenant_id = claims.tenant_id;
+    let tenant_id = claims.organization_id.unwrap_or_default();
     let engine = CapitalEngine::new(db.pool.clone());
     match engine.create_advance(&tenant_id, payload.amount, payload.fee, payload.repayment_percentage).await {
         Ok(advance) => Ok(Json(advance)),
@@ -46,7 +46,7 @@ async fn process_repayment(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<RepaymentRequest>,
 ) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let tenant_id = claims.tenant_id;
+    let tenant_id = claims.organization_id.unwrap_or_default();
     let engine = CapitalEngine::new(db.pool.clone());
     match engine.process_repayment(&tenant_id, payload.transaction_amount).await {
         Ok(repaid) => Ok(Json(serde_json::json!({"repaid_amount": repaid}))),
@@ -66,7 +66,7 @@ async fn analyze_needs(
     State(db): State<Arc<DB>>,
     Extension(claims): Extension<Claims>,
 ) -> Result<Json<Option<CapitalAdvance>>, axum::http::StatusCode> {
-    let tenant_id = claims.tenant_id;
+    let tenant_id = claims.organization_id.unwrap_or_default();
     let engine = CapitalEngine::new(db.pool.clone());
     match engine.analyze_capital_needs(&tenant_id).await {
         Ok(advance_opt) => Ok(Json(advance_opt)),

@@ -115,7 +115,6 @@ impl CapitalEngine {
 
         Ok(total_repaid)
     }
-}
 
     pub async fn analyze_capital_needs(&self, tenant_id: &str) -> Result<Option<CapitalAdvance>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
@@ -160,3 +159,4 @@ impl CapitalEngine {
 
         Ok(None)
     }
+}

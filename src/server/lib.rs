@@ -2490,7 +2490,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }))
         }))
         .merge(webhook_router)
-        .merge(api::finance_api::finance_routes().with_state(std::sync::Arc::new(db_for_sales.clone())))
+        .merge(api::finance_api::finance_routes().with_state(std::sync::Arc::new(crate::db::DB { pool: db_for_sales.pool.clone(), store: db_for_sales.store.clone() })))
         .merge(health_router)
         .fallback(ui_handler);
 
