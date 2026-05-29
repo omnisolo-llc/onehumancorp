@@ -1195,7 +1195,6 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
-                    continue;
                 }
             }
         }
@@ -1607,7 +1606,6 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
-                    continue;
                 }
             }
         }
@@ -1783,7 +1781,6 @@ impl Agent {
                         return Err(Box::new(std::io::Error::new(std::io::ErrorKind::TimedOut, "Agent execution exceeded 60-second ML-Resilience timeout rule.")));
                     }
                     tracing::warn!("Agent timeout on attempt {}. Retrying...", attempts);
-                    continue;
                 }
             }
         }
