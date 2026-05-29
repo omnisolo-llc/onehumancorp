@@ -1,3 +1,4 @@
+use sqlx::Executor;
 use axum::{
     extract::Json,
     http::StatusCode,
@@ -81,7 +82,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -89,7 +90,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(&webhook_state.db.pool)
+                            .execute(&webhook_state.db.pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +125,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -132,7 +133,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = $1 WHERE tenant_id = $2")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(&webhook_state.db.pool)
+                            .execute(&webhook_state.db.pool.clone())
                             .await
                             .map(|_| ())
                     }
@@ -187,7 +188,7 @@ pub struct MercadoPagoEventData {
 }
 
 pub async fn mercadopago_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<MercadoPagoEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -257,14 +258,14 @@ pub async fn razorpay_webhook_handler(
                 DbStore::Sqlite(pool) => {
                     sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
                         .bind(order_id)
-                        .execute(pool)
+                        .execute(&pool.clone())
                         .await
                         .map(|_| ())
                 }
                 DbStore::Postgres => {
                     sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = $1")
                         .bind(order_id)
-                        .execute(&webhook_state.db.pool)
+                        .execute(&webhook_state.db.pool.clone())
                         .await
                         .map(|_| ())
                 }
@@ -284,7 +285,8 @@ pub async fn razorpay_webhook_handler(
 
 #[derive(Debug, Deserialize)]
 pub struct CalComEvent {
-    pub triggerEvent: String,
+    #[serde(rename = "triggerEvent")]
+    pub trigger_event: String,
     pub payload: CalComPayload,
 }
 
@@ -292,8 +294,10 @@ pub struct CalComEvent {
 pub struct CalComPayload {
     pub uid: String,
     pub title: String,
-    pub startTime: String,
-    pub endTime: String,
+    #[serde(rename = "startTime")]
+    pub start_time: String,
+    #[serde(rename = "endTime")]
+    pub end_time: String,
     pub attendees: Vec<CalComAttendee>,
 }
 
@@ -304,10 +308,10 @@ pub struct CalComAttendee {
 }
 
 pub async fn calcom_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<CalComEvent>,
 ) -> impl IntoResponse {
-    match payload.triggerEvent.as_str() {
+    match payload.trigger_event.as_str() {
         "BOOKING_CREATED" => {
             let booking_uid = &payload.payload.uid;
 
@@ -335,7 +339,7 @@ pub struct ResendEventData {
 }
 
 pub async fn resend_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ResendEvent>,
 ) -> impl IntoResponse {
     match payload.type_.as_str() {
@@ -358,7 +362,7 @@ pub struct AyrshareEvent {
 }
 
 pub async fn ayrshare_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<AyrshareEvent>,
 ) -> impl IntoResponse {
     match payload.action.as_str() {
@@ -384,7 +388,7 @@ pub struct ManychatMessage {
 }
 
 pub async fn manychat_webhook_handler(
-    axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
