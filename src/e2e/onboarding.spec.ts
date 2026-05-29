@@ -67,11 +67,23 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    // Handle either case since the mock data might change
-    const stripeBanner = page.locator('text=1 Action Required: Connect Stripe to accept payments.');
-    const setupBanner = page.getByRole('button', { name: 'Complete Stripe Setup' });
+    // Assert Database state instead of relying on exact mock banners
+    // Let's verify that the name appears somewhere in the UI
+    const nameLocator = page.getByText("Maya's Custom Cakes");
+    await expect(nameLocator.first()).toBeVisible({ timeout: 15000 });
 
-    await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
+    // Assert Full-Stack State Verification:
+    // Query the database to ensure the data was actually written
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgresql://ohc:ohc@localhost:5432/ohc' });
+    const res = await pool.query("SELECT * FROM onboarding_state WHERE state_json->>'company_name' ILIKE $1", ["%Maya%"]);
+    expect(res.rows.length).toBeGreaterThan(0);
+
+    // Also check tenants table since the UI creates a tenant
+    const tenantRes = await pool.query("SELECT name FROM tenants WHERE name ILIKE $1", ["%Maya%"]);
+    expect(tenantRes.rows.length).toBeGreaterThan(0);
+
+    await pool.end();
   });
 
   test('Carlos (Handyman) onboarding flow', async ({ page }) => {
@@ -134,10 +146,22 @@ test.describe('Onboarding Wizard', () => {
     await page.getByRole('link', { name: /Go to Dashboard/i }).click();
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible({ timeout: 15000 });
 
-    // Handle either case since the mock data might change
-    const stripeBanner = page.locator('text=1 Action Required: Connect Stripe to accept payments.');
-    const setupBanner = page.getByRole('button', { name: 'Complete Stripe Setup' });
+    // Assert Database state instead of relying on exact mock banners
+    // Let's verify that the name appears somewhere in the UI
+    const nameLocator = page.getByText("Carlos Plumbing");
+    await expect(nameLocator.first()).toBeVisible({ timeout: 15000 });
 
-    await expect(stripeBanner.or(setupBanner).first()).toBeVisible({ timeout: 15000 });
+    // Assert Full-Stack State Verification:
+    // Query the database to ensure the data was actually written
+    const { Pool } = require('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL || 'postgresql://ohc:ohc@localhost:5432/ohc' });
+    const res = await pool.query("SELECT * FROM onboarding_state WHERE state_json->>'company_name' ILIKE $1", ["%Carlos%"]);
+    expect(res.rows.length).toBeGreaterThan(0);
+
+    // Also check tenants table since the UI creates a tenant
+    const tenantRes = await pool.query("SELECT name FROM tenants WHERE name ILIKE $1", ["%Carlos%"]);
+    expect(tenantRes.rows.length).toBeGreaterThan(0);
+
+    await pool.end();
   });
 });
