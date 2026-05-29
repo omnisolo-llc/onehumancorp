@@ -1,3 +1,4 @@
+use crate::memory_store::MockConflictResolver;
 #[cfg(test)]
 mod exhaustive_tests {
     use crate::memory_store::{VectorRepository, EmbeddingRecord};
@@ -47,7 +48,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -85,7 +86,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -123,7 +124,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -161,7 +162,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -199,7 +200,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -237,7 +238,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -275,7 +276,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -313,7 +314,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -351,7 +352,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -389,7 +390,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -427,7 +428,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -465,7 +466,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -503,7 +504,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -541,7 +542,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -579,7 +580,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -617,7 +618,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -655,7 +656,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -693,7 +694,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -731,7 +732,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -769,7 +770,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -807,7 +808,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -845,7 +846,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -883,7 +884,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -921,7 +922,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -959,7 +960,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -997,7 +998,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1035,7 +1036,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1073,7 +1074,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1111,7 +1112,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1149,7 +1150,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1187,7 +1188,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1225,7 +1226,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1263,7 +1264,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1301,7 +1302,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1339,7 +1340,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1377,7 +1378,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1415,7 +1416,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1453,7 +1454,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1491,7 +1492,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1529,7 +1530,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1567,7 +1568,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1605,7 +1606,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1643,7 +1644,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1681,7 +1682,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1719,7 +1720,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1757,7 +1758,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1795,7 +1796,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1833,7 +1834,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1871,7 +1872,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1909,7 +1910,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1947,7 +1948,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -1985,7 +1986,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2023,7 +2024,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2061,7 +2062,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2099,7 +2100,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2137,7 +2138,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2175,7 +2176,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2213,7 +2214,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2251,7 +2252,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2289,7 +2290,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2327,7 +2328,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2365,7 +2366,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2403,7 +2404,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2441,7 +2442,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2479,7 +2480,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2517,7 +2518,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2555,7 +2556,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2593,7 +2594,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2631,7 +2632,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2669,7 +2670,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2707,7 +2708,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2745,7 +2746,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2783,7 +2784,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2821,7 +2822,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2859,7 +2860,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2897,7 +2898,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2935,7 +2936,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -2973,7 +2974,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3011,7 +3012,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3049,7 +3050,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3087,7 +3088,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3125,7 +3126,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3163,7 +3164,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3201,7 +3202,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3239,7 +3240,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3277,7 +3278,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3315,7 +3316,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3353,7 +3354,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3391,7 +3392,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3429,7 +3430,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3467,7 +3468,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3505,7 +3506,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3543,7 +3544,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3581,7 +3582,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3619,7 +3620,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3657,7 +3658,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3695,7 +3696,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3733,7 +3734,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3771,7 +3772,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
@@ -3809,7 +3810,7 @@ mod exhaustive_tests {
         };
         repo.upsert(&rec1).await.unwrap();
         repo.upsert(&rec2).await.unwrap();
-        let resolved = repo.auto_resolve_conflicts().await.unwrap();
+        let resolved = repo.auto_resolve_conflicts(&crate::memory_store::MockConflictResolver).await.unwrap();
         assert!(resolved <= 2);
     }
 
