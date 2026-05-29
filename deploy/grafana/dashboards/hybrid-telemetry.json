@@ -80,8 +80,7 @@
         "y": 3
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -270,8 +269,7 @@
         "y": 12
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -605,8 +603,7 @@
         "y": 29
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -1314,8 +1311,7 @@
         "y": 62
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "title": "Teammate Mesh Broadcasts",
@@ -1662,8 +1658,7 @@
         "y": 79
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 24,
@@ -2104,8 +2099,7 @@
         "y": 104
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {
@@ -2568,8 +2562,7 @@
         "y": 129
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 27,
@@ -2890,8 +2883,7 @@
         "y": 146
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "id": 34,
@@ -3442,8 +3434,7 @@
         "y": 171
       },
       "collapsed": false,
-      "panels": [],
-      "transparent": true
+      "panels": []
     },
     {
       "datasource": {

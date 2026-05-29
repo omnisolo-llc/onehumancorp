@@ -1,11 +1,3 @@
-<style>
-body {
-  backdrop-filter: blur(20px) saturate(200%);
-  background: rgba(255, 255, 255, 0.03);
-  font-family: 'Outfit', 'Inter', sans-serif;
-}
-</style>
-
 # KAIROS AI OS Orchestration Walkthrough
 
 The KAIROS Orchestration layer is the foundation of the OneHumanCorp autonomous workforce. It ensures that your business runs smoothly, efficiently, and with perfect memory.
