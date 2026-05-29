@@ -1513,7 +1513,7 @@ error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ser
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `chrono`
     --> agent.rs:2520:45
      |
-2520 | ...                   created_at: chrono::Utc::now().to_rfc3339(),
+2520 | ...                   created_at: chrono::Utc::now(),
      |                                   ^^^^^^ use of unresolved module or unlinked crate `chrono`
      |
      = help: you might be missing a crate named `chrono`
@@ -1577,7 +1577,7 @@ error[E0433]: failed to resolve: use of unresolved module or unlinked crate `ser
 error[E0433]: failed to resolve: use of unresolved module or unlinked crate `chrono`
     --> agent.rs:2732:49
      |
-2732 | ...                   created_at: chrono::Utc::now().to_rfc3339(),
+2732 | ...                   created_at: chrono::Utc::now(),
      |                                   ^^^^^^ use of unresolved module or unlinked crate `chrono`
      |
      = help: you might be missing a crate named `chrono`
