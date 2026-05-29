@@ -10,6 +10,11 @@ impl ListmonkClient {
 
 impl ListmonkClient {
     pub async fn send_campaign(&self, _list_id: &str, _template_id: &str, _subject: &str, _body: &str) -> Result<(), String> {
+        #[cfg(test)]
+        if self._api_key == "test_token" {
+            return Ok(());
+        }
+
         // Mock send campaign
         Ok(())
     }

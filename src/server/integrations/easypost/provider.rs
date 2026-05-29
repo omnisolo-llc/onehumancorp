@@ -22,13 +22,13 @@ impl EasyPostProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
-                id: self.metadata.id.clone(),
-                name: self.metadata.name.clone(),
-                category: self.metadata.category.clone(),
-                base_url: self.metadata.base_url.clone(),
+                id: self.metadata.id,
+                name: self.metadata.name,
+                category: self.metadata.category,
+                base_url: self.metadata.base_url,
             }
         }
     }
@@ -37,5 +37,30 @@ impl EasyPostProvider {
 impl EasyPostProvider {
     pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
         self._client.create_shipment(to_address, from_address, parcel_details).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_easypost_provider_new() {
+        let provider = EasyPostProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "easypost");
+    }
+
+    #[test]
+    fn test_easypost_provider_into() {
+        let provider = EasyPostProvider::new("test_token".to_string());
+        let integration = provider.into_integration_provider();
+        assert_eq!(integration.metadata.id, "easypost");
+    }
+
+    #[tokio::test]
+    async fn test_easypost_provider_create_shipment() {
+        let provider = EasyPostProvider::new("test_token".to_string());
+        let result = provider.create_shipment("to", "from", "parcel").await;
+        assert!(result.is_ok());
     }
 }

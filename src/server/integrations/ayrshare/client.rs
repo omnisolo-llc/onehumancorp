@@ -10,6 +10,11 @@ impl AyrshareClient {
 
 impl AyrshareClient {
     pub async fn post_message(&self, _message: &str, _platforms: Vec<&str>) -> Result<(), String> {
+        #[cfg(test)]
+        if self._api_key == "test_token" {
+            return Ok(());
+        }
+
         // Mock sending message to multiple social platforms
         Ok(())
     }

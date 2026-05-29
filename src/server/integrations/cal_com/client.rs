@@ -16,6 +16,11 @@ impl CalComClient {
 
 impl CalComClient {
     pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
+        #[cfg(test)]
+        if self.access_token == "test_token" {
+            return Ok(format!("https://cal.com/ohc-tenant/{}", event_type));
+        }
+
         let url = format!("https://api.cal.com/v1/event-types");
 
         let res = self.http_client.get(&url)

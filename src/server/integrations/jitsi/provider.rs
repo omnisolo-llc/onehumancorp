@@ -22,13 +22,13 @@ impl JitsiProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
-                id: self.metadata.id.clone(),
-                name: self.metadata.name.clone(),
-                category: self.metadata.category.clone(),
-                base_url: self.metadata.base_url.clone(),
+                id: self.metadata.id,
+                name: self.metadata.name,
+                category: self.metadata.category,
+                base_url: self.metadata.base_url,
             }
         }
     }
@@ -37,5 +37,30 @@ impl JitsiProvider {
 impl JitsiProvider {
     pub async fn create_meeting(&self, meeting_name: &str) -> Result<String, String> {
         self._client.create_meeting(meeting_name).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_jitsi_provider_new() {
+        let provider = JitsiProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "jitsi");
+    }
+
+    #[test]
+    fn test_jitsi_provider_into() {
+        let provider = JitsiProvider::new("test_token".to_string());
+        let integration = provider.into_integration_provider();
+        assert_eq!(integration.metadata.id, "jitsi");
+    }
+
+    #[tokio::test]
+    async fn test_jitsi_provider_create_meeting() {
+        let provider = JitsiProvider::new("test_token".to_string());
+        let result = provider.create_meeting("test").await;
+        assert!(result.is_ok());
     }
 }

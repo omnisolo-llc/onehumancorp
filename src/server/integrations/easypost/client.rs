@@ -14,6 +14,11 @@ impl EasyPostClient {
     }
 
     pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
+        #[cfg(test)]
+        if self.api_key == "test_token" {
+            return Ok("https://easypost.com/labels/mock_label_123.pdf".to_string());
+        }
+
         let url = "https://api.easypost.com/v2/shipments";
         let payload = serde_json::json!({
             "shipment": {

@@ -22,13 +22,13 @@ impl AyrshareProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
-                id: self.metadata.id.clone(),
-                name: self.metadata.name.clone(),
-                category: self.metadata.category.clone(),
-                base_url: self.metadata.base_url.clone(),
+                id: self.metadata.id,
+                name: self.metadata.name,
+                category: self.metadata.category,
+                base_url: self.metadata.base_url,
             }
         }
     }
@@ -37,5 +37,30 @@ impl AyrshareProvider {
 impl AyrshareProvider {
     pub async fn post_message(&self, message: &str, platforms: Vec<&str>) -> Result<(), String> {
         self._client.post_message(message, platforms).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ayrshare_provider_new() {
+        let provider = AyrshareProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "ayrshare");
+    }
+
+    #[test]
+    fn test_ayrshare_provider_into() {
+        let provider = AyrshareProvider::new("test_token".to_string());
+        let integration = provider.into_integration_provider();
+        assert_eq!(integration.metadata.id, "ayrshare");
+    }
+
+    #[tokio::test]
+    async fn test_ayrshare_provider_post_message() {
+        let provider = AyrshareProvider::new("test_token".to_string());
+        let result = provider.post_message("test", vec!["test"]).await;
+        assert!(result.is_ok());
     }
 }

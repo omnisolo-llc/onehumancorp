@@ -22,4 +22,10 @@ rust_test(
     size = "small",
     crate = ":server_integrations_easypost",
     edition = "2024",
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    deps = [
+        "@crates//:tokio",
+    ],
 )
