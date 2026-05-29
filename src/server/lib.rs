@@ -1885,6 +1885,13 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(mesh_transport.clone()));
+
+    let dynamic_task_router = std::sync::Arc::new(crate::orchestration::task_router::DynamicTaskRouter::new(db.clone(), handoff_mesh.clone()));
+    let router_clone = dynamic_task_router.clone();
+    tokio::spawn(async move {
+        let _ = router_clone.start_listener().await;
+    });
+
     let dept_orchestrator = std::sync::Arc::new(crate::orchestration::departments::orchestrator::DepartmentOrchestrator::new(db.clone(), handoff_mesh.clone()));
     let ops_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::operations_agent::OperationsAgent::new(dept_orchestrator.clone())));
     let cs_agent = std::sync::Arc::new(tokio::sync::RwLock::new(crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent::new(dept_orchestrator.clone())));

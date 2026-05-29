@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use tokio::sync::Mutex;
+use crate::orchestration::mesh::TeammateMesh;
+use ::server_ohc::orchestration::TeammateMeshEvent;
+use crate::orchestration::task_router::TaskAvailablePayload;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTaskV4 {
@@ -25,11 +28,17 @@ pub struct SharedTaskV4 {
 pub struct SharedTaskOrchestrator {
     db: Arc<DB>,
     sqlite_mutex: Mutex<()>,
+    mesh: Option<Arc<dyn TeammateMesh>>,
 }
 
 impl SharedTaskOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db, sqlite_mutex: Mutex::new(()) }
+        Self { db, sqlite_mutex: Mutex::new(()), mesh: None }
+    }
+
+    pub fn with_mesh(mut self, mesh: Arc<dyn TeammateMesh>) -> Self {
+        self.mesh = Some(mesh);
+        self
     }
 
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
@@ -93,7 +102,28 @@ impl SharedTaskOrchestrator {
         }
 
         let mut res = task;
-        res.id = task_id;
+        res.id = task_id.clone();
+
+        if let Some(mesh) = &self.mesh {
+            if res.status == "PENDING" {
+                let payload = TaskAvailablePayload {
+                    task_id: task_id,
+                    required_skills: vec![],
+                    details: serde_json::from_str(res.payload.as_deref().unwrap_or("{}")).unwrap_or(serde_json::json!({})),
+                };
+                if let Ok(payload_bytes) = serde_json::to_vec(&payload) {
+                    let event = TeammateMeshEvent {
+                        agent_id: "system".to_string(),
+                        action: "task.available".to_string(),
+                        status: "ok".to_string(),
+                        payload: payload_bytes,
+                        msg_id: uuid::Uuid::new_v4().to_string(),
+                    };
+                    let _ = mesh.publish("task.available", serde_json::to_vec(&event).unwrap_or_default()).await;
+                }
+            }
+        }
+
         Ok(res)
     }
 

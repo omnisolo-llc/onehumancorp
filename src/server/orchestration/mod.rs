@@ -1,5 +1,8 @@
 pub mod tasks;
 pub mod shared_tasks;
+pub mod task_router;
+#[cfg(test)]
+pub mod task_router_test;
 #[cfg(test)]
 pub mod shared_tasks_test;
 #[cfg(test)]

@@ -6,6 +6,8 @@ use chrono::Utc;
 
 use opentelemetry::global;
 use opentelemetry::trace::Tracer;
+use crate::orchestration::task_router::TaskAvailablePayload;
+use ::server_ohc::orchestration::TeammateMeshEvent;
 
 pub struct TaskDecompositionService {
     db: Arc<DB>,
@@ -89,6 +91,24 @@ impl TaskDecompositionService {
                 .execute(sqlite_pool)
                 .await
                 .map_err(|e| e.to_string())?;
+            }
+        }
+
+        if task.status == "PENDING" {
+            let payload = TaskAvailablePayload {
+                task_id: task.id.clone(),
+                required_skills: vec![],
+                details: serde_json::from_str(&task.payload).unwrap_or(serde_json::json!({})),
+            };
+            if let Ok(payload_bytes) = serde_json::to_vec(&payload) {
+                let event = TeammateMeshEvent {
+                    agent_id: "system".to_string(),
+                    action: "task.available".to_string(),
+                    status: "ok".to_string(),
+                    payload: payload_bytes,
+                    msg_id: uuid::Uuid::new_v4().to_string(),
+                };
+                let _ = self.mesh.publish("task.available", serde_json::to_vec(&event).unwrap_or_default()).await;
             }
         }
 
