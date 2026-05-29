@@ -79,6 +79,7 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/campaign/generate-seasonal-promo", post(handle_generate_seasonal_promo))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -180,6 +181,31 @@ async fn handle_generate_review(
     );
 
     Json(GenerateReviewResponse {
+        message: generated,
+    })
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateSeasonalPromoRequest {
+    pub theme: String,
+    pub discount: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateSeasonalPromoResponse {
+    pub message: String,
+}
+
+async fn handle_generate_seasonal_promo(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateSeasonalPromoRequest>,
+) -> impl IntoResponse {
+    let generated = format!(
+        "🌟 {} Special! 🌟\n\nWe're celebrating with a {} discount on all our top products. Treat yourself or find the perfect gift today.\n\nShop the sale here: https://ohc.store/sale\n\n⚡ Powered by OHC",
+        req.theme, req.discount
+    );
+
+    Json(GenerateSeasonalPromoResponse {
         message: generated,
     })
 }
