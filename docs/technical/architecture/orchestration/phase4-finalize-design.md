@@ -15,7 +15,7 @@ Realtime communications run via Redis Pub/Sub channels `mesh:tasks` and `mesh:co
 Background workers consolidate agent scratchpads into `autodream_memories` using `pgvector` for omni-context memory consolidation.
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue (Finalization)
-The final architecture runs isolated sub-agents through the Queue Manager in `src/server/orchestration/queue/queue.rs`.
+The final architecture runs isolated sub-agents through the Queue Manager in `src/server/orchestration/queue/queue.go`.
 - **Cloud Mode:** High-concurrency routing via Redis.
 - **Standalone Mode:** Gracefully degrades to local SQLite internal tables.
 

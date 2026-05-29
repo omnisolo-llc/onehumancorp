@@ -108,6 +108,7 @@ rust_library(
 
 rust_test(
     name = "dummy_test",
+    size = "small",
     srcs = ["dummy.rs"],
     target_compatible_with = select({
         "@platforms//os:linux": [],

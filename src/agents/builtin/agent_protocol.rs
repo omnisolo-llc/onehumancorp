@@ -85,7 +85,7 @@ impl AgentProtocolServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::{Agent, AgentRunConfig};
+    use crate::agent::Agent;
     use crate::llm::LlmClient;
     use crate::types::{ChatRequest, ChatResponse, Message, Usage};
 

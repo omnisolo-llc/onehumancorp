@@ -124,7 +124,7 @@ rust_library(
 
 rust_test(
     name = "server_services_sync_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_services_sync",
     edition = "2024",
     env = {

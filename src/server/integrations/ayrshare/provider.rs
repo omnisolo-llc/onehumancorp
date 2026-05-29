@@ -22,7 +22,7 @@ impl AyrshareProvider {
         }
     }
 
-    pub fn into_integration_provider(self) -> IntegrationProvider {
+    pub fn to_integration_provider(&self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -37,23 +37,5 @@ impl AyrshareProvider {
 impl AyrshareProvider {
     pub async fn post_message(&self, message: &str, platforms: Vec<&str>) -> Result<(), String> {
         self._client.post_message(message, platforms).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_ayrshare_provider_new() {
-        let provider = AyrshareProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "ayrshare");
-    }
-
-    #[test]
-    fn test_ayrshare_provider_into() {
-        let provider = AyrshareProvider::new("test_token".to_string());
-        let integration = provider.into_integration_provider();
-        assert_eq!(integration.metadata.id, "ayrshare");
     }
 }

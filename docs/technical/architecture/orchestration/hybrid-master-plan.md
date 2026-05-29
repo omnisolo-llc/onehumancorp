@@ -58,6 +58,6 @@ CREATE INDEX idx_autodream_memories_embedding ON autodream_memories USING ivffla
 ```
 
 ## 5. Phase 4: Sub-Agent Orchestration Queue
-Background worker system (`src/server/orchestration/queue/queue.rs`) utilizing BullMQ/Celery payload structures for distributed execution.
+Background worker system (`src/server/orchestration/queue/queue.go`) utilizing BullMQ/Celery payload structures for distributed execution.
 
 </div>

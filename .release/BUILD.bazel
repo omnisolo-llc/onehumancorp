@@ -1,0 +1,4 @@
+exports_files([
+    "cloud_version.txt",
+    "standalone_version.txt",
+])

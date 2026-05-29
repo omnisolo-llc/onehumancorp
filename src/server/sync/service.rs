@@ -2,7 +2,6 @@ use std::env;
 use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use crate::db::{DB, DbStore};
-use sqlx::Row;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyncDelta {
@@ -88,8 +87,6 @@ impl SyncDeltas for CloudSyncService {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // We mock the DB for tests, but doing so via integration tests is better.
     // For unit testing here, we avoid starting a full postgres instance by relying on standard traits or a simple mock.
 }

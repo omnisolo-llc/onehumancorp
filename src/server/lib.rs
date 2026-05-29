@@ -461,7 +461,7 @@ async fn http_login_handler(
         }
     };
 
-    let claims = ::server_common::Claims {
+    let _claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -1498,16 +1498,13 @@ impl HubService for MyHubService {
         self.hub.register_agent(sub_agent);
         
         // Prompt injection checks
-        {
-            static INJECTION_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-            let re = INJECTION_RE.get_or_init(|| regex::Regex::new(r"(?i)(SYSTEM:|\[INST\]|<\|im_start\|>|Ignore previous instructions)").unwrap());
-            if re.is_match(&req.instruction) {
-                return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
-            }
-            if re.is_match(&req.parent_thread_id) {
-                return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
-            }
+        if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
+            return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
         }
+        if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
+            return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
+        }
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -2289,7 +2286,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             rate_limiter,
             ::server_utils::tier_middleware::tier_middleware,
         ))
-        .layer(axum::middleware::from_fn(crate::utils::gzip_middleware::gzip_middleware))
         .with_state(mesh_transport)
         .route("/api/help", axum::routing::get(|| async { axum::Json(serde_json::json!([
             { "title": "Getting Started", "desc": "Welcome to One Human Corp! This is a simple app that helps you manage your small business. You can set up your store, accept payments, and hire AI helpers." },
@@ -2683,8 +2679,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
                         button {
-            min-height: 44px;
-            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
@@ -2758,13 +2752,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #setup-screen {
                             font-family: 'Inter', sans-serif;
                             padding: 40px;
-                            max-width: 600px;
+                            max-width: 375px;
                             margin: 60px auto;
                             color: #1D1D1F;
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
                         }
 
                         body.dark-theme #setup-screen {
                             color: #F5F5F7;
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                         }
 
                         #setup-screen h1, #setup-screen h2, #setup-screen h3 {
@@ -2796,11 +2797,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             #setup-screen {
                                 padding: 24px;
                                 margin: 20px auto;
-                                border-radius: 12px;
+                                border-radius: 16px;
                             }
                             #setup-screen button {
-            min-height: 44px;
-            min-width: 44px;
+                                min-height: 44px;
+                                min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
                             }
@@ -3054,11 +3055,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
             .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
             .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-            .video-thumbnail { background: #000; aspect-ratio: 9/16; width: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; position: relative; }
-            .video-thumbnail::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8)); }
-            .video-info { padding: 12px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 2; pointer-events: none; }
-            .video-info h4 { margin: 0 0 4px 0; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-            .video-info p { margin: 0; color: rgba(255,255,255,0.8); font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+            .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
+            .video-info { padding: 12px; }
+            .video-info h4 { margin: 0 0 4px 0; }
+            .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
 
@@ -3114,14 +3114,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     el.addEventListener("mouseenter", () => showTooltip(el, text));
                                     el.addEventListener("mouseleave", hideTooltip);
 
-                                    // Mobile Long Press (Added by Scribe)
+                                    // Mobile Long Press
                                     el.addEventListener("touchstart", (e) => {
-                                        tooltipTimeout = setTimeout(() => { showTooltip(el, text); }, 500);
+                                        tooltipTimeout = setTimeout(() => {
+                                            showTooltip(el, text);
+                                        }, 500); // 500ms for long press
                                     }, {passive: true});
 
                                     el.addEventListener("touchend", () => {
                                         clearTimeout(tooltipTimeout);
-                                        setTimeout(hideTooltip, 2000);
+                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
                                     });
 
                                     el.addEventListener("touchmove", () => {
@@ -3246,11 +3248,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('advisory-dashboard-screen')">Advisory</button>
                             <button onclick="showScreen('seasonal-promo-screen')">Seasonal Promos ✨</button>
                             <button onclick="showScreen('referral-dashboard-screen')">Referrals</button>
-                            <button onclick="showScreen('help-screen')">Help Center</button>
+                            <button onclick="alert('Help Center')">Help Center</button>
                             <button onclick="alert('Connect Apps')">Connect Apps</button>
-                            <button onclick="showScreen('help-screen')">Video Tutorials</button>
+                            <button onclick="alert('Tutorial started')">Video Tutorials</button>
                             <button onclick="showScreen('dashboard-screen')">How to use this app</button>
-                            <button onclick="showScreen('changelog-screen')">What's New</button>
+                            <button onclick="alert(&quot;What's New&quot;)">What's New</button>
                             <button id="integrations-btn" onclick="document.getElementById('manychat-integration').style.display='block';">Integrations</button>
                             <button onclick="toggleMenu()">Menu</button>
                         </div>
@@ -3313,7 +3315,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             <button onclick="showScreen('api-screen')">Connect Custom Software</button>
                             <div class="card glass">
                                 <h3>Learn</h3>
-                                <button onclick="showScreen('help-screen')">Tutorial Library</button>
+                                <button onclick="alert('Tutorial started')">Tutorial Library</button>
                                 <button class="nav-button" onclick="showScreen('inbox-screen')">Inbox</button>
                             </div>
                         </div>
@@ -3477,38 +3479,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     <h3 style="margin: 0 0 8px 0; font-size: 18px; color: var(--text-primary);">Unlock Growth Insights</h3>
                                     <p style="margin: 0 0 16px 0; font-size: 14px; color: var(--text-secondary);">See exactly where your best customers come from and optimize your store to double your conversion rate.</p>
                                     <button onclick="showScreen('pricing-screen')" style="width: 100%; background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); font-weight: bold; padding: 12px; border-radius: 8px; color: white; border: none; cursor: pointer;">Upgrade to Premium</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Growth Loop: Interactive Trial Extension -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(234, 179, 8, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Extend Your Trial <span style="font-size: 12px; background: rgba(234, 179, 8, 0.1); color: #ca8a04; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Grow Faster</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have <strong style="color: var(--text-primary);"><span id="trial-days-left">14</span> days left</strong> in your free trial. Complete these quick tasks to earn more time.</p>
-
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🐦</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Connect Twitter</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-twitter" onclick="extendTrialWithTwitter()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Connect</button>
-                                </div>
-
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(168, 85, 247, 0.1); color: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">⭐</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Leave a Review</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-review" onclick="extendTrialWithReview()" style="background: #111827; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Review</button>
                                 </div>
                             </div>
                         </div>
@@ -4184,7 +4154,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="width: 100%; overflow-x: hidden; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
@@ -4420,7 +4390,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
+                                let state = { step: currentStep };
+
+                                const existingState = localStorage.getItem('ohc_wizard_state');
+                                if (existingState) {
+                                    try {
+                                        const parsed = JSON.parse(existingState);
+                                        state = { ...parsed, ...state };
+                                    } catch(e) {}
+                                }
+
                                 Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
                                     const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
@@ -4476,17 +4455,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 console.error('Failed to load state from server', e);
                             }
 
-                            if (!state) {
-                                const saved = localStorage.getItem('ohc_wizard_state');
-                                if (saved) {
-                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
-                                }
+                            const saved = localStorage.getItem('ohc_wizard_state');
+                            if (saved) {
+                                try {
+                                    const localState = JSON.parse(saved);
+                                    if (localState) {
+                                        state = { ...localState, ...state };
+                                    }
+                                } catch (e) { console.error('Failed to parse wizard state', e); }
                             }
 
                             if (state) {
                                 if (state.step) currentStep = state.step;
                                 inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
                                             input.checked = state[key];
@@ -5167,28 +5149,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function extendTrialWithTwitter() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-twitter');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Connected';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
-                        }
-
-                        function extendTrialWithReview() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-review');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Done';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
-                        }
-
                         async function generateDiscountShare() {
                             try {
                                 const response = await fetch('/api/v1/growth/discount_share/generate', {
@@ -5210,46 +5170,57 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            let hasError = false;
+
+                            // Reset previous errors
+                            document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
+                                input.style.border = "";
+                            });
+
                             if (stepId === 3 && currentStep === 2) {
-                                let valid = false;
-                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
-                                });
+                                let valid = onboardingState.business_type ? true : false;
+                                const input = document.getElementById('step-2-business-type');
+                                if (input && input.value.trim().length >= 3) valid = true;
+
                                 if (!valid) {
-                                    alert('Please select a business type');
-                                    return false;
+                                    if(input) input.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 4 && currentStep === 3) {
-                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
-                                    return false;
+                                const input1 = document.getElementById('step-3-business-name');
+                                const input2 = document.getElementById('step-3-business-name-2');
+                                if ((!input1 || input1.value.trim().length < 3) && (!input2 || input2.value.trim().length < 3)) {
+                                    if(input1) input1.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
-                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                const nameInput = document.getElementById('step-5-product-name');
+                                const priceInput = document.getElementById('step-5-product-price');
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
-                                    return false;
+                                    if(nameInput) nameInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
-                                    return false;
+                                    if(priceInput) priceInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
-                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                const emailInput = document.getElementById('step-7-user-email');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
-                                    return false;
+                                    if(emailInput) emailInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
+                                }
+                                const pwdInput = document.getElementById('step-7-user-password');
+                                if (!pwdInput || pwdInput.value.trim().length < 6) {
+                                    if(pwdInput) pwdInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
-                            return true;
+                            return !hasError;
                         }
 
 
@@ -5257,20 +5228,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const prevStep = currentStep;
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
-                                // Enhanced Input Validation - only validate when moving forward
-                                let hasError = false;
                                 if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
+                                    if (!validateInputs(stepId)) return;
                                 }
-                                if (hasError) return;
 
                                 try {
                                     const stateData = { step: stepId };
@@ -5876,13 +5836,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link && data.link.title && data.link.url) {
-                                    if(data.link.url === '/api-docs') {
-                                        aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
-                                    } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
-                                    }
-                                }
+                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }

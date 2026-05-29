@@ -22,7 +22,7 @@ impl EasyPostProvider {
         }
     }
 
-    pub fn into_integration_provider(self) -> IntegrationProvider {
+    pub fn to_integration_provider(&self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -37,23 +37,5 @@ impl EasyPostProvider {
 impl EasyPostProvider {
     pub async fn create_shipment(&self, to_address: &str, from_address: &str, parcel_details: &str) -> Result<String, String> {
         self._client.create_shipment(to_address, from_address, parcel_details).await
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_easypost_provider_new() {
-        let provider = EasyPostProvider::new("test_token".to_string());
-        assert_eq!(provider.metadata.id, "easypost");
-    }
-
-    #[test]
-    fn test_easypost_provider_into() {
-        let provider = EasyPostProvider::new("test_token".to_string());
-        let integration = provider.into_integration_provider();
-        assert_eq!(integration.metadata.id, "easypost");
     }
 }

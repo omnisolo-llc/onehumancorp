@@ -16,7 +16,7 @@ mod tests {
                 assert_eq!(provider.is_mock, false);
                 assert_eq!(provider.base_url, "http://127.0.0.1:9000");
 
-                let ip = provider.into_integration_provider();
+                let ip = provider.to_integration_provider();
                 assert_eq!(ip.metadata.id, "chromadb");
                 assert_eq!(ip.metadata.base_url, "http://127.0.0.1:9000");
             },
@@ -35,7 +35,7 @@ mod tests {
                 assert_eq!(provider.is_mock, true);
                 assert_eq!(provider.base_url, "mock://chromadb");
 
-                let ip = provider.into_integration_provider();
+                let ip = provider.to_integration_provider();
                 assert_eq!(ip.metadata.base_url, "mock://chromadb");
             },
         );
