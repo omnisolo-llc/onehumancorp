@@ -1,21 +1,41 @@
 import React from 'react';
-import Link from 'next/link';
+import fs from 'fs';
+import path from 'path';
 
 export default function ChangelogPage() {
-  const sections = [
-    {
-      version: "Version 1.0 (Latest)",
-      contentLines: [
-        "### 🌟 New Features",
-        "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
-        "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
-        "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
-        "### 🛠️ Improvements",
-        "- Faster loading times for product images.",
-        "- Simplified checkout process for your customers."
-      ]
-    }
-  ];
+  // Fix the path to point to root correctly
+  const changelogPath = path.join(process.cwd(), '..', '..', '..', 'CHANGELOG.md');
+  let changelogContent = '';
+  try {
+    changelogContent = fs.readFileSync(changelogPath, 'utf8');
+  } catch (err) {
+    changelogContent = "";
+  }
+
+  // Very basic markdown parsing for display
+  let sections = changelogContent.split('## ').filter(Boolean).map(section => {
+    const lines = section.split('\n');
+    const version = lines[0].trim();
+    const contentLines = lines.slice(1).filter(l => l.trim().length > 0);
+    return { version, contentLines };
+  });
+
+  if (sections.length === 0 || sections[0].version === "No changelog found.") {
+    sections = [
+      {
+        version: "Version 1.0 (Latest)",
+        contentLines: [
+          "### 🌟 New Features",
+          "- **Interactive AI Store Builder:** You can now generate a complete storefront from just a short description of your business. AI will handle the layout and copy for you.",
+          "- **Smart Tooltips:** We added helpful text bubbles to all major buttons to help you learn the system faster.",
+          "- **Help Center Upgrade:** Find answers instantly with our new searchable Help Center.",
+          "### 🛠️ Improvements",
+          "- Faster loading times for product images.",
+          "- Simplified checkout process for your customers."
+        ]
+      }
+    ];
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-inter">
@@ -41,12 +61,6 @@ export default function ChangelogPage() {
               )}
             </div>
           ))}
-
-          <div className="mt-8 text-center">
-            <a href="https://onehumancorp.com/changelog" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:underline">
-              Read the full technical changelog on our website →
-            </a>
-          </div>
         </div>
       </div>
     </div>

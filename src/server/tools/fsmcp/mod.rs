@@ -71,7 +71,7 @@ impl FsMcpTool {
         let local_base_dir = if let Ok(home) = env::var("HOME") {
             PathBuf::from(home).join(".ohc-local-data/fs")
         } else {
-            std::env::temp_dir().join(".ohc-local-data/fs")
+            PathBuf::from("/tmp/.ohc-local-data/fs")
         };
 
         let local_dir_clone = local_base_dir.clone();

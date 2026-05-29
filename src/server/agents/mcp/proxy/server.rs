@@ -21,7 +21,7 @@ impl McpReverseTunnelService for ReverseTunnelServer {
     ) -> Result<Response<<ReverseTunnelServer as McpReverseTunnelService>::EstablishTunnelStream>, Status> {
         let mut in_stream = request.into_inner();
 
-        let (_tx, rx) = mpsc::channel(128);
+        let (tx, rx) = mpsc::channel(128);
         let pool = self.pool.clone();
 
         tokio::spawn(async move {

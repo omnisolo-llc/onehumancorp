@@ -92,7 +92,6 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
-    pub(crate) broadcaster: Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>,
 }
 
 impl TaskManager {
@@ -100,7 +99,6 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(None),
-            broadcaster: None,
         }
     }
 
@@ -108,17 +106,6 @@ impl TaskManager {
         TaskManager {
             tasks: RwLock::new(HashMap::new()),
             db: RwLock::new(Some(db)),
-            broadcaster: None,
-        }
-    }
-
-    pub fn set_broadcaster(&mut self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
-        self.broadcaster = Some(broadcaster);
-    }
-
-    fn broadcast(&self, task: &SharedTask, event_type: &str) {
-        if let Some(ref b) = self.broadcaster {
-            b(task.clone(), event_type.to_string());
         }
     }
 
@@ -187,7 +174,6 @@ impl TaskManager {
         if let Some(task) = tasks.get_mut(task_id) {
             task.status = new_status;
             task.updated_at = Utc::now();
-            self.broadcast(&task, "task_status_updated");
             Ok(())
         } else {
             Err("task not found".to_string())
@@ -201,7 +187,6 @@ impl TaskManager {
                 task.status = "IN_PROGRESS".to_string();
                 task.assigned_agent_id = Some(agent_id);
                 task.updated_at = Utc::now();
-                self.broadcast(&task, "task_claimed");
                 return Ok(Some(task.clone()));
             }
         }
@@ -214,7 +199,6 @@ impl TaskManager {
             if task.assigned_agent_id.as_deref() == Some(agent_id) {
                 task.status = "REVIEW".to_string();
                 task.updated_at = Utc::now();
-                self.broadcast(&task, "task_review");
                 return Ok(());
             } else {
                 return Err("task not assigned to this agent".to_string());
@@ -420,7 +404,6 @@ impl TaskManager {
                 task.payload = payload;
             }
             task.updated_at = new_updated_at;
-            self.broadcast(&task, "task_approved");
         }
 
         Ok(())
