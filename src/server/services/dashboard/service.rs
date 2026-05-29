@@ -9,6 +9,7 @@ static PRODUCTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::organization::Prod
 static ORDERS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::app::Order>>> = OnceLock::new();
 static ORG_CACHE: OnceLock<HybridCache<Option<::server_ohc::organization::Organization>>> = OnceLock::new();
 static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent>>> = OnceLock::new();
+static MEETINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::MeetingRoom>>> = OnceLock::new();
 
 pub struct MyDashboardService {
     hub: Arc<crate::hub::Hub>,
@@ -59,6 +60,7 @@ impl DashboardService for MyDashboardService {
         let org_id1 = req.organization_id.clone();
         let org_id2 = req.organization_id.clone();
         let org_id3 = req.organization_id.clone();
+        let org_id4 = req.organization_id.clone();
 
         let hub_prod = self.hub.clone();
         let hub_orders = self.hub.clone();
@@ -81,9 +83,18 @@ impl DashboardService for MyDashboardService {
                 Ok::<_, String>(agents)
             }),
             tokio::spawn(async move {
-                Ok::<_, String>(hub2.get_meetings().await)
+                let cache_key = format!("hub:meetings:{}:{}", org_id4, mobile_optimized);
+                let cache = MEETINGS_CACHE.get_or_init(|| HybridCache::new(hub2.redis_client.clone()));
+
+                if let Some(meetings) = cache.get(&cache_key).await {
+                    return Ok::<_, String>(meetings);
+                }
+
+                let meetings = hub2.get_meetings().await.to_vec();
+                cache.set(&cache_key, meetings.clone(), std::time::Duration::from_secs(5)).await;
+                Ok::<_, String>(meetings)
             }),
-            tokio::task::spawn_blocking(move || {
+            tokio::spawn(async move {
                 let cost_auditor = hub3.get_cost_auditor();
                 Ok::<_, String>((
                     cost_auditor.get_total_cost(),
@@ -776,4 +787,3 @@ mod tests {
         // without panicking.
     }
 }
-// Parallel Execution Optimization verified
