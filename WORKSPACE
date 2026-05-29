@@ -29,75 +29,27 @@ go_repository(
 )
 
 go_repository(
-    name = "com_github_gorilla_websocket",
-    build_file_generation = "on",
-    importpath = "github.com/gorilla/websocket",
-    sum = "h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=",
-    version = "v1.5.3",
-)
-
-go_repository(
-    name = "com_github_jackc_pgpassfile",
-    build_file_generation = "on",
-    importpath = "github.com/jackc/pgpassfile",
-    sum = "h1:/6Hmqy13Ss2zCq62VdNG8tM1wchn8zjSGOBJ6icpsIM=",
-    version = "v1.0.0",
-)
-
-go_repository(
-    name = "com_github_jackc_pgservicefile",
-    build_file_generation = "on",
-    importpath = "github.com/jackc/pgservicefile",
-    sum = "h1:iCEnooe7UlwOQYpKFhBabPMi4aNAfoODPEFNiAnClxo=",
-    version = "v0.0.0-20240606120523-5a60cdf6a761",
-)
-
-go_repository(
-    name = "com_github_jackc_pgx_v5",
-    build_file_generation = "on",
-    importpath = "github.com/jackc/pgx/v5",
-    sum = "h1:uwrxJXBnx76nyISkhr33kQLlUqjv7et7b9FjCen/tdc=",
-    version = "v5.9.1",
-)
-
-go_repository(
-    name = "com_github_jackc_puddle_v2",
-    build_file_generation = "on",
-    importpath = "github.com/jackc/puddle/v2",
-    sum = "h1:PR8nw+E/1w0GLuRFSmiioY6UooMp6KJv0/61nB7icHo=",
-    version = "v2.2.2",
-)
-
-go_repository(
     name = "com_github_klauspost_cpuid_v2",
     build_file_generation = "on",
     importpath = "github.com/klauspost/cpuid/v2",
-    sum = "h1:0OwqZRYI2rFrjS4kvkDnqJkKHdHaRnCm68/DY4OxRzU=",
-    version = "v2.2.11",
+    sum = "h1:tBs3QSyvjDyFTq3uoc/9xFpCuOsJQFNPiAhYdw2skhE=",
+    version = "v2.2.10",
 )
 
 go_repository(
     name = "com_github_redis_go_redis_v9",
     build_file_generation = "on",
     importpath = "github.com/redis/go-redis/v9",
-    sum = "h1:pMkxYPkEbMPwRdenAzUNyFNrDgHx9U+DrBabWNfSRQs=",
-    version = "v9.18.0",
-)
-
-go_repository(
-    name = "com_github_stretchr_objx",
-    build_file_generation = "on",
-    importpath = "github.com/stretchr/objx",
-    sum = "h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=",
-    version = "v0.5.2",
+    sum = "h1:XPVaaPSnG6RhYf7p+rmSa9zZfeVAnWsH5h3lxthOm/k=",
+    version = "v9.19.0",
 )
 
 go_repository(
     name = "com_github_zeebo_xxh3",
     build_file_generation = "on",
     importpath = "github.com/zeebo/xxh3",
-    sum = "h1:xZmwmqxHZA8AI603jOQ0tMqmBr9lPeFwGg6d+xy9DC0=",
-    version = "v1.0.2",
+    sum = "h1:s7DLGDK45Dyfg7++yxI0khrfwq9661w9EN78eP/UZVs=",
+    version = "v1.1.0",
 )
 
 go_repository(
@@ -115,11 +67,3 @@ go_deps()
 
 # gazelle:repository_macro repositories.bzl%go_repositories
 go_repositories()
-
-go_repository(
-    name = "com_github_stretchr_testify",
-    build_file_generation = "on",
-    importpath = "github.com/stretchr/testify",
-    sum = "h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYK4Q=",
-    version = "v1.8.4",
-)

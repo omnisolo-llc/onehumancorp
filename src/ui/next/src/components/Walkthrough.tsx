@@ -70,8 +70,10 @@ export function InteractiveWalkthrough({ steps, isOpen, onClose, onComplete }: W
     onClose();
   };
 
+  if (!targetRect) return null; // Enforce requirement: no generic popups/modals without target
+
   // Calculate bubble position based on targetRect
-  let bubbleStyle: React.CSSProperties = { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }; // fallback center
+  let bubbleStyle: React.CSSProperties = {};
   let arrowClass = "";
 
   if (targetRect) {

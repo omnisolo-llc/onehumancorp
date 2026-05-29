@@ -130,7 +130,6 @@ impl TaskDecompositionService {
                     r#"
                     SELECT st.id FROM shared_tasks_decomposition st
                     WHERE st.status = 'PENDING'
-                    AND (st.approval_status IS NULL OR st.approval_status != 'PENDING')
                     AND NOT EXISTS (
                         SELECT 1
                         FROM json_array_elements_text(st.dependencies) AS dep_id
@@ -226,7 +225,6 @@ impl TaskDecompositionService {
                     WHERE id = (
                         SELECT st.id FROM shared_tasks_decomposition st
                         WHERE st.status = 'PENDING'
-                        AND (st.approval_status IS NULL OR st.approval_status != 'PENDING')
                         AND NOT EXISTS (
                             SELECT 1
                             FROM json_each(st.dependencies) AS dep_id
@@ -1162,7 +1160,7 @@ mod chaos_tests {
 
         // Insert 100 tasks
         for i in 0..100 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies, organization_id, title, priority, parent_plan_id, mission_id) VALUES (?, 'PENDING', '[]', 'org1', 'task', 'P2', 'p1', 'm1')")
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_{}", i))
                 .execute(&pool).await.unwrap();
         }
@@ -1229,7 +1227,7 @@ mod chaos_tests {
 
         // Insert 10 tasks
         for i in 0..10 {
-            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies, organization_id, title, priority, parent_plan_id, mission_id) VALUES (?, 'PENDING', '[]', 'org1', 'task', 'P2', 'p1', 'm1')")
+            sqlx::query("INSERT INTO shared_tasks_decomposition (id, status, dependencies) VALUES (?, 'PENDING', '[]')")
                 .bind(format!("task_sa_{}", i))
                 .execute(&pool).await.unwrap();
         }
