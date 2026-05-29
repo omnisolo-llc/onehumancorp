@@ -22,7 +22,7 @@ impl MercadoPagoProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_mercadopago_provider_into() {
         let provider = MercadoPagoProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
+        let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "mercadopago");
     }
 
@@ -85,7 +85,17 @@ mod tests {
     #[tokio::test]
     async fn test_mercadopago_provider_handle_webhook() {
         let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.handle_webhook("{}").await;
+        let valid_payload = r#"{
+            "action": "payment.created",
+            "api_version": "v1",
+            "data": { "id": "123456" },
+            "date_created": "2023-01-01T00:00:00Z",
+            "id": 1,
+            "live_mode": true,
+            "type": "payment",
+            "user_id": "user123"
+        }"#;
+        let result = provider.handle_webhook(valid_payload).await;
         assert!(result.is_ok());
     }
 }
