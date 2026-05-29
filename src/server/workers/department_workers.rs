@@ -246,7 +246,7 @@ impl OperationsWorker {
                                         prompt,
                                         from_agent_id: "operations".into(),
                                     };
-                                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
+                                    if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(tonic::Request::new(reason_req))).await {
                                         drafted_msg = res.into_inner().content;
                                     }
                                 }
@@ -764,10 +764,13 @@ impl CustomerSuccessWorker {
                         prompt,
                         from_agent_id: "The Ambassador".into(),
                     };
-                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                        let content = res.into_inner().content;
-                        if !content.is_empty() {
-                            drafted_msg = content;
+                    for _ in 0..3 {
+                        if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(tonic::Request::new(reason_req.clone()))).await {
+                            let content = res.into_inner().content;
+                            if !content.is_empty() {
+                                drafted_msg = content;
+                                break;
+                            }
                         }
                     }
                 }
@@ -781,9 +784,12 @@ impl CustomerSuccessWorker {
                 if !api_key.is_empty() {
                     let minimax = crate::minimax::MinimaxClient::new(api_key);
                     let prompt = format!("Evaluate this customer message and the drafted reply. If the drafted reply perfectly and safely addresses the customer message, reply with exactly 'CONFIDENT'. Otherwise reply with 'REVIEW'. Message: '{}'. Draft: '{}'", payload.get("message").and_then(|m| m.as_str()).unwrap_or(""), drafted_msg);
-                    if let Ok(res) = minimax.reason(&prompt).await {
-                        if res.trim() == "CONFIDENT" {
-                            confidence = "CONFIDENT".to_string();
+                    for _ in 0..3 {
+                        if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), minimax.reason(&prompt)).await {
+                            if res.trim() == "CONFIDENT" {
+                                confidence = "CONFIDENT".to_string();
+                            }
+                            break;
                         }
                     }
                 }
@@ -913,8 +919,11 @@ impl PromoterWorker {
                                     prompt,
                                     from_agent_id: "The Promoter".into(),
                                 };
-                                if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                    drafted_post = res.into_inner().content;
+                                for _ in 0..3 {
+                                    if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(tonic::Request::new(reason_req.clone()))).await {
+                                        drafted_post = res.into_inner().content;
+                                        break;
+                                    }
                                 }
                             }
 
@@ -977,9 +986,12 @@ impl PromoterWorker {
 
                                 if let Ok(mut client) = ::server_ohc::orchestration::hub_service_client::HubServiceClient::connect(std::env::var("OHC_HUB_URL").unwrap_or_else(|_| "http://127.0.0.1:8081".to_string())).await {
 
-                                    if let Ok(res) = client.reason(tonic::Request::new(reason_req)).await {
-                                        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
-                                            resolved_payload = v;
+                                    for _ in 0..3 {
+                                        if let Ok(Ok(res)) = tokio::time::timeout(std::time::Duration::from_secs(60), client.reason(tonic::Request::new(reason_req.clone()))).await {
+                                            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&res.into_inner().content) {
+                                                resolved_payload = v;
+                                                break;
+                                            }
                                         }
                                     }
                                 }
