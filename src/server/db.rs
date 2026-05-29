@@ -544,7 +544,9 @@ impl DB {
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1,
-                        topic TEXT DEFAULT ''
+                        topic TEXT DEFAULT '',
+                        synced_to_cloud BOOLEAN DEFAULT 0,
+                        last_sync_at TIMESTAMP
                     );
                                         CREATE TABLE IF NOT EXISTS state_machine_transitions (
                         id TEXT PRIMARY KEY,
