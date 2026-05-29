@@ -3,7 +3,7 @@ use ::server_ohc::orchestration::*;
 use ::server_ohc::orchestration::agent_manager_service_server::AgentManagerService;
 use std::sync::{Arc, RwLock};
 use chrono::Utc;
-use crate::hub::Hub;
+use ::server_lib::hub::Hub;
 
 pub struct MyAgentManagerService {
     hub: Arc<Hub>,

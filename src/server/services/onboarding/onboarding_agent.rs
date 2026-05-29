@@ -20,12 +20,12 @@ pub struct IntakeProduct {
 #[derive(Clone)]
 pub struct OnboardingAgent {
     db: std::sync::Arc<crate::db::DB>,
-    hub: std::sync::Arc<crate::hub::Hub>,
+    hub: std::sync::Arc<::server_lib::hub::Hub>,
     minimax: Option<std::sync::Arc<MinimaxClient>>,
 }
 
 impl OnboardingAgent {
-    pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<crate::hub::Hub>) -> Self {
+    pub fn new(db: std::sync::Arc<crate::db::DB>, hub: std::sync::Arc<::server_lib::hub::Hub>) -> Self {
         let minimax = std::env::var("MINIMAX_API_KEY")
             .ok()
             .map(|key| std::sync::Arc::new(MinimaxClient::new(key)));
@@ -323,7 +323,7 @@ impl OnboardingAgent {
         .await
         .map_err(|e| e.to_string())?;
 
-        crate::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
+        ::server_lib::telemetry::track_onboarding_step(&org_id, "start_onboarding", start_time.elapsed().as_millis() as u64);
         Ok(StartOnboardingResponse {
             success: true,
             message: format!("Successfully onboarded {} as a {}!", company_name, business_type),
@@ -2465,7 +2465,7 @@ mod tests {
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = std::sync::Arc::new(::server_lib::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db, hub);
 
         let req = StartOnboardingRequest {
@@ -2528,7 +2528,7 @@ mod tests {
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = std::sync::Arc::new(::server_lib::hub::Hub::new(tx, db.pool.clone()));
         let mut agent = OnboardingAgent::new(db.clone(), hub);
 
         // Mock MinimaxClient if we could, but here we'll just check if it handles configured key
@@ -2549,7 +2549,7 @@ mod tests {
             None => return,
         };
         let (tx, _) = tokio::sync::mpsc::channel(10);
-        let hub = std::sync::Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = std::sync::Arc::new(::server_lib::hub::Hub::new(tx, db.pool.clone()));
         let agent = OnboardingAgent::new(db.clone(), hub);
 
         // Test Service Business

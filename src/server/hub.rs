@@ -6,8 +6,8 @@ use ::server_ohc::orchestration::{Agent, MeetingRoom, Message, AgentCapabilities
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use crate::billing::Tracker;
-use crate::tasks::TaskManager;
-use crate::scheduler::Scheduler;
+use ::server_lib::tasks::TaskManager;
+use ::server_lib::scheduler::Scheduler;
 use chrono::{DateTime, Utc};
 use serde::{Serialize, Deserialize};
 use std::sync::Arc;

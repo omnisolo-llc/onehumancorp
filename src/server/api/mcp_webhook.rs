@@ -7,7 +7,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
-use crate::hub::Hub;
+use ::server_lib::hub::Hub;
 use crate::integrations::mcp::mcp_async::AsyncTaskTracker;
 use std::str::FromStr;
 

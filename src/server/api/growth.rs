@@ -7,7 +7,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use sqlx::PgPool;
-use crate::hub::Hub;
+use ::server_lib::hub::Hub;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -203,7 +203,7 @@ async fn handle_send_campaign(
         "segment": req.target_segment,
         "emails_sent": target_emails
     })) {
-        let msg = crate::hub::HubEvent {
+        let msg = ::server_lib::hub::HubEvent {
             r#type: "growth.campaign_sent".to_string(),
             payload: event,
             occurred_at: chrono::Utc::now(),
@@ -522,7 +522,7 @@ async fn handle_referral_click(
             state.hub.referral_tracker().record_click(&req.id);
 
             if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
+                let msg = ::server_lib::hub::HubEvent {
                     r#type: "growth.referral_clicked".to_string(),
                     payload: event,
                     occurred_at: chrono::Utc::now(),
@@ -551,7 +551,7 @@ async fn handle_referral_convert(
             state.hub.referral_tracker().record_conversion(&req.id);
 
             if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
+                let msg = ::server_lib::hub::HubEvent {
                     r#type: "growth.referral_converted".to_string(),
                     payload: event,
                     occurred_at: chrono::Utc::now(),
@@ -584,7 +584,7 @@ async fn handle_referral_generate(
     {
         Ok(_) => {
             if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": ref_id, "referral_code": ref_code })) {
-                let msg = crate::hub::HubEvent {
+                let msg = ::server_lib::hub::HubEvent {
                     r#type: "growth.referral_generated".to_string(),
                     payload: event,
                     occurred_at: chrono::Utc::now(),
@@ -609,7 +609,7 @@ async fn handle_team_invite_accept(
     match tracker.accept_invite(&req.id).await {
         Ok(_) => {
             if let Ok(event) = serde_json::to_string(&serde_json::json!({ "id": req.id })) {
-                let msg = crate::hub::HubEvent {
+                let msg = ::server_lib::hub::HubEvent {
                     r#type: "growth.team_invite_accepted".to_string(),
                     payload: event,
                     occurred_at: chrono::Utc::now(),
@@ -633,7 +633,7 @@ async fn handle_create_team_invite(
     match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
         Ok(_) => {
             if let Ok(event) = serde_json::to_string(&serde_json::json!({ "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id })) {
-                let msg = crate::hub::HubEvent {
+                let msg = ::server_lib::hub::HubEvent {
                     r#type: "growth.team_invite_created".to_string(),
                     payload: event,
                     occurred_at: chrono::Utc::now(),
@@ -675,7 +675,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub };
 
         let req = CreateTeamInviteRequest {
@@ -743,7 +743,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         // Insert dummy referral
@@ -793,7 +793,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         // Insert dummy referral
@@ -834,7 +834,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
@@ -864,7 +864,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         // Insert dummy invite
@@ -899,7 +899,7 @@ mod tests {
         }
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")

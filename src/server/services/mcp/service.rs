@@ -11,14 +11,14 @@ use crate::tools::config_sync::server::ConfigSyncServer;
 pub struct MyMcpService {
     dynamic_tools: RwLock<Vec<McpToolProto>>,
     registry: Arc<IntegrationsRegistry>,
-    hub: Arc<crate::hub::Hub>,
+    hub: Arc<::server_lib::hub::Hub>,
     hybrid_fs_server: Arc<HybridFSMcpServer>,
     local_proxy_server: Arc<LocalProxyServer>,
     config_sync_server: Arc<ConfigSyncServer>,
 }
 
 impl MyMcpService {
-    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(registry: Arc<IntegrationsRegistry>, hub: Arc<::server_lib::hub::Hub>) -> Self {
         MyMcpService {
             dynamic_tools: RwLock::new(Vec::new()),
             registry,
@@ -330,7 +330,7 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -348,7 +348,7 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let req = Request::new(SyncContextRequest {
@@ -371,7 +371,7 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncMissionsRequest { missions: vec![], force_local: false });
@@ -391,7 +391,7 @@ mod tests {
         if std::env::var("DATABASE_URL").unwrap_or_default().contains("localhost") { return; }
         if !matches!(tokio::time::timeout(std::time::Duration::from_millis(500), sqlx::query("SELECT 1").execute(&pool)).await, Ok(Ok(_))) { return; }
         let (tx, _rx) = tokio::sync::mpsc::channel(1);
-        let hub = Arc::new(crate::hub::Hub::new(tx, pool));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, pool));
         let service = MyMcpService::new(registry, hub);
 
         let mut req = Request::new(SyncContextRequest {

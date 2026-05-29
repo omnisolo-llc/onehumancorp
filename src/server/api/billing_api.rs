@@ -1,6 +1,6 @@
 use axum::{extract::State, Json};
 use std::sync::Arc;
-use crate::hub::Hub;
+use ::server_lib::hub::Hub;
 use axum::http::HeaderMap;
 
 #[derive(serde::Serialize)]

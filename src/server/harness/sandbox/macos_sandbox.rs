@@ -7,7 +7,7 @@ use sqlx::PgPool;
 use super::ast::ASTParser;
 use super::manager::{SandboxAdapter, SandboxPolicy};
 use super::permissions::PermissionEvaluator;
-use crate::telemetry::ViolationStore;
+use ::server_lib::telemetry::ViolationStore;
 
 pub struct MacOsSandbox {
     evaluator: PermissionEvaluator,

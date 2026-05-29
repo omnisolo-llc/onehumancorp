@@ -127,7 +127,7 @@ impl AutoDreamPipeline {
                             "TASK_SUMMARY"
                         ).await.map_err(|e| Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) as Box<dyn std::error::Error + Send + Sync>)?;
 
-                        if let Err(telemetry_err) = crate::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
+                        if let Err(telemetry_err) = ::server_lib::telemetry::record_autodream_consolidation(&self.db.pool, 1.0).await {
                             tracing::error!("AutoDreamPipeline: Failed to record telemetry: {}", telemetry_err);
                         }
                     }

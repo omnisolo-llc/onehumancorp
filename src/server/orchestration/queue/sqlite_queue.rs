@@ -123,7 +123,7 @@ impl TaskQueue for SQLiteTaskQueue {
             Ok(guard) => guard,
             Err(_) => {
                 let pg_pool = crate::db::get_pool();
-                let _ = crate::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
+                let _ = ::server_lib::telemetry::record_sqlite_lock_contention(&pg_pool, "PollTasks").await;
                 self.mu.lock().await
             }
         };

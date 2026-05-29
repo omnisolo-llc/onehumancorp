@@ -12,12 +12,12 @@ static AGENTS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::Agent
 static MEETINGS_CACHE: OnceLock<HybridCache<Vec<::server_ohc::orchestration::MeetingRoom>>> = OnceLock::new();
 
 pub struct MyDashboardService {
-    hub: Arc<crate::hub::Hub>,
+    hub: Arc<::server_lib::hub::Hub>,
     db: Arc<crate::db::DB>,
 }
 
 impl MyDashboardService {
-    pub fn new(db: Arc<crate::db::DB>, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(db: Arc<crate::db::DB>, hub: Arc<::server_lib::hub::Hub>) -> Self {
         Self { db, hub }
     }
 }
@@ -658,7 +658,7 @@ mod tests {
         let db = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(pool.clone()) });
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, db.pool.clone()));
 
         // Add agents
         hub.register_agent(::server_ohc::orchestration::Agent {

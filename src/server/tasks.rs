@@ -92,7 +92,7 @@ impl ActionRisk {
 pub struct TaskManager {
     pub(crate) tasks: RwLock<HashMap<String, SharedTask>>,
     pub(crate) db: RwLock<Option<Arc<DB>>>,
-    pub(crate) broadcaster: Option<Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>>,
+    pub(crate) broadcaster: Option<Arc<dyn Fn(::server_lib::tasks::SharedTask, String) + Send + Sync>>,
 }
 
 impl TaskManager {
@@ -112,7 +112,7 @@ impl TaskManager {
         }
     }
 
-    pub fn set_broadcaster(&mut self, broadcaster: Arc<dyn Fn(crate::tasks::SharedTask, String) + Send + Sync>) {
+    pub fn set_broadcaster(&mut self, broadcaster: Arc<dyn Fn(::server_lib::tasks::SharedTask, String) + Send + Sync>) {
         self.broadcaster = Some(broadcaster);
     }
 

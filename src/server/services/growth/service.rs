@@ -12,7 +12,7 @@ use ::server_common::auth_utils::set_org_context;
 
 pub struct MyGrowthService {
     pool: PgPool,
-    hub: Arc<crate::hub::Hub>,
+    hub: Arc<::server_lib::hub::Hub>,
     experiments: RwLock<Vec<LandingPageExperiment>>,
     downloads: RwLock<Vec<Download>>,
     team_invites: RwLock<Vec<TeamInviteProto>>,
@@ -21,7 +21,7 @@ pub struct MyGrowthService {
 }
 
 impl MyGrowthService {
-    pub fn new(pool: PgPool, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(pool: PgPool, hub: Arc<::server_lib::hub::Hub>) -> Self {
         MyGrowthService {
             pool,
             hub,
@@ -563,7 +563,7 @@ mod tests {
         if database_url.contains("localhost") { return; }
         if sqlx::query("SELECT 1").execute(&pool).await.is_err() { return; }
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(event_tx, pool.clone()));
         let service = MyGrowthService::new(pool, hub);
 
         let mut req = Request::new(CreateReferralRequest {

@@ -5,13 +5,13 @@ use std::sync::{Arc, RwLock};
 use std::collections::HashMap;
 
 pub struct MyOrgService {
-    hub: Arc<crate::hub::Hub>,
+    hub: Arc<::server_lib::hub::Hub>,
     settings: RwLock<SettingsResponse>,
     analytics_cache: ::server_utils::cache::HybridCache<AnalyticsSummaryResponse>,
 }
 
 impl MyOrgService {
-    pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(hub: Arc<::server_lib::hub::Hub>) -> Self {
         let redis_client = hub.redis_client.clone();
         MyOrgService {
             hub,
@@ -157,7 +157,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let pg_pool = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
         let db_arc = Arc::new(crate::db::DB { pool: pg_pool, store: crate::db::DbStore::Sqlite(sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap()) });
-        let hub = Arc::new(crate::hub::Hub::new(tx, db_arc.pool.clone()));
+        let hub = Arc::new(::server_lib::hub::Hub::new(tx, db_arc.pool.clone()));
 
         let service = MyOrgService::new(hub);
 

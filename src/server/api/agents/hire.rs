@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use std::sync::Arc;
-use crate::hub::Hub;
+use ::server_lib::hub::Hub;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]

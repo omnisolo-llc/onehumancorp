@@ -1,7 +1,7 @@
 use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use crate::orchestration::tasks::TaskDecompositionService;
-use crate::tasks::SharedTask;
+use ::server_lib::tasks::SharedTask;
 use crate::orchestration::mesh::TeammateMesh;
 use chrono::Utc;
 

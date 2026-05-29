@@ -876,11 +876,11 @@ impl CustomerSuccessWorker {
 pub struct PromoterWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
-    pub hub: Arc<crate::hub::Hub>,
+    pub hub: Arc<::server_lib::hub::Hub>,
 }
 
 impl PromoterWorker {
-    pub fn new(db: Arc<DB>, hub: Arc<crate::hub::Hub>) -> Self {
+    pub fn new(db: Arc<DB>, hub: Arc<::server_lib::hub::Hub>) -> Self {
         Self {
             db,
             poll_interval: Duration::from_secs(5),

@@ -74,7 +74,7 @@ pub async fn bench_api_response_time() {
     if database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
-        let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
+        let hub_cloud = Arc::new(::server_lib::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
         let dashboard_service_cloud = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_cloud), hub_cloud.clone());
 
         let mut cloud_times = Vec::new();
@@ -100,7 +100,7 @@ pub async fn bench_api_response_time() {
 
     let fallback_pg = sqlx::PgPool::connect_lazy("postgres://localhost/dummy").unwrap();
     let db_standalone = crate::db::DB { pool: fallback_pg, store: crate::db::DbStore::Sqlite(sqlite_pool) };
-    let hub_standalone = Arc::new(crate::hub::Hub::new(tx, db_standalone.pool.clone()));
+    let hub_standalone = Arc::new(::server_lib::hub::Hub::new(tx, db_standalone.pool.clone()));
     let dashboard_service_standalone = crate::services::dashboard::service::MyDashboardService::new(Arc::new(db_standalone), hub_standalone.clone());
 
     let mut standalone_times = Vec::new();
@@ -143,7 +143,7 @@ pub async fn bench_dashboard_snapshot() {
         crate::db::DB { pool: pool.clone(), store: crate::db::DbStore::Postgres }
     };
 
-    let hub = Arc::new(crate::hub::Hub::new(tx, db.pool.clone()));
+    let hub = Arc::new(::server_lib::hub::Hub::new(tx, db.pool.clone()));
 
     let iterations = 100;
     let mut fetch_times = Vec::new();
