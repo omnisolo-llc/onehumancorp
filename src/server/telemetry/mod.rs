@@ -440,6 +440,44 @@ pub async fn record_autodream_sync(
     .await
 }
 
+pub async fn record_llm_call_cost(
+    pool: &PgPool,
+    organization_id: &str,
+    model: &str,
+    cost_usd: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_llm_call_cost",
+        "counter",
+        cost_usd as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "model": model,
+        }),
+    )
+    .await
+}
+
+pub async fn record_outbound_api_cost(
+    pool: &PgPool,
+    organization_id: &str,
+    api_name: &str,
+    cost_usd: f64,
+) -> Result<(), Box<dyn std::error::Error>> {
+    buffer_metric(
+        pool,
+        "ohc_outbound_api_cost",
+        "counter",
+        cost_usd as f32,
+        serde_json::json!({
+            "organization_id": organization_id,
+            "api_name": api_name,
+        }),
+    )
+    .await
+}
+
 pub async fn record_token_burn_rate_predicted_24h(
     pool: &PgPool,
     org_id: &str,
@@ -1177,8 +1215,6 @@ pub fn record_harness_db_io_latency(operation: &str, latency_seconds: f64) {
 }
 #[cfg(test)]
 mod additional_tests {
-    use super::*;
-
     #[test]
     fn test_record_task_resolution_efficiency_has_deployment_mode() {
         // Just checking that `get_deployment_mode` is exported and we can use it.

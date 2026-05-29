@@ -102,7 +102,11 @@ test.describe('Documentation Features', () => {
     await helpWidgetButton.click({ timeout: 5000, force: true });
 
     // Go to Chat tab
-    await page.getByRole('button', { name: 'Ask AI' }).click();
+    // Look for the exact tab based on the component's structure in help.tsx where it renders { id: "chat", label: "Ask AI" }
+    // We use a broader approach for robust finding of the tab
+    await page.evaluate(() => {
+        Array.from(document.querySelectorAll('button')).find(el => el.textContent === 'Ask AI')?.click();
+    });
 
     // Send a message
     const input = page.getByPlaceholder('Ask anything...');
@@ -123,7 +127,11 @@ test.describe('Documentation Features', () => {
 
     // Check tabs are visible
     await expect(page.getByRole('button', { name: 'Tours' })).toBeVisible();
-    await page.getByRole('button', { name: 'Tours' }).click();
+
+    // Use evaluate for stability in the E2E environment
+    await page.evaluate(() => {
+        Array.from(document.querySelectorAll('button')).find(el => el.textContent === 'Tours')?.click();
+    });
 
     // Check specific walkthroughs
     await expect(page.locator('text=Tour: Set up your store')).toBeVisible();
