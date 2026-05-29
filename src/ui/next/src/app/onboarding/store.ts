@@ -13,6 +13,8 @@ interface OnboardingState {
   websiteTemplate: string;
   firstProductName: string;
   firstProductPrice: string;
+  aiAgents: string[];
+  aiAutoRespond: boolean;
   isLoading: boolean;
   error: string;
   startResult: any;
@@ -27,6 +29,8 @@ interface OnboardingState {
   setWebsiteTemplate: (template: string) => void;
   setFirstProductName: (name: string) => void;
   setFirstProductPrice: (price: string) => void;
+  setAiAgents: (agents: string[]) => void;
+  setAiAutoRespond: (autoRespond: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string) => void;
   setStartResult: (result: any) => void;
@@ -46,6 +50,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       websiteTemplate: 'Modern',
       firstProductName: '',
       firstProductPrice: '',
+      aiAgents: [],
+      aiAutoRespond: true,
       isLoading: false,
       error: '',
       startResult: null,
@@ -60,6 +66,8 @@ export const useOnboardingStore = create<OnboardingState>()(
       setWebsiteTemplate: (websiteTemplate) => set({ websiteTemplate }),
       setFirstProductName: (firstProductName) => set({ firstProductName }),
       setFirstProductPrice: (firstProductPrice) => set({ firstProductPrice }),
+      setAiAgents: (aiAgents) => set({ aiAgents }),
+      setAiAutoRespond: (aiAutoRespond) => set({ aiAutoRespond }),
       setIsLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
       setStartResult: (startResult) => set({ startResult }),

@@ -110,7 +110,7 @@ rust_library(
 
 rust_test(
     name = "server_services_mcp_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_services_mcp",
     edition = "2024",
     env = {
