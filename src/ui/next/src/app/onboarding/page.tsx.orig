@@ -51,7 +51,7 @@ export default function OnboardingWizard() {
         if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
       }
     })
-    ?.catch?.(err => console.error('Failed to load onboarding state', err));
+    .catch(err => console.error('Failed to load onboarding state', err));
   }, []);
 
   // Sync state to backend

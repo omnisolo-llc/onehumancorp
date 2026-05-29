@@ -45,12 +45,6 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockImplementation(() => Promise.resolve({
-      ok: true,
-      json: async () => ({
-        wizardState: {}
-      })
-    }));
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -127,12 +121,6 @@ describe('OnboardingWizard', () => {
   it('Step 1: Handles intake API failure', async () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
-    (global.fetch as any).mockImplementation(() => Promise.resolve({
-      ok: true,
-      json: async () => ({
-        wizardState: {}
-      })
-    }));
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
@@ -177,12 +165,6 @@ describe('OnboardingWizard', () => {
     // Set initial state to Step 3 to test start API directly
     useOnboardingStore.setState({ step: 3 });
 
-    (global.fetch as any).mockImplementation(() => Promise.resolve({
-      ok: true,
-      json: async () => ({
-        wizardState: {}
-      })
-    }));
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
