@@ -27,6 +27,43 @@ static MCP_TOOL_CALLS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static POSTGRES_LOCK_CONTENTION: OnceLock<Counter<u64>> = OnceLock::new();
 static LLM_NETWORK_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 
+static ERROR_SIGNAL_CATEGORIZED: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn categorize_error_signal(err_msg: &str) -> &'static str {
+    let lower = err_msg.to_lowercase();
+    if lower.contains("panic") || lower.contains("segfault") || lower.contains("unreachable") || lower.contains("fatal") || lower.contains("bug") {
+        "bug"
+    } else if lower.contains("unimplemented") || lower.contains("not supported") || lower.contains("missing feature") {
+        "feature"
+    } else if lower.contains("deprecated") || lower.contains("legacy") || lower.contains("refactor") {
+        "refactor"
+    } else if lower.contains("leak") || lower.contains("garbage") || lower.contains("clean up") || lower.contains("cleanup") {
+        "cleanup"
+    } else if lower.contains("doc") || lower.contains("comment") || lower.contains("readme") {
+        "docs"
+    } else if lower.contains("cve") || lower.contains("vulnerabilit") || lower.contains("injection") || lower.contains("auth") || lower.contains("security") || lower.contains("malware") || lower.contains("permission") || lower.contains("denied") {
+        "security"
+    } else {
+        "bug"
+    }
+}
+
+pub fn get_error_signal_counter() -> &'static Counter<u64> {
+    ERROR_SIGNAL_CATEGORIZED.get_or_init(|| {
+        let meter = global::meter("ohc.telemetry");
+        meter
+            .u64_counter("ohc_error_signals_total")
+            .with_description("Total number of error signals categorized")
+            .build()
+    })
+}
+
+pub fn record_error_signal(err_msg: &str) {
+    let category = categorize_error_signal(err_msg);
+    let counter = get_error_signal_counter();
+    counter.add(1, &[opentelemetry::KeyValue::new("category", category)]);
+}
+
 pub fn get_postgres_lock_contention_counter() -> &'static Counter<u64> {
     POSTGRES_LOCK_CONTENTION.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
