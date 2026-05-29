@@ -109,6 +109,7 @@ pub struct AgentRunConfig {
         pub enable_harness_thickness_optimization: bool,
 pub enable_llmcompiler_plan_and_execute: bool,
     pub enable_acon_context_strategy: bool,
+    pub acon_config: Option<crate::acon_context::AconConfig>,
     pub enable_progressive_skills: bool,
     pub progressive_skills_dir: Option<String>,
     pub enable_observation_masking: bool,
@@ -166,6 +167,7 @@ impl Default for AgentRunConfig {
                         enable_harness_thickness_optimization: false,
 enable_llmcompiler_plan_and_execute: false,
             enable_acon_context_strategy: false,
+            acon_config: None,
             enable_progressive_skills: false,
             progressive_skills_dir: None,
             enable_observation_masking: true,
@@ -2004,21 +2006,8 @@ impl Agent {
 
             // Context Window Strategy: Prioritize reasoning traces over raw tool outputs (ACON Research)
             if final_cfg.enable_acon_context_strategy {
-                let msg_count = final_messages.len();
-                if msg_count > 3 {
-                    // We preserve the last 2 messages (usually assistant + tool results)
-                    // For older Tool role messages, we strip the raw tool output but keep reasoning
-                    let threshold = msg_count - 2;
-                    for i in 0..threshold {
-                        if final_messages[i].role == Role::Tool {
-                            for tr in &mut final_messages[i].tool_results {
-                                if tr.error.is_empty() && !tr.content.starts_with("[ACON:") && !tr.content.is_empty() {
-                                    tr.content = "[ACON: Tool output omitted to prioritize reasoning traces.]".to_string();
-                                }
-                            }
-                        }
-                    }
-                }
+                let acon_cfg = final_cfg.acon_config.clone().unwrap_or_default();
+                crate::acon_context::apply_acon_strategy(&mut final_messages, &acon_cfg);
             }
 
             // Prompt Construction Mechanic: "Lost in the Middle" Prevention
