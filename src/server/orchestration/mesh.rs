@@ -29,34 +29,14 @@ pub trait TeammateMesh: Send + Sync {
 
 pub struct LocalTeammateMesh {
     hub: Arc<crate::hub::Hub>,
-    inner: Arc<dyn MeshTransport>,
-    _cancel_task: Box<dyn Fn() + Send + Sync>,
+    inner: ohc_builtin_agent::mesh::transport::InProcessTransport,
 }
 
 impl LocalTeammateMesh {
-    pub async fn new(hub: Arc<crate::hub::Hub>) -> Self {
-        let inner: Arc<dyn MeshTransport> = if let Ok(redis_url) = std::env::var("REDIS_URL") {
-            if let Ok(transport) = crate::orchestration::hub::RedisMeshTransport::new(&redis_url).await {
-                Arc::new(transport)
-            } else {
-                Arc::new(crate::orchestration::hub::MemoryMeshTransport::new())
-            }
-        } else {
-            Arc::new(crate::orchestration::hub::MemoryMeshTransport::new())
-        };
-
-        let hub_clone = hub.clone();
-        let cancel_task = inner.subscribe("mesh:tasks", Box::new(move |msg| {
-            use prost::Message as ProstMessage;
-            if let Ok(event) = ::server_ohc::orchestration::TeammateMeshEvent::decode(&msg.payload[..]) {
-                let _ = hub_clone.publish_teammate_event("mesh:tasks".to_string(), event);
-            }
-        })).await.unwrap();
-
+    pub fn new(hub: Arc<crate::hub::Hub>) -> Self {
         Self {
             hub,
-            inner,
-            _cancel_task: cancel_task,
+            inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
         }
     }
 }
@@ -305,7 +285,7 @@ mod tests {
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(tx, pool));
 
-        let mesh = LocalTeammateMesh::new(hub.clone()).await;
+        let mesh = LocalTeammateMesh::new(hub.clone());
 
         let received = Arc::new(AtomicBool::new(false));
         let received_clone = received.clone();
