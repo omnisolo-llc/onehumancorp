@@ -1,100 +1,128 @@
 import { test, expect } from './fixtures';
 
 test.describe('Website Builder Full E2E', () => {
-  test('builder workflow handles empty inputs correctly', async ({ page }) => {
-    await page.goto('/builder');
-    await expect(page.getByRole('heading', { name: "What are you building today?" })).toBeVisible();
-    await page.getByRole('button', { name: '🛍️ Selling Products' }).click();
-    await expect(page.getByRole('heading', { name: "Let's build your store" })).toBeVisible();
-
-    const businessNameInput = page.locator('input[placeholder="e.g. Acme Corp"]');
-    const categoryInput = page.locator('input[placeholder="e.g. Retail, Consulting, Tech"]');
-    const btn = page.getByRole('button', { name: 'Next: Choose Vibe' });
-
-    await businessNameInput.fill('A');
-    await categoryInput.fill('A');
-    await btn.click();
-    await expect(page.getByText('Business name must be at least 3 characters.')).toBeVisible();
-
-    await businessNameInput.fill('Test Bakery');
-    await categoryInput.fill('Food & Beverage');
-    await btn.click();
-
-    await expect(page.getByRole('heading', { name: 'Select Your Vibe' })).toBeVisible();
-    await page.getByText('Professional').click();
-    await page.getByRole('button', { name: 'Next: Details' }).click();
-
-    await expect(page.getByRole('heading', { name: 'Final Details' })).toBeVisible();
-    const textarea = page.locator('textarea');
-    const finalBtn = page.getByRole('button', { name: 'Build Store' });
-
-    await textarea.fill('A');
-    await expect(finalBtn).toBeDisabled();
-
-    await textarea.fill('I run a family-owned bakery specializing in sourdough bread.');
-    await expect(finalBtn).toBeEnabled();
+  test('renders editable storefront blocks', async ({ page }) => {
+    await page.goto('/storefront-builder');
+    await expect(page.getByRole('heading', { name: 'Edit Website' })).toBeVisible();
+    await page.getByRole('button', { name: 'Rearrange' }).click();
+    await expect(page.locator('#builder-preview-container')).toContainText('Hero');
+    await expect(page.locator('#builder-preview-container')).toContainText('Product Grid');
   });
 
-  test('builder workflow generates and publishes successfully to the real database', async ({ page }) => {
-    // Navigate to the storefront builder UI
+  test('opens publish workflow for a free subdomain', async ({ page }) => {
     await page.goto('/storefront-builder');
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+    await page.getByRole('button', { name: 'Publish Changes' }).click();
+    await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
+    await page.getByPlaceholder('mybusiness').fill('test-store');
+    await expect(page.getByPlaceholder('mybusiness')).toHaveValue('test-store');
+  });
 
-    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
-    await textarea.fill('I am a baker');
-
-    // We will clean up local storage and try to run it properly from scratch
+  test('generates storefront via AI without mocks', async ({ page }) => {
+    // Navigate to step AI
+    await page.goto('/');
+    // Trigger the generation directly or navigate the UI to step-ai. For testing UI flow:
     await page.evaluate(() => {
-        localStorage.removeItem("ohc_builder_blocks");
-        localStorage.removeItem("ohc_builder_status");
+        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+        document.getElementById('setup-screen').style.display = 'block';
+        // nextStep is a global helper
+        (window as any).nextStep('ai');
     });
 
-    // The server checks for MINIMAX_API_KEY.
-    // If it's missing or invalid, generate returns 500 error.
-    const requestPromise = page.waitForResponse(response => response.url().includes('/api/v1/builder/generate') && response.request().method() === 'POST');
-    await page.getByRole('button', { name: 'Build My Storefront' }).click();
+    const input = page.locator('#step-ai input');
+    await input.fill('I am a baker');
 
-    const response = await requestPromise;
-    // We strictly assert the end-to-end flow IF the backend provides a valid response.
-    // If the environment does not provide a valid minimax key, we skip testing the backend dependency,
-    // which prevents the build from failing on CI machines that do not have external internet/keys.
-    if (response.status() === 200) {
-        await expect(page.getByText('Preview Mode')).toBeVisible({ timeout: 45000 });
-        await expect(page.locator('button:has-text("1-Tap Launch")')).toBeVisible({ timeout: 15000 });
+    // Make real backend API call
+    await page.getByRole('button', { name: 'Generate Storefront →' }).click();
 
-        await page.getByRole('button', { name: '1-Tap Launch' }).click();
-        await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 20000 });
-        await expect(page.locator('text=Your automated storefront is successfully published.')).toBeVisible();
-    } else {
-        // Assert the UI correctly resets to idle mode when encountering backend failure.
-        // This ensures NO MOCK data is used, and error states are correctly tested without a try-catch block.
-        await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Build My Storefront' })).toBeVisible();
-    }
+    // Wait for real backend to respond. Since it goes to LLM it may take up to 20 seconds.
+    // The real AI typically generates 'Hero' or similar components. We wait for the preview container
+    await expect(page.locator('#builder-preview-container')).toBeVisible({ timeout: 20000 });
+  });
+
+  test('publishes storefront with generated payload without mocks', async ({ page }) => {
+    await page.goto('/storefront-builder');
+
+    // Simulate clicking publish and publishing
+    await page.getByRole('button', { name: 'Publish Changes' }).click();
+    await page.getByRole('button', { name: /Free OHC Subdomain/ }).click();
+    await page.getByPlaceholder('mybusiness').fill('baked-goods');
+
+    // We let the real request happen
+    const requestPromise = page.waitForRequest(request => request.url().includes('/api/v1/builder/publish_draft') && request.method() === 'POST');
+    await page.getByRole('button', { name: 'Publish' }).click();
+    const request = await requestPromise;
+    const requestBody = request.postDataJSON();
+
+    expect(requestBody).toBeDefined();
+    expect(requestBody.domain).toBe('baked-goods');
+    // Ensure blocks are mapped to the correct real draft blocks like 'HeroBlock' or 'ProductGridBlock'
+    expect(requestBody.draft.pages[0].blocks.length).toBeGreaterThan(0);
   });
 
   test('verifies block edits update optimistic UI', async ({ page }) => {
+     // Given canvas tests cover this, we will add a secondary check here.
      await page.goto('/storefront-builder');
-     await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+     await page.getByText('My Awesome Store').click();
 
-     // To test the optimistic UI update functionality WITHOUT making external AI requests,
-     // we set up the `localStorage` state to simulate a successfully loaded draft.
-     // This simulates the frontend-only update functionality.
-     await page.evaluate(() => {
-        const blocks = [{
-            type: 'Hero',
-            props: { headline: 'My Awesome Store', copy: 'Welcome' }
-        }];
-        localStorage.setItem("ohc_builder_blocks", JSON.stringify(blocks));
-        localStorage.setItem("ohc_builder_status", "draft");
-    });
+     await expect(page.locator('#sheet-title')).toHaveText('Edit Hero');
+     await page.locator('input#edit-title').fill('Updated Title');
+     await page.getByRole('button', { name: 'Save' }).click();
 
-    await page.goto('/storefront-builder');
-    await expect(page.locator('body')).toContainText('My Awesome Store');
+     await expect(page.locator('#builder-preview-container')).toContainText('Updated Title');
+  });
 
-    // The legacy test tested block edits updating optimistic UI.
-    // However, the previous test clicked an element by text, modified a form, and hit save.
-    // We simulate clicking and editing the block to ensure coverage of edit UI isn't dropped
-    await page.getByText('My Awesome Store').click();
+  test('nextjs builder workflow handles empty inputs correctly', async ({ page }) => {
+    await page.goto('/builder');
+
+    // Check initial state
+    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+
+    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+
+    // Try to build with too short a string
+    await textarea.fill('A');
+
+    // Button should be disabled
+    const btn = page.getByRole('button', { name: 'Build My Storefront' });
+    await expect(btn).toBeDisabled();
+
+    // Try to build by pressing Enter with too short a string
+    await textarea.press('Enter');
+    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+
+    // Fill with long enough string
+    await textarea.fill('This is a valid long string to test the Enter key.');
+
+    // Wait to avoid rate limiting or overlap, then press enter. The generation should trigger.
+    await page.waitForTimeout(500);
+    await textarea.press('Enter');
+    await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('nextjs builder workflow generates and publishes successfully to the real database', async ({ page }) => {
+    await page.goto('/builder');
+
+    // Check initial state
+    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
+
+    const textarea = page.locator('textarea[placeholder*="e.g. I run a mobile dog grooming service"]');
+    // Using a specific keyword that helps the LLM generate a known block
+    await textarea.fill('I am a baker');
+
+    // Trigger real backend generation call
+    await page.getByRole('button', { name: 'Build My Storefront' }).click();
+
+    // Wait for the LLM to complete and the UI to update to draft view.
+    // The real AI judge logic takes a bit.
+    await expect(page.getByText('Preview Mode')).toBeVisible({ timeout: 15000 });
+    // The real AI typically generates 'Hero' headers.
+    await expect(page.locator('.builder-block, .glassmorphism').first()).toBeVisible({ timeout: 15000 });
+
+    // Trigger publish which creates real DB records
+    await page.getByRole('button', { name: '1-Tap Launch' }).click();
+
+    // Wait for the backend processing and UI update
+    await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('text=ohc.store')).toBeVisible();
   });
 });
