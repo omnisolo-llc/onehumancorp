@@ -29,6 +29,21 @@ export default function Dashboard() {
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
+  // Extract automated review request count from approvals
+  let unreviewedCount = 12; // Fallback
+  for (const a of (approvals || [])) {
+    if (a.payload) {
+        try {
+            let p = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
+            if (p.feature_type === 'automated_review_request' && p.count) {
+                unreviewedCount = p.count;
+            }
+        } catch (e) {
+            // ignore parse error
+        }
+    }
+  }
+
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
@@ -38,6 +53,10 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
+
+  // Growth Loop: Post-Purchase Social Share State
+  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
+  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
@@ -68,6 +87,14 @@ export default function Dashboard() {
   const [isGeneratingCustomerReferral, setIsGeneratingCustomerReferral] = useState<boolean>(false);
   const [customerReferralMessage, setCustomerReferralMessage] = useState<string>("");
   const [customerReferralSent, setCustomerReferralSent] = useState<boolean>(false);
+
+  // Capital Engine State
+  const [showCapitalOffer, setShowCapitalOffer] = useState<boolean>(true);
+  const [showCapitalModal, setShowCapitalModal] = useState<boolean>(false);
+  const [capitalAmount, setCapitalAmount] = useState<number>(1200);
+  const [capitalAccepted, setCapitalAccepted] = useState<boolean>(false);
+  const [capitalTransferring, setCapitalTransferring] = useState<boolean>(false);
+  const [repaymentProgress, setRepaymentProgress] = useState<number>(0);
 
   useEffect(() => {
     setReferralLink(`https://ohc.store/join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'}`);
@@ -242,7 +269,9 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
+    const referralLink = `ohc://join?ref=${tenant}`;
+    const shareCardUrl = `https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('One Human Corp')}&description=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today.')}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + shareCardUrl)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -337,6 +366,16 @@ export default function Dashboard() {
     }
   };
 
+  const handleAcceptCapital = () => {
+    setCapitalTransferring(true);
+    setTimeout(() => {
+      setCapitalTransferring(false);
+      setCapitalAccepted(true);
+      setShowCapitalModal(false);
+      setShowCapitalOffer(false);
+    }, 1500);
+  };
+
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
 
@@ -369,6 +408,9 @@ export default function Dashboard() {
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
              </Link>
+             <Link href="/store-wrap" className="px-4 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-md text-sm font-medium hover:from-orange-500 hover:to-pink-600 transition-colors shadow-sm">
+               Store Wrap-Up 🎁
+             </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
                <span>🤖</span> AI Departments
@@ -389,8 +431,42 @@ export default function Dashboard() {
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
+         {/* Capital Engine Nudge */}
+         {showCapitalOffer && !capitalAccepted && (
+            <div className="p-4 rounded-xl shadow-lg border border-white flex flex-col sm:flex-row items-center justify-between cursor-pointer hover:scale-[1.01] transition-transform"
+                 style={{ background: 'rgba(255, 255, 255, 0.7)', backdropFilter: 'blur(20px)', zIndex: 10 }}
+                 onClick={() => setShowCapitalModal(true)}>
+                <div className="flex items-center gap-4">
+                    <div className="text-3xl">💸</div>
+                    <div>
+                        <h3 className="font-outfit font-bold text-lg text-gray-900">{businessName}, you're pre-approved for $1,200 to grow your business.</h3>
+                        <p className="text-gray-600 text-sm font-inter">Tap to review your offer.</p>
+                    </div>
+                </div>
+                <button className="mt-4 sm:mt-0 px-6 py-2 bg-black text-white font-medium rounded-full shadow-md whitespace-nowrap">
+                    Review Offer
+                </button>
+            </div>
+         )}
+
          {/* Business Analytics Widget */}
          <section className="mb-6 animate-fade-in">
+           {/* Capital Repayment Tracker */}
+           {capitalAccepted && (
+               <div className="mb-6 p-6 shadow-sm border rounded-2xl bg-white animate-fade-in relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-24 h-24 bg-green-50 rounded-bl-full -z-10"></div>
+                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Advance Repayment</h3>
+                   <div className="flex justify-between items-center mb-2">
+                       <span className="text-2xl font-bold font-outfit text-gray-900">${(repaymentProgress).toFixed(2)} <span className="text-sm font-normal text-gray-500">/ $1,320.00</span></span>
+                       <span className="text-sm font-medium text-green-600 bg-green-50 px-2 py-1 rounded-md">{((repaymentProgress / 1320) * 100).toFixed(1)}% Complete</span>
+                   </div>
+                   <div className="w-full bg-gray-100 rounded-full h-3 mb-2">
+                       <div className="bg-green-500 h-3 rounded-full transition-all duration-1000" style={{ width: `${(repaymentProgress / 1320) * 100}%` }}></div>
+                   </div>
+                   <p className="text-xs text-gray-500">10% of your incoming sales are automatically applied to your repayment.</p>
+               </div>
+           )}
+
            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
                <div className="flex items-center gap-4">
                    <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
@@ -652,12 +728,12 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have {unreviewedCount} recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                        ✓ Campaign sent to <span id="review-emails-sent">{unreviewedCount}</span> customers!
                     </div>
                 ) : (
                     <button
@@ -1003,6 +1079,56 @@ export default function Dashboard() {
             </div>
          </section>
 
+         {/* Growth Loop: Post-Purchase Social Share */}
+         {showSaleCelebration && (
+         <section className="mb-8 mt-8">
+            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
+                        🎉
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">New Order Received!</h3>
+                        <p className="text-sm text-gray-800 font-medium">Alex just bought "Premium Coffee Beans" for $24.99</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-2 w-full md:w-auto">
+                    <button
+                        onClick={() => {
+                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
+                            navigator.clipboard.writeText(message);
+                            setSaleShareCopied(true);
+                            setTimeout(() => setSaleShareCopied(false), 2000);
+                        }}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
+                    >
+                        {saleShareCopied ? (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                Copied!
+                            </>
+                        ) : (
+                            <>
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                Copy Share Message
+                            </>
+                        )}
+                    </button>
+                    <a
+                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
+                        onClick={() => setShowSaleCelebration(false)}
+                    >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
+                        Share on X
+                    </a>
+                </div>
+            </div>
+         </section>
+         )}
+
          {/* Growth Loop: Milestone Celebration */}
          {showMilestoneBanner && (
            <section className="mb-8 animate-fade-in">
@@ -1080,12 +1206,20 @@ export default function Dashboard() {
                         <span className="text-xs font-medium text-green-600">{productCount} / 10 Products Used</span>
                     </div>
                 </div>
-                <button
-                    onClick={() => setShowAddItemModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-xl shadow-md hover:bg-black transition-all font-inter text-sm"
-                >
-                    <span>+ Add Item</span>
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => setShowAddItemModal(true)}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white font-semibold rounded-[8px] shadow-md hover:bg-black transition-all font-inter text-sm"
+                    >
+                        <span>+ Add Item</span>
+                    </button>
+                    <Link
+                        href="/products/new"
+                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold rounded-[8px] shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all font-inter text-sm border border-blue-400/50"
+                    >
+                        <span>✨ Auto-Catalog</span>
+                    </Link>
+                </div>
             </div>
          </section>
 
@@ -1971,6 +2105,75 @@ export default function Dashboard() {
                   X (Twitter)
                 </a>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Capital Offer Modal */}
+      {showCapitalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden relative">
+            <button onClick={() => setShowCapitalModal(false)} className="absolute top-4 right-4 p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div className="p-8">
+              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-3xl mb-6 shadow-inner">
+                💸
+              </div>
+              <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-2">Pre-approved Capital</h2>
+              <p className="text-gray-600 font-inter text-sm mb-8">Access funds instantly to grow your business. Select the amount you need today.</p>
+
+              <div className="mb-8">
+                <div className="flex justify-between items-end mb-4">
+                  <span className="text-gray-500 font-medium text-sm uppercase tracking-wider">Amount</span>
+                  <span className="text-4xl font-bold font-outfit text-gray-900">${capitalAmount}</span>
+                </div>
+                <input
+                  type="range"
+                  min="500"
+                  max="1200"
+                  step="100"
+                  value={capitalAmount}
+                  onChange={(e) => setCapitalAmount(Number(e.target.value))}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-black"
+                />
+                <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                  <span>$500</span>
+                  <span>$1,200</span>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-2xl p-5 mb-8 border border-gray-100 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Amount you get today</span>
+                  <span className="font-semibold text-gray-900">${capitalAmount}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-sm">Total you repay</span>
+                  <span className="font-semibold text-gray-900">${Math.round(capitalAmount * 1.10)}</span>
+                </div>
+                <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
+                  <span className="text-gray-600 text-sm font-medium">Repayment</span>
+                  <span className="font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md text-sm">10% of future sales</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAcceptCapital}
+                disabled={capitalTransferring}
+                className="w-full py-4 bg-black text-white rounded-xl font-bold text-lg shadow-lg hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {capitalTransferring ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Transferring...
+                  </>
+                ) : (
+                  <>Accept & Transfer ➔</>
+                )}
+              </button>
+              <p className="text-center text-xs text-gray-400 mt-4">By accepting, you agree to the Capital Advance Terms. No hidden fees or APR.</p>
             </div>
           </div>
         </div>

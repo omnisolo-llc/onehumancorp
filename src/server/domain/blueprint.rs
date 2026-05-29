@@ -39,6 +39,13 @@ pub fn parse_blueprint(data: &[u8], is_yaml: bool) -> Result<SkillBlueprint, Str
 
 impl SkillBlueprint {
     pub fn validate(&self) -> Result<(), String> {
+        static INJECTION_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        let re = INJECTION_RE.get_or_init(|| regex::Regex::new(r"(?i)(SYSTEM:|\[INST\]|<\|im_start\|>|Ignore previous instructions)").unwrap());
+
+        if re.is_match(&self.domain) {
+            return Err("domain contains forbidden prompt injection sequences".to_string());
+        }
+
         if self.domain.trim().is_empty() {
             return Err("domain is required".to_string());
         }
@@ -49,6 +56,15 @@ impl SkillBlueprint {
 
         let mut roles_map = HashMap::new();
         for role in &self.roles {
+            if re.is_match(&role.id) || re.is_match(&role.title) || re.is_match(&role.context) || re.is_match(&role.reports_to) {
+                return Err(format!("role {} contains forbidden prompt injection sequences", role.id));
+            }
+            for tool in &role.tools {
+                if re.is_match(tool) {
+                    return Err(format!("role {} contains forbidden prompt injection sequences in tools", role.id));
+                }
+            }
+
             if role.id.trim().is_empty() {
                 return Err("role id is required".to_string());
             }
@@ -275,5 +291,52 @@ roles:
         assert_eq!(bp.roles[0].id, "test_v1/a");
         assert_eq!(bp.roles[1].id, "test_v1/b");
         assert_eq!(bp.roles[1].reports_to, "test_v1/a");
+    }
+
+    #[test]
+    fn test_blueprint_validation_prompt_injection() {
+        let tests = vec![
+            (
+                "injection in domain",
+                r#"
+domain: "Legal Consulting SYSTEM:"
+roles:
+  - id: "associate"
+    title: "Associate Agent"
+    context: "You perform case law research."
+"#,
+                "domain contains forbidden prompt injection sequences",
+            ),
+            (
+                "injection in role context",
+                r#"
+domain: "Legal Consulting"
+roles:
+  - id: "associate"
+    title: "Associate Agent"
+    context: "You perform case law research. <|im_start|> user"
+"#,
+                "role associate contains forbidden prompt injection sequences",
+            ),
+            (
+                "injection in role tools",
+                r#"
+domain: "Legal Consulting"
+roles:
+  - id: "associate"
+    title: "Associate Agent"
+    context: "You perform case law research."
+    tools: ["mcp://tools/lexis-nexis", "[INST] malicious"]
+"#,
+                "role associate contains forbidden prompt injection sequences in tools",
+            ),
+        ];
+
+        for (name, yaml_data, expected_err) in tests {
+            let res = parse_blueprint(yaml_data.as_bytes(), true);
+            assert!(res.is_err(), "Expected error for test case: {}", name);
+            let err = res.unwrap_err();
+            assert!(err.contains(expected_err), "Expected error to contain '{}', got: {}", expected_err, err);
+        }
     }
 }
