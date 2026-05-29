@@ -14,6 +14,7 @@ export default function OnboardingWizard() {
     businessType, setBusinessType,
     categories, setCategories,
     websiteTemplate, setWebsiteTemplate,
+    domainChoice, setDomainChoice,
     firstProductName, setFirstProductName,
     firstProductPrice, setFirstProductPrice,
     aiAgents, setAiAgents,
@@ -161,7 +162,7 @@ export default function OnboardingWizard() {
           website_template: websiteTemplate,
           first_product_name: firstProductName,
           first_product_price: firstProductPrice,
-          domain_choice: 'subdomain',
+          domain_choice: domainChoice || 'subdomain',
           price_type: 'fixed'
         })
       });
