@@ -1,5 +1,6 @@
 load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
 load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
+load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 SERVER_RS_SRCS = [
     "analytics.rs",
@@ -242,70 +243,11 @@ SERVER_RS_SRCS = [
     "//src/server/workers:mod.rs",
 ]
 
-SERVICES_RS_SRCS = [
-    "//src/server/services:booking.rs",
-    "//src/server/services:mod.rs",
-    "//src/server/services:wizard.rs",
-    "//src/server/services/agent:department/mod.rs",
-    "//src/server/services/agent:department/service.rs",
-    "//src/server/services/agent:mod.rs",
-    "//src/server/services/agent:service.rs",
-    "//src/server/services/autodream:mod.rs",
-    "//src/server/services/autodream:service.rs",
-    "//src/server/services/billing:auditor.rs",
-    "//src/server/services/billing:mod.rs",
-    "//src/server/services/billing:service.rs",
-    "//src/server/services/chat:mod.rs",
-    "//src/server/services/chat:service.rs",
-    "//src/server/services/dashboard:mod.rs",
-    "//src/server/services/dashboard:service.rs",
-    "//src/server/services/growth:experiments.rs",
-    "//src/server/services/growth:invites.rs",
-    "//src/server/services/growth:mod.rs",
-    "//src/server/services/growth:quota.rs",
-    "//src/server/services/growth:referral_api.rs",
-    "//src/server/services/growth:referrals.rs",
-    "//src/server/services/growth:service.rs",
-    "//src/server/services/growth:viral_loop.rs",
-    "//src/server/services/integration:mod.rs",
-    "//src/server/services/integration:service.rs",
-    "//src/server/services/mcp:mod.rs",
-    "//src/server/services/mcp:service.rs",
-    "//src/server/services/onboarding:audit.rs",
-    "//src/server/services/onboarding:cli.rs",
-    "//src/server/services/onboarding:dayone.rs",
-    "//src/server/services/onboarding:diagnostics.rs",
-    "//src/server/services/onboarding:env_verifier.rs",
-    "//src/server/services/onboarding:mod.rs",
-    "//src/server/services/onboarding:onboarding_agent.rs",
-    "//src/server/services/onboarding:personas.rs",
-    "//src/server/services/onboarding:preflight.rs",
-    "//src/server/services/onboarding:provisioner.rs",
-    "//src/server/services/onboarding:validation.rs",
-    "//src/server/services/onboarding:wizard.rs",
-    "//src/server/services/ops:mod.rs",
-    "//src/server/services/ops:service.rs",
-    "//src/server/services/org:mod.rs",
-    "//src/server/services/org:service.rs",
-    "//src/server/services/scheduler:mod.rs",
-    "//src/server/services/scheduler:service.rs",
-    "//src/server/services/sync:cloud_synchronizer.rs",
-    "//src/server/services/sync:escalator.rs",
-    "//src/server/services/sync:local_repository.rs",
-    "//src/server/services/sync:local_repository_impl.rs",
-    "//src/server/services/sync:mod.rs",
-    "//src/server/services/sync:power_sync_orchestrator.rs",
-    "//src/server/services/sync:power_sync_test.rs",
-    "//src/server/services/sync:service.rs",
-    "//src/server/services/sync:telemetry_sync.rs",
-]
-
 # build_script removed as protos are now built with Bazel rules
 
 rust_library(
     name = "server_lib",
     srcs = SERVER_RS_SRCS,
-    compile_data = SERVICES_RS_SRCS,
     data = ["//src/server/migrations"],
     edition = "2024",
     proc_macro_deps = [
@@ -344,12 +286,12 @@ rust_library(
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
+        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
         "//src/server/integrations/shippo:server_integrations_shippo",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
-        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
@@ -433,7 +375,6 @@ rust_test(
 rust_binary(
     name = "server",
     srcs = ["main.rs"],
-    compile_data = SERVICES_RS_SRCS,
     edition = "2024",
     visibility = ["//visibility:public"],
     deps = [
@@ -560,7 +501,50 @@ SERVER_LIB_SPLIT_TESTS = [
         ],
     )
     for group, filters in SERVER_LIB_TEST_GROUPS.items()
+    if group != "core"
 ]
+
+rust_test(
+    name = "server_lib_core_unit_test_bin",
+    size = "large",
+    args = SERVER_LIB_TEST_GROUPS["core"],
+    crate = ":server_lib",
+    data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
+    edition = "2024",
+    env = {
+        "RUST_TEST_THREADS": "1",
+    },
+    proc_macro_deps = [
+        "@crates//:async-trait",
+    ],
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "@crates//:serde_json",
+        "@crates//:sqlx",
+        "@crates//:temp-env",
+        "@crates//:tempfile",
+        "@crates//:tokio",
+        "@crates//:tokio-tungstenite",
+        "@crates//:tree-sitter-bash",
+        "@crates//:walkdir",
+    ],
+)
+
+rust_sharded_test(
+    name = "server_lib_core_unit_test",
+    size = "large",
+    binary = ":server_lib_core_unit_test_bin",
+    filters = SERVER_LIB_TEST_GROUPS["core"],
+    shard_count = 6,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
 
 test_suite(
     name = "server_lib_unit_test",
@@ -665,7 +649,6 @@ rust_test(
         "--test",
         "power_sync",
     ],
-    compile_data = SERVICES_RS_SRCS,
     crate = ":server_lib",
     data = ["//src/server/migrations"] + ["//deploy/scripts:ohc-standalone.sh"],
     edition = "2024",
@@ -690,7 +673,6 @@ rust_test(
     name = "crypto_test",
     size = "small",
     srcs = ["crypto.rs"],
-    compile_data = SERVICES_RS_SRCS,
     crate_root = "crypto.rs",
     edition = "2024",
     target_compatible_with = select({
