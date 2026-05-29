@@ -26,6 +26,60 @@ describe('OnboardingWizard', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('Decodes state from URL and restores it', async () => {
+    const encodedState = btoa(unescape(encodeURIComponent(JSON.stringify({
+      step: 2,
+      businessName: 'Resumed Business 🍰',
+      businessType: 'Bakery',
+      categories: ['food'],
+      firstProductName: 'Cake',
+      firstProductPrice: '20'
+    }))));
+
+    window.history.replaceState({}, '', `/?state=${encodedState}`);
+
+    act(() => { render(<OnboardingWizard />); });
+
+    await waitFor(() => {
+      expect(screen.getByText("Review Details")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("Resumed Business 🍰")).toBeInTheDocument();
+    });
+  });
+
+  it('Share to Resume encodes state and shows toast', async () => {
+    useOnboardingStore.setState({
+      step: 2,
+      businessName: 'Maya 🍰',
+      businessType: 'Bakery',
+      categories: ['food'],
+      firstProductName: 'Cake',
+      firstProductPrice: '20'
+    });
+
+    // Mock navigator.clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: vi.fn().mockImplementation(() => Promise.resolve()),
+      },
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const shareBtn = screen.getByRole('button', { name: /Share to Resume/i });
+    await act(async () => {
+      shareBtn.click();
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    const url = (navigator.clipboard.writeText as any).mock.calls[0][0];
+    expect(url).toContain('?state=');
+
+    await waitFor(() => {
+      expect(screen.getByText("Resume link copied to clipboard!")).toBeInTheDocument();
+    });
   });
 
   it('Step 1: Renders initial screen correctly', async () => {

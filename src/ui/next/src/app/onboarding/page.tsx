@@ -28,7 +28,53 @@ export default function OnboardingWizard() {
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Resume from state query parameter if present
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const stateParam = params.get('state');
+      if (stateParam) {
+        try {
+          const decoded = JSON.parse(decodeURIComponent(escape(atob(stateParam))));
+          useOnboardingStore.setState(decoded);
+          // Clean up URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch (e) {
+          console.error("Failed to parse resume state", e);
+        }
+      }
+    }
   }, []);
+
+  const [toastMessage, setToastMessage] = useState('');
+
+  const handleShareResume = () => {
+    const currentState = useOnboardingStore.getState();
+    const stateToSave = {
+      step: currentState.step,
+      chatStep: currentState.chatStep,
+      businessDescription: currentState.businessDescription,
+      businessName: currentState.businessName,
+      whatYouSell: currentState.whatYouSell,
+      location: currentState.location,
+      businessType: currentState.businessType,
+      categories: currentState.categories,
+      websiteTemplate: currentState.websiteTemplate,
+      firstProductName: currentState.firstProductName,
+      firstProductPrice: currentState.firstProductPrice,
+      aiAgents: currentState.aiAgents,
+      aiAutoRespond: currentState.aiAutoRespond,
+    };
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(stateToSave))));
+    const url = `${window.location.origin}${window.location.pathname}?state=${encoded}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setToastMessage('Resume link copied to clipboard!');
+      setTimeout(() => setToastMessage(''), 3000);
+    }).catch(() => {
+      setToastMessage('Failed to copy. Here is your link: ' + url);
+      setTimeout(() => setToastMessage(''), 5000);
+    });
+  };
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -126,8 +172,13 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col min-h-[100dvh] sm:h-[650px] sm:min-h-0 sm:my-auto relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
+          {toastMessage && (
+            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50 bg-[#34C759]/90 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg transition-opacity animate-fade-in">
+              {toastMessage}
+            </div>
+          )}
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
               {error}
@@ -160,7 +211,7 @@ export default function OnboardingWizard() {
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
                         placeholder="e.g. Maya's Custom Cakes"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -227,7 +278,7 @@ export default function OnboardingWizard() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. Portland, OR"
-                        className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
+                        className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
                     </div>
                   </div>
@@ -251,7 +302,15 @@ export default function OnboardingWizard() {
               <button onClick={() => setStep(1)} className="self-start text-[#0066FF] text-sm font-semibold mb-4 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg> Back
               </button>
-              <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Review Details</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-3xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Review Details</h2>
+                <button
+                  onClick={handleShareResume}
+                  className="text-xs bg-[#0066FF]/10 text-[#0066FF] px-2 py-1 rounded-[8px] font-semibold hover:bg-[#0066FF]/20 transition-colors"
+                >
+                  Share to Resume
+                </button>
+              </div>
               <p className="text-gray-500 dark:text-[#A1A1A6] text-sm mb-6">
                 Here's what our AI figured out. Feel free to tweak these.
               </p>
@@ -312,6 +371,10 @@ export default function OnboardingWizard() {
                   onClick={() => {
                     if (businessName.trim().length < 3) {
                       setValidationError('Business Name must be at least 3 characters.');
+                      return;
+                    }
+                    if (isNaN(Number(firstProductPrice)) || Number(firstProductPrice) <= 0) {
+                      setValidationError('Product price must be a valid positive number.');
                       return;
                     }
                     setValidationError('');
