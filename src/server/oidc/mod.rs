@@ -198,6 +198,15 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         roles.push("VIEWER".to_string());
     }
     
+    let mut org_id = None;
+    if let Some(tenant) = raw.get("tenant_id").and_then(|v| v.as_str()) {
+        org_id = Some(tenant.to_string());
+    } else if let Some(org) = raw.get("organization_id").and_then(|v| v.as_str()) {
+        org_id = Some(org.to_string());
+    } else if let Some(tenant_id) = raw.get("tenantId").and_then(|v| v.as_str()) {
+        org_id = Some(tenant_id.to_string());
+    }
+
     Ok(Claims {
         sub: {
             let sub = raw.get("sub").and_then(|v| v.as_str()).unwrap_or_default().to_string();
@@ -207,7 +216,7 @@ pub async fn validate_oidc_token(token_str: &str, cfg: &OIDCConfig) -> Result<Cl
         username: raw.get("preferred_username").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         email: raw.get("email").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
         roles,
-        organization_id: None,
+        organization_id: org_id,
         session_id: None,
         iat: raw.get("iat").and_then(|v| v.as_i64()).unwrap_or_default(),
         exp: raw.get("exp").and_then(|v| v.as_i64()).unwrap_or_default(),
