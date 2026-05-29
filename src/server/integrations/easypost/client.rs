@@ -1,3 +1,4 @@
+use serde_json;
 use reqwest::Client;
 
 pub struct EasyPostClient {
@@ -39,5 +40,16 @@ impl EasyPostClient {
             }
             Err(e) => Err(format!("Network error: {}", e)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_easypost_client_new() {
+        let client = EasyPostClient::new("test_token".to_string());
+        assert_eq!(client.api_key, "test_token");
     }
 }
