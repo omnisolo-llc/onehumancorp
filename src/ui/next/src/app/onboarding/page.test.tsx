@@ -21,7 +21,7 @@ describe('OnboardingWizard', () => {
       startResult: null,
     });
 
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) });
   });
 
   afterEach(() => {
@@ -118,6 +118,7 @@ describe('OnboardingWizard', () => {
 
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
+      json: async () => ({}),
       ok: false
     });
 
@@ -162,6 +163,7 @@ describe('OnboardingWizard', () => {
 
     // Mock start failure
     (global.fetch as any).mockResolvedValueOnce({
+      json: async () => ({}),
       ok: false
     });
 
@@ -201,6 +203,27 @@ describe('OnboardingWizard', () => {
     });
 
     expect(await screen.findByText('Business Name must be at least 3 characters.')).toBeInTheDocument();
+  });
+
+  it('Step 2: Displays validation error when price format is invalid', async () => {
+    useOnboardingStore.setState({
+      step: 2,
+      businessName: 'Maya Bakery',
+      businessType: 'Bakery',
+      categories: ['food'],
+      firstProductName: 'Cake',
+      firstProductPrice: 'invalid_price'
+    });
+
+    act(() => { render(<OnboardingWizard />); });
+
+    const continueButton = screen.getByRole('button', { name: /Continue/i });
+
+    await act(async () => {
+      continueButton.click();
+    });
+
+    expect(await screen.findByText('Price must be a valid number (e.g. 10.00).')).toBeInTheDocument();
   });
 
   it('Step 3: Can select AI agents and toggle auto-respond', async () => {
