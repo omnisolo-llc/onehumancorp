@@ -35,11 +35,13 @@ pub struct HnswNode {
     pub connections: Vec<Vec<usize>>,
 }
 
+// Min-heap for keeping track of the closest elements (closest = highest cosine similarity)
 #[derive(PartialEq)]
 struct MinDist(usize, f32);
 impl Eq for MinDist {}
 impl PartialOrd for MinDist {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        // We want the smallest distance (lowest similarity) to be popped first, so we reverse the comparison.
         other.1.partial_cmp(&self.1)
     }
 }
@@ -203,7 +205,12 @@ impl AgentDB {
                 if node_n_conns.len() > m_conn {
                     let mut distances = Vec::new();
                     for &c_idx in &node_n_conns {
-                        distances.push((c_idx, self.nodes[c_idx].vector.cosine_similarity(&node_n_vec)));
+                        let sim = if c_idx == new_idx {
+                            vec.cosine_similarity(&node_n_vec)
+                        } else {
+                            self.nodes[c_idx].vector.cosine_similarity(&node_n_vec)
+                        };
+                        distances.push((c_idx, sim));
                     }
                     distances.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
                     distances.truncate(m_conn);
