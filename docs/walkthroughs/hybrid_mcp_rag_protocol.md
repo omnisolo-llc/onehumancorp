@@ -14,11 +14,11 @@ As a busy business owner, you don't have time to dig through old files. This too
 
 Here is what it looks like when you search for something:
 
-![Desktop View](../assets/desktop_help_center.svg)
+![Desktop View](../assets/desktop_help_center.png)
 
 *On your computer, you will see a clear search bar at the top.*
 
-![Mobile View](../assets/mobile_help_center.svg)
+![Mobile View](../assets/mobile_help_center.png)
 
 *On your phone, it is easy to use with just your thumb.*
 

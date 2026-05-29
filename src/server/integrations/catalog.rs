@@ -78,11 +78,5 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
     let jitsi_provider = crate::integrations::jitsi::provider::JitsiProvider::new("dummy_token".to_string());
     catalog.push(jitsi_provider.to_integration_provider());
 
-    let resend_provider = crate::integrations::resend::provider::ResendProvider::new("dummy_token".to_string());
-    catalog.push(resend_provider.to_integration_provider());
-
-    let daily_provider = crate::integrations::daily::provider::DailyProvider::new("dummy_token".to_string());
-    catalog.push(daily_provider.to_integration_provider());
-
     catalog
 }
