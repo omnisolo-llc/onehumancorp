@@ -38,6 +38,7 @@ pub mod mcp_dynamic;
 pub mod skill;
 pub mod create_skill;
 pub mod pydantic;
+pub mod claude_plugins;
 pub mod marketplace;
 pub mod marketplace_tool;
 
@@ -144,28 +145,68 @@ pub fn all_tools(
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
     ];
 
-    // Instantiate the Ruflo 32+ Claude Code Plugins
-    let mut claude_plugins = crate::claude_plugins::ClaudePluginManager::new();
+    let mut plugin_manager = claude_plugins::ClaudePluginManager::new();
 
-    // Example: Registering a default known plugin to demonstrate functionality
-    claude_plugins.load_plugin(
-        crate::claude_plugins::ClaudePluginConfig {
-            plugin_name: "claude_echo_plugin".to_string(),
+    // In a real implementation, this would scan a directory (e.g., ~/.claude/plugins)
+    // or read from a manifest. For now, we load a dynamic list of system commands as plugins.
+    let external_plugins = vec![
+        claude_plugins::ClaudePluginConfig {
+            name: "ruflo_system_echo".to_string(),
+            description: "Echoes the input back to the terminal. Useful for testing output.".to_string(),
             command: "echo".to_string(),
-            sub_args: vec![],
+            args: vec![],
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "description": "The message to echo"
+                    }
+                }
+            }),
         },
-        serde_json::json!({
+        claude_plugins::ClaudePluginConfig {
+            name: "ruflo_system_date".to_string(),
+            description: "Gets the current system date and time.".to_string(),
+            command: "date".to_string(),
+            args: vec![],
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {}
+            }),
+        },
+        claude_plugins::ClaudePluginConfig {
+            name: "ruflo_system_uptime".to_string(),
+            description: "Gets the system uptime.".to_string(),
+            command: "uptime".to_string(),
+            args: vec![],
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {}
+            }),
+        }
+    ];
+
+    for config in external_plugins {
+        plugin_manager.load_plugin(config);
+    }
+
+    // Also load the legacy test plugin
+    plugin_manager.load_plugin(claude_plugins::ClaudePluginConfig {
+        name: "echo_plugin".to_string(),
+        description: "An example plugin that echoes the input".to_string(),
+        command: "echo".to_string(),
+        args: vec!["hello from plugin".to_string()],
+        parameters: serde_json::json!({
             "type": "object",
             "properties": {
-                "message": {"type": "string"}
+                "message": {
+                    "type": "string"
+                }
             }
         }),
-        "A mock Claude plugin that echoes back the input.".to_string()
-    );
-
-    tools.extend(claude_plugins.get_tools());
-
-
+    });
+    tools.extend(plugin_manager.get_tools());
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
