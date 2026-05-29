@@ -5,6 +5,7 @@ import { WalkthroughProvider, HelpWidget } from '../components/help';
 import { TooltipProvider } from '../components/TooltipRegistry';
 
 import { HelpChat } from "../components/HelpChat";
+import { ScribeDocumentationSystem } from "../components/help";
 
 export const metadata: Metadata = {
   title: 'OHC Builder',
@@ -25,7 +26,7 @@ export default function RootLayout({
       <body>
         <TooltipProvider>
                   <WalkthroughProvider>
-            {children}
+            <ScribeDocumentationSystem>{children}</ScribeDocumentationSystem>
             <WalkthroughTarget id="help-widget-container"><HelpWidget /></WalkthroughTarget>
             <HelpChat />
           </WalkthroughProvider>
