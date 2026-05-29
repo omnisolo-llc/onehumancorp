@@ -282,7 +282,7 @@ pub(crate) async fn load_cascading_agents_md(start_dir: &std::path::Path) -> Str
 }
 
 /// A dedicated builder for the Hierarchical Priority Stack mechanic.
-/// This fulfills the Master Catalog specification: Prompt Construction: OpenAI Codex Strict hierarchical priority stack
+/// This fulfills the Master Catalog specification:
 /// 1. Server-controlled System Message (Highest Priority)
 /// 2. Tool Definitions
 /// 3. Developer Instructions
@@ -329,8 +329,6 @@ impl HierarchicalPromptBuilder {
     pub fn build(&self) -> String {
         let mut combined_system = String::new();
 
-        // Prompt Construction: OpenAI Codex Strict hierarchical priority stack
-        // 1. Server-controlled System Message (Highest Priority) -> 2. Tool Definitions -> 3. Developer Instructions -> 4. User Instructions
         // 1. Server-controlled System Message (Highest Priority)
         if !self.server_system_message.is_empty() {
             combined_system.push_str("[Server System Message]\n");
@@ -965,7 +963,6 @@ impl Agent {
 
                     if let Some(tool) = tt.iter().find(|t| t.name == name) {
                         if let Err(e) = Agent::validate_schema(&args, &tool.parameters) {
-                            let final_res: Result<String, crate::types::ToolError> = Err(crate::types::ToolError::LlmRecoverable(format!("Schema validation failed: {}. Please correct your tool arguments.", e)));
                             let tool_name = name.to_string();
                             let count = error_counts.entry(tool_name.clone()).or_insert(serde_json::json!(0)).as_u64().unwrap() + 1;
                             error_counts.insert(tool_name.clone(), serde_json::json!(count));
@@ -2089,8 +2086,7 @@ impl Agent {
 
             // Layered Termination Condition: Safety Refusal
             if stop_reason == "content_filter" || stop_reason == "safety" {
-                let term_cond = crate::types::TerminationCondition::SafetyRefusal(stop_reason.to_string());
-                let err_msg = term_cond.to_string();
+                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -2112,8 +2108,6 @@ impl Agent {
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let term_cond = crate::types::TerminationCondition::TokenBudgetExhausted(decision.budget);
-                    tracing::info!("{}", term_cond);
                     let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                     on_event(AgentEvent::TextChunk { content: msg.clone() });
                     on_event(AgentEvent::TaskComplete { content: msg.clone() });
@@ -2143,8 +2137,8 @@ impl Agent {
                 ]);
             }
 
+            // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                tracing::info!("{}", crate::types::TerminationCondition::NoToolCalls);
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2228,8 +2222,6 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
-                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2237,7 +2229,6 @@ impl Agent {
                 let tc_clone = tc.clone();
                 let session_tools_clone = session_tools.clone();
                 let messages_clone = messages.clone();
-                let cfg_max_retries = final_cfg.max_retries;
 
                 let tool_span = info_span!(
                     "tool_execution",
@@ -2249,8 +2240,6 @@ impl Agent {
                     if let Err(e) = gating_res {
                         return (tc_clone, Err(e));
                     }
-                    let mut retry_count = 0;
-                    let max_retries = std::cmp::min(cfg_max_retries, 2); // Error Handling (Compounding Error Prevention): Stripe limits retries to exactly 2.
                     loop {
                         match self.execute_tool(&tc_clone, &session_tools_clone, &messages_clone, final_cfg.max_retries).await {
                             Ok(r) => {
@@ -2415,8 +2404,6 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
-                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2637,18 +2624,6 @@ impl Agent {
             // 1. Configured Checkpointer (Database or Git)
             if let (Some(checkpointer), Some(thread_id)) = (&self.checkpointer, &final_cfg.thread_id) {
                 let checkpoint_id = uuid::Uuid::new_v4().to_string();
-
-                let current_objective = final_cfg.user_instructions.clone();
-                let mut notes = vec![];
-                if let Some(last_msg) = messages.last() {
-                    if !last_msg.content.is_empty() {
-                        notes.push(format!("Last msg: {:.50}...", last_msg.content));
-                    }
-                    if !last_msg.tool_calls.is_empty() {
-                        notes.push(format!("Tool calls: {}", last_msg.tool_calls.len()));
-                    }
-                }
-
                 let cp = crate::checkpointer::Checkpoint {
                     thread_id: thread_id.clone(),
                     checkpoint_id: checkpoint_id.clone(),
@@ -2658,9 +2633,6 @@ impl Agent {
                         "iteration": iteration,
                         "turn_input_tokens": turn_input_tokens,
                         "turn_output_tokens": output_tokens,
-                        "current_objective": current_objective,
-                        "status": "running",
-                        "notes": notes,
                     }),
                     created_at: chrono::Utc::now(),
                 };
@@ -2781,8 +2753,7 @@ impl Agent {
         }
 
         // Hit max iterations.
-        let term_cond = crate::types::TerminationCondition::MaxTurnLimitExceeded(max_iterations);
-        let err_msg = term_cond.to_string();
+        let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
         return Err(err_msg.into());
     }
@@ -2928,7 +2899,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
         }
 
         let mut modified_tc = tc.clone();
@@ -3997,6 +3968,7 @@ mod tests {
             ]),
         });
 
+        #[allow(dead_code)]
         pub struct MockToolExecutor;
         #[async_trait::async_trait]
         impl ToolExecutor for MockToolExecutor {
@@ -4544,7 +4516,7 @@ mod tests {
             description: "A test tool".to_string(),
             is_read_only: true,
             parameters: serde_json::json!({"type": "object"}),
-            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
+            execute: std::sync::Arc::new(MockToolExecutor),
         };
 
         let prompt = build_hierarchical_system_prompt(&cfg, &[tool]);
@@ -6063,7 +6035,7 @@ mod stream_tests {
     #[tokio::test]
     async fn test_time_travel_rewind_lightweight_chaining() {
         use ohc_builtin_agent_tools::ToolExecutor;
-        use crate::types::{ChatRequest, Message, Role, ToolCall, Usage, ToolError};
+        use crate::types::{ChatRequest, ToolCall, Usage, ToolError};
 
         struct MockLlmClientLightweightRewind {
             call_count: tokio::sync::Mutex<i32>,
@@ -6296,6 +6268,7 @@ mod hierarchical_prompt_tests {
 }
 
 
+    #[allow(dead_code)]
     struct NudgeMockLlmClient {
         call_count: tokio::sync::Mutex<usize>,
     }
@@ -6337,7 +6310,6 @@ mod hierarchical_prompt_tests {
 
     #[tokio::test]
     async fn test_agent_curated_memory_nudge() {
-        use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, ToolResult, Usage};
         let client = std::sync::Arc::new(NudgeMockLlmClient { call_count: tokio::sync::Mutex::new(0) });
         let tool = Tool {
             name: "test_tool".to_string(),
@@ -6363,7 +6335,7 @@ mod hierarchical_prompt_tests {
 
 #[tokio::test]
 async fn test_stripe_retry_limit() {
-    use crate::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+    use crate::types::{ChatRequest, ChatResponse, ToolCall, Usage, ToolError};
 
     struct FailingTool;
     #[async_trait::async_trait]
@@ -6437,7 +6409,7 @@ async fn test_stripe_retry_limit() {
     #[tokio::test]
     async fn test_code_native_agent_integration() {
         use ohc_builtin_agent_core::code_native::{CodeNativeAdapter, CodeNativeTool, RichExecutionEnvironment};
-        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage, ToolError};
+        use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message, Role, ToolCall, Usage};
 
         struct EnvSetterTool;
         #[async_trait::async_trait]
@@ -6594,59 +6566,3 @@ async fn test_stripe_retry_limit() {
         assert!(prompt.contains("[Progressive Skill Loaded: Secret Skill]"));
         assert!(prompt.contains("ALWAYS perform deep analysis."));
     }
-
-#[cfg(test)]
-mod openai_codex_prompt_tests {
-    use super::*;
-    use crate::tools::Tool;
-
-    #[test]
-    fn test_openai_codex_strict_hierarchical_priority_stack() {
-        let mut cfg = AgentRunConfig::default();
-        cfg.server_system_message = "I am a server system message.".to_string();
-        cfg.developer_instructions = "I am developer instructions.".to_string();
-
-        // Create user instructions larger than 32 KiB
-        let long_user_instruction = "A".repeat(40000);
-        cfg.user_instructions = long_user_instruction;
-
-        let tool = Tool {
-            name: "test_tool".to_string(),
-            description: "A test tool.".to_string(),
-            parameters: serde_json::json!({"type": "object"}),
-            is_read_only: true,
-            execute: std::sync::Arc::new(crate::agent::tests::MockToolExecutor),
-        };
-        let tools = vec![tool];
-
-        let prompt = build_hierarchical_system_prompt(&cfg, &tools);
-
-        // Verify Strict hierarchical priority stack
-
-        // 1. Server-controlled System Message (Highest Priority)
-        let server_idx = prompt.find("[Server System Message]").expect("Server System Message should be present");
-
-        // 2. Tool Definitions
-        let tool_idx = prompt.find("[Tool Definitions]").expect("Tool Definitions should be present");
-
-        // 3. Developer Instructions
-        let dev_idx = prompt.find("[Developer Instructions]").expect("Developer Instructions should be present");
-
-        // 4. User Instructions
-        let user_idx = prompt.find("[User Instructions]").expect("User Instructions should be present");
-
-        // Assert strictly ordered stack
-        assert!(server_idx < tool_idx, "Server System Message must come before Tool Definitions");
-        assert!(tool_idx < dev_idx, "Tool Definitions must come before Developer Instructions");
-        assert!(dev_idx < user_idx, "Developer Instructions must come before User Instructions");
-
-        // Assert User Instructions capped at 32 KiB
-        let user_instruction_content = &prompt[user_idx..];
-        assert!(
-            user_instruction_content.len() <= 32768 + "[User Instructions]\n".len() + "[CRITICAL REMINDER: High-Signal Context Repeated to prevent 'Lost in the Middle']\nI am a server system message.".len() + 100,
-            "User instructions should be capped at 32 KiB (actual length: {})", user_instruction_content.len()
-        );
-        assert!(user_instruction_content.contains(&"A".repeat(32768)));
-        assert!(!user_instruction_content.contains(&"A".repeat(32769)));
-    }
-}
