@@ -124,8 +124,8 @@ jobs:
 
       - name: Pull E2E Docker images
         run: |
-          docker pull postgres:16
-          docker pull valkey/valkey:8-alpine
+          docker pull pgvector/pgvector:pg16 || true
+          docker pull valkey/valkey:8-alpine || true
 
       - name: Test Playwright E2E target
         run: bazelisk test //src/e2e:playwright
