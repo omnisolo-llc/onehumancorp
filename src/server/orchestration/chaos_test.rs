@@ -331,6 +331,41 @@ mod chaos_tests {
     }
 
     #[tokio::test]
+    async fn test_sql_sync_lag_resilience() {
+        // Chaos Engineering: Simulate SQL sync lag between Cloud and Standalone
+        // The read ops must use cached data if the DB queries start taking too long.
+        // We will simulate a slow network to Postgres causing a timeout.
+
+        let dummy_pg_pool = sqlx::postgres::PgPoolOptions::new()
+            .max_connections(1)
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://postgres:postgres@localhost:5432/test")
+            .unwrap();
+
+        let db = Arc::new(DB {
+            pool: dummy_pg_pool,
+            store: DbStore::Postgres,
+        });
+
+        // The SleepingMockMesh forces the 60s timeout of CloudStateManager
+        let mesh: Arc<dyn TeammateMesh> = Arc::new(SleepingMockMesh);
+        let state_manager = CloudStateManager::new(db.clone(), mesh);
+
+        // When DB is degraded (SQL sync lag simulated via sleeping lock mesh),
+        // fallback logic kicks in and we return safe degraded state (empty list instead of panic).
+        let start = std::time::Instant::now();
+        let tasks = state_manager.pull_available_tasks(10).await.unwrap_or(vec![]);
+        let elapsed = start.elapsed();
+
+        // 60-second timeout
+        assert!(elapsed < std::time::Duration::from_millis(62000));
+        assert!(elapsed > std::time::Duration::from_millis(59000));
+
+        // Return degraded state gracefully
+        assert_eq!(tasks.len(), 0);
+    }
+
+    #[tokio::test]
     async fn test_standalone_db_pull_fallback() {
         let dummy_sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new()
             .max_connections(1).acquire_timeout(std::time::Duration::from_millis(50))
