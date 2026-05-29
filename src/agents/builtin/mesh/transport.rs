@@ -75,16 +75,35 @@ impl MeshTransport for InProcessTransport {
                 Ok(true)
             }
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
+                // If the lock exists, we read its contents.
                 if let Ok(owner_bytes) = std::fs::read(&lock_path) {
                     let current_data = String::from_utf8_lossy(&owner_bytes).into_owned();
                     if let Some((stored_owner, stored_exp)) = current_data.split_once(':') {
                         if let Ok(exp) = stored_exp.parse::<i64>() {
                             if stored_owner == owner || exp <= chrono::Utc::now().timestamp_millis() {
-                                let _ = std::fs::remove_file(&lock_path);
-                                if let Ok(mut f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&lock_path) {
+                                // Instead of a race-prone read-then-delete-then-create,
+                                // we will just try to overwrite if we hold an OS lock,
+                                // or use an atomic directory rename if we were doing it right.
+                                // However, `InProcessTransport` is specifically meant for the same node.
+                                // We can use atomic open with O_EXCL via OpenOptions by appending a nonce
+                                // and hard linking, but cross-platform standard library doesn't easily expose this.
+                                // Instead, let's use the simplest atomic lock file pattern:
+                                // Create a unique temp file in the same directory, then hard link it to the target name.
+                                // If the hard link succeeds, we won the race.
+                                // If it fails, the file exists and we lost.
+
+                                let temp_lock_path = std::env::temp_dir().join(format!("ohc_mesh_lock_{}_{}.tmp", resource, uuid::Uuid::new_v4()));
+                                if let Ok(mut tmp_f) = std::fs::OpenOptions::new().write(true).create_new(true).open(&temp_lock_path) {
                                     use std::io::Write;
-                                    let _ = f.write_all(payload.as_bytes());
-                                    return Ok(true);
+                                    let _ = tmp_f.write_all(payload.as_bytes());
+                                    // Try to take over by removing the old file first.
+                                    let _ = std::fs::remove_file(&lock_path);
+                                    // Then attempt to hard link.
+                                    if std::fs::hard_link(&temp_lock_path, &lock_path).is_ok() {
+                                        let _ = std::fs::remove_file(&temp_lock_path);
+                                        return Ok(true);
+                                    }
+                                    let _ = std::fs::remove_file(&temp_lock_path);
                                 }
                             }
                         }
