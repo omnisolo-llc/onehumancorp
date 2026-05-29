@@ -5,6 +5,7 @@ exports_files(
         "b2b.rs",
         "blueprint.rs",
         "compute.rs",
+        "compliance.rs",
         "federation.rs",
         "mod.rs",
         "model.rs",
@@ -28,10 +29,7 @@ rust_library(
         "organization.rs",
         "sre.rs",
         "unified_tenant_test.rs",
-        "//src/server/domain/compliance:mod.rs",
-        "//src/server/domain/compliance:audit.rs",
-        "//src/server/domain/compliance:rules.rs",
-        "//src/server/domain/compliance:telemetry_check.rs",
+        "//src/server/domain:compliance.rs",
         "//src/server/domain/repository:mod.rs",
         "//src/server/domain/repository:models.rs",
         "//src/server/domain/repository:task_repo.rs",
@@ -131,7 +129,7 @@ rust_library(
 
 rust_test(
     name = "server_domain_unit_test",
-    size = "large",
+    size = "small",
     crate = ":server_domain",
     edition = "2024",
     env = {

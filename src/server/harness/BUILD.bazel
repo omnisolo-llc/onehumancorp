@@ -4,7 +4,6 @@ rust_library(
     name = "server_harness",
     srcs = [
         "executor.rs",
-        "network_proxy.rs",
         "mod.rs",
         "telemetry/mod.rs",
         "telemetry/store.rs",
@@ -33,7 +32,6 @@ rust_library(
         "@crates//:tree-sitter",
         "@crates//:tree-sitter-bash",
         "@crates//:uuid",
-        "@crates//:tracing",
     ],
     proc_macro_deps = [
         "@crates//:async-trait",
@@ -44,6 +42,7 @@ load("@rules_rust//rust:defs.bzl", "rust_test")
 
 rust_test(
     name = "server_harness_test",
+    size = "small",
     crate = ":server_harness",
     target_compatible_with = select({
         "@platforms//os:linux": [],

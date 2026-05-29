@@ -1,9 +1,0 @@
-exports_files(
-    [
-        "mod.rs",
-        "audit.rs",
-        "rules.rs",
-        "telemetry_check.rs",
-    ],
-    visibility = ["//visibility:public"],
-)

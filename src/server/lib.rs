@@ -460,7 +460,7 @@ async fn http_login_handler(
         }
     };
 
-    let claims = ::server_common::Claims {
+    let _claims = ::server_common::Claims {
         sub: id.clone(),
         exp: expires_at,
         iat: issued_at,
@@ -490,7 +490,7 @@ async fn http_login_handler(
         .into_response()
 }
 
-pub async fn advisory_insights_handler(
+async fn advisory_insights_handler(
     db: std::sync::Arc<db::DB>,
     store: std::sync::Arc<crate::auth::Store>,
     headers: axum::http::HeaderMap,
@@ -530,31 +530,22 @@ pub async fn advisory_insights_handler(
         }
     };
 
-    // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
-        async {
-            sqlx::query_as::<_, (String, String)>(
-                "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
-            )
-            .bind(&tenant_id)
-            .fetch_optional(&db.pool)
-            .await
-        },
-        async {
-            sqlx::query_scalar::<_, i64>(
-                "SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'"
-            )
-            .bind(&tenant_id)
-            .fetch_one(&db.pool)
-            .await
-        }
-    );
+    // Gather context from DB
+    let (business_name, industry): (String, String) = sqlx::query_as(
+        "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
+    )
+    .bind(&tenant_id)
+    .fetch_optional(&db.pool)
+    .await
+    .unwrap_or(None)
+    .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
-    let (business_name, industry) = org_res
-        .unwrap_or(None)
-        .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
-
-    let active_orders = active_orders_res.unwrap_or(0);
+    // Get order counts
+    let active_orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders WHERE tenant_id = $1 AND status != 'delivered'")
+        .bind(&tenant_id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
 
@@ -1984,8 +1975,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
-        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
-        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2048,25 +2037,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
-    let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
-        crate::db::DbStore::Postgres => {
-            std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
-        }
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            let queue = crate::queue::SqliteTaskQueue::new(sqlite_pool.clone());
-            queue.init().await?;
-            std::sync::Arc::new(queue)
-        }
-    };
-    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
-        .map(std::path::PathBuf::from)
-        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
-    let dynamic_workflow_manager = std::sync::Arc::new(
-        crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
-            dynamic_workflow_queue,
-            dynamic_workflow_state_dir,
-        ),
-    );
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2177,156 +2147,8 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/readyz", axum::routing::get(|| async { "ok" }))
         .route(
             "/api/dev/seed",
-            axum::routing::post({
-                let db = db.clone();
-                move |axum::Json(payload): axum::Json<serde_json::Value>| async move {
-                    let scenario = payload.get("scenario").and_then(|v| v.as_str()).unwrap_or("");
-
-                    if scenario == "launch-readiness" {
-                        let tenant_id = "default";
-
-                        let result = db.execute_with_retry("seed_data", || async {
-                            match &db.store {
-                                crate::db::DbStore::Sqlite(pool) => {
-                                    sqlx::query(
-                                        "INSERT OR IGNORE INTO tenants (id, name, tier) VALUES (?, ?, ?)"
-                                    )
-                                    .bind(tenant_id)
-                                    .bind("My Local Business")
-                                    .bind("free")
-                                    .execute(pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                                    )
-                                    .bind("prod_demo1")
-                                    .bind(tenant_id)
-                                    .bind("Artisan Sourdough Loaf")
-                                    .bind("Freshly baked daily.")
-                                    .bind(8.50)
-                                    .bind(850)
-                                    .bind("USD")
-                                    .bind(15)
-                                    .execute(pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT OR IGNORE INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-                                    )
-                                    .bind("prod_demo2")
-                                    .bind(tenant_id)
-                                    .bind("Consultation Hour")
-                                    .bind("One hour of expert advice.")
-                                    .bind(150.00)
-                                    .bind(15000)
-                                    .bind("USD")
-                                    .bind(999)
-                                    .execute(pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT OR IGNORE INTO customers (id, tenant_id, name, email) VALUES (?, ?, ?, ?)"
-                                    )
-                                    .bind("cust_demo1")
-                                    .bind(tenant_id)
-                                    .bind("Alice Demo")
-                                    .bind("alice@example.com")
-                                    .execute(pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT OR IGNORE INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES (?, ?, ?, ?, ?)"
-                                    )
-                                    .bind("ord_demo1")
-                                    .bind(tenant_id)
-                                    .bind("cust_demo1")
-                                    .bind(158.50)
-                                    .bind("completed")
-                                    .execute(pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-                                }
-                                crate::db::DbStore::Postgres => {
-                                    sqlx::query(
-                                        "INSERT INTO tenants (id, name, tier) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING"
-                                    )
-                                    .bind(tenant_id)
-                                    .bind("My Local Business")
-                                    .bind("free")
-                                    .execute(&db.pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
-                                    )
-                                    .bind("prod_demo1")
-                                    .bind(tenant_id)
-                                    .bind("Artisan Sourdough Loaf")
-                                    .bind("Freshly baked daily.")
-                                    .bind(8.50)
-                                    .bind(850)
-                                    .bind("USD")
-                                    .bind(15)
-                                    .execute(&db.pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT INTO products (id, tenant_id, title, description, price, price_cents, currency, inventory_count) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING"
-                                    )
-                                    .bind("prod_demo2")
-                                    .bind(tenant_id)
-                                    .bind("Consultation Hour")
-                                    .bind("One hour of expert advice.")
-                                    .bind(150.00)
-                                    .bind(15000)
-                                    .bind("USD")
-                                    .bind(999)
-                                    .execute(&db.pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT INTO customers (id, tenant_id, name, email) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING"
-                                    )
-                                    .bind("cust_demo1")
-                                    .bind(tenant_id)
-                                    .bind("Alice Demo")
-                                    .bind("alice@example.com")
-                                    .execute(&db.pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-
-                                    sqlx::query(
-                                        "INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING"
-                                    )
-                                    .bind("ord_demo1")
-                                    .bind(tenant_id)
-                                    .bind("cust_demo1")
-                                    .bind(158.50)
-                                    .bind("completed")
-                                    .execute(&db.pool)
-                                    .await
-                                    .map_err(|e| e.to_string())?;
-                                }
-                            }
-                            Ok::<(), String>(())
-                        }).await;
-
-                        if let Err(e) = result {
-                            tracing::error!("Failed to seed data: {}", e);
-                            return axum::Json(serde_json::json!({ "ok": false, "error": e }));
-                        }
-                    }
-
-                    axum::Json(serde_json::json!({ "ok": true }))
-                }
+            axum::routing::post(|| async {
+                axum::Json(serde_json::json!({ "ok": true }))
             }),
         )
         .route(
@@ -2424,7 +2246,6 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
-        .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -2731,22 +2552,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             backdrop-filter: blur(30px) saturate(210%);
                             -webkit-backdrop-filter: blur(30px) saturate(210%);
                             border: 1px solid rgba(255, 255, 255, 0.1);
-                        }
-                        .animated-dropdown {
-                            transition: max-height 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms cubic-bezier(0.4, 0, 0.2, 1), margin-top 250ms cubic-bezier(0.4, 0, 0.2, 1), padding-top 250ms cubic-bezier(0.4, 0, 0.2, 1);
-                            overflow: hidden;
-                            max-height: 0;
-                            opacity: 0;
-                            margin-top: 0;
-                            padding-top: 0;
-                            border-top-color: transparent;
-                        }
-                        .animated-dropdown.open {
-                            max-height: 500px;
-                            opacity: 1;
-                            margin-top: 15px;
-                            padding-top: 15px;
-                            border-top-color: var(--border);
                         }
                         nav { 
                             padding: 0 28px; 
@@ -3214,11 +3019,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             .help-category-card p { margin: 0; font-size: 14px; color: var(--text-secondary); }
             .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 16px; }
             .video-card { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-            .video-thumbnail { background: #000; aspect-ratio: 9/16; width: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; position: relative; }
-            .video-thumbnail::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8)); }
-            .video-info { padding: 12px; position: absolute; bottom: 0; left: 0; right: 0; color: white; z-index: 2; pointer-events: none; }
-            .video-info h4 { margin: 0 0 4px 0; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-            .video-info p { margin: 0; color: rgba(255,255,255,0.8); font-size: 12px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+            .video-thumbnail { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; cursor: pointer; }
+            .video-info { padding: 12px; }
+            .video-info h4 { margin: 0 0 4px 0; }
+            .video-info p { margin: 0; color: var(--text-secondary); font-size: 12px; }
             @media (max-width: 768px) { #ai-chat-widget { width: calc(100% - 32px); right: 16px; bottom: 80px; } }
                     </style>
 
@@ -3274,14 +3078,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                     el.addEventListener("mouseenter", () => showTooltip(el, text));
                                     el.addEventListener("mouseleave", hideTooltip);
 
-                                    // Mobile Long Press (Added by Scribe)
+                                    // Mobile Long Press
                                     el.addEventListener("touchstart", (e) => {
-                                        tooltipTimeout = setTimeout(() => { showTooltip(el, text); }, 500);
+                                        tooltipTimeout = setTimeout(() => {
+                                            showTooltip(el, text);
+                                        }, 500); // 500ms for long press
                                     }, {passive: true});
 
                                     el.addEventListener("touchend", () => {
                                         clearTimeout(tooltipTimeout);
-                                        setTimeout(hideTooltip, 2000);
+                                        setTimeout(hideTooltip, 2000); // hide after 2 seconds on mobile
                                     });
 
                                     el.addEventListener("touchmove", () => {
@@ -3771,9 +3577,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Marketing Pro</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Replied to 3 Instagram DMs.</p>
-                                <div id="ambassador-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
+                                <div id="ambassador-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                                     <h4 style="margin-top: 0;">Settings</h4>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for quotes > $100
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('ambassador', this.checked)">
@@ -3785,9 +3590,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <h3 class="outfit">Ops Helper</h3>
                                 <p style="color: var(--accent-green);">Status: Active</p>
                                 <p style="font-size: 14px; margin-top: 8px;">Recent: Updated inventory for Vegan Cupcakes.</p>
-                                <div id="manager-settings" class="animated-dropdown" style="border-top: 1px solid var(--border);">
+                                <div id="manager-settings" style="display: none; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
                                     <h4 style="margin-top: 0;">Settings</h4>
-                                    <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Control how much autonomy this agent has when making decisions.</p>
                                     <label style="display: flex; align-items: center; justify-content: space-between; font-size: 14px; cursor: pointer;">
                                         Require approval for order refunds
                                         <input type="checkbox" checked onchange="event.stopPropagation(); updateApprovalSetting('manager', this.checked)">
@@ -3810,7 +3614,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function toggleDepartment(deptId) {
                             const settingsDiv = document.getElementById(deptId + '-settings');
                             if (settingsDiv) {
-                                settingsDiv.classList.toggle('open');
+                                settingsDiv.style.display = settingsDiv.style.display === 'none' ? 'block' : 'none';
                             }
                         }
 
@@ -3929,21 +3733,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Custom Software</h1>
+                            <h1>Connect Tools</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
                         <p style="color: var(--text-secondary); margin-bottom: 32px;">Seamlessly connect your favorite apps to streamline your business operations.</p>
 
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
-                            <!-- ManyChat Integration -->
+                            <!-- Ayrshare Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Social Media Accounts</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📱</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to ManyChat...')">Connect my Instagram and Facebook</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
@@ -3956,14 +3760,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Enabling Autonomous Booking...')">Enable Booking Agent</button>
                             </div>
 
-                            <!-- MailerLite Integration -->
+                            <!-- Listmonk Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Customer Emails</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📨</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Send email updates and promotions to your customers.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up MailerLite...')">Start sending emails</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Listmonk...')">Start sending emails</button>
                             </div>
 
                             <!-- Mercado Pago Integration -->
@@ -3976,14 +3780,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Mercado Pago...')">Accept local payments</button>
                             </div>
 
-                            <!-- Shippo Integration -->
+                            <!-- EasyPost Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Shipping Labels</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📦</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Print shipping labels and automatically track packages for your orders.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Shippo...')">Set up shipping</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up EasyPost...')">Set up shipping</button>
                             </div>
 
                             <!-- Twilio Integration -->
@@ -3996,14 +3800,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Twilio...')">Enable text messages</button>
                             </div>
 
-                            <!-- Whereby Integration -->
+                            <!-- Jitsi Meet Integration -->
                             <div class="card glass" style="border-radius: 16px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                                     <h3 style="margin: 0;">Online Meetings</h3>
                                     <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">📹</span>
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Host online video meetings with your customers easily without extra downloads.</p>
-                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Whereby...')">Create my meeting room</button>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Setting up Jitsi Meet...')">Create my meeting room</button>
                             </div>
                         </div>
 
@@ -4318,7 +4122,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <h2>Your business, live in minutes.</h2>
+                            <p>Your business, live in minutes.</p>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -5968,13 +5772,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 const aiMsg = document.createElement('div');
                                 aiMsg.className = 'chat-msg ai';
                                 aiMsg.innerHTML = data.reply;
-                                if(data.link && data.link.title && data.link.url) {
-                                    if(data.link.url === '/api-docs') {
-                                        aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;api-docs-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;; return false;">Read the full article →</a>';
-                                    } else {
-                                        aiMsg.innerHTML += '<br><br><a href="' + data.link.url + '" target="_blank">Read the full article →</a>';
-                                    }
-                                }
+                                if(data.link) aiMsg.innerHTML += '<br><br><a href="#" onclick="showScreen(&quot;help-screen&quot;); document.getElementById(&quot;ai-chat-widget&quot;).style.display=&quot;none&quot;;">' + data.link_text + '</a>';
                                 messages.appendChild(aiMsg);
                                 messages.scrollTop = messages.scrollHeight;
                             } catch(e) { console.error(e); }
@@ -6080,7 +5878,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">
