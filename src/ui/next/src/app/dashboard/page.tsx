@@ -246,9 +246,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    const referralLink = `ohc://join?ref=${tenant}`;
-    const shareCardUrl = `https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('One Human Corp')}&description=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today.')}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + shareCardUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -1779,11 +1777,16 @@ export default function Dashboard() {
                     {!isGeneratingCustomerReferral && (
                         <button
                             onClick={async () => {
-                                // Simulate sending email
+                                try {
+                                    const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store';
+                                    await fetch('/api/v1/dashboard/metrics', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ data: { tenant_id: tenant } })
+                                    });
+                                } catch (e) { console.error(e); }
                                 setCustomerReferralSent(true);
-                                setTimeout(() => {
-                                    setShowCustomerReferralModal(false);
-                                }, 3000);
+                                setShowCustomerReferralModal(false);
                             }}
                             className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl text-center shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >

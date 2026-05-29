@@ -2218,8 +2218,7 @@ impl Agent {
 
             // Layered Termination Condition: Safety Refusal
             if stop_reason == "content_filter" || stop_reason == "safety" {
-                let term_cond = crate::types::TerminationCondition::SafetyRefusal(stop_reason.to_string());
-                let err_msg = term_cond.to_string();
+                let err_msg = "Terminal condition reached: Safety refusal. The model halted execution due to content safety policy.".to_string();
                 on_event(AgentEvent::TaskError { error: err_msg.clone() });
                 return Err(err_msg.into());
             }
@@ -2241,8 +2240,6 @@ impl Agent {
                 );
 
                 if decision.action == BudgetAction::Stop {
-                    let term_cond = crate::types::TerminationCondition::TokenBudgetExhausted(decision.budget);
-                    tracing::info!("{}", term_cond);
                     let msg = "I've reached my token budget for this task. Please upgrade your plan to unlock longer interactions!".to_string();
                     on_event(AgentEvent::TextChunk { content: msg.clone() });
                     on_event(AgentEvent::TaskComplete { content: msg.clone() });
@@ -2272,8 +2269,8 @@ impl Agent {
                 ]);
             }
 
+            // Terminal condition: no tool calls.
             if tool_calls.is_empty() {
-                tracing::info!("{}", crate::types::TerminationCondition::NoToolCalls);
                 let mut verification_manager = crate::verification_loops::VerificationManager::new();
                 if final_cfg.enable_computational_guides && !final_cfg.computational_guide_command.is_empty() {
                     verification_manager.add_computational(Arc::new(BashComputationalGuide { command: final_cfg.computational_guide_command.clone(), workspace_path: final_cfg.workspace_path.clone() }));
@@ -2357,8 +2354,6 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
-                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2559,8 +2554,6 @@ impl Agent {
                 if let Some(guard_cfg) = &final_cfg.guardrails {
                     if let Err(e) = guard_cfg.check_tool(&tc) {
                         on_event(AgentEvent::TaskError { error: e.clone() });
-                        let term_cond = crate::types::TerminationCondition::GuardrailTripwireFired(e.clone());
-                        tracing::info!("{}", term_cond);
                         return Err(e.into()); // Tripwire: halt the loop immediately
                     }
                 }
@@ -2925,8 +2918,7 @@ impl Agent {
         }
 
         // Hit max iterations.
-        let term_cond = crate::types::TerminationCondition::MaxTurnLimitExceeded(max_iterations);
-        let err_msg = term_cond.to_string();
+        let err_msg = format!("Terminal condition reached: max turn limit exceeded ({} iterations).", max_iterations);
         on_event(AgentEvent::TaskError { error: err_msg.clone() });
         return Err(err_msg.into());
     }
@@ -3072,7 +3064,7 @@ impl Agent {
         }
 
         if let Err(e) = Self::validate_schema(&args, &tool.parameters) {
-            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}", e)));
+            return Err(ToolError::LlmRecoverable(format!("Tool schema validation failed: {}. Please correct your tool arguments.", e)));
         }
 
         let mut modified_tc = tc.clone();

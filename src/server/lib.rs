@@ -1415,6 +1415,8 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
+            // Delegate the dependency validation to the TaskManager or Orchestrator logic
+            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
             
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
@@ -1506,16 +1508,13 @@ impl HubService for MyHubService {
         self.hub.register_agent(sub_agent);
         
         // Prompt injection checks
-        {
-            static INJECTION_RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-            let re = INJECTION_RE.get_or_init(|| regex::Regex::new(r"(?i)(SYSTEM:|\[INST\]|<\|im_start\|>|Ignore previous instructions)").unwrap());
-            if re.is_match(&req.instruction) {
-                return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
-            }
-            if re.is_match(&req.parent_thread_id) {
-                return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
-            }
+        if req.instruction.contains("SYSTEM:") || req.instruction.contains("\n\n") {
+            return Err(Status::invalid_argument("instruction contains forbidden prompt injection sequences"));
         }
+        if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
+            return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
+        }
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -1987,6 +1986,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2049,6 +2050,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let queue = crate::queue::SqliteTaskQueue::new(sqlite_pool.clone());
+            queue.init().await?;
+            std::sync::Arc::new(queue)
+        }
+    };
+    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
+    let dynamic_workflow_manager = std::sync::Arc::new(
+        crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
+            dynamic_workflow_queue,
+            dynamic_workflow_state_dir,
+        ),
+    );
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2406,6 +2426,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
@@ -3622,38 +3643,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <!-- Growth Loop: Interactive Trial Extension -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(234, 179, 8, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Extend Your Trial <span style="font-size: 12px; background: rgba(234, 179, 8, 0.1); color: #ca8a04; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Grow Faster</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have <strong style="color: var(--text-primary);"><span id="trial-days-left">14</span> days left</strong> in your free trial. Complete these quick tasks to earn more time.</p>
-
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🐦</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Connect Twitter</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-twitter" onclick="extendTrialWithTwitter()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Connect</button>
-                                </div>
-
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(168, 85, 247, 0.1); color: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">⭐</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Leave a Review</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-review" onclick="extendTrialWithReview()" style="background: #111827; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Review</button>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -3942,7 +3931,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <h1>Connect Custom Software</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -4331,7 +4320,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
+                            <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -5300,28 +5289,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             }
                         }
 
-                        function extendTrialWithTwitter() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-twitter');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Connected';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
-                        }
-
-                        function extendTrialWithReview() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-review');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Done';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
-                        }
-
                         async function generateDiscountShare() {
                             try {
                                 const response = await fetch('/api/v1/growth/discount_share/generate', {
@@ -6115,7 +6082,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">
