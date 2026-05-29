@@ -61,6 +61,7 @@ SERVER_RS_SRCS = [
     "//src/server/benchmarks:mod.rs",
     "//src/server/builder:api.rs",
     "//src/server/builder:builder_test.rs",
+    "//src/server/builder:edge.rs",
     "//src/server/builder:db.rs",
     "//src/server/builder:jobs.rs",
     "//src/server/builder:mod.rs",
