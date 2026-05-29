@@ -1,0 +1,11 @@
+--- page.test.tsx
++++ page.test.tsx
+@@ -95,6 +95,11 @@
+
++    // Verify it transitions to Step 2: Review Details
++    await waitFor(() => {
++      expect(screen.getByText("Review Details")).toBeInTheDocument();
++      expect(screen.getByDisplayValue("Maya Bakery")).toBeInTheDocument();
++    });
+
+     const continueButton = screen.getByRole('button', { name: /Continue/i });
