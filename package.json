@@ -7,8 +7,10 @@
     "@bufbuild/protoplugin": "^2.11.0",
     "@modelcontextprotocol/server-github": "^0.6.2",
     "@types/pg": "^8.20.0",
+    "@types/react-dom": "^19.2.3",
     "google-protobuf": "^3.21.4",
     "pg": "^8.21.0",
+    "react": "^19.2.5",
     "ts-proto": "^2.11.6",
     "zod": "^3.23.0"
   },
