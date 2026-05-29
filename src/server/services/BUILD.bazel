@@ -1,4 +1,5 @@
 load("@rules_rust//rust:defs.bzl", "rust_library", "rust_test")
+load("//bazel/rules:rust_sharded_test.bzl", "rust_sharded_test")
 
 exports_files(
     [
@@ -16,9 +17,6 @@ rust_library(
         "booking.rs",
         "mod.rs",
         "wizard.rs",
-        "//src/server/services/syndication:mod.rs",
-        "//src/server/services/syndication:mesh.rs",
-        "//src/server/services/syndication:adapter.rs",
         "//src/server/services/agent:department/mod.rs",
         "//src/server/services/agent:department/service.rs",
         "//src/server/services/agent:mod.rs",
@@ -76,6 +74,9 @@ rust_library(
         "//src/server/services/sync:power_sync_test.rs",
         "//src/server/services/sync:service.rs",
         "//src/server/services/sync:telemetry_sync.rs",
+        "//src/server/services/syndication:adapter.rs",
+        "//src/server/services/syndication:mesh.rs",
+        "//src/server/services/syndication:mod.rs",
     ],
     crate_root = "bazel_lib.rs",
     edition = "2024",
@@ -84,7 +85,6 @@ rust_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
-        "//src/server:server_lib",
         "//src/agents/builtin:core",
         "//src/agents/builtin:ohc_builtin_agent_lib",
         "//src/proto:agent_prost",
@@ -99,6 +99,7 @@ rust_library(
         "//src/proto:mcp_proxy_prost",
         "//src/proto:mcp_proxy_tonic",
         "//src/proto:organization_prost",
+        "//src/server:server_lib",
         "//src/server/auth:server_auth",
         "//src/server/common:server_common",
         "//src/server/config:server_config",
@@ -116,12 +117,12 @@ rust_library(
         "//src/server/integrations/nats:server_integrations_nats",
         "//src/server/integrations/pubsub:server_integrations_pubsub",
         "//src/server/integrations/razorpay:server_integrations_razorpay",
+        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/integrations/sendgrid:server_integrations_sendgrid",
         "//src/server/integrations/shippo:server_integrations_shippo",
         "//src/server/integrations/task_scheduler:server_integrations_task_scheduler",
         "//src/server/integrations/twilio:server_integrations_twilio",
         "//src/server/integrations/zoom:server_integrations_zoom",
-        "//src/server/integrations/restic:server_integrations_restic",
         "//src/server/ohc:server_ohc",
         "//src/server/oidc:server_oidc",
         "//src/server/pricing:server_pricing",
@@ -173,13 +174,25 @@ rust_library(
 )
 
 rust_test(
-    name = "server_services_unit_test",
+    name = "server_services_unit_test_bin",
     size = "large",
     crate = ":server_services",
     edition = "2024",
     env = {
         "RUST_TEST_THREADS": "1",
     },
+    tags = ["manual"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+)
+
+rust_sharded_test(
+    name = "server_services_unit_test",
+    size = "large",
+    binary = ":server_services_unit_test_bin",
+    shard_count = 6,
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
