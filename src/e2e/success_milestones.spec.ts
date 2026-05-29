@@ -97,6 +97,17 @@ test.describe('Success Milestones Notifications', () => {
     }
 
     await expect(page.locator('text=🎉 100th Order!')).toBeVisible({ timeout: 10000 });
+
+    // Check for viral sharing options
+    await expect(page.locator('text=Share Your Success')).toBeVisible();
+
+    const whatsappShare = page.locator('a:has-text("Share to WhatsApp")');
+    await expect(whatsappShare).toBeVisible();
+    await expect(whatsappShare).toHaveAttribute('href', /wa\.me.*100th%20Order/);
+
+    const xShare = page.locator('a:has-text("Share to X")');
+    await expect(xShare).toBeVisible();
+    await expect(xShare).toHaveAttribute('href', /twitter\.com.*100th%20Order/);
   });
 
   test('should verify 100 visitors milestone', async ({ page }) => {

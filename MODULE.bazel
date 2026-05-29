@@ -25,6 +25,22 @@ single_version_override(
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.5.1.2", dev_dependency = True)
 
+python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+python.toolchain(
+    python_version = "3.12",
+)
+use_repo(python, "python_3_12")
+
+pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+pip.parse(
+    hub_name = "docs_pip",
+    python_version = "3.12",
+    requirements_lock = "//:docs/requirements.txt",
+)
+use_repo(pip, "docs_pip")
+
+register_toolchains("@python_3_12//:all")
+
 tauri_android_sdk_repository = use_repo_rule("//bazel/rules:android_sdk_repository.bzl", "tauri_android_sdk_repository")
 
 tauri_android_sdk_repository(
