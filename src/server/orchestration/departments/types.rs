@@ -59,9 +59,7 @@ pub struct DepartmentEvent {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActionRisk {
-    #[serde(rename = "LOW")]
     AutoExecute,
-    #[serde(rename = "HIGH")]
     DraftForReview,
 }
 
@@ -99,8 +97,7 @@ pub struct ApprovalRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ApprovalStatus {
-    Draft,
-    Executed,
+    PendingApproval,
     Approved,
     Rejected,
 }

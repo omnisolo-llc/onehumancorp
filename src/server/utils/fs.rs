@@ -59,7 +59,7 @@ mod tests {
             .take(10)
             .map(char::from)
             .collect();
-        let filename = format!("/tmp/test_atomic_write_{}.txt", random_suffix);
+        let filename = std::env::temp_dir().join(format!("test_atomic_write_{}.txt", random_suffix));
         let data = b"hello world";
         let _mode = 0o644;
 

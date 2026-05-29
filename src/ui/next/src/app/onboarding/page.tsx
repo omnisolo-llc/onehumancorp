@@ -26,9 +26,71 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+  // Read state from server on mount
   useEffect(() => {
     setIsLoaded(true);
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    fetch('/api/onboarding/state', {
+      headers: { 'X-Tenant-ID': tenantId, 'X-User-ID': userId }
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data && data.wizardState) {
+        if (data.wizardState.step) setStep(data.wizardState.step);
+        if (data.wizardState.chatStep) setChatStep(data.wizardState.chatStep);
+        if (data.wizardState.businessDescription) setBusinessDescription(data.wizardState.businessDescription);
+        if (data.wizardState.businessName) setBusinessName(data.wizardState.businessName);
+        if (data.wizardState.whatYouSell) setWhatYouSell(data.wizardState.whatYouSell);
+        if (data.wizardState.location) setLocation(data.wizardState.location);
+        if (data.wizardState.businessType) setBusinessType(data.wizardState.businessType);
+        if (data.wizardState.categories) setCategories(data.wizardState.categories);
+        if (data.wizardState.websiteTemplate) setWebsiteTemplate(data.wizardState.websiteTemplate);
+        if (data.wizardState.firstProductName) setFirstProductName(data.wizardState.firstProductName);
+        if (data.wizardState.firstProductPrice) setFirstProductPrice(data.wizardState.firstProductPrice);
+      }
+    })
+    .catch(err => console.error('Failed to load onboarding state', err));
   }, []);
+
+  // Sync state to backend
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    // Only save if we are past the initial state
+    if (step === 1 && chatStep === 1 && !businessName) return;
+
+    const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+    const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+    const wizardState = {
+      step,
+      chatStep,
+      businessDescription,
+      businessName,
+      whatYouSell,
+      location,
+      businessType,
+      categories,
+      websiteTemplate,
+      firstProductName,
+      firstProductPrice
+    };
+
+    const timer = setTimeout(() => {
+      fetch('/api/onboarding/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': userId },
+        body: JSON.stringify({ wizardState })
+      }).catch(err => console.error('Failed to sync onboarding state', err));
+    }, 1000); // debounce 1s
+
+    return () => clearTimeout(timer);
+  }, [
+    step, chatStep, businessDescription, businessName, whatYouSell, location,
+    businessType, categories, websiteTemplate, firstProductName, firstProductPrice, isLoaded
+  ]);
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -126,7 +188,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
@@ -159,12 +221,6 @@ export default function OnboardingWizard() {
                         type="text"
                         value={businessName}
                         onChange={(e) => setBusinessName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && businessName.trim()) {
-                            e.preventDefault();
-                            setChatStep(2);
-                          }
-                        }}
                         placeholder="e.g. Maya's Custom Cakes"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -174,8 +230,8 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(2)}
-                      disabled={businessName.trim().length < 3}
-                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!businessName.trim()}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -198,12 +254,6 @@ export default function OnboardingWizard() {
                       <textarea
                         value={whatYouSell}
                         onChange={(e) => setWhatYouSell(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey && whatYouSell.trim()) {
-                            e.preventDefault();
-                            setChatStep(3);
-                          }
-                        }}
                         placeholder="e.g. I bake custom vegan cakes for weddings and parties..."
                         className="w-full p-4 rounded-[8px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] focus:ring-2 focus:ring-[#0066FF]/30 outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] h-32 resize-none transition-all shadow-inner"
                       />
@@ -213,8 +263,8 @@ export default function OnboardingWizard() {
                   <div className="mt-auto pt-6">
                     <button
                       onClick={() => setChatStep(3)}
-                      disabled={whatYouSell.trim().length < 5}
-                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={!whatYouSell.trim()}
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                     </button>
@@ -238,12 +288,6 @@ export default function OnboardingWizard() {
                         type="text"
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && location.trim() && !isLoading) {
-                            e.preventDefault();
-                            handleIntake();
-                          }
-                        }}
                         placeholder="e.g. Portland, OR"
                         className="w-full p-4 rounded-[12px] border border-white/50 dark:border-white/10 focus:border-[#0066FF] outline-none mac-glass-container text-[#1D1D1F] dark:text-[#F5F5F7] text-lg transition-all shadow-inner"
                       />
@@ -254,7 +298,7 @@ export default function OnboardingWizard() {
                     <button
                       onClick={handleIntake}
                       disabled={!location.trim() || isLoading}
-                      className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isLoading ? 'Analyzing...' : 'Generate My Business'}
                     </button>
@@ -336,7 +380,7 @@ export default function OnboardingWizard() {
                     setStep(3);
                   }}
                   disabled={!businessName.trim() || !businessType.trim() || categories.length === 0 || !firstProductName.trim() || !firstProductPrice.trim()}
-                  className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
                 </button>
@@ -417,7 +461,7 @@ export default function OnboardingWizard() {
                 <button
                   onClick={handleStartOnboarding}
                   disabled={isLoading}
-                  className="w-full bg-[#0066FF] text-white p-4 mac-button font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-[#0066FF] text-white p-4 rounded-[8px] font-bold shadow-md hover:bg-[#0052cc] active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Launch Store
                 </button>
@@ -463,13 +507,13 @@ export default function OnboardingWizard() {
 
                 <a
                   href="/dashboard"
-                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 mac-button font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98]"
+                  className="block w-full bg-[#1D1D1F] dark:bg-white text-white dark:text-[#1D1D1F] p-4 rounded-[8px] font-bold shadow-md hover:bg-black dark:hover:bg-gray-200 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Go to Dashboard
                 </a>
                 <a
                   href="/builder"
-                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 mac-button font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98]"
+                  className="block w-full bg-white/70 dark:bg-white/10 backdrop-blur-md text-[#1D1D1F] dark:text-[#F5F5F7] border border-white/50 dark:border-white/10 p-4 rounded-[8px] font-bold shadow-sm hover:bg-white/90 dark:hover:bg-white/20 active:scale-[0.98] transition-all duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]"
                 >
                   Preview Storefront
                 </a>
