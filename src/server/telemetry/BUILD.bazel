@@ -18,6 +18,7 @@ rust_library(
         "@crates//:tracing",
         "@crates//:opentelemetry",
         "@crates//:tokio",
+        "@crates//:regex",
     ],
 )
 

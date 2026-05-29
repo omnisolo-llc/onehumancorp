@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_pii_logging_statements() {
+    fn test_pii_leakage_in_logs() {
         use walkdir::WalkDir;
         use std::fs;
         use std::env;
@@ -399,6 +399,7 @@ mod tests {
                                current_log_block.contains("email") ||
                                current_log_block.contains("password") ||
                                current_log_block.contains("pii") ||
+                               current_log_block.contains("ssn") ||
                                current_log_block.contains("api_key") ||
                                current_log_block.contains("secret_key") ||
                                current_log_block.contains("credit") ||
