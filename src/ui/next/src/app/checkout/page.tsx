@@ -175,6 +175,26 @@ export default function CheckoutPage() {
               >
                 Continue to Dashboard
               </button>
+
+              <div className="relative py-2">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
+              </div>
+
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+                <div className="flex items-start gap-3">
+                  <div className="text-2xl mt-1">🚀</div>
+                  <div>
+                    <h3 className="text-sm font-bold text-indigo-900 mb-1">Start Your Own Business</h3>
+                    <p className="text-xs text-indigo-700 mb-3 leading-relaxed">Join thousands of merchants. Build your free store in 30 seconds.</p>
+                    <button
+                      onClick={() => router.push('/onboarding')}
+                      className="w-full px-3 py-2 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+                    >
+                      Build Your Free Store
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
