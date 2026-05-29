@@ -340,16 +340,16 @@ fn compress_data(data: &[u8]) -> Result<Vec<u8>, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(data).map_err(|e| e.to_string())?;
     let compressed = encoder.finish().map_err(|e| e.to_string())?;
-    
+
     use base64::engine::general_purpose::STANDARD;
     use base64::Engine;
-    
+
     let b64 = STANDARD.encode(&compressed);
     let mut result = Vec::new();
     result.push(b'"');
     result.extend_from_slice(b64.as_bytes());
     result.push(b'"');
-    
+
     Ok(result)
 }
 
@@ -370,7 +370,7 @@ fn decompress_data(data: &[u8]) -> Result<Vec<u8>, String> {
         Ok(d) => d,
         Err(_) => return Ok(data.to_vec()), // Fallback for raw JSON data
     };
-    
+
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
     if let Err(_) = decoder.read_to_end(&mut decompressed) {
