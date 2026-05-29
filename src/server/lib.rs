@@ -557,9 +557,11 @@ pub async fn advisory_insights_handler(
     let active_orders = active_orders_res.unwrap_or(0);
 
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
@@ -636,9 +638,11 @@ async fn draft_reply_handler(
         "Write one concise, warm customer-service reply. Business context: {} Customer message: {}",
         business_context, customer_message
     );
+    let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
-    match client.reason(&prompt).await {
+    match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
         Err(e) => {
             tracing::error!("MiniMax draft reply failed: {}", e);
@@ -1465,8 +1469,9 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
         
+        let prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
+        match client.reason(&prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
@@ -1512,7 +1517,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -3619,38 +3624,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                         </div>
 
-                        <!-- Growth Loop: Interactive Trial Extension -->
-                        <div class="card glass" style="margin-top: 24px; border: 1px solid rgba(234, 179, 8, 0.3);">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                                <h3 style="margin: 0; color: var(--text-primary);">Extend Your Trial <span style="font-size: 12px; background: rgba(234, 179, 8, 0.1); color: #ca8a04; padding: 4px 8px; border-radius: 99px; margin-left: 8px; font-weight: normal; vertical-align: middle;">Grow Faster</span></h3>
-                            </div>
-                            <p style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">You have <strong style="color: var(--text-primary);"><span id="trial-days-left">14</span> days left</strong> in your free trial. Complete these quick tasks to earn more time.</p>
-
-                            <div style="display: flex; flex-direction: column; gap: 12px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center;">🐦</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Connect Twitter</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-twitter" onclick="extendTrialWithTwitter()" style="background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Connect</button>
-                                </div>
-
-                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div style="width: 32px; height: 32px; background: rgba(168, 85, 247, 0.1); color: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center;">⭐</div>
-                                        <div>
-                                            <h4 style="margin: 0; font-size: 14px;">Leave a Review</h4>
-                                            <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">+7 Days</p>
-                                        </div>
-                                    </div>
-                                    <button id="trial-btn-review" onclick="extendTrialWithReview()" style="background: #111827; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 12px; cursor: pointer;">Review</button>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="card glass" style="margin-top: 24px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
@@ -5295,28 +5268,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 btn.innerHTML = originalText;
                                 btn.disabled = false;
                             }
-                        }
-
-                        function extendTrialWithTwitter() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-twitter');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Connected';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
-                        }
-
-                        function extendTrialWithReview() {
-                            const daysEl = document.getElementById('trial-days-left');
-                            const btn = document.getElementById('trial-btn-review');
-                            const currentDays = parseInt(daysEl.innerText);
-                            daysEl.innerText = currentDays + 7;
-                            btn.innerText = 'Done';
-                            btn.disabled = true;
-                            btn.style.background = '#d1fae5';
-                            btn.style.color = '#047857';
                         }
 
                         async function generateDiscountShare() {
