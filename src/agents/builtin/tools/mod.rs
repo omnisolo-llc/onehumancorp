@@ -27,6 +27,7 @@ pub mod subagent;
 pub mod head;
 pub mod tail;
 pub mod hybrid_blob;
+pub mod restic;
 pub mod anthropic_memory;
 pub mod repo_map;
 pub mod lazy_load;
@@ -142,6 +143,7 @@ pub fn all_tools(
         recall::recall_observation_tool(observation_store),
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
+        restic::restic_tool(runner.clone()),
     ];
 
     if let Some(accessor) = memory_accessor {
