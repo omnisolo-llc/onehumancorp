@@ -67,6 +67,7 @@ pub mod benchmarks;
 pub use ::server_config as config;
 pub use ::server_common as common;
 pub use crate::proto as ohc;
+use crate::ohc::orchestration::*;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -1763,7 +1764,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
+    let resolver = std::sync::Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver);
+    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo, resolver);
     consolidation_worker.start();
 
     // Start Competitor Audit Worker
@@ -2784,10 +2786,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         #setup-screen > div.hidden {
                             opacity: 0;
-                            transform: translateY(10px);
                             pointer-events: none;
-                            position: absolute;
+                            transform: translateY(10px);
                             visibility: hidden;
+                            position: absolute;
                         }
 
                         @media (max-width: 375px) {
@@ -3002,6 +3004,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             }
             #setup-screen h1 {
                 font-size: 24px;
+            }
+
+            #setup-screen .step-container {
+                transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                opacity: 1;
+                visibility: visible;
             }
             #setup-screen button, #setup-screen input {
                 width: 100%;
@@ -4489,10 +4497,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 // Restore screen visually without calling nextStep to avoid validation
                                 if (currentStep && currentStep !== 1) {
-                                    document.getElementById('step-1').style.display = 'none';
+                                    const step1 = document.getElementById('step-1');
+                                    if (step1) {
+                                        step1.classList.add('hidden');
+                                        step1.style.display = 'none';
+                                    }
                                     const currentStepEl = document.getElementById(`step-${currentStep}`);
                                     if (currentStepEl) {
-                                        currentStepEl.style.display = 'block';
+                                        currentStepEl.style.display = '';
                                         currentStepEl.classList.remove('hidden');
                                     }
                                 }
@@ -4890,9 +4902,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
+                            if (title === '🎉 10th Order!' || title === '🎉 100th Order!') {
                                 const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
+                                const mName = title === '🎉 10th Order!' ? '10th' : '100th';
+                                const shareText = encodeURIComponent('I just reached my ' + mName + ' Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
                                 htmlBody += '<div style="margin-top: 15px;">' +
                                     '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
                                     '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
@@ -5301,7 +5314,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.classList.add('hidden');
-                                    d.style.display = 'none'; // Fallback for old e2e logic
                                     setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
@@ -5309,13 +5321,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
-                                next.style.display = 'block'; // Fallback for old e2e logic
+                                next.style.display = ''; // Fallback for old e2e logic
                                 setTimeout(() => next.classList.remove('hidden'), 10);
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
-                                    if (child.style.display === 'none') child.style.display = 'block';
+                                    if (child.style.display === 'none') child.style.display = '';
                                 });
                             }
 
