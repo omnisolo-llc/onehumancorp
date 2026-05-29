@@ -220,12 +220,12 @@ export default function WebsiteBuilderPage() {
                 <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`flex-[2] p-4 mac-button font-bold font-outfit text-lg ${
                       bio.trim().length > 5
                         ? "text-white shadow-md active:scale-[0.98]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"
                     }`}
-                    style={{ borderRadius: '8px', background: (bio.trim().length > 5) ? '#0071E3' : '' }}
+                    style={{ background: (bio.trim().length > 5) ? '#0071E3' : '' }}
                     onClick={handleGenerate}
                     disabled={bio.trim().length <= 5}
                   >
@@ -267,8 +267,7 @@ export default function WebsiteBuilderPage() {
           </div>
 
           <button
-            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] transition-all hover:bg-gray-200"
-            style={{ borderRadius: '8px' }}
+            className="w-full bg-gray-100 text-gray-800 dark:text-[#f5f5f7] font-bold p-4 active:scale-[0.98] mac-button hover:bg-gray-200"
             onClick={() => updateStatus("idle")}
           >
             Go to Dashboard
@@ -325,8 +324,7 @@ export default function WebsiteBuilderPage() {
           <WithTooltip id="launch-btn-tooltip" defaultText="Launch your storefront immediately to a live URL.">
             <button
               id="launch-btn"
-              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] transition-all flex justify-center items-center gap-2"
-              style={{ borderRadius: '8px' }}
+              className="w-full bg-blue-600 text-white p-4 font-bold shadow-lg hover:bg-blue-700 active:scale-[0.98] mac-button flex justify-center items-center gap-2"
               onClick={handleLaunch}
             >
               <span>1-Tap Launch</span>
