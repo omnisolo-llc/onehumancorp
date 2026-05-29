@@ -9,6 +9,7 @@ use super::permissions::PermissionEvaluator;
 use super::wrapper::BashWrapper;
 use crate::telemetry::ViolationStore;
 
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 pub struct SandboxPolicy {
     #[serde(default)]
@@ -20,12 +21,15 @@ pub struct SandboxPolicy {
     #[serde(default)]
     pub blocked_domains: Vec<String>,
     #[serde(default)]
+    pub allowed_domains: Vec<String>,
+    #[serde(default)]
     pub seccomp_fd: Option<i32>,
     #[serde(default)]
     pub socat_socket_path: Option<String>,
     #[serde(default)]
     pub socat_proxy_port: Option<u16>,
 }
+
 
 #[async_trait]
 pub trait SandboxAdapter: Send + Sync {
@@ -38,15 +42,21 @@ pub struct SandboxManager {
     evaluator: PermissionEvaluator,
     wrapper: BashWrapper,
     violation_store: Arc<ViolationStore>,
+    policy: SandboxPolicy,
 }
 
 impl SandboxManager {
+    pub fn get_policy(&self) -> SandboxPolicy {
+        self.policy.clone()
+    }
+
     pub fn new(pool: Option<PgPool>) -> Self {
         let violation_store = Arc::new(ViolationStore::new(pool.clone()));
         SandboxManager {
             evaluator: PermissionEvaluator::new(),
             wrapper: BashWrapper::new(),
             violation_store,
+            policy: SandboxPolicy::default(),
         }
     }
 }
@@ -87,7 +97,8 @@ impl SandboxAdapter for SandboxManager {
             .map_err(|e| format!("Invalid policy JSON: {}", e))?;
 
         self.evaluator.update_policy(policy.clone());
-        self.wrapper.update_policy(policy);
+        self.wrapper.update_policy(policy.clone());
+        self.policy = policy;
 
         Ok(())
     }

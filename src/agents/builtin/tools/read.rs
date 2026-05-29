@@ -29,8 +29,6 @@ impl ToolExecutor for ReadExecutor {
         let mut line_buffer = String::new();
         let mut result_lines = Vec::new();
         let mut line_count = 0;
-        let mut total_bytes = 0;
-        let max_bytes = 16 * 1024; // 16KB JIT retrieval limit
 
         let req_start = args["start_line"].as_u64().map(|n| n.saturating_sub(1) as usize);
         let req_end = args["end_line"].as_u64().map(|n| n as usize);
@@ -68,12 +66,6 @@ impl ToolExecutor for ReadExecutor {
                 break;
             }
             if line_count >= start && line_count < end {
-                total_bytes += bytes;
-                if total_bytes > max_bytes {
-                    return Err(ToolError::LlmRecoverable(
-                        "JIT Retrieval Error: Requested file portion is too large (> 16KB). Never load full files. Please use start_line and end_line to paginate.".to_string()
-                    ));
-                }
                 result_lines.push(line_buffer.trim_end_matches('\n').trim_end_matches('\r').to_string());
             }
             line_count += 1;
@@ -191,37 +183,6 @@ mod tests {
         });
         let result3 = executor.execute(args3).await;
         assert!(result3.is_ok());
-
-        let _ = std::fs::remove_file(&test_file);
-    }
-}
-
-#[cfg(test)]
-mod additional_tests {
-    use super::*;
-    use std::io::Write;
-    use serde_json::json;
-
-    #[tokio::test]
-    async fn test_read_jit_retrieval_limit_bytes() {
-        let temp_dir = std::env::temp_dir();
-        let test_file = temp_dir.join(format!("read_jit_bytes_test_{}.txt", uuid::Uuid::new_v4()));
-
-        let mut file = std::fs::File::create(&test_file).unwrap();
-        // Generate a 20KB line
-        writeln!(file, "{}", "a".repeat(20000)).unwrap();
-
-        let executor = ReadExecutor { working_dir: None };
-
-        let args = json!({ "path": test_file.to_string_lossy().to_string() });
-        let result = executor.execute(args).await;
-
-        assert!(result.is_err());
-        if let Err(ToolError::LlmRecoverable(msg)) = result {
-            assert!(msg.contains("JIT Retrieval Error: Requested file portion is too large (> 16KB)"));
-        } else {
-            panic!("Expected JIT Retrieval Error bytes");
-        }
 
         let _ = std::fs::remove_file(&test_file);
     }

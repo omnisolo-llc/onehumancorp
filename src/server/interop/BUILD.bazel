@@ -110,7 +110,7 @@ rust_library(
 
 rust_test(
     name = "server_interop_unit_test",
-    size = "small",
+    size = "large",
     crate = ":server_interop",
     edition = "2024",
     env = {

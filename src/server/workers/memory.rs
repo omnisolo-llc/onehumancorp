@@ -8,16 +8,14 @@ pub struct MemoryConsolidationWorker {
     pub repository: Arc<VectorRepository>,
     pub poll_interval: std::time::Duration,
     pub prune_threshold_days: i64,
-    pub resolver: Arc<dyn ohc_builtin_agent::memory_store::ConflictResolver>,
 }
 
 impl MemoryConsolidationWorker {
-    pub fn new(repository: Arc<VectorRepository>, resolver: Arc<dyn ohc_builtin_agent::memory_store::ConflictResolver>) -> Self {
+    pub fn new(repository: Arc<VectorRepository>) -> Self {
         Self {
             repository,
             poll_interval: std::time::Duration::from_secs(3600), // 1 hour
             prune_threshold_days: 180, // Default to 180 days
-            resolver,
         }
     }
 
@@ -26,20 +24,6 @@ impl MemoryConsolidationWorker {
         let interval_duration = self.poll_interval;
         let prune_threshold_days = self.prune_threshold_days;
         tokio::spawn(async move {
-            struct WorkerConflictResolver {
-                client: crate::minimax::LocalLLMClient,
-            }
-            #[async_trait::async_trait]
-            impl ohc_builtin_agent::memory_store::ConflictResolver for WorkerConflictResolver {
-                async fn merge_conflicts(&self, old_content: String, new_content: String) -> Result<(String, Vec<f32>), String> {
-                    let prompt = format!("Merge the following two context items (Old vs New). Keep the newer information as the source of truth.\n\nOld: {}\n\nNew: {}\n\nReturn only the merged summary.", old_content, new_content);
-                    let merged = self.client.reason(&prompt).await.map_err(|e| e.to_string())?;
-                    let embedding = self.client.generate_embedding(&merged).await.map_err(|e| e.to_string())?;
-                    Ok((merged, embedding))
-                }
-            }
-            let resolver = WorkerConflictResolver { client: crate::minimax::LocalLLMClient::new() };
-
             let mut interval = tokio::time::interval(interval_duration);
             loop {
                 interval.tick().await;
@@ -47,7 +31,7 @@ impl MemoryConsolidationWorker {
                 if let Err(e) = repository.prune_stale(older_than).await {
                     tracing::error!("Consolidation Worker: Failed to prune stale context: {}", e);
                 }
-                if let Err(e) = repository.auto_resolve_conflicts(&resolver).await {
+                if let Err(e) = repository.auto_resolve_conflicts().await {
                     tracing::error!("Consolidation Worker: Failed to resolve memory conflicts: {}", e);
                 }
             }
@@ -68,7 +52,7 @@ mod tests {
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-        let worker = MemoryConsolidationWorker::new(repo, Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver));
+        let worker = MemoryConsolidationWorker::new(repo);
 
         worker.start();
 
@@ -86,7 +70,7 @@ mod tests {
         let pool = SqlitePoolOptions::new().connect_with(conn_opts).await.unwrap();
 
         let repo = Arc::new(VectorRepository::new_sqlite(pool));
-        let worker = MemoryConsolidationWorker::new(repo, Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver));
+        let worker = MemoryConsolidationWorker::new(repo);
         assert_eq!(worker.poll_interval.as_secs(), 3600);
 }
     #[tokio::test]
@@ -141,7 +125,7 @@ mod tests {
         };
         repo.upsert(&stale_record).await.expect("Failed to upsert stale record");
 
-        let mut worker = MemoryConsolidationWorker::new(repo.clone(), Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver));
+        let mut worker = MemoryConsolidationWorker::new(repo.clone());
         worker.poll_interval = std::time::Duration::from_millis(10); // Fast interval for testing
         worker.start();
 
@@ -242,7 +226,7 @@ mod tests {
         repo.upsert(&conflict_loser).await.unwrap();
         repo.upsert(&conflict_winner).await.unwrap();
 
-        let mut worker = MemoryConsolidationWorker::new(repo.clone(), Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver));
+        let mut worker = MemoryConsolidationWorker::new(repo.clone());
         worker.poll_interval = std::time::Duration::from_millis(10);
         worker.start();
 

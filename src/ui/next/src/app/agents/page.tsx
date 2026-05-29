@@ -179,7 +179,7 @@ export default function AgentsPage() {
                         <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-md uppercase tracking-wide">
                           {item.department}
                         </span>
-                        <span className="text-xs text-gray-400 font-medium">{item.status === "Approved" ? "Approved" : item.status === "Rejected" ? "Rejected" : item.status === "Executed" ? "Executed" : "Draft"}</span>
+                        <span className="text-xs text-gray-400 font-medium">{item.status === "Approved" ? "Approved" : item.status === "Rejected" ? "Rejected" : "Draft"}</span>
                       </div>
                       <p className="text-gray-800 text-sm font-medium leading-relaxed">
                         {item.description}

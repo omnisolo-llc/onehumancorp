@@ -200,9 +200,6 @@ impl MinimaxClient {
             return Box::pin(tokio_stream::wrappers::ReceiverStream::new(rx));
         }
 
-        let cache = self.cache.clone();
-        let prompt_clone = prompt.to_string();
-
         tokio::spawn(async move {
             let client = reqwest::Client::new();
             let request_body = MinimaxRequest {
@@ -227,7 +224,6 @@ impl MinimaxClient {
                     if resp.status().is_success() {
                         let mut stream = resp.bytes_stream();
                         use tokio_stream::StreamExt;
-                        let mut full_response = String::new();
                         while let Some(chunk_res) = stream.next().await {
                             match chunk_res {
                                 Ok(chunk) => {
@@ -238,13 +234,9 @@ impl MinimaxClient {
                                     for line in text.lines() {
                                         if line.starts_with("data: ") {
                                             let json_str = &line[6..];
-                                            if json_str == "[DONE]" {
-                                                cache.set(&prompt_clone, &full_response, prompt_clone.len() / 4 + full_response.len() / 4);
-                                                break;
-                                            }
+                                            if json_str == "[DONE]" { break; }
                                             if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
                                                 if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
-                                                    full_response.push_str(content);
                                                     let _ = tx.send(Ok(content.to_string())).await;
                                                 }
                                             }

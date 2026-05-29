@@ -1,8 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_binary")
-load("@docs_pip//:requirements.bzl", "all_requirements")
 load("@gazelle//:def.bzl", "gazelle")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
@@ -108,36 +106,28 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-py_binary(
+sh_binary(
     name = "docs_build",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["build"],
-    data = [
-        ":docs_srcs",
-    ],
-    main = "docs/mkdocs_runner.py",
+    data = [":docs_srcs"],
     tags = ["manual"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = all_requirements,
 )
 
-py_binary(
+sh_binary(
     name = "docs_serve",
-    srcs = ["docs/mkdocs_runner.py"],
+    srcs = ["docs/mkdocs_via_bazel.sh"],
     args = ["serve"],
-    data = [
-        ":docs_srcs",
-    ],
-    main = "docs/mkdocs_runner.py",
+    data = [":docs_srcs"],
     tags = ["manual"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
     }),
-    deps = all_requirements,
 )
 
 sh_binary(

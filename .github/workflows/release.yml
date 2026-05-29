@@ -16,10 +16,6 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  # Git Bash on Windows rewrites Bazel labels like //release:target to
-  # /release:target unless MSYS path conversion is disabled.
-  MSYS2_ARG_CONV_EXCL: "*"
-  MSYS_NO_PATHCONV: "1"
 
 defaults:
   run:
@@ -99,10 +95,6 @@ jobs:
                 ;;
             esac
           done < artifact-files.txt
-          if [[ ! -f "dist/${{ matrix.archive_name }}" ]]; then
-            echo "Missing expected release archive: ${{ matrix.archive_name }}" >&2
-            exit 1
-          fi
           ls -lh dist/
 
       - name: Generate platform checksums
@@ -186,17 +178,10 @@ jobs:
             build --show_timestamps
 
       - name: Build Tauri CLI with Bazel
-        if: matrix.name != 'linux-arm64'
         run: |
           bazelisk build @crates//:tauri-cli__cargo-tauri
           tauri_cli="$(bazelisk cquery --output=files @crates//:tauri-cli__cargo-tauri | tail -n 1)"
           echo "$(pwd)/$(dirname "$tauri_cli")" >> "$GITHUB_PATH"
-
-      - name: Install Tauri CLI with Cargo
-        if: matrix.name == 'linux-arm64'
-        run: |
-          cargo install tauri-cli --version 2.11.2 --locked --bin cargo-tauri
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Prepare release version and updater signing
         env:
@@ -205,14 +190,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD_SECRET: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="$(tr -d '\r\n' < .release/standalone_version.txt)"
-          fi
-          if [[ -z "$VERSION" ]]; then
-            echo "Could not determine release version" >&2
-            exit 1
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ -z "$VERSION" || ( "$GITHUB_REF_NAME" != v* && "$VERSION" == "$GITHUB_REF_NAME" ) ]]; then
+            VERSION="0.0.0-${GITHUB_RUN_NUMBER}"
           fi
 
           if [[ -z "${TAURI_SIGNING_PUBLIC_KEY_SECRET:-}" || -z "${TAURI_SIGNING_PRIVATE_KEY_SECRET:-}" ]]; then

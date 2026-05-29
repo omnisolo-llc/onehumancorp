@@ -144,7 +144,7 @@ export default function ApprovalInbox({
                     {req.action_risk ? req.action_risk.charAt(0).toUpperCase() + req.action_risk.slice(1).toLowerCase() : 'Unknown'} Risk
                   </span>
                   <span className="text-xs text-gray-400 font-medium">
-                    {req.status === "Approved" ? "Approved" : req.status === "Rejected" ? "Rejected" : req.status === "Executed" ? "Executed" : "Draft"}
+                    {req.status}
                   </span>
                 </div>
 
