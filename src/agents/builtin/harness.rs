@@ -911,7 +911,7 @@ mod tests {
         // Docker backend is no longer a mock, we skip evaluating its exact string output since docker might not be available in all test runners
         let docker_res = manager.execute_with_policy(command, None, BackendType::Docker).await;
         // Just verify it attempts execution.
-        if let Ok(res) = docker_res {
+        if let Ok(_res) = docker_res {
             // If docker is available, it might succeed or fail depending on setup.
         }
 

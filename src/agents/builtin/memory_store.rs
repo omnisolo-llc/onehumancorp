@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
-use async_trait::async_trait;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct EmbeddingRecord {

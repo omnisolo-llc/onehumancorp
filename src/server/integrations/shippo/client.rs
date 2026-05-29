@@ -4,6 +4,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 struct ShippoRate {
+    #[allow(dead_code)]
     object_id: String,
     provider: String,
     amount: String,
