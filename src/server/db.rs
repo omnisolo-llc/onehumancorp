@@ -902,7 +902,7 @@ pub async fn insert_autodream_memory(
     pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), Box<dyn std::error::Error>> {
         let res: Result<(), Box<dyn std::error::Error>> = match &self.store {
             DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
+                let query_result = sqlx::query(
                     "UPDATE agent_missions
                      SET status = 'blocked',
                          mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
@@ -912,29 +912,36 @@ pub async fn insert_autodream_memory(
                 .bind(blockers)
                 .bind(mission_id)
                 .execute(sqlite_pool)
-                .await
-                .map(|_| ())
-                .map_err(|e| e.into())
+                .await;
+
+                query_result.map(|_| ()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
             },
             DbStore::Postgres => {
-                let perform_update = async {
-                    let mut tx = self.pool.begin().await?;
-                    let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
-                    sqlx::query(
-                        "UPDATE agent_missions
-                         SET status = 'blocked',
-                             mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
-                             updated_at = CURRENT_TIMESTAMP
-                         WHERE id = $2"
-                    )
-                    .bind(blockers)
-                    .bind(mission_id)
-                    .execute(&mut *tx)
-                    .await?;
-                    tx.commit().await?;
-                    Ok(())
-                };
-                perform_update.await
+                let tx_res = self.pool.begin().await;
+                match tx_res {
+                    Ok(mut tx) => {
+                        let _ = ::server_common::auth_utils::set_system_context(&mut *tx).await;
+                        let query_result = sqlx::query(
+                            "UPDATE agent_missions
+                             SET status = 'blocked',
+                                 mission_log = CASE WHEN mission_log IS NULL OR mission_log = '' THEN $1 ELSE mission_log || '\n' || $1 END,
+                                 updated_at = CURRENT_TIMESTAMP
+                             WHERE id = $2"
+                        )
+                        .bind(blockers)
+                        .bind(mission_id)
+                        .execute(&mut *tx)
+                        .await;
+
+                        match query_result {
+                            Ok(_) => {
+                                tx.commit().await.map(|_| ()).map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
+                            },
+                            Err(e) => Err(Box::new(e) as Box<dyn std::error::Error>),
+                        }
+                    },
+                    Err(e) => Err(Box::new(e) as Box<dyn std::error::Error>),
+                }
             }
         };
 
@@ -1254,6 +1261,8 @@ mod security_tests_final {
 
 #[cfg(test)]
 mod e2e_tenant_isolation_tests {
+    use super::*;
+
     #[tokio::test]
     async fn test_tenant_data_isolation() {
         if std::env::var("DATABASE_URL").is_err() {
