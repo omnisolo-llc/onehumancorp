@@ -315,19 +315,18 @@ export function HelpWidget() {
 
 // --- Scribe: Implementation of all 7 Required Features ---
 // This component aggregates the required documentation infrastructure
-import { TooltipProvider } from './TooltipRegistry';
-import { HelpChat } from './HelpChat';
-import { WalkthroughProvider } from './Walkthrough';
+import { TooltipProvider as ScribeTooltipProvider } from './TooltipRegistry';
+import { HelpChat as ScribeHelpChat } from './HelpChat';
 
 export function ScribeDocumentationSystem({ children }: { children: React.ReactNode }) {
   return (
-    <TooltipProvider>
+    <ScribeTooltipProvider>
 
         {children}
-        <HelpChat />
+        <ScribeHelpChat />
         <ScribeFloatingHelpCenter />
 
-    </TooltipProvider>
+    </ScribeTooltipProvider>
   );
 }
 
