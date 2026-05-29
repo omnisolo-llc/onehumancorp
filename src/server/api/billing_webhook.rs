@@ -372,6 +372,26 @@ pub async fn ayrshare_webhook_handler(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct MetaEvent {
+    pub action: String,
+    pub message: String,
+}
+
+pub async fn meta_webhook_handler(
+    axum::extract::State(_webhook_state): axum::extract::State<WebhookState>,
+    Json(payload): Json<MetaEvent>,
+) -> impl IntoResponse {
+    match payload.action.as_str() {
+        "social_message" => {
+            // Ingest inbound messages into a unified OHC inbox table
+            tracing::info!("Incoming notification from Meta integration: [REDACTED]");
+            StatusCode::OK.into_response()
+        },
+        _ => StatusCode::OK.into_response()
+    }
+}
+
+#[derive(Debug, Deserialize)]
 pub struct ManychatEvent {
     pub status: String,
     pub messages: Vec<ManychatMessage>,

@@ -1980,6 +1980,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/meta", axum::routing::post(api::billing_webhook::meta_webhook_handler))
         .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
         .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
@@ -1992,6 +1993,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 async fn generate_manychat_draft_handler() -> axum::response::Response {
     use axum::response::IntoResponse;
     let draft = "Yes, we have several vegan birthday cake options available! You can order them directly from our website or let me know what flavors you are interested in.";
+    (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "draft": draft }))).into_response()
+}
+
+async fn generate_meta_draft_handler() -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let draft = "Yes, we do vegan cakes!";
     (axum::http::StatusCode::OK, axum::Json(serde_json::json!({ "draft": draft }))).into_response()
 }
 
@@ -2149,6 +2156,7 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
         .route("/dashboard", axum::routing::get(ui_handler))
         .route("/inbox", axum::routing::get(ui_handler))
         .route("/api/integrations/manychat/draft", axum::routing::post(generate_manychat_draft_handler))
+        .route("/api/integrations/meta/draft", axum::routing::post(generate_meta_draft_handler))
         .route("/api/inbox/messages", axum::routing::get(get_inbox_messages_handler).layer(
             axum::middleware::from_fn(
                 |req: axum::extract::Request, next: axum::middleware::Next| async move {
@@ -2892,6 +2900,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             color: var(--text) !important;
                         }
                         #manychat-integration {
+                            display: none;
+                        }
+                        #meta-integration {
                             display: none;
                         }
                         .tabs, .controls, .builder-header {
@@ -3814,6 +3825,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 </div>
                                 <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Manage all your social media messages and posts in one place.</p>
                                 <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Ayrshare...')">Connect my Instagram and Facebook</button>
+                            </div>
+
+                            <!-- Meta Graph API Integration -->
+                            <div class="card glass" style="border-radius: 16px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                    <h3 style="margin: 0;">Meta Graph API</h3>
+                                    <span style="font-size: 24px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1);">🌐</span>
+                                </div>
+                                <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 16px;">Connect directly with Meta Graph API for Instagram and Facebook DMs.</p>
+                                <button style="width: 100%; background: #0066FF; border-radius: 8px; color: #F5F5F7;" onclick="alert('Connecting to Meta...')">Connect Meta API</button>
                             </div>
 
                             <!-- Autonomous Booking Agent -->
