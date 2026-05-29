@@ -29,21 +29,6 @@ export default function Dashboard() {
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
-  // Extract automated review request count from approvals
-  let unreviewedCount = 12; // Fallback
-  for (const a of (approvals || [])) {
-    if (a.payload) {
-        try {
-            let p = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
-            if (p.feature_type === 'automated_review_request' && p.count) {
-                unreviewedCount = p.count;
-            }
-        } catch (e) {
-            // ignore parse error
-        }
-    }
-  }
-
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
@@ -53,10 +38,6 @@ export default function Dashboard() {
   // Growth Loop: Referral Modal State
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false);
   const [showPaywallModal, setShowPaywallModal] = useState<boolean>(false);
-
-  // Growth Loop: Post-Purchase Social Share State
-  const [showSaleCelebration, setShowSaleCelebration] = useState<boolean>(true);
-  const [saleShareCopied, setSaleShareCopied] = useState<boolean>(false);
   const [showAddItemModal, setShowAddItemModal] = useState<boolean>(false);
   const [newItemType, setNewItemType] = useState<string>('product');
   const [showEmbedModal, setShowEmbedModal] = useState<boolean>(false);
@@ -261,9 +242,7 @@ export default function Dashboard() {
 
   const claimTrialExtension = () => {
     const tenant = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || 'DEFAULT' : 'DEFAULT';
-    const referralLink = `ohc://join?ref=${tenant}`;
-    const shareCardUrl = `https://ohc.store/share-card?url=${encodeURIComponent(referralLink)}&title=${encodeURIComponent('One Human Corp')}&description=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today.')}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ' + shareCardUrl)}`, '_blank');
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on One Human Corp! Start your own business today: ohc://join?ref=' + tenant)}`, '_blank');
     if (typeof localStorage !== 'undefined') {
         localStorage.setItem('has_pro', 'true');
     }
@@ -389,9 +368,6 @@ export default function Dashboard() {
              </Link>
              <Link href="/seasonal-promo" className="px-4 py-2 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700 transition-colors">
                Seasonal Promos ✨
-             </Link>
-             <Link href="/store-wrap" className="px-4 py-2 bg-gradient-to-r from-orange-400 to-pink-500 text-white rounded-md text-sm font-medium hover:from-orange-500 hover:to-pink-600 transition-colors shadow-sm">
-               Store Wrap-Up 🎁
              </Link>
              <Link href="/scribe-mission-track" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">Scribe Track</Link>
              <Link href="/agents" className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-md text-sm font-medium hover:bg-indigo-100 transition-colors border border-indigo-100 shadow-sm flex items-center gap-1">
@@ -676,12 +652,12 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have {unreviewedCount} recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">{unreviewedCount}</span> customers!
+                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
                     </div>
                 ) : (
                     <button
@@ -1026,56 +1002,6 @@ export default function Dashboard() {
                 </div>
             </div>
          </section>
-
-         {/* Growth Loop: Post-Purchase Social Share */}
-         {showSaleCelebration && (
-         <section className="mb-8 mt-8">
-            <div className="p-6 shadow-sm border rounded-[16px] flex flex-col md:flex-row gap-6 items-center justify-between" style={{ background: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)', borderColor: 'rgba(0,0,0,0.05)' }}>
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center text-3xl">
-                        🎉
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold font-outfit text-gray-900 mb-1">New Order Received!</h3>
-                        <p className="text-sm text-gray-800 font-medium">Alex just bought "Premium Coffee Beans" for $24.99</p>
-                    </div>
-                </div>
-                <div className="flex flex-col gap-2 w-full md:w-auto">
-                    <button
-                        onClick={() => {
-                            const message = `Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`;
-                            navigator.clipboard.writeText(message);
-                            setSaleShareCopied(true);
-                            setTimeout(() => setSaleShareCopied(false), 2000);
-                        }}
-                        className={`px-5 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all flex items-center justify-center gap-2 ${saleShareCopied ? 'bg-green-500 text-white' : 'bg-white text-gray-900 hover:bg-gray-50'}`}
-                    >
-                        {saleShareCopied ? (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                Copied!
-                            </>
-                        ) : (
-                            <>
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                Copy Share Message
-                            </>
-                        )}
-                    </button>
-                    <a
-                        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Just secured another amazing order for Premium Coffee Beans! 🎉 My business is growing fast. Launch your own store today: ohc://join?ref=${typeof localStorage !== 'undefined' ? localStorage.getItem('tenant') || 'my-store' : 'my-store'} ⚡ Powered by OHC`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-5 py-2.5 bg-[#1DA1F2] text-white rounded-xl text-sm font-bold shadow-md hover:bg-[#1a8cd8] transition-all flex items-center justify-center gap-2"
-                        onClick={() => setShowSaleCelebration(false)}
-                    >
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                        Share on X
-                    </a>
-                </div>
-            </div>
-         </section>
-         )}
 
          {/* Growth Loop: Milestone Celebration */}
          {showMilestoneBanner && (

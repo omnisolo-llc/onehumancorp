@@ -17,7 +17,7 @@ pub async fn bench_queue_latency() {
 
     let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
 
-    if database_url.starts_with("postgres") {
+    if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pool_res = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
             .connect(&database_url).await;
 
@@ -39,7 +39,7 @@ pub async fn bench_db_query_time() {
 
     // Cloud Mode (Postgres)
     // Only run if the database URL actually points to postgres, otherwise skip
-    if database_url.starts_with("postgres") {
+    if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let mut pg_times = Vec::new();
         for _ in 0..iterations {
@@ -71,7 +71,7 @@ pub async fn bench_api_response_time() {
     let (tx, _rx) = tokio::sync::mpsc::channel(100);
 
     // Cloud setup
-    if database_url.starts_with("postgres") {
+    if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
         let pg_pool = sqlx::postgres::PgPoolOptions::new().connect(&database_url).await.unwrap();
         let db_cloud = crate::db::DB { pool: pg_pool.clone(), store: crate::db::DbStore::Postgres };
         let hub_cloud = Arc::new(crate::hub::Hub::new(tx.clone(), db_cloud.pool.clone()));
@@ -228,7 +228,10 @@ pub async fn bench_dashboard_snapshot() {
     let res_mobile = dashboard_service.get_dashboard(req_mobile_t).await.unwrap().into_inner();
     let res_desktop = dashboard_service.get_dashboard(req_desktop_t).await.unwrap().into_inner();
 
+    println!("Mobile optimized meetings length: {}, desktop: {}", res_mobile.meetings.len(), res_desktop.meetings.len());
     if !res_mobile.meetings.is_empty() {
+        println!("Mobile meeting 0 transcript len: {}", res_mobile.meetings[0].transcript.len());
+        println!("Desktop meeting 0 transcript len: {}", res_desktop.meetings[0].transcript.len());
         assert_eq!(res_mobile.meetings[0].transcript.len(), 0, "Mobile payload optimization should clear transcripts");
         assert!(res_desktop.meetings[0].transcript.len() > 0, "Desktop payload should contain transcripts");
     }
@@ -329,7 +332,7 @@ mod tests {
         bench_queue("Memory_Stress", mem_queue).await;
 
         let database_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite::memory:".to_string());
-        if database_url.starts_with("postgres") {
+        if database_url != "sqlite::memory:" && database_url.starts_with("postgres") {
             if let Ok(pg_pool) = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).connect(&database_url).await {
                 let pg_queue = Arc::new(PostgresTaskQueue::new(pg_pool));
                 bench_queue("Postgres_Stress", pg_queue).await;
