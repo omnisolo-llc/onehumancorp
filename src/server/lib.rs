@@ -1406,6 +1406,8 @@ impl HubService for MyHubService {
                     filtered_deps.push(dep);
                 }
             }
+            // Delegate the dependency validation to the TaskManager or Orchestrator logic
+            // TaskManager checks cyclic dependencies internally in create_task_with_plan.
             
             self.hub.task_manager().create_task_with_plan(
                 req.organization_id.clone(),
