@@ -388,7 +388,13 @@ pub async fn manychat_webhook_handler(
     Json(payload): Json<ManychatEvent>,
 ) -> impl IntoResponse {
     match payload.status.as_str() {
-        "ok" => StatusCode::OK.into_response(),
+        "ok" => {
+            tracing::info!("Received Manychat webhook with {} messages", payload.messages.len());
+            // Here you would process the messages and send them to the Customer Success agent.
+            // A full implementation would enqueue a job or dispatch an event.
+            // See `src/server/api/agents/webhook.rs` for an example of handling inbound messages.
+            StatusCode::OK.into_response()
+        },
         _ => StatusCode::OK.into_response()
     }
 }
