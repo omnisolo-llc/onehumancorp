@@ -40,13 +40,23 @@ impl ToolExecutor for GrepExecutor {
         }
 
         // Just-in-Time (JIT) Retrieval Mechanic:
-        // Limit output
-        if results.len() > 500 {
-            results.truncate(500);
-            results.push("... (truncated)".to_string());
-        }
+        let max_bytes = 16 * 1024; // 16KB JIT retrieval limit
+        let mut final_result = String::new();
 
-        Ok(results.join("\n"))
+        if results.is_empty() {
+            return Ok("No matches found.".to_string());
+        }
+        for res in results {
+            if final_result.len() + res.len() > max_bytes {
+                final_result.push_str("\n... (truncated due to JIT byte limit)");
+                break;
+            }
+            if !final_result.is_empty() {
+                final_result.push('\n');
+            }
+            final_result.push_str(&res);
+        }
+        Ok(final_result)
     }
 }
 
@@ -187,4 +197,32 @@ mod tests {
 
         let _ = std::fs::remove_dir_all(&test_dir);
     }
+
+    #[tokio::test]
+    async fn test_grep_jit_retrieval_limit() {
+        let temp_dir = std::env::temp_dir();
+        let test_dir = temp_dir.join(format!("grep_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&test_dir).unwrap();
+
+        let test_file = test_dir.join("test.txt");
+        let mut file = std::fs::File::create(&test_file).unwrap();
+        use std::io::Write;
+        for _ in 0..500 {
+            writeln!(file, "{}", "match ".repeat(100)).unwrap();
+        }
+
+        let executor = GrepExecutor { working_dir: Some(test_dir.clone()) };
+
+        let args = serde_json::json!({
+            "pattern": "match",
+            "path": test_dir.to_string_lossy().to_string(),
+        });
+
+        let result = executor.execute(args).await.unwrap_or_else(|_| "".to_string());
+        assert!(result.contains("... (truncated due to JIT byte limit)"));
+        assert!(result.len() < 20000);
+
+        let _ = std::fs::remove_dir_all(&test_dir);
+    }
+
 }
