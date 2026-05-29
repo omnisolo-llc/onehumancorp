@@ -39,7 +39,7 @@ done
 # Resolve browsers path to absolute
 if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
   echo "[playwright] Original browsers path: $PLAYWRIGHT_BROWSERS_PATH"
-  
+
   # Resolve relative to runfiles root if it starts with ../
   if [[ "$PLAYWRIGHT_BROWSERS_PATH" == ../* ]]; then
       if [[ -L bazel-out ]]; then
@@ -52,7 +52,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
           fi
       fi
   fi
-  
+
   if [[ ! -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       ACTUAL_SHELL=$(find "$RUNFILES_ROOT" -name "headless_shell" -type f -executable 2>/dev/null | head -n 1)
       if [[ -n "$ACTUAL_SHELL" ]]; then
@@ -60,7 +60,7 @@ if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]]; then
           export PLAYWRIGHT_BROWSERS_PATH="$(dirname "$(dirname "$(dirname "$ACTUAL_SHELL_ABS")")")"
       fi
   fi
-  
+
   if [[ -d "$PLAYWRIGHT_BROWSERS_PATH" ]]; then
       export PLAYWRIGHT_BROWSERS_PATH="$(realpath "$PLAYWRIGHT_BROWSERS_PATH")"
   fi
@@ -136,7 +136,7 @@ if [[ ! -x "$PLAYWRIGHT_CLI" ]]; then
 fi
 
 # Check if Docker is available. If not, skip E2E tests gracefully.
-if ! docker info >/dev/null 2>&1 || ! docker run --rm hello-world >/dev/null 2>&1; then
+if ! docker info >/dev/null 2>&1; then
   echo "Skip E2E tests due to docker failure in sandbox"
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
     touch "$TEST_SHARD_STATUS_FILE"
@@ -271,7 +271,7 @@ if [[ -n "${TEST_TOTAL_SHARDS:-}" ]]; then
   SHARD_INDEX=$((TEST_SHARD_INDEX + 1))
   PLAYWRIGHT_SHARD_ARG="--shard=${SHARD_INDEX}/${TEST_TOTAL_SHARDS}"
   echo "[playwright] Bazel sharding active: running shard ${SHARD_INDEX} of ${TEST_TOTAL_SHARDS}"
-  
+
   # Advertise sharding support to Bazel by touching the status file
   if [[ -n "${TEST_SHARD_STATUS_FILE:-}" ]]; then
     touch "$TEST_SHARD_STATUS_FILE"
