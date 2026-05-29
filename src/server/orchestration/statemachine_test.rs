@@ -1,7 +1,7 @@
-use super::statemachine_v2::{StateMachine, State, Repository};
 use super::locks::StandaloneLock;
-use std::sync::{Arc, Mutex};
+use super::statemachine_v2::{Repository, State, StateMachine};
 use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 struct MockRepository {
     states: Mutex<HashMap<String, State>>,
@@ -21,7 +21,12 @@ impl Repository for MockRepository {
         Ok(states.get(task_id).cloned().unwrap_or(State::Pending))
     }
 
-    fn update_task_state(&self, task_id: &str, new_state: State, _agent_id: &str) -> Result<(), String> {
+    fn update_task_state(
+        &self,
+        task_id: &str,
+        new_state: State,
+        _agent_id: &str,
+    ) -> Result<(), String> {
         let mut states = self.states.lock().unwrap();
         states.insert(task_id.to_string(), new_state);
         Ok(())
@@ -41,7 +46,9 @@ async fn test_statemachine_valid_transitions() {
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Ready);
 
     // Ready -> InProgress
-    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent1")
+        .await
+        .unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Blocked
@@ -49,7 +56,9 @@ async fn test_statemachine_valid_transitions() {
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::Blocked);
 
     // Blocked -> InProgress
-    sm.transition_to_in_progress(task_id, "agent1").await.unwrap();
+    sm.transition_to_in_progress(task_id, "agent1")
+        .await
+        .unwrap();
     assert_eq!(repo.get_task_state(task_id).unwrap(), State::InProgress);
 
     // InProgress -> Completed
@@ -83,20 +92,20 @@ async fn test_statemachine_concurrent_transitions() {
     let sm1 = sm.clone();
     let sm2 = sm.clone();
 
-    let t1 = tokio::spawn(async move {
-        sm1.transition_to_in_progress("task3", "agent1").await
-    });
+    let t1 = tokio::spawn(async move { sm1.transition_to_in_progress("task3", "agent1").await });
 
-    let t2 = tokio::spawn(async move {
-        sm2.transition_to_in_progress("task3", "agent2").await
-    });
+    let t2 = tokio::spawn(async move { sm2.transition_to_in_progress("task3", "agent2").await });
 
     let res1 = t1.await.unwrap();
     let res2 = t2.await.unwrap();
 
     let mut success_count = 0;
-    if res1.is_ok() { success_count += 1; }
-    if res2.is_ok() { success_count += 1; }
+    if res1.is_ok() {
+        success_count += 1;
+    }
+    if res2.is_ok() {
+        success_count += 1;
+    }
 
     assert_eq!(success_count, 1, "Only one transition should succeed");
 }

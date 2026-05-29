@@ -1,16 +1,16 @@
 #[cfg(test)]
 mod tests {
-    use crate::orchestration::departments::orchestrator::{DepartmentOrchestrator};
-    use crate::orchestration::departments::types::{DepartmentEvent};
-    use crate::orchestration::departments::operations_agent::OperationsAgent;
+    use crate::db::DbStore;
     use crate::orchestration::departments::customer_success_agent::CustomerSuccessAgent;
+    use crate::orchestration::departments::operations_agent::OperationsAgent;
+    use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
     use crate::orchestration::departments::sales_agent::SalesAgent;
+    use crate::orchestration::departments::types::DepartmentEvent;
     use crate::orchestration::mesh::CentrifugeNode;
     use ohc_builtin_agent::mesh::transport::InProcessTransport;
     use std::sync::Arc;
     use tokio::sync::RwLock;
     use uuid::Uuid;
-    use crate::db::DbStore;
 
     #[tokio::test]
     async fn test_cross_department_flow() {
@@ -66,11 +66,19 @@ mod tests {
         let mut has_cs_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
+            let pending = orchestrator
+                .get_pending_approvals(&tenant_id, None, 100)
+                .await;
+            if pending
+                .iter()
+                .any(|req| req.description.contains("Process Order & Update Inventory"))
+            {
                 has_ops_auto = true;
             }
-            if pending.iter().any(|req| req.description.contains("Send personalized thank you")) {
+            if pending
+                .iter()
+                .any(|req| req.description.contains("Send personalized thank you"))
+            {
                 has_cs_draft = true;
             }
             if has_ops_auto && has_cs_draft {
@@ -78,8 +86,14 @@ mod tests {
             }
         }
 
-        assert!(has_ops_auto, "Cross-department flow should result in an Operations task");
-        assert!(has_cs_draft, "Cross-department flow should result in a pending Customer Success approval");
+        assert!(
+            has_ops_auto,
+            "Cross-department flow should result in an Operations task"
+        );
+        assert!(
+            has_cs_draft,
+            "Cross-department flow should result in a pending Customer Success approval"
+        );
     }
 
     #[tokio::test]
@@ -135,7 +149,13 @@ mod tests {
         {
             let mut agent = cs_agent.write().await;
             use crate::orchestration::departments::types::DepartmentConfig;
-            agent.set_config(tenant_id.clone(), DepartmentConfig { tone_of_voice: "friendly".to_string(), auto_approve_limits: 0.0 });
+            agent.set_config(
+                tenant_id.clone(),
+                DepartmentConfig {
+                    tone_of_voice: "friendly".to_string(),
+                    auto_approve_limits: 0.0,
+                },
+            );
         }
 
         let event = DepartmentEvent {
@@ -151,8 +171,13 @@ mod tests {
         let mut has_draft = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Draft email for review")) {
+            let pending = orchestrator
+                .get_pending_approvals(&tenant_id, None, 100)
+                .await;
+            if pending
+                .iter()
+                .any(|req| req.description.contains("Draft email for review"))
+            {
                 has_draft = true;
                 break;
             }
@@ -214,13 +239,21 @@ mod tests {
         let mut has_ops_auto = false;
         for _ in 0..10 {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-            let pending = orchestrator.get_pending_approvals(&tenant_id, None, 100).await;
-            if pending.iter().any(|req| req.description.contains("Process Order & Update Inventory")) {
+            let pending = orchestrator
+                .get_pending_approvals(&tenant_id, None, 100)
+                .await;
+            if pending
+                .iter()
+                .any(|req| req.description.contains("Process Order & Update Inventory"))
+            {
                 has_ops_auto = true;
                 break;
             }
         }
 
-        assert!(has_ops_auto, "Msgbus integration should map system:order_received to an Operations task");
+        assert!(
+            has_ops_auto,
+            "Msgbus integration should map system:order_received to an Operations task"
+        );
     }
 }

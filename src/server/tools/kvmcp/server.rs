@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use crate::db::{DB, DbStore};
+use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
 use redis::AsyncCommands;
+use std::sync::Arc;
 use tracing::Instrument;
 
 pub struct KvMcpServer {
@@ -13,23 +13,31 @@ pub struct KvMcpServer {
 impl KvMcpServer {
     pub fn new(db: Arc<DB>, redis_client: Option<redis::Client>) -> Self {
         let redis_conn = redis_client.is_some().then(|| tokio::sync::OnceCell::new());
-        Self { db, redis_client, redis_conn }
+        Self {
+            db,
+            redis_client,
+            redis_conn,
+        }
     }
 
     async fn get_redis_conn(&self) -> Result<redis::aio::MultiplexedConnection, tonic::Status> {
         if let Some(client) = &self.redis_client {
             if let Some(cell) = &self.redis_conn {
-                cell.get_or_try_init(|| async {
-                    client.get_multiplexed_async_connection().await
-                })
-                .await
-                .map(|c| c.clone())
-                .map_err(|e| tonic::Status::internal(format!("failed to connect to redis: {}", e)))
+                cell.get_or_try_init(|| async { client.get_multiplexed_async_connection().await })
+                    .await
+                    .map(|c| c.clone())
+                    .map_err(|e| {
+                        tonic::Status::internal(format!("failed to connect to redis: {}", e))
+                    })
             } else {
-                Err(tonic::Status::internal("redis client configured but no connection cell"))
+                Err(tonic::Status::internal(
+                    "redis client configured but no connection cell",
+                ))
             }
         } else {
-            Err(tonic::Status::internal("redis client not configured for cloud mode"))
+            Err(tonic::Status::internal(
+                "redis client not configured for cloud mode",
+            ))
         }
     }
 
@@ -71,16 +79,22 @@ impl KvMcpServer {
             .map_err(|_| tonic::Status::unauthenticated("invalid SPIFFE ID"))?;
         let tenant_id = parsed.0;
         if tenant_id.is_empty() {
-            return Err(tonic::Status::unauthenticated("empty tenant ID in SPIFFE ID"));
+            return Err(tonic::Status::unauthenticated(
+                "empty tenant ID in SPIFFE ID",
+            ));
         }
         Ok(tenant_id)
     }
 
     fn is_standalone(&self) -> bool {
-        std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true" || self.redis_client.is_none()
+        std::env::var("OHC_STANDALONE").unwrap_or_else(|_| "false".to_string()) == "true"
+            || self.redis_client.is_none()
     }
 
-    pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {
+    pub async fn invoke_tool(
+        &self,
+        req: &McpInvokeRequest,
+    ) -> Result<McpInvokeResponse, tonic::Status> {
         let params: serde_json::Value = serde_json::from_str(&req.params)
             .map_err(|e| tonic::Status::invalid_argument(format!("invalid JSON params: {}", e)))?;
 
@@ -88,7 +102,9 @@ impl KvMcpServer {
 
         match req.tool_id.as_str() {
             "kv_get" => {
-                let key = params["key"].as_str().ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
+                let key = params["key"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
                 async {
                     if self.is_standalone() {
                         let row: Result<(String,), sqlx::Error> = match &self.db.store {
@@ -129,8 +145,12 @@ impl KvMcpServer {
                 }.instrument(tracing::info_span!("kv_get")).await
             }
             "kv_set" => {
-                let key = params["key"].as_str().ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
-                let value = params["value"].as_str().ok_or_else(|| tonic::Status::invalid_argument("value is required"))?;
+                let key = params["key"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
+                let value = params["value"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("value is required"))?;
                 async {
                     if self.is_standalone() {
                         match &self.db.store {
@@ -165,7 +185,9 @@ impl KvMcpServer {
                 }.instrument(tracing::info_span!("kv_set")).await
             }
             "kv_delete" => {
-                let key = params["key"].as_str().ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
+                let key = params["key"]
+                    .as_str()
+                    .ok_or_else(|| tonic::Status::invalid_argument("key is required"))?;
                 async {
                     if self.is_standalone() {
                         match &self.db.store {
@@ -242,7 +264,10 @@ impl KvMcpServer {
                     }
                 }.instrument(tracing::info_span!("kv_list")).await
             }
-            _ => Err(tonic::Status::unimplemented(format!("tool {} not implemented", req.tool_id))),
+            _ => Err(tonic::Status::unimplemented(format!(
+                "tool {} not implemented",
+                req.tool_id
+            ))),
         }
     }
 }

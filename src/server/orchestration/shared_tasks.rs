@@ -1,10 +1,10 @@
-use std::sync::Arc;
 use crate::db::{DB, DbStore};
-use sqlx::Row;
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
+use std::sync::Arc;
 use tokio::sync::Mutex;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SharedTaskV4 {
@@ -29,7 +29,10 @@ pub struct SharedTaskOrchestrator {
 
 impl SharedTaskOrchestrator {
     pub fn new(db: Arc<DB>) -> Self {
-        Self { db, sqlite_mutex: Mutex::new(()) }
+        Self {
+            db,
+            sqlite_mutex: Mutex::new(()),
+        }
     }
 
     pub async fn create_task(&self, task: SharedTaskV4) -> Result<SharedTaskV4, String> {
@@ -47,7 +50,7 @@ impl SharedTaskOrchestrator {
                         id, organization_id, title, description, status, agent_id,
                         priority, payload, parent_plan_id, dependencies, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                    "#
+                    "#,
                 )
                 .bind(&task_id)
                 .bind(&task.organization_id)
@@ -72,7 +75,7 @@ impl SharedTaskOrchestrator {
                         id, organization_id, title, description, status, agent_id,
                         priority, payload, parent_plan_id, dependencies, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    "#
+                    "#,
                 )
                 .bind(&task_id)
                 .bind(&task.organization_id)
@@ -97,7 +100,11 @@ impl SharedTaskOrchestrator {
         Ok(res)
     }
 
-    pub async fn claim_task(&self, organization_id: &str, agent_id: &str) -> Result<Option<SharedTaskV4>, String> {
+    pub async fn claim_task(
+        &self,
+        organization_id: &str,
+        agent_id: &str,
+    ) -> Result<Option<SharedTaskV4>, String> {
         match &self.db.store {
             DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;
@@ -113,7 +120,7 @@ impl SharedTaskOrchestrator {
                     )
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
-                    "#
+                    "#,
                 )
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
@@ -128,7 +135,7 @@ impl SharedTaskOrchestrator {
                         UPDATE shared_tasks_v4
                         SET status = 'ASSIGNED', agent_id = $1, updated_at = $2
                         WHERE id = $3
-                        "#
+                        "#,
                     )
                     .bind(agent_id)
                     .bind(Utc::now())
@@ -187,7 +194,7 @@ impl SharedTaskOrchestrator {
                         WHERE parent.status != 'COMPLETED'
                     )
                     LIMIT 1
-                    "#
+                    "#,
                 )
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
@@ -202,7 +209,7 @@ impl SharedTaskOrchestrator {
                         UPDATE shared_tasks_v4
                         SET status = 'ASSIGNED', agent_id = ?, updated_at = ?
                         WHERE id = ?
-                        "#
+                        "#,
                     )
                     .bind(agent_id)
                     .bind(Utc::now().to_rfc3339())
@@ -229,10 +236,19 @@ impl SharedTaskOrchestrator {
                     tx.commit().await.map_err(|e| e.to_string())?;
 
                     let created_str: String = row.get("created_at");
-                    let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
-                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
-                        .unwrap_or_else(|_| chrono::Utc::now());
+                    let dt_created =
+                        chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                            .map(|nd| {
+                                chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+                                    nd,
+                                    chrono::Utc,
+                                )
+                            })
+                            .or_else(|_| {
+                                chrono::DateTime::parse_from_rfc3339(&created_str)
+                                    .map(|d| d.with_timezone(&chrono::Utc))
+                            })
+                            .unwrap_or_else(|_| chrono::Utc::now());
 
                     Ok(Some(SharedTaskV4 {
                         id: task_id,
@@ -288,16 +304,34 @@ impl SharedTaskOrchestrator {
                     .map_err(|e| e.to_string())?;
 
                 let created_str: String = row.get("created_at");
-                let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
-                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
-                    .unwrap_or_else(|_| chrono::Utc::now());
+                let dt_created =
+                    chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| {
+                            chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+                                nd,
+                                chrono::Utc,
+                            )
+                        })
+                        .or_else(|_| {
+                            chrono::DateTime::parse_from_rfc3339(&created_str)
+                                .map(|d| d.with_timezone(&chrono::Utc))
+                        })
+                        .unwrap_or_else(|_| chrono::Utc::now());
 
                 let updated_str: String = row.get("updated_at");
-                let dt_updated = chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
-                    .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                    .or_else(|_| chrono::DateTime::parse_from_rfc3339(&updated_str).map(|d| d.with_timezone(&chrono::Utc)))
-                    .unwrap_or_else(|_| chrono::Utc::now());
+                let dt_updated =
+                    chrono::NaiveDateTime::parse_from_str(&updated_str, "%Y-%m-%d %H:%M:%S")
+                        .map(|nd| {
+                            chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+                                nd,
+                                chrono::Utc,
+                            )
+                        })
+                        .or_else(|_| {
+                            chrono::DateTime::parse_from_rfc3339(&updated_str)
+                                .map(|d| d.with_timezone(&chrono::Utc))
+                        })
+                        .unwrap_or_else(|_| chrono::Utc::now());
 
                 Ok(SharedTaskV4 {
                     id: row.get("id"),

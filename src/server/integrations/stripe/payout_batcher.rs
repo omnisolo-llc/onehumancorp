@@ -34,14 +34,24 @@ impl PayoutBatcher {
 
     /// Records a pending payout for a connected account.
     /// Returns Some(amount_to_payout_in_cents) if the threshold is reached and we should execute the payout.
-    pub async fn record_payout(&self, account_id: &str, amount_cents: i64) -> Result<Option<i64>, String> {
+    pub async fn record_payout(
+        &self,
+        account_id: &str,
+        amount_cents: i64,
+    ) -> Result<Option<i64>, String> {
         if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+            let mut conn = client
+                .get_multiplexed_async_connection()
+                .await
+                .map_err(|e| e.to_string())?;
             let key = format!("stripe_payout_batch:{}", account_id);
-            let current_balance: i64 = conn.incr(&key, amount_cents).await.map_err(|e| e.to_string())?;
+            let current_balance: i64 = conn
+                .incr(&key, amount_cents)
+                .await
+                .map_err(|e| e.to_string())?;
 
             if current_balance >= self.batch_threshold_cents {
-                let _ : () = conn.del(&key).await.unwrap_or(());
+                let _: () = conn.del(&key).await.unwrap_or(());
                 Ok(Some(current_balance))
             } else {
                 Ok(None)
@@ -54,7 +64,10 @@ impl PayoutBatcher {
 
     pub async fn get_pending_balance(&self, account_id: &str) -> Result<i64, String> {
         if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+            let mut conn = client
+                .get_multiplexed_async_connection()
+                .await
+                .map_err(|e| e.to_string())?;
             let key = format!("stripe_payout_batch:{}", account_id);
             let balance: Option<i64> = conn.get(&key).await.ok();
             Ok(balance.unwrap_or(0))
@@ -65,12 +78,15 @@ impl PayoutBatcher {
 
     pub async fn force_payout(&self, account_id: &str) -> Result<Option<i64>, String> {
         if let Some(client) = &self.redis_client {
-            let mut conn = client.get_multiplexed_async_connection().await.map_err(|e| e.to_string())?;
+            let mut conn = client
+                .get_multiplexed_async_connection()
+                .await
+                .map_err(|e| e.to_string())?;
             let key = format!("stripe_payout_batch:{}", account_id);
             let balance: Option<i64> = conn.get(&key).await.ok();
             if let Some(b) = balance {
                 if b > 0 {
-                    let _ : () = conn.del(&key).await.unwrap_or(());
+                    let _: () = conn.del(&key).await.unwrap_or(());
                     return Ok(Some(b));
                 }
             }
@@ -106,7 +122,10 @@ mod tests {
             assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 5000);
 
             // Reaches threshold
-            assert_eq!(batcher.record_payout("acct_2", 6000).await.unwrap(), Some(11000));
+            assert_eq!(
+                batcher.record_payout("acct_2", 6000).await.unwrap(),
+                Some(11000)
+            );
             assert_eq!(batcher.get_pending_balance("acct_2").await.unwrap(), 0);
         }
     }

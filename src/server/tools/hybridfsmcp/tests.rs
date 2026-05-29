@@ -1,8 +1,8 @@
-use super::provider::{LocalFSProvider, CloudFSProvider, FileSystemProvider};
+use super::provider::{CloudFSProvider, FileSystemProvider, LocalFSProvider};
 use super::server::HybridFSMcpServer;
+use ::server_ohc::orchestration::McpInvokeRequest;
 use std::sync::Arc;
 use tempfile::tempdir;
-use ::server_ohc::orchestration::McpInvokeRequest;
 
 #[tokio::test]
 async fn test_local_fs_provider() {
@@ -10,7 +10,10 @@ async fn test_local_fs_provider() {
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
 
     // Test write and read
-    provider.write_file("test.txt", b"hello world").await.unwrap();
+    provider
+        .write_file("test.txt", b"hello world")
+        .await
+        .unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
     assert_eq!(content, b"hello world");
 
@@ -30,7 +33,10 @@ async fn test_cloud_fs_provider() {
     let provider = CloudFSProvider::new(tenant_id.clone(), dir.path().to_path_buf());
 
     // Test write and read
-    provider.write_file("test.txt", b"cloud content").await.unwrap();
+    provider
+        .write_file("test.txt", b"cloud content")
+        .await
+        .unwrap();
     let content = provider.read_file("test.txt").await.unwrap();
     assert_eq!(content, b"cloud content");
 
@@ -109,9 +115,14 @@ async fn test_local_fs_provider_search() {
     let dir = tempdir().unwrap();
     let provider = LocalFSProvider::new(dir.path().to_path_buf());
 
-    tokio::fs::create_dir_all(dir.path().join("dir")).await.unwrap();
+    tokio::fs::create_dir_all(dir.path().join("dir"))
+        .await
+        .unwrap();
 
-    provider.write_file("dir/file1.txt", b"hello").await.unwrap();
+    provider
+        .write_file("dir/file1.txt", b"hello")
+        .await
+        .unwrap();
     provider.write_file("dir/file2.md", b"world").await.unwrap();
 
     let entries = provider.search_files("dir", ".md").await.unwrap();
@@ -127,7 +138,10 @@ async fn test_provider_path_traversal() {
     provider.write_file("valid.txt", b"valid").await.unwrap();
 
     // Attempt directory traversal out of bounds
-    let err = provider.write_file("../out_of_bounds.txt", b"invalid").await.unwrap_err();
+    let err = provider
+        .write_file("../out_of_bounds.txt", b"invalid")
+        .await
+        .unwrap_err();
     assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
 
     // Attempt directory traversal read
@@ -135,7 +149,10 @@ async fn test_provider_path_traversal() {
     assert_eq!(err.kind(), std::io::ErrorKind::PermissionDenied);
 
     // Attempt to write an absolute path that is stripped and becomes in bounds
-    provider.write_file("/in_bounds.txt", b"absolute").await.unwrap();
+    provider
+        .write_file("/in_bounds.txt", b"absolute")
+        .await
+        .unwrap();
     let content = provider.read_file("in_bounds.txt").await.unwrap();
     assert_eq!(content, b"absolute");
 

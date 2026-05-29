@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use ohc_builtin_agent::mesh::transport::{MeshTransport, Message};
-use opentelemetry::global;
 use opentelemetry::KeyValue;
+use opentelemetry::global;
 use opentelemetry::metrics::{Counter, Histogram};
 use std::time::Instant;
 
@@ -15,7 +15,8 @@ pub struct RedisMeshTransport {
 
 impl RedisMeshTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url).await
+        let inner = ohc_builtin_agent::mesh::transport::RedisPubSubTransport::new(url)
+            .await
             .map_err(|e| format!("Failed to create RedisPubSubTransport: {}", e))?;
 
         let meter = global::meter("orchestration");
@@ -24,33 +25,76 @@ impl RedisMeshTransport {
         let subscribe_counter = meter.u64_counter("mesh.subscribe.count").build();
         let latency_histogram = meter.u64_histogram("mesh.publish.latency").build();
 
-        Ok(Self { inner, publish_counter, bytes_counter, subscribe_counter, latency_histogram })
+        Ok(Self {
+            inner,
+            publish_counter,
+            bytes_counter,
+            subscribe_counter,
+            latency_histogram,
+        })
     }
 }
 
 #[async_trait]
 impl MeshTransport for RedisMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(
+        &self,
+        topic: &str,
+        message: ::server_ohc::orchestration::TeammateMeshEvent,
+    ) -> Result<(), String> {
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
 
-        self.publish_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
-        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+        self.publish_counter.add(
+            1,
+            &[
+                KeyValue::new("transport", "redis"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
+        self.bytes_counter.add(
+            payload_size,
+            &[
+                KeyValue::new("transport", "redis"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
 
         let res = self.inner.publish(topic, message).await;
 
         let duration_ms = start.elapsed().as_millis() as u64;
-        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+        self.latency_histogram.record(
+            duration_ms,
+            &[
+                KeyValue::new("transport", "redis"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
 
         res
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "redis"), KeyValue::new("topic", topic.to_string())]);
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(
+            1,
+            &[
+                KeyValue::new("transport", "redis"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
@@ -58,8 +102,15 @@ impl MeshTransport for RedisMeshTransport {
         self.inner.release_lock(resource, owner).await
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
@@ -85,34 +136,74 @@ impl MemoryMeshTransport {
 
         Self {
             inner: ohc_builtin_agent::mesh::transport::InProcessTransport::new(),
-            publish_counter, bytes_counter, subscribe_counter, latency_histogram,
+            publish_counter,
+            bytes_counter,
+            subscribe_counter,
+            latency_histogram,
         }
     }
 }
 
 #[async_trait]
 impl MeshTransport for MemoryMeshTransport {
-    async fn publish(&self, topic: &str, message: ::server_ohc::orchestration::TeammateMeshEvent) -> Result<(), String> {
+    async fn publish(
+        &self,
+        topic: &str,
+        message: ::server_ohc::orchestration::TeammateMeshEvent,
+    ) -> Result<(), String> {
         let start = Instant::now();
         let payload_size = message.payload.len() as u64;
 
-        self.publish_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
-        self.bytes_counter.add(payload_size, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+        self.publish_counter.add(
+            1,
+            &[
+                KeyValue::new("transport", "memory"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
+        self.bytes_counter.add(
+            payload_size,
+            &[
+                KeyValue::new("transport", "memory"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
 
         let res = self.inner.publish(topic, message).await;
 
         let duration_ms = start.elapsed().as_millis() as u64;
-        self.latency_histogram.record(duration_ms, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+        self.latency_histogram.record(
+            duration_ms,
+            &[
+                KeyValue::new("transport", "memory"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
 
         res
     }
 
-    async fn subscribe(&self, topic: &str, handler: Box<dyn Fn(Message) + Send + Sync>) -> Result<Box<dyn Fn() + Send + Sync>, String> {
-        self.subscribe_counter.add(1, &[KeyValue::new("transport", "memory"), KeyValue::new("topic", topic.to_string())]);
+    async fn subscribe(
+        &self,
+        topic: &str,
+        handler: Box<dyn Fn(Message) + Send + Sync>,
+    ) -> Result<Box<dyn Fn() + Send + Sync>, String> {
+        self.subscribe_counter.add(
+            1,
+            &[
+                KeyValue::new("transport", "memory"),
+                KeyValue::new("topic", topic.to_string()),
+            ],
+        );
         self.inner.subscribe(topic, handler).await
     }
 
-    async fn acquire_lock(&self, resource: &str, owner: &str, ttl_seconds: u64) -> Result<bool, String> {
+    async fn acquire_lock(
+        &self,
+        resource: &str,
+        owner: &str,
+        ttl_seconds: u64,
+    ) -> Result<bool, String> {
         self.inner.acquire_lock(resource, owner, ttl_seconds).await
     }
 
@@ -120,8 +211,15 @@ impl MeshTransport for MemoryMeshTransport {
         self.inner.release_lock(resource, owner).await
     }
 
-    async fn register_presence(&self, agent_id: &str, status: &str, ttl_seconds: u64) -> Result<(), String> {
-        self.inner.register_presence(agent_id, status, ttl_seconds).await
+    async fn register_presence(
+        &self,
+        agent_id: &str,
+        status: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), String> {
+        self.inner
+            .register_presence(agent_id, status, ttl_seconds)
+            .await
     }
 
     async fn get_active_agents(&self) -> Result<Vec<(String, String)>, String> {
@@ -176,15 +274,27 @@ mod tests {
         let transport = MemoryMeshTransport::new();
         let resource_name = format!("test_resource_{}", uuid::Uuid::new_v4());
 
-        let acq1 = transport.acquire_lock(&resource_name, "agent_1", 10).await.unwrap();
+        let acq1 = transport
+            .acquire_lock(&resource_name, "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acq1);
 
-        let acq2 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
+        let acq2 = transport
+            .acquire_lock(&resource_name, "agent_2", 10)
+            .await
+            .unwrap();
         assert!(!acq2);
 
-        transport.release_lock(&resource_name, "agent_1").await.unwrap();
+        transport
+            .release_lock(&resource_name, "agent_1")
+            .await
+            .unwrap();
 
-        let acq3 = transport.acquire_lock(&resource_name, "agent_2", 10).await.unwrap();
+        let acq3 = transport
+            .acquire_lock(&resource_name, "agent_2", 10)
+            .await
+            .unwrap();
         assert!(acq3);
     }
 
@@ -192,8 +302,14 @@ mod tests {
     async fn test_memory_mesh_transport_presence() {
         let transport = MemoryMeshTransport::new();
 
-        transport.register_presence("agent_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_2", "busy", 10).await.unwrap();
+        transport
+            .register_presence("agent_1", "online", 10)
+            .await
+            .unwrap();
+        transport
+            .register_presence("agent_2", "busy", 10)
+            .await
+            .unwrap();
 
         let mut agents = transport.get_active_agents().await.unwrap();
         agents.sort();
@@ -224,7 +340,10 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
-        let cancel = transport.subscribe("test_topic_redis", handler).await.unwrap();
+        let cancel = transport
+            .subscribe("test_topic_redis", handler)
+            .await
+            .unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -236,7 +355,10 @@ mod tests {
             msg_id: "msg_redis_1".to_string(),
         };
 
-        transport.publish("test_topic_redis", msg.clone()).await.unwrap();
+        transport
+            .publish("test_topic_redis", msg.clone())
+            .await
+            .unwrap();
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -258,15 +380,27 @@ mod tests {
 
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
 
-        let acq1 = transport.acquire_lock("test_resource_redis", "agent_1", 10).await.unwrap();
+        let acq1 = transport
+            .acquire_lock("test_resource_redis", "agent_1", 10)
+            .await
+            .unwrap();
         assert!(acq1);
 
-        let acq2 = transport.acquire_lock("test_resource_redis", "agent_2", 10).await.unwrap();
+        let acq2 = transport
+            .acquire_lock("test_resource_redis", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(!acq2);
 
-        transport.release_lock("test_resource_redis", "agent_1").await.unwrap();
+        transport
+            .release_lock("test_resource_redis", "agent_1")
+            .await
+            .unwrap();
 
-        let acq3 = transport.acquire_lock("test_resource_redis", "agent_2", 10).await.unwrap();
+        let acq3 = transport
+            .acquire_lock("test_resource_redis", "agent_2", 10)
+            .await
+            .unwrap();
         assert!(acq3);
     }
 
@@ -279,8 +413,14 @@ mod tests {
 
         let transport = RedisMeshTransport::new(&redis_url).await.unwrap();
 
-        transport.register_presence("agent_redis_1", "online", 10).await.unwrap();
-        transport.register_presence("agent_redis_2", "busy", 10).await.unwrap();
+        transport
+            .register_presence("agent_redis_1", "online", 10)
+            .await
+            .unwrap();
+        transport
+            .register_presence("agent_redis_2", "busy", 10)
+            .await
+            .unwrap();
 
         let mut agents = transport.get_active_agents().await.unwrap();
 
@@ -289,7 +429,10 @@ mod tests {
         agents.sort();
 
         assert_eq!(agents.len(), 2);
-        assert_eq!(agents[0], ("agent_redis_1".to_string(), "online".to_string()));
+        assert_eq!(
+            agents[0],
+            ("agent_redis_1".to_string(), "online".to_string())
+        );
         assert_eq!(agents[1], ("agent_redis_2".to_string(), "busy".to_string()));
     }
 
@@ -326,7 +469,11 @@ mod tests {
         if let Some(received_time) = rx.recv().await {
             let elapsed = received_time.duration_since(start);
             // using <= 10ms for reliability on slower CI runners while still proving sub-ms locally
-            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+            assert!(
+                elapsed.as_millis() <= 50,
+                "Latency was {} ms, expected < 50ms",
+                elapsed.as_millis()
+            );
         } else {
             panic!("Did not receive message");
         }
@@ -352,7 +499,10 @@ mod tests {
             });
         });
 
-        let cancel = transport.subscribe("subms_topic_redis", handler).await.unwrap();
+        let cancel = transport
+            .subscribe("subms_topic_redis", handler)
+            .await
+            .unwrap();
 
         let msg = ::server_ohc::orchestration::TeammateMeshEvent {
             agent_id: "agent_fast_redis".to_string(),
@@ -373,7 +523,11 @@ mod tests {
 
         if let Ok(Some(received_time)) = res {
             let elapsed = received_time.duration_since(start);
-            assert!(elapsed.as_millis() <= 50, "Latency was {} ms, expected < 50ms", elapsed.as_millis());
+            assert!(
+                elapsed.as_millis() <= 50,
+                "Latency was {} ms, expected < 50ms",
+                elapsed.as_millis()
+            );
         } else {
             panic!("Did not receive message");
         }

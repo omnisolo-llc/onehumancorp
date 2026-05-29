@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf, Component};
 use std::io;
+use std::path::{Component, Path, PathBuf};
 
 #[async_trait::async_trait]
 pub trait FileSystemProvider: Send + Sync {
@@ -50,7 +50,10 @@ impl BaseFSProvider {
         let root_normalized = normalize_path(&self.root_dir);
 
         if !normalized.starts_with(&root_normalized) {
-            return Err(io::Error::new(io::ErrorKind::PermissionDenied, "Path out of bounds"));
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Path out of bounds",
+            ));
         }
 
         Ok(normalized)
@@ -118,13 +121,17 @@ impl FileSystemProvider for BaseFSProvider {
 pub struct LocalFSProvider;
 impl LocalFSProvider {
     pub fn new(workspace_dir: PathBuf) -> BaseFSProvider {
-        BaseFSProvider { root_dir: workspace_dir }
+        BaseFSProvider {
+            root_dir: workspace_dir,
+        }
     }
 }
 
 pub struct CloudFSProvider;
 impl CloudFSProvider {
     pub fn new(tenant_id: String, mount_point: PathBuf) -> BaseFSProvider {
-        BaseFSProvider { root_dir: mount_point.join(tenant_id) }
+        BaseFSProvider {
+            root_dir: mount_point.join(tenant_id),
+        }
     }
 }

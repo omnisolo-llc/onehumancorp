@@ -1,8 +1,8 @@
-use tonic::{Request, Response, Status};
+use crate::integrations::registry::IntegrationsRegistry;
+use ::server_ohc::orchestration::chat_service_server::ChatService;
 #[allow(unused_imports)]
 use ::server_ohc::orchestration::*;
-use ::server_ohc::orchestration::chat_service_server::ChatService;
-use crate::integrations::registry::IntegrationsRegistry;
+use tonic::{Request, Response, Status};
 
 pub struct MyChatService {
     registry: std::sync::Arc<IntegrationsRegistry>,
@@ -21,9 +21,14 @@ impl ChatService for MyChatService {
         request: Request<::server_ohc::orchestration::ChatTestRequest>,
     ) -> Result<Response<::server_ohc::orchestration::ChatTestResponse>, Status> {
         let req = request.into_inner();
-        
-        match self.registry.test_connection(&req.integration_id, req.clone()) {
-            Ok(_) => Ok(Response::new(::server_ohc::orchestration::ChatTestResponse { success: true })),
+
+        match self
+            .registry
+            .test_connection(&req.integration_id, req.clone())
+        {
+            Ok(_) => Ok(Response::new(
+                ::server_ohc::orchestration::ChatTestResponse { success: true },
+            )),
             Err(e) => Err(Status::invalid_argument(e)),
         }
     }
@@ -34,7 +39,9 @@ impl ChatService for MyChatService {
     ) -> Result<Response<::server_ohc::orchestration::GetChatMessagesResponse>, Status> {
         let req = request.into_inner();
         let messages = self.registry.chat_messages(&req.integration_id);
-        Ok(Response::new(::server_ohc::orchestration::GetChatMessagesResponse { messages }))
+        Ok(Response::new(
+            ::server_ohc::orchestration::GetChatMessagesResponse { messages },
+        ))
     }
 
     async fn send_chat_message(
@@ -42,8 +49,14 @@ impl ChatService for MyChatService {
         request: Request<::server_ohc::orchestration::ChatSendRequest>,
     ) -> Result<Response<::server_ohc::orchestration::ChatMessage>, Status> {
         let req = request.into_inner();
-        
-        match self.registry.send_chat_message(&req.integration_id, &req.channel, &req.from_agent, &req.content, &req.thread_id) {
+
+        match self.registry.send_chat_message(
+            &req.integration_id,
+            &req.channel,
+            &req.from_agent,
+            &req.content,
+            &req.thread_id,
+        ) {
             Ok(msg) => Ok(Response::new(msg)),
             Err(e) => Err(Status::internal(e)),
         }

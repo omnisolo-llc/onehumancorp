@@ -1,11 +1,11 @@
+use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
+use ::server_pricing::prompt_caching::PromptCache;
 use serde::{Deserialize, Serialize};
+use std::pin::Pin;
 use std::sync::Mutex;
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
-use ::server_pricing::prompt_caching::PromptCache;
-use ::server_pricing::compression::{minify_json_prompt, truncate_by_word_count};
 use tokio_stream::Stream;
-use std::pin::Pin;
 
 struct CircuitBreaker {
     failures: Mutex<usize>,
@@ -144,7 +144,8 @@ impl MinimaxClient {
             match response {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let result: MinimaxResponse = resp.json().await.map_err(|e| e.to_string())?;
+                        let result: MinimaxResponse =
+                            resp.json().await.map_err(|e| e.to_string())?;
                         cb.record_success();
                         if let Some(choice) = result.choices.first() {
                             let content = choice.message.content.clone();
@@ -183,7 +184,10 @@ impl MinimaxClient {
         Err(format!("failed after 5 retries: {}", last_err))
     }
 
-    pub async fn reason_stream(&self, prompt: &str) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
+    pub async fn reason_stream(
+        &self,
+        prompt: &str,
+    ) -> Pin<Box<dyn Stream<Item = Result<String, String>> + Send>> {
         let api_key = self.api_key.clone();
         let url = self.url.clone();
         let optimized_prompt = truncate_by_word_count(prompt, 2000);
@@ -192,7 +196,10 @@ impl MinimaxClient {
 
         // 1. Check Cache
         if let (Some(cached), _) = self.cache.get_with_cost_cents(prompt) {
-            tracing::info!("Prompt cache hit in stream (saved ~{} tokens)", cached.token_count);
+            tracing::info!(
+                "Prompt cache hit in stream (saved ~{} tokens)",
+                cached.token_count
+            );
             let cached_text = cached.text.clone();
             tokio::spawn(async move {
                 let _ = tx.send(Ok(cached_text)).await;
@@ -234,23 +241,35 @@ impl MinimaxClient {
                                     for line in text.lines() {
                                         if line.starts_with("data: ") {
                                             let json_str = &line[6..];
-                                            if json_str == "[DONE]" { break; }
-                                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(json_str) {
-                                                if let Some(content) = val["choices"][0]["delta"]["content"].as_str() {
+                                            if json_str == "[DONE]" {
+                                                break;
+                                            }
+                                            if let Ok(val) =
+                                                serde_json::from_str::<serde_json::Value>(json_str)
+                                            {
+                                                if let Some(content) =
+                                                    val["choices"][0]["delta"]["content"].as_str()
+                                                {
                                                     let _ = tx.send(Ok(content.to_string())).await;
                                                 }
                                             }
                                         }
                                     }
                                 }
-                                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
+                                Err(e) => {
+                                    let _ = tx.send(Err(e.to_string())).await;
+                                }
                             }
                         }
                     } else {
-                        let _ = tx.send(Err(format!("Stream error: {}", resp.status()))).await;
+                        let _ = tx
+                            .send(Err(format!("Stream error: {}", resp.status())))
+                            .await;
                     }
                 }
-                Err(e) => { let _ = tx.send(Err(e.to_string())).await; }
+                Err(e) => {
+                    let _ = tx.send(Err(e.to_string())).await;
+                }
             }
         });
 
@@ -284,14 +303,21 @@ impl MinimaxClient {
             match response {
                 Ok(resp) => {
                     if resp.status().is_success() {
-                        let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+                        let result: serde_json::Value =
+                            resp.json().await.map_err(|e| e.to_string())?;
 
                         // Handle Minimax base_resp envelope
                         if let Some(base_resp) = result.get("base_resp") {
-                            let code = base_resp.get("status_code").and_then(|c| c.as_i64()).unwrap_or(0);
+                            let code = base_resp
+                                .get("status_code")
+                                .and_then(|c| c.as_i64())
+                                .unwrap_or(0);
                             if code != 0 && code != 1000 {
                                 cb.record_failure();
-                                let msg = base_resp.get("status_msg").and_then(|m| m.as_str()).unwrap_or("unknown error");
+                                let msg = base_resp
+                                    .get("status_msg")
+                                    .and_then(|m| m.as_str())
+                                    .unwrap_or("unknown error");
                                 last_err = format!("API error (status {}): {}", code, msg);
                                 tokio::time::sleep(Duration::from_secs(1)).await;
                                 continue;
@@ -302,7 +328,8 @@ impl MinimaxClient {
                         if let Some(vectors) = result["vectors"].as_array() {
                             if let Some(vector) = vectors.first() {
                                 if let Some(array) = vector.as_array() {
-                                    let f32_vec: Vec<f32> = array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
+                                    let f32_vec: Vec<f32> =
+                                        array.iter().map(|v| v.as_f64().unwrap() as f32).collect();
                                     return Ok(f32_vec);
                                 }
                             }
@@ -348,10 +375,14 @@ impl LocalLLMClient {
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/generate".to_string());
         let embed_endpoint = std::env::var("OHC_LOCAL_LLM_EMBED_ENDPOINT")
             .unwrap_or_else(|_| "http://127.0.0.1:11434/api/embeddings".to_string());
-        let model = std::env::var("OHC_LOCAL_MODEL_NAME")
-            .unwrap_or_else(|_| "llama3".to_string());
-            
-        LocalLLMClient { endpoint, embed_endpoint, model, cache: PromptCache::new(Duration::from_secs(300)) }
+        let model = std::env::var("OHC_LOCAL_MODEL_NAME").unwrap_or_else(|_| "llama3".to_string());
+
+        LocalLLMClient {
+            endpoint,
+            embed_endpoint,
+            model,
+            cache: PromptCache::new(Duration::from_secs(300)),
+        }
     }
 
     pub async fn reason(&self, prompt: &str) -> Result<String, String> {
@@ -367,7 +398,8 @@ impl LocalLLMClient {
             "stream": false,
         });
 
-        let resp = client.post(&self.endpoint)
+        let resp = client
+            .post(&self.endpoint)
             .json(&req_body)
             .send()
             .await
@@ -378,7 +410,9 @@ impl LocalLLMClient {
         }
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        let response = result["response"].as_str().ok_or("missing response field")?;
+        let response = result["response"]
+            .as_str()
+            .ok_or("missing response field")?;
         self.cache.set(prompt, response, prompt.len() / 4);
         Ok(response.to_string())
     }
@@ -390,19 +424,28 @@ impl LocalLLMClient {
             "prompt": text,
         });
 
-        let resp = client.post(&self.embed_endpoint)
+        let resp = client
+            .post(&self.embed_endpoint)
             .json(&req_body)
             .send()
             .await
             .map_err(|e| e.to_string())?;
 
         if !resp.status().is_success() {
-            return Err(format!("local LLM embedding error (status {})", resp.status()));
+            return Err(format!(
+                "local LLM embedding error (status {})",
+                resp.status()
+            ));
         }
 
         let result: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
-        let embedding = result["embedding"].as_array().ok_or("missing embedding field")?;
-        let f32_vec: Vec<f32> = embedding.iter().map(|v| v.as_f64().unwrap() as f32).collect();
+        let embedding = result["embedding"]
+            .as_array()
+            .ok_or("missing embedding field")?;
+        let f32_vec: Vec<f32> = embedding
+            .iter()
+            .map(|v| v.as_f64().unwrap() as f32)
+            .collect();
         Ok(f32_vec)
     }
 }
@@ -442,4 +485,3 @@ impl ResilientClient {
         }
     }
 }
-

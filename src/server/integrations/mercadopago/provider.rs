@@ -29,18 +29,31 @@ impl MercadoPagoProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 }
 
 impl MercadoPagoProvider {
-    pub async fn create_checkout_preference(&self, price_id: &str, tenant_id: &str) -> Result<String, String> {
-        self._client.create_checkout_preference(price_id, tenant_id).await
+    pub async fn create_checkout_preference(
+        &self,
+        price_id: &str,
+        tenant_id: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_checkout_preference(price_id, tenant_id)
+            .await
     }
 
-    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
-        self._client.create_payment(amount, description, payer_email).await
+    pub async fn create_payment(
+        &self,
+        amount: f64,
+        description: &str,
+        payer_email: &str,
+    ) -> Result<String, String> {
+        self._client
+            .create_payment(amount, description, payer_email)
+            .await
     }
 
     pub async fn handle_webhook(&self, payload: &str) -> Result<(), String> {
@@ -69,15 +82,22 @@ mod tests {
     #[tokio::test]
     async fn test_mercadopago_provider_create_checkout_preference() {
         let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.create_checkout_preference("price_123", "tenant_123").await;
+        let result = provider
+            .create_checkout_preference("price_123", "tenant_123")
+            .await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123");
+        assert_eq!(
+            result.unwrap(),
+            "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123"
+        );
     }
 
     #[tokio::test]
     async fn test_mercadopago_provider_create_payment() {
         let provider = MercadoPagoProvider::new("test_token".to_string());
-        let result = provider.create_payment(100.0, "Test payment", "test@example.com").await;
+        let result = provider
+            .create_payment(100.0, "Test payment", "test@example.com")
+            .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "mock_txn_123");
     }

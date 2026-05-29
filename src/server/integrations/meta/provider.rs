@@ -41,7 +41,7 @@ impl MetaProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 
@@ -59,7 +59,12 @@ mod tests {
 
     #[async_trait]
     impl MetaClientWrapper for MockMetaClient {
-        async fn send_message(&self, _platform: &str, _to: &str, _body: &str) -> Result<(), String> {
+        async fn send_message(
+            &self,
+            _platform: &str,
+            _to: &str,
+            _body: &str,
+        ) -> Result<(), String> {
             Ok(())
         }
     }

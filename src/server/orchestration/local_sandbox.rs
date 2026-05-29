@@ -1,8 +1,8 @@
+use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig, ViolationEvent};
+use crate::orchestration::sandbox_ask::SandboxAskCallback;
 use async_trait::async_trait;
 use std::sync::Arc;
 use tokio::process::Command;
-use crate::orchestration::sandbox::{OHCSandboxManager, SandboxConfig, ViolationEvent};
-use crate::orchestration::sandbox_ask::SandboxAskCallback;
 
 pub struct LocalSandbox {
     config: SandboxConfig,
@@ -21,7 +21,10 @@ impl OHCSandboxManager for LocalSandbox {
         // Check deny-list directories
         for deny_dir in &self.config.deny_list_dirs {
             if cmd.contains(deny_dir) {
-                let reason = format!("Command attempts to access deny-listed directory: {}", deny_dir);
+                let reason = format!(
+                    "Command attempts to access deny-listed directory: {}",
+                    deny_dir
+                );
                 if let Some(cb) = &self.callback {
                     if !cb.ask_for_permission(cmd, &reason).await {
                         return Err(ViolationEvent {
@@ -61,9 +64,17 @@ impl OHCSandboxManager for LocalSandbox {
         match Command::new("sh").arg("-c").arg(cmd).output().await {
             Ok(output) => {
                 if output.status.success() {
-                    Ok((true, String::from_utf8_lossy(&output.stdout).to_string(), "".to_string()))
+                    Ok((
+                        true,
+                        String::from_utf8_lossy(&output.stdout).to_string(),
+                        "".to_string(),
+                    ))
                 } else {
-                    Ok((false, "".to_string(), String::from_utf8_lossy(&output.stderr).to_string()))
+                    Ok((
+                        false,
+                        "".to_string(),
+                        String::from_utf8_lossy(&output.stderr).to_string(),
+                    ))
                 }
             }
             Err(e) => Ok((false, "".to_string(), e.to_string())),
@@ -109,7 +120,10 @@ mod tests {
         let result = sandbox.execute("cat /etc/passwd").await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err.reason, "Command attempts to access deny-listed directory: /etc");
+        assert_eq!(
+            err.reason,
+            "Command attempts to access deny-listed directory: /etc"
+        );
         assert_eq!(err.command, "cat /etc/passwd");
     }
 
@@ -123,7 +137,10 @@ mod tests {
         let result = sandbox.execute("sudo rm -rf /").await;
         assert!(result.is_err());
         let err = result.unwrap_err();
-        assert_eq!(err.reason, "Command attempts to run disabled command: rm -rf /");
+        assert_eq!(
+            err.reason,
+            "Command attempts to run disabled command: rm -rf /"
+        );
         assert_eq!(err.command, "sudo rm -rf /");
     }
 

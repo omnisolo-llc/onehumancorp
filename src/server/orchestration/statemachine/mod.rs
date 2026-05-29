@@ -72,7 +72,7 @@ impl DeliberationStateMachine {
                     WHERE status = 'PENDING' AND organization_id = $1
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
-                    "#
+                    "#,
                 )
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
@@ -87,7 +87,7 @@ impl DeliberationStateMachine {
                         UPDATE shared_tasks_decomposition
                         SET status = 'DELIBERATING', agent_id = $1, updated_at = $2
                         WHERE id = $3 AND organization_id = $4
-                        "#
+                        "#,
                     )
                     .bind(agent_id)
                     .bind(Utc::now())
@@ -123,7 +123,7 @@ impl DeliberationStateMachine {
                     SELECT * FROM shared_tasks_decomposition
                     WHERE status = 'PENDING' AND organization_id = ?
                     LIMIT 1
-                    "#
+                    "#,
                 )
                 .bind(organization_id)
                 .fetch_optional(&mut *tx)
@@ -138,7 +138,7 @@ impl DeliberationStateMachine {
                         UPDATE shared_tasks_decomposition
                         SET status = 'DELIBERATING', agent_id = ?, updated_at = ?
                         WHERE id = ? AND organization_id = ?
-                        "#
+                        "#,
                     )
                     .bind(agent_id)
                     .bind(Utc::now().to_rfc3339())
@@ -151,14 +151,26 @@ impl DeliberationStateMachine {
                     tx.commit().await.map_err(|e| e.to_string())?;
 
                     let created_str: String = row.get("created_at");
-                    let dt_created = chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
-                        .map(|nd| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(nd, chrono::Utc))
-                        .or_else(|_| chrono::DateTime::parse_from_rfc3339(&created_str).map(|d| d.with_timezone(&chrono::Utc)))
-                        .unwrap_or_else(|_| chrono::Utc::now());
+                    let dt_created =
+                        chrono::NaiveDateTime::parse_from_str(&created_str, "%Y-%m-%d %H:%M:%S")
+                            .map(|nd| {
+                                chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(
+                                    nd,
+                                    chrono::Utc,
+                                )
+                            })
+                            .or_else(|_| {
+                                chrono::DateTime::parse_from_rfc3339(&created_str)
+                                    .map(|d| d.with_timezone(&chrono::Utc))
+                            })
+                            .unwrap_or_else(|_| chrono::Utc::now());
 
                     let locked_str: Option<String> = row.try_get("locked_until").unwrap_or(None);
-                    let locked_until = locked_str.map(|s| chrono::DateTime::parse_from_rfc3339(&s).map(|d| d.with_timezone(&chrono::Utc)).unwrap_or_else(|_| chrono::Utc::now()));
-
+                    let locked_until = locked_str.map(|s| {
+                        chrono::DateTime::parse_from_rfc3339(&s)
+                            .map(|d| d.with_timezone(&chrono::Utc))
+                            .unwrap_or_else(|_| chrono::Utc::now())
+                    });
 
                     Ok(Some(TaskDeliberation {
                         id: task_id,
@@ -192,7 +204,7 @@ impl DeliberationStateMachine {
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4 AND status = 'DELIBERATING'
                     RETURNING id
-                    "#
+                    "#,
                 )
                 .bind(dependencies)
                 .bind(Utc::now())
@@ -203,7 +215,9 @@ impl DeliberationStateMachine {
                 .map_err(|e| e.to_string())?;
 
                 if res.is_none() {
-                    return Err("Invalid state transition or task not found for organization".to_string());
+                    return Err(
+                        "Invalid state transition or task not found for organization".to_string(),
+                    );
                 }
                 Ok(())
             }
@@ -215,7 +229,7 @@ impl DeliberationStateMachine {
                     SET status = 'RESOLVING_DEPENDENCIES', dependencies = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ? AND status = 'DELIBERATING'
                     RETURNING id
-                    "#
+                    "#,
                 )
                 .bind(dependencies)
                 .bind(Utc::now().to_rfc3339())
@@ -226,14 +240,20 @@ impl DeliberationStateMachine {
                 .map_err(|e| e.to_string())?;
 
                 if res.is_none() {
-                    return Err("Invalid state transition or task not found for organization".to_string());
+                    return Err(
+                        "Invalid state transition or task not found for organization".to_string(),
+                    );
                 }
                 Ok(())
             }
         }
     }
 
-    pub async fn complete_deliberation(&self, organization_id: &str, task_id: &str) -> Result<(), String> {
+    pub async fn complete_deliberation(
+        &self,
+        organization_id: &str,
+        task_id: &str,
+    ) -> Result<(), String> {
         match &self.db {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
@@ -267,7 +287,9 @@ impl DeliberationStateMachine {
                         .await;
                     }
                 } else {
-                    return Err("Invalid state transition or task not found for organization".to_string());
+                    return Err(
+                        "Invalid state transition or task not found for organization".to_string(),
+                    );
                 }
                 Ok(())
             }
@@ -289,14 +311,20 @@ impl DeliberationStateMachine {
                 .map_err(|e| e.to_string())?;
 
                 if res.is_none() {
-                    return Err("Invalid state transition or task not found for organization".to_string());
+                    return Err(
+                        "Invalid state transition or task not found for organization".to_string(),
+                    );
                 }
                 Ok(())
             }
         }
     }
 
-    pub async fn fail_deliberation(&self, organization_id: &str, task_id: &str) -> Result<(), String> {
+    pub async fn fail_deliberation(
+        &self,
+        organization_id: &str,
+        task_id: &str,
+    ) -> Result<(), String> {
         match &self.db {
             DbStore::Postgres(pool) => {
                 let res = sqlx::query(
@@ -305,7 +333,7 @@ impl DeliberationStateMachine {
                     SET status = 'FAILED', updated_at = $1
                     WHERE id = $2 AND organization_id = $3
                     RETURNING id, tokens_consumed, agent_role, model
-                    "#
+                    "#,
                 )
                 .bind(Utc::now())
                 .bind(task_id)
@@ -342,7 +370,7 @@ impl DeliberationStateMachine {
                     SET status = 'FAILED', updated_at = ?
                     WHERE id = ? AND organization_id = ?
                     RETURNING id
-                    "#
+                    "#,
                 )
                 .bind(Utc::now().to_rfc3339())
                 .bind(task_id)
@@ -393,7 +421,7 @@ mod tests {
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT DEFAULT CURRENT_TIMESTAMP
             );
-            "#
+            "#,
         )
         .execute(&pool)
         .await
@@ -441,12 +469,16 @@ mod tests {
         .unwrap();
 
         let deps = json!(["dep1", "dep2"]);
-        sm.resolve_dependencies("org1", "t2", deps.clone()).await.unwrap();
-
-        let row: (String, String) = sqlx::query_as("SELECT status, dependencies FROM shared_tasks_decomposition WHERE id = 't2'")
-            .fetch_one(&pool)
+        sm.resolve_dependencies("org1", "t2", deps.clone())
             .await
             .unwrap();
+
+        let row: (String, String) = sqlx::query_as(
+            "SELECT status, dependencies FROM shared_tasks_decomposition WHERE id = 't2'",
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap();
 
         assert_eq!(row.0, "RESOLVING_DEPENDENCIES");
         assert_eq!(row.1, deps.to_string());
@@ -467,7 +499,10 @@ mod tests {
         let deps = json!(["dep1", "dep2"]);
         let res = sm.resolve_dependencies("org1", "t2b", deps.clone()).await;
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Invalid state transition or task not found for organization");
+        assert_eq!(
+            res.unwrap_err(),
+            "Invalid state transition or task not found for organization"
+        );
     }
 
     #[tokio::test]
@@ -485,7 +520,10 @@ mod tests {
         let deps = json!(["dep1", "dep2"]);
         let res = sm.resolve_dependencies("org2", "t2c", deps.clone()).await; // org2 tries to modify org1
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Invalid state transition or task not found for organization");
+        assert_eq!(
+            res.unwrap_err(),
+            "Invalid state transition or task not found for organization"
+        );
     }
 
     #[tokio::test]
@@ -502,10 +540,11 @@ mod tests {
 
         sm.complete_deliberation("org1", "t3").await.unwrap();
 
-        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't3'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let row: (String,) =
+            sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't3'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
 
         assert_eq!(row.0, "COMPLETED");
     }
@@ -524,7 +563,10 @@ mod tests {
 
         let res = sm.complete_deliberation("org1", "t3b").await;
         assert!(res.is_err());
-        assert_eq!(res.unwrap_err(), "Invalid state transition or task not found for organization");
+        assert_eq!(
+            res.unwrap_err(),
+            "Invalid state transition or task not found for organization"
+        );
     }
 
     #[tokio::test]
@@ -541,10 +583,11 @@ mod tests {
 
         sm.fail_deliberation("org1", "t4").await.unwrap();
 
-        let row: (String,) = sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't4'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let row: (String,) =
+            sqlx::query_as("SELECT status FROM shared_tasks_decomposition WHERE id = 't4'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
 
         assert_eq!(row.0, "FAILED");
     }
@@ -570,7 +613,10 @@ mod tests {
     fn test_deliberation_state_as_ref() {
         assert_eq!(DeliberationState::Pending.as_ref(), "PENDING");
         assert_eq!(DeliberationState::Deliberating.as_ref(), "DELIBERATING");
-        assert_eq!(DeliberationState::ResolvingDependencies.as_ref(), "RESOLVING_DEPENDENCIES");
+        assert_eq!(
+            DeliberationState::ResolvingDependencies.as_ref(),
+            "RESOLVING_DEPENDENCIES"
+        );
         assert_eq!(DeliberationState::Claimed.as_ref(), "CLAIMED");
         assert_eq!(DeliberationState::Completed.as_ref(), "COMPLETED");
         assert_eq!(DeliberationState::Failed.as_ref(), "FAILED");

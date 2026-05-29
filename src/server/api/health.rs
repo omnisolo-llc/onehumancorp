@@ -1,10 +1,8 @@
-use axum::{extract::State, Json};
-use std::sync::Arc;
 use crate::hub::Hub;
+use axum::{Json, extract::State};
+use std::sync::Arc;
 
-pub async fn health_handler(
-    State(hub): State<Arc<Hub>>,
-) -> Json<serde_json::Value> {
+pub async fn health_handler(State(hub): State<Arc<Hub>>) -> Json<serde_json::Value> {
     let health = hub.check_health().await.unwrap_or(serde_json::json!({
         "mode": "standalone",
         "status": "degraded",
@@ -16,10 +14,11 @@ pub async fn health_handler(
         "sync_error_count": 0,
     }));
 
-    let failed_missions: i64 = sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'FAILED'")
-        .fetch_one(&hub.pool)
-        .await
-        .unwrap_or(0);
+    let failed_missions: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM agent_missions WHERE status = 'FAILED'")
+            .fetch_one(&hub.pool)
+            .await
+            .unwrap_or(0);
 
     Json(serde_json::json!({
         "mode": health.get("mode").unwrap_or(&serde_json::json!("standalone")),

@@ -1,3 +1,3 @@
 pub mod service;
 
-pub use service::{SyncDelta, SyncDeltas, CloudSyncService};
+pub use service::{CloudSyncService, SyncDelta, SyncDeltas};

@@ -69,7 +69,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
-                        let _ = crate::telemetry::record_llm_call_cost(&pool, &tenant_id, &model_string, cost_usd).await;
+                        let _ = crate::telemetry::record_llm_call_cost(
+                            &pool,
+                            &tenant_id,
+                            &model_string,
+                            cost_usd,
+                        )
+                        .await;
                     });
                 }
             }
@@ -100,7 +106,13 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                         .to_string();
                     tokio::spawn(async move {
                         let pool = crate::db::get_pool();
-                        let _ = crate::telemetry::record_outbound_api_cost(&pool, &tenant_id, &api_string, cost_usd).await;
+                        let _ = crate::telemetry::record_outbound_api_cost(
+                            &pool,
+                            &tenant_id,
+                            &api_string,
+                            cost_usd,
+                        )
+                        .await;
                     });
                 }
             }
@@ -147,7 +159,14 @@ pub async fn sync_telemetry_handler(Json(batch): Json<Vec<MetricBatchItem>>) -> 
                 let is_telemetry_enabled = ::server_config::get().telemetry_enabled;
                 if is_telemetry_enabled {
                     let pool = crate::db::get_pool();
-                    let _ = crate::telemetry::buffer_metric(&pool, &item.metric_name, &item.metric_type, item.value, item.labels.clone()).await;
+                    let _ = crate::telemetry::buffer_metric(
+                        &pool,
+                        &item.metric_name,
+                        &item.metric_type,
+                        item.value,
+                        item.labels.clone(),
+                    )
+                    .await;
                 }
                 // Ignore other metrics in cloud
                 tracing::trace!(

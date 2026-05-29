@@ -1,16 +1,15 @@
-use axum::{
-    extract::{Extension, State},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
+use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Deserialize)]
 pub struct ChatRequest {
@@ -38,25 +37,33 @@ pub fn determine_routing(msg: &str) -> (DepartmentType, String, serde_json::Valu
         (
             DepartmentType::Operations,
             "Process refund request from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "refund" })
+            serde_json::json!({ "original_request": msg, "action": "refund" }),
         )
-    } else if lower_msg.contains("post") || lower_msg.contains("newsletter") || lower_msg.contains("campaign") || lower_msg.contains("promote") {
+    } else if lower_msg.contains("post")
+        || lower_msg.contains("newsletter")
+        || lower_msg.contains("campaign")
+        || lower_msg.contains("promote")
+    {
         (
             DepartmentType::Marketing,
             "Draft marketing content from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "create_content" })
+            serde_json::json!({ "original_request": msg, "action": "create_content" }),
         )
-    } else if lower_msg.contains("quote") || lower_msg.contains("lead") || lower_msg.contains("discount") || lower_msg.contains("pricing") {
+    } else if lower_msg.contains("quote")
+        || lower_msg.contains("lead")
+        || lower_msg.contains("discount")
+        || lower_msg.contains("pricing")
+    {
         (
             DepartmentType::Sales,
             "Draft sales response/quote from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "draft_quote" })
+            serde_json::json!({ "original_request": msg, "action": "draft_quote" }),
         )
     } else {
         (
             DepartmentType::Operations, // Fallback
             "General task assignment from team chat".to_string(),
-            serde_json::json!({ "original_request": msg, "action": "general_task" })
+            serde_json::json!({ "original_request": msg, "action": "general_task" }),
         )
     }
 }
@@ -68,20 +75,46 @@ async fn handle_chat(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ChatResponse {
+                    success: false,
+                    department_assigned: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     let (dept, description, payload_json) = determine_routing(&payload.message);
 
-    match orchestrator.execute_action(
-        dept.clone(),
-        description,
-        tenant_id,
-        ActionRisk::DraftForReview,
-        payload_json,
-    ).await {
-        Ok(_) => (StatusCode::OK, Json(ChatResponse { success: true, department_assigned: Some(dept.to_string()) })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(ChatResponse { success: false, department_assigned: None })).into_response(),
+    match orchestrator
+        .execute_action(
+            dept.clone(),
+            description,
+            tenant_id,
+            ActionRisk::DraftForReview,
+            payload_json,
+        )
+        .await
+    {
+        Ok(_) => (
+            StatusCode::OK,
+            Json(ChatResponse {
+                success: true,
+                department_assigned: Some(dept.to_string()),
+            }),
+        )
+            .into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ChatResponse {
+                success: false,
+                department_assigned: None,
+            }),
+        )
+            .into_response(),
     }
 }
 

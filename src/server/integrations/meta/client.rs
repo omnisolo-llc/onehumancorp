@@ -38,7 +38,9 @@ impl MetaClientWrapper for RealMetaClient {
             "messaging_type": "RESPONSE"
         });
 
-        let res = self.http_client.post(&url)
+        let res = self
+            .http_client
+            .post(&url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -51,8 +53,9 @@ impl MetaClientWrapper for RealMetaClient {
                         &crate::db::get_pool(),
                         "unknown", // tenant context
                         &format!("{}_send_message", platform),
-                        0.01 // nominal meta cost
-                    ).await;
+                        0.01, // nominal meta cost
+                    )
+                    .await;
                     Ok(())
                 } else {
                     Err(format!("Meta API error: {}", resp.status()))

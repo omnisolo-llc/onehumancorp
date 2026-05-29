@@ -1,8 +1,8 @@
-use tonic::{Request, Response, Status};
-use ::server_ohc::billing::*;
+use crate::services::billing::auditor::{AuditEvent, CostAuditor};
 use ::server_ohc::billing::billing_service_server::BillingService;
-use crate::services::billing::auditor::{CostAuditor, AuditEvent};
+use ::server_ohc::billing::*;
 use std::sync::Arc;
+use tonic::{Request, Response, Status};
 
 pub struct MyBillingService {
     auditor: Arc<CostAuditor>,
@@ -20,7 +20,10 @@ impl BillingService for MyBillingService {
         &self,
         request: Request<TokenUsage>,
     ) -> Result<Response<TokenUsage>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
 
         let req = request.into_inner();
 
@@ -54,8 +57,14 @@ impl BillingService for MyBillingService {
         let total_tokens = self.auditor.get_total_tokens();
 
         let mut agents = Vec::new();
-        for (agent_id, cost, token_used, roi, eff, storage_bytes) in self.auditor.get_agent_costs_snapshot() {
-            let pct = if total_cost > 0.0 { (cost / total_cost) as f32 } else { 0.0 };
+        for (agent_id, cost, token_used, roi, eff, storage_bytes) in
+            self.auditor.get_agent_costs_snapshot()
+        {
+            let pct = if total_cost > 0.0 {
+                (cost / total_cost) as f32
+            } else {
+                0.0
+            };
             agents.push(AgentCostSummary {
                 agent_id,
                 cost_usd: cost,
@@ -104,11 +113,13 @@ mod tests {
         };
 
         let mut request = Request::new(req.clone());
-        request.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://test".to_string(),
-            org_id: "org_y".to_string(),
-            agent_id: "agent_x".to_string(),
-        });
+        request
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test".to_string(),
+                org_id: "org_y".to_string(),
+                agent_id: "agent_x".to_string(),
+            });
         let response = service.track_token_usage(request).await;
 
         assert!(response.is_ok());
@@ -141,11 +152,13 @@ mod tests {
             cached_tokens: 0,
         };
         let mut req_req = Request::new(req);
-        req_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://test".to_string(),
-            org_id: "org_y".to_string(),
-            agent_id: "agent_x".to_string(),
-        });
+        req_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "spiffe://test".to_string(),
+                org_id: "org_y".to_string(),
+                agent_id: "agent_x".to_string(),
+            });
         let _ = service.track_token_usage(req_req).await;
 
         let req_summary = TokenUsage {

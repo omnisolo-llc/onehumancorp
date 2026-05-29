@@ -1,6 +1,6 @@
 use crate::ohc::orchestration::{McpInvokeRequest, McpInvokeResponse, McpToolProto};
-use sha2::{Sha256, Digest};
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use sqlx::Row;
 
 pub struct ConfigSyncServer {
@@ -28,7 +28,10 @@ impl ConfigSyncServer {
         }]
     }
 
-    pub async fn invoke_tool(&self, req: &McpInvokeRequest) -> Result<McpInvokeResponse, tonic::Status> {
+    pub async fn invoke_tool(
+        &self,
+        req: &McpInvokeRequest,
+    ) -> Result<McpInvokeResponse, tonic::Status> {
         if req.tool_id != "mcp_config_sync" {
             return Err(tonic::Status::invalid_argument("Invalid tool_id"));
         }
@@ -53,11 +56,16 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "hash": hash,
-                })).unwrap();
-                Ok(McpInvokeResponse { payload: resp_payload })
+                }))
+                .unwrap();
+                Ok(McpInvokeResponse {
+                    payload: resp_payload,
+                })
             }
             "push_config" => {
-                let mut payload = params.payload.ok_or_else(|| tonic::Status::invalid_argument("Missing payload"))?;
+                let mut payload = params
+                    .payload
+                    .ok_or_else(|| tonic::Status::invalid_argument("Missing payload"))?;
 
                 let max_size: usize = std::env::var("MAX_CONFIG_SIZE")
                     .unwrap_or_else(|_| (1024 * 1024).to_string())
@@ -67,7 +75,10 @@ impl ConfigSyncServer {
                 if let serde_json::Value::Object(ref mut map) = payload {
                     if let Some(pwd) = map.get("local_proxy_password").and_then(|v| v.as_str()) {
                         let encrypted = crate::crypto::encrypt_deterministic(pwd);
-                        map.insert("local_proxy_password".to_string(), serde_json::Value::String(encrypted));
+                        map.insert(
+                            "local_proxy_password".to_string(),
+                            serde_json::Value::String(encrypted),
+                        );
                     }
                 }
 
@@ -90,7 +101,7 @@ impl ConfigSyncServer {
                         config_json = EXCLUDED.config_json,
                         updated_at = EXCLUDED.updated_at,
                         hash = EXCLUDED.hash
-                    "#
+                    "#,
                 )
                 .bind(&req.spiffe_id)
                 .bind(&config_str)
@@ -103,8 +114,11 @@ impl ConfigSyncServer {
                 let resp_payload = serde_json::to_string(&serde_json::json!({
                     "status": "success",
                     "merged": true,
-                })).unwrap();
-                Ok(McpInvokeResponse { payload: resp_payload })
+                }))
+                .unwrap();
+                Ok(McpInvokeResponse {
+                    payload: resp_payload,
+                })
             }
             _ => Err(tonic::Status::invalid_argument("Invalid action")),
         }

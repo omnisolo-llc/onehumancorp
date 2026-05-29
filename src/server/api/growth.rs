@@ -1,13 +1,13 @@
+use crate::hub::Hub;
 use axum::{
+    Extension, Json, Router,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
-    Json, Router, Extension,
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use sqlx::PgPool;
-use crate::hub::Hub;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SocialPostRequest {
@@ -83,19 +83,27 @@ where
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/milestones/check", get(handle_check_milestones))
-        .route("/team-invites", get(handle_get_team_invites).post(handle_create_team_invite))
+        .route(
+            "/team-invites",
+            get(handle_get_team_invites).post(handle_create_team_invite),
+        )
         .route("/team-invites/metrics", get(handle_team_invites_metrics))
-        .route("/team-invites/aggregated-metrics", get(handle_aggregated_team_invites_metrics))
+        .route(
+            "/team-invites/aggregated-metrics",
+            get(handle_aggregated_team_invites_metrics),
+        )
         .route("/referrals/click", post(handle_referral_click))
         .route("/referrals/convert", post(handle_referral_convert))
         .route("/team-invites/accept", post(handle_team_invite_accept))
         .route("/referrals/generate", post(handle_referral_generate))
         .route("/onboarding-metrics", get(handle_onboarding_metrics))
-        .route("/discount_share/generate", post(handle_generate_discount_share))
+        .route(
+            "/discount_share/generate",
+            post(handle_generate_discount_share),
+        )
         .route("/milestone/card", get(handle_get_milestone_card))
         .layer(Extension(GrowthState { pool, hub }))
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralIdRequest {
@@ -119,13 +127,10 @@ pub struct InviteIdRequest {
     pub id: String,
 }
 
-
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReferralGenerateResponse {
     pub referral_link: String,
 }
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TeamInvitesMetricsResponse {
@@ -179,9 +184,7 @@ async fn handle_generate_review(
         req.customer_name, req.product_name, req.order_id
     );
 
-    Json(GenerateReviewResponse {
-        message: generated,
-    })
+    Json(GenerateReviewResponse { message: generated })
 }
 
 async fn handle_send_campaign(
@@ -195,7 +198,11 @@ async fn handle_send_campaign(
     // 4. Record the campaign in DB.
 
     // Simulate sending 12 emails (since the UI states "12 recent orders without reviews")
-    let target_emails = if req.target_segment == "recent_buyers_no_review" { 12 } else { 150 };
+    let target_emails = if req.target_segment == "recent_buyers_no_review" {
+        12
+    } else {
+        150
+    };
 
     // We can emit an event here to the Hub to trigger any background tasks or metrics updates.
     if let Ok(event) = serde_json::to_string(&serde_json::json!({
@@ -238,27 +245,53 @@ async fn handle_storefront_embed(
     let tenant = query.tenant.as_deref().unwrap_or("my-store");
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-    let bg_color = if query.theme.as_deref() == Some("dark") { "#333" } else { "white" };
-    let text_color = if query.theme.as_deref() == Some("dark") { "white" } else { "black" };
-    let border_color = if query.theme.as_deref() == Some("dark") { "#555" } else { "#eaeaea" };
-    let price_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#555" };
-    let link_color = if query.theme.as_deref() == Some("dark") { "#ddd" } else { "#333" };
+    let bg_color = if query.theme.as_deref() == Some("dark") {
+        "#333"
+    } else {
+        "white"
+    };
+    let text_color = if query.theme.as_deref() == Some("dark") {
+        "white"
+    } else {
+        "black"
+    };
+    let border_color = if query.theme.as_deref() == Some("dark") {
+        "#555"
+    } else {
+        "#eaeaea"
+    };
+    let price_color = if query.theme.as_deref() == Some("dark") {
+        "#ddd"
+    } else {
+        "#555"
+    };
+    let link_color = if query.theme.as_deref() == Some("dark") {
+        "#ddd"
+    } else {
+        "#333"
+    };
 
     // Basic HTML escaping
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-         .replace("<", "&lt;")
-         .replace(">", "&gt;")
-         .replace("\"", "&quot;")
-         .replace("'", "&#x27;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#x27;")
     };
 
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
     // Note: URL encode tenant for the href
-    let safe_tenant = tenant.replace(" ", "%20").replace("<", "%3C").replace(">", "%3E").replace("\"", "%22").replace("'", "%27");
+    let safe_tenant = tenant
+        .replace(" ", "%20")
+        .replace("<", "%3C")
+        .replace(">", "%3E")
+        .replace("\"", "%22")
+        .replace("'", "%27");
 
-    let html = format!(r##"
+    let html = format!(
+        r##"
 <!DOCTYPE html>
 <html>
 <head>
@@ -285,7 +318,8 @@ async fn handle_storefront_embed(
     </div>
 </body>
 </html>
-"##);
+"##
+    );
     axum::response::Html(html)
 }
 
@@ -294,22 +328,31 @@ async fn handle_og_card(
 ) -> impl IntoResponse {
     let name = query.product_name.as_deref().unwrap_or("Premium Product");
     let price = query.price.as_deref().unwrap_or("$49.99");
-    let bg_color = if query.theme.as_deref() == Some("dark") { "#1a1a1a" } else { "#ffffff" };
-    let text_color = if query.theme.as_deref() == Some("dark") { "#ffffff" } else { "#000000" };
+    let bg_color = if query.theme.as_deref() == Some("dark") {
+        "#1a1a1a"
+    } else {
+        "#ffffff"
+    };
+    let text_color = if query.theme.as_deref() == Some("dark") {
+        "#ffffff"
+    } else {
+        "#000000"
+    };
     let accent_color = "#0066ff";
 
     let escape_html = |s: &str| {
         s.replace("&", "&amp;")
-         .replace("<", "&lt;")
-         .replace(">", "&gt;")
-         .replace("\"", "&quot;")
-         .replace("'", "&#x27;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&#x27;")
     };
 
     let safe_name = escape_html(name);
     let safe_price = escape_html(price);
 
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(
+        r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <rect width="1200" height="630" fill="{bg_color}" />
   <rect x="50" y="50" width="1100" height="530" fill="none" stroke="{accent_color}" stroke-width="4" rx="20" />
 
@@ -320,12 +363,10 @@ async fn handle_og_card(
   <text x="250" y="505" font-family="sans-serif" font-size="40" font-weight="bold" fill="#ffffff" text-anchor="middle">Buy Now</text>
 
   <text x="1100" y="550" font-family="sans-serif" font-size="30" font-weight="bold" fill="{text_color}" text-anchor="end" opacity="0.8">⚡ Powered by OHC</text>
-</svg>"##);
+</svg>"##
+    );
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    ([(axum::http::header::CONTENT_TYPE, "image/svg+xml")], svg)
 }
 
 async fn handle_check_milestones(
@@ -333,7 +374,10 @@ async fn handle_check_milestones(
     axum::extract::Query(query): axum::extract::Query<serde_json::Value>,
 ) -> impl IntoResponse {
     use sqlx::Row;
-    let tenant_id = query.get("tenant").and_then(|v| v.as_str()).unwrap_or("DEFAULT");
+    let tenant_id = query
+        .get("tenant")
+        .and_then(|v| v.as_str())
+        .unwrap_or("DEFAULT");
 
     let rows = sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
         .bind(tenant_id)
@@ -382,11 +426,13 @@ async fn handle_get_milestone_card(
     // Fetch business name - handle "DEFAULT" and ID vs tenant_id
     let mut business_name = "My Awesome Store".to_string();
     if tenant_id != "DEFAULT" && uuid::Uuid::parse_str(tenant_id).is_ok() {
-        let row: Option<String> = sqlx::query_scalar("SELECT business_name FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid")
-            .bind(tenant_id)
-            .fetch_optional(&state.pool)
-            .await
-            .unwrap_or_default();
+        let row: Option<String> = sqlx::query_scalar(
+            "SELECT business_name FROM tenants WHERE id = $1::uuid OR tenant_id = $1::uuid",
+        )
+        .bind(tenant_id)
+        .fetch_optional(&state.pool)
+        .await
+        .unwrap_or_default();
         if let Some(name) = row {
             business_name = name;
         }
@@ -394,10 +440,10 @@ async fn handle_get_milestone_card(
 
     let escape_xml = |s: &str| {
         s.replace("&", "&amp;")
-         .replace("<", "&lt;")
-         .replace(">", "&gt;")
-         .replace("\"", "&quot;")
-         .replace("'", "&apos;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
     };
 
     let safe_business_name = escape_xml(&business_name);
@@ -409,7 +455,8 @@ async fn handle_get_milestone_card(
         _ => ("Success Milestone!", "Built with OHC", "✨"),
     };
 
-    let svg = format!(r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+    let svg = format!(
+        r##"<svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
@@ -426,31 +473,37 @@ async fn handle_get_milestone_card(
 
   <text x="600" y="560" font-family="sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#ffffff">{safe_business_name}</text>
   <text x="1100" y="590" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ Powered by OHC</text>
-</svg>"##);
+</svg>"##
+    );
 
-    (
-        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-        svg,
-    )
+    ([(axum::http::header::CONTENT_TYPE, "image/svg+xml")], svg)
 }
 
 async fn handle_get_team_invites(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
+        state.pool.clone(),
+    ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     let limit = query.limit.unwrap_or(20);
-    match tracker.get_team_invites(&query.team_id, query.cursor.clone(), limit as i64).await {
+    match tracker
+        .get_team_invites(&query.team_id, query.cursor.clone(), limit as i64)
+        .await
+    {
         Ok(invites) => {
             let next_cursor = if invites.len() == limit {
                 invites.last().map(|i| i.id.clone())
             } else {
                 None
             };
-            Ok(Json(TeamInvitesResponse { invites, next_cursor }))
-        },
+            Ok(Json(TeamInvitesResponse {
+                invites,
+                next_cursor,
+            }))
+        }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
@@ -479,7 +532,9 @@ async fn handle_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<GetTeamInvitesQuery>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
+        state.pool.clone(),
+    ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.get_team_invites_count(&query.team_id).await {
@@ -492,11 +547,18 @@ async fn handle_onboarding_metrics(
     Extension(_state): Extension<GrowthState>,
 ) -> Result<Json<OnboardingMetricsResponse>, StatusCode> {
     match sqlx::query("SELECT step, COUNT(*) as count FROM onboarding_funnels GROUP BY step")
-        .fetch_all(&_state.pool).await
+        .fetch_all(&_state.pool)
+        .await
     {
         Ok(rows) => {
             use sqlx::Row;
-            let metrics = rows.into_iter().map(|r| OnboardingMetric { step: r.get("step"), count: r.get::<i64, _>("count") as i32 }).collect();
+            let metrics = rows
+                .into_iter()
+                .map(|r| OnboardingMetric {
+                    step: r.get("step"),
+                    count: r.get::<i64, _>("count") as i32,
+                })
+                .collect();
             Ok(Json(OnboardingMetricsResponse { metrics }))
         }
         Err(e) => {
@@ -564,14 +626,18 @@ async fn handle_referral_convert(
     }
 }
 
-
 async fn handle_referral_generate(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<::server_auth::orchestration::AuthInfo>,
+    axum::extract::Extension(auth_info): axum::extract::Extension<
+        ::server_auth::orchestration::AuthInfo,
+    >,
 ) -> Result<Json<ReferralGenerateResponse>, StatusCode> {
     let ref_code = uuid::Uuid::new_v4().to_string();
     let ref_id = uuid::Uuid::new_v4().to_string();
-    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs() as i64;
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
 
     match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
         .bind(&ref_id)
@@ -603,7 +669,9 @@ async fn handle_team_invite_accept(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<InviteIdRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
+        state.pool.clone(),
+    ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.accept_invite(&req.id).await {
@@ -617,7 +685,7 @@ async fn handle_team_invite_accept(
                 state.hub.append_recent_event(msg);
             }
             Ok(Json(()))
-        },
+        }
         Err(e) if e == "not found" => Err(StatusCode::NOT_FOUND),
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -627,12 +695,19 @@ async fn handle_create_team_invite(
     Extension(state): Extension<GrowthState>,
     Json(req): Json<CreateTeamInviteRequest>,
 ) -> Result<Json<()>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
+        state.pool.clone(),
+    ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
-    match tracker.record_invite(&req.team_id, &req.inviter_id, &req.invitee_id).await {
+    match tracker
+        .record_invite(&req.team_id, &req.inviter_id, &req.invitee_id)
+        .await
+    {
         Ok(_) => {
-            if let Ok(event) = serde_json::to_string(&serde_json::json!({ "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id })) {
+            if let Ok(event) = serde_json::to_string(
+                &serde_json::json!({ "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }),
+            ) {
                 let msg = crate::hub::HubEvent {
                     r#type: "growth.team_invite_created".to_string(),
                     payload: event,
@@ -641,17 +716,16 @@ async fn handle_create_team_invite(
                 state.hub.append_recent_event(msg);
             }
             Ok(Json(()))
-        },
+        }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::extract::Extension;
     use axum::Json;
+    use axum::extract::Extension;
     use axum::extract::Query;
     use sqlx::PgPool;
 
@@ -676,7 +750,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub,
+        };
 
         let req = CreateTeamInviteRequest {
             team_id: "team-test-direct".to_string(),
@@ -712,10 +789,9 @@ mod tests {
         }
         assert!(found);
 
-        let accept_req = InviteIdRequest {
-            id: invite_id,
-        };
-        let accept_res = handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
+        let accept_req = InviteIdRequest { id: invite_id };
+        let accept_res =
+            handle_team_invite_accept(Extension(state.clone()), Json(accept_req)).await;
         assert!(accept_res.is_ok());
 
         // Call metrics handler directly
@@ -724,14 +800,23 @@ mod tests {
             cursor: None,
             limit: None,
         };
-        let metrics_res = handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
+        let metrics_res =
+            handle_team_invites_metrics(Extension(state.clone()), Query(metrics_query)).await;
         assert!(metrics_res.is_ok());
         let metrics_res_json = metrics_res.unwrap().0;
         assert_eq!(metrics_res_json.total_invites, 1);
 
         let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_created"));
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.team_invite_accepted"));
+        assert!(
+            recent_events
+                .iter()
+                .any(|e| e.r#type == "growth.team_invite_created")
+        );
+        assert!(
+            recent_events
+                .iter()
+                .any(|e| e.r#type == "growth.team_invite_accepted")
+        );
     }
 
     #[tokio::test]
@@ -744,7 +829,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
 
         // Insert dummy referral
         let ref_id = "ref-code-123";
@@ -768,20 +856,30 @@ mod tests {
         let click_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res_not_found = handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
+        let res_not_found =
+            handle_referral_click(Extension(state.clone()), Json(click_req_not_found)).await;
         assert!(res_not_found.is_err());
         assert_eq!(res_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
         let convert_req_not_found = ReferralIdRequest {
             id: "ref-code-123-not-found".to_string(),
         };
-        let res2_not_found = handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
+        let res2_not_found =
+            handle_referral_convert(Extension(state.clone()), Json(convert_req_not_found)).await;
         assert!(res2_not_found.is_err());
         assert_eq!(res2_not_found.unwrap_err(), StatusCode::NOT_FOUND);
 
         let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_clicked"));
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_converted"));
+        assert!(
+            recent_events
+                .iter()
+                .any(|e| e.r#type == "growth.referral_clicked")
+        );
+        assert!(
+            recent_events
+                .iter()
+                .any(|e| e.r#type == "growth.referral_converted")
+        );
     }
 
     #[tokio::test]
@@ -794,7 +892,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
 
         // Insert dummy referral
         let ref_id = "test-ref-123";
@@ -802,7 +903,9 @@ mod tests {
             .bind(ref_id)
             .execute(&pool).await.unwrap();
 
-        let req = ReferralIdRequest { id: ref_id.to_string() };
+        let req = ReferralIdRequest {
+            id: ref_id.to_string(),
+        };
 
         // Test Click
         let res = handle_referral_click(Extension(state.clone()), Json(req)).await;
@@ -810,20 +913,26 @@ mod tests {
 
         let clicks: i32 = sqlx::query_scalar("SELECT clicks FROM referrals WHERE id = $1")
             .bind(ref_id)
-            .fetch_one(&pool).await.unwrap();
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(clicks, 1);
 
-        let req2 = ReferralIdRequest { id: ref_id.to_string() };
+        let req2 = ReferralIdRequest {
+            id: ref_id.to_string(),
+        };
         // Test Convert
         let res2 = handle_referral_convert(Extension(state.clone()), Json(req2)).await;
         assert!(res2.is_ok());
 
-        let conversions: i32 = sqlx::query_scalar("SELECT conversions FROM referrals WHERE id = $1")
-            .bind(ref_id)
-            .fetch_one(&pool).await.unwrap();
+        let conversions: i32 =
+            sqlx::query_scalar("SELECT conversions FROM referrals WHERE id = $1")
+                .bind(ref_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(conversions, 1);
     }
-
 
     #[tokio::test]
     async fn test_referral_generate() {
@@ -835,7 +944,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
 
         let auth_info = ::server_auth::orchestration::AuthInfo {
             spiffe_id: "spiffe://ohc.app/test".to_string(),
@@ -843,7 +955,12 @@ mod tests {
             agent_id: "test-agent".to_string(),
         };
 
-        let res = handle_referral_generate(Extension(state.clone()), axum::extract::Extension(auth_info.clone())).await.unwrap();
+        let res = handle_referral_generate(
+            Extension(state.clone()),
+            axum::extract::Extension(auth_info.clone()),
+        )
+        .await
+        .unwrap();
         let ref_link = res.0.referral_link;
         assert!(ref_link.starts_with("https://ohc.app/ref/"));
 
@@ -852,7 +969,11 @@ mod tests {
         assert_eq!(count, 1);
 
         let recent_events = state.hub.recent_events(10);
-        assert!(recent_events.iter().any(|e| e.r#type == "growth.referral_generated"));
+        assert!(
+            recent_events
+                .iter()
+                .any(|e| e.r#type == "growth.referral_generated")
+        );
     }
 
     #[tokio::test]
@@ -865,7 +986,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
 
         // Insert dummy invite
         let invite_id = "test-invite-123";
@@ -873,19 +997,26 @@ mod tests {
             .bind(invite_id)
             .execute(&pool).await.unwrap();
 
-        let req = InviteIdRequest { id: invite_id.to_string() };
+        let req = InviteIdRequest {
+            id: invite_id.to_string(),
+        };
 
         let res = handle_team_invite_accept(Extension(state.clone()), Json(req)).await;
         assert!(res.is_ok());
 
         let status: String = sqlx::query_scalar("SELECT status FROM team_invites WHERE id = $1")
             .bind(invite_id)
-            .fetch_one(&pool).await.unwrap();
+            .fetch_one(&pool)
+            .await
+            .unwrap();
         assert_eq!(status, "ACCEPTED");
 
         // Test missing invite
-        let missing_req = InviteIdRequest { id: "missing-invite-404".to_string() };
-        let res_missing = handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
+        let missing_req = InviteIdRequest {
+            id: "missing-invite-404".to_string(),
+        };
+        let res_missing =
+            handle_team_invite_accept(Extension(state.clone()), Json(missing_req)).await;
         assert!(res_missing.is_err());
         assert_eq!(res_missing.unwrap_err(), StatusCode::NOT_FOUND);
     }
@@ -900,7 +1031,10 @@ mod tests {
 
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState { pool: pool.clone(), hub: hub.clone() };
+        let state = GrowthState {
+            pool: pool.clone(),
+            hub: hub.clone(),
+        };
 
         sqlx::query("INSERT INTO onboarding_funnels (id, user_id, step, created_at_unix) VALUES ($1, $2, $3, 0) ON CONFLICT DO NOTHING")
             .bind("funnel-1").bind("user1").bind("step1")
@@ -909,7 +1043,12 @@ mod tests {
         let res = handle_onboarding_metrics(Extension(state.clone())).await;
         assert!(res.is_ok());
         let metrics_json = res.unwrap().0;
-        let count_step1 = metrics_json.metrics.iter().find(|m| m.step == "step1").map(|m| m.count).unwrap_or(0);
+        let count_step1 = metrics_json
+            .metrics
+            .iter()
+            .find(|m| m.step == "step1")
+            .map(|m| m.count)
+            .unwrap_or(0);
         assert_eq!(count_step1, 1);
     }
 }
@@ -917,7 +1056,9 @@ mod tests {
 async fn handle_aggregated_team_invites_metrics(
     Extension(state): Extension<GrowthState>,
 ) -> Result<Json<TeamInvitesMetricsResponse>, StatusCode> {
-    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(state.pool.clone()));
+    let repo = std::sync::Arc::new(crate::services::growth::invites::InviteRepository::new(
+        state.pool.clone(),
+    ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
     match tracker.get_total_invites_count().await {

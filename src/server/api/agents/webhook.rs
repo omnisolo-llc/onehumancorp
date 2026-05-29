@@ -1,16 +1,16 @@
-use axum::{
-    extract::{State, Json},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
-use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
-use crate::orchestration::departments::types::{DepartmentType, ActionRisk};
-use uuid::Uuid;
 use crate::db::get_pool;
+use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
+use crate::orchestration::departments::types::{ActionRisk, DepartmentType};
+use axum::{
+    Router,
+    extract::{Json, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::post,
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct WebhookPayload {
@@ -42,7 +42,8 @@ async fn handle_webhook(
     if payload.source == "stripe" && payload.message == "order_placed" {
         // Trigger SMS notification for new orders
         tokio::spawn(async move {
-            let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+            let _ =
+                crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
         });
 
         let event = crate::orchestration::departments::types::DepartmentEvent {
@@ -53,12 +54,35 @@ async fn handle_webhook(
         };
 
         match orchestrator.dispatch_event(event).await {
-            Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+            Ok(_) => {
+                return (
+                    StatusCode::OK,
+                    Json(WebhookResponse {
+                        success: true,
+                        request_id: None,
+                    }),
+                )
+                    .into_response();
+            }
             Err(e) => {
                 if e.contains("AI Budget exhausted") {
-                    return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                    return (
+                        StatusCode::TOO_MANY_REQUESTS,
+                        Json(WebhookResponse {
+                            success: false,
+                            request_id: None,
+                        }),
+                    )
+                        .into_response();
                 } else {
-                    return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                    return (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        Json(WebhookResponse {
+                            success: false,
+                            request_id: None,
+                        }),
+                    )
+                        .into_response();
                 }
             }
         }
@@ -67,7 +91,8 @@ async fn handle_webhook(
     if payload.source == "mercadopago" {
         if payload.message == "approved" {
             tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
+                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!")
+                    .await;
             });
 
             let event = crate::orchestration::departments::types::DepartmentEvent {
@@ -78,21 +103,54 @@ async fn handle_webhook(
             };
 
             match orchestrator.dispatch_event(event).await {
-                Ok(_) => return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response(),
+                Ok(_) => {
+                    return (
+                        StatusCode::OK,
+                        Json(WebhookResponse {
+                            success: true,
+                            request_id: None,
+                        }),
+                    )
+                        .into_response();
+                }
                 Err(e) => {
                     if e.contains("AI Budget exhausted") {
-                        return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                        return (
+                            StatusCode::TOO_MANY_REQUESTS,
+                            Json(WebhookResponse {
+                                success: false,
+                                request_id: None,
+                            }),
+                        )
+                            .into_response();
                     } else {
-                        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                        return (
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            Json(WebhookResponse {
+                                success: false,
+                                request_id: None,
+                            }),
+                        )
+                            .into_response();
                     }
                 }
             }
         } else if payload.message == "pending" || payload.message == "rejected" {
-            return (StatusCode::OK, Json(WebhookResponse { success: true, request_id: None })).into_response();
+            return (
+                StatusCode::OK,
+                Json(WebhookResponse {
+                    success: true,
+                    request_id: None,
+                }),
+            )
+                .into_response();
         }
     }
 
-    let description = format!("Incoming message from {}: {}", payload.source, payload.message);
+    let description = format!(
+        "Incoming message from {}: {}",
+        payload.source, payload.message
+    );
 
     // We route external messages (like DMs) to the Customer Success department
     let risk = ActionRisk::DraftForReview;
@@ -106,7 +164,10 @@ async fn handle_webhook(
             business_context, payload.message
         );
         let client = crate::minimax::MinimaxClient::new(api_key);
-        client.reason(&prompt).await.unwrap_or_else(|_| "Draft generation failed.".to_string())
+        client
+            .reason(&prompt)
+            .await
+            .unwrap_or_else(|_| "Draft generation failed.".to_string())
     } else {
         "Thank you for reaching out! We will get back to you shortly.".to_string()
     };
@@ -117,10 +178,27 @@ async fn handle_webhook(
     let pool = get_pool();
     let mut tx = match pool.begin().await {
         Ok(t) => t,
-        Err(_e) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response(),
+        Err(_e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(WebhookResponse {
+                    success: false,
+                    request_id: None,
+                }),
+            )
+                .into_response();
+        }
     };
-    if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await {
-        return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+    if let Err(_e) = crate::common::auth_utils::set_org_context(&mut *tx, &payload.tenant_id).await
+    {
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(WebhookResponse {
+                success: false,
+                request_id: None,
+            }),
+        )
+            .into_response();
     }
     let _ = sqlx::query(
         "INSERT INTO inbox_messages (id, tenant_id, source, content, draft_reply, status) VALUES ($1, $2, $3, $4, $5, $6)"
@@ -135,24 +213,48 @@ async fn handle_webhook(
     .await;
     let _ = tx.commit().await;
 
-    match orchestrator.execute_action(
-        DepartmentType::CustomerSuccess,
-        description,
-        payload.tenant_id,
-        risk,
-        serde_json::json!({
-            "source": payload.source,
-            "message": payload.message,
-            "draft_reply": draft_reply,
-            "inbox_message_id": id,
-        }),
-    ).await {
-        Ok(req) => (StatusCode::OK, Json(WebhookResponse { success: true, request_id: Some(req.id) })).into_response(),
+    match orchestrator
+        .execute_action(
+            DepartmentType::CustomerSuccess,
+            description,
+            payload.tenant_id,
+            risk,
+            serde_json::json!({
+                "source": payload.source,
+                "message": payload.message,
+                "draft_reply": draft_reply,
+                "inbox_message_id": id,
+            }),
+        )
+        .await
+    {
+        Ok(req) => (
+            StatusCode::OK,
+            Json(WebhookResponse {
+                success: true,
+                request_id: Some(req.id),
+            }),
+        )
+            .into_response(),
         Err(e) => {
             if e.contains("AI Budget exhausted") {
-                return (StatusCode::TOO_MANY_REQUESTS, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                return (
+                    StatusCode::TOO_MANY_REQUESTS,
+                    Json(WebhookResponse {
+                        success: false,
+                        request_id: None,
+                    }),
+                )
+                    .into_response();
             } else {
-                return (StatusCode::INTERNAL_SERVER_ERROR, Json(WebhookResponse { success: false, request_id: None })).into_response();
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(WebhookResponse {
+                        success: false,
+                        request_id: None,
+                    }),
+                )
+                    .into_response();
             }
         }
     }

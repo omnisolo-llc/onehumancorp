@@ -1,7 +1,7 @@
-use axum::{extract::State, Json};
-use std::sync::Arc;
 use crate::hub::Hub;
 use axum::http::HeaderMap;
+use axum::{Json, extract::State};
+use std::sync::Arc;
 
 #[derive(serde::Serialize)]
 pub struct MyPlanResponse {
@@ -24,10 +24,15 @@ pub struct CostDashboardResponse {
     pub period_end: String,
 }
 
-pub fn router(hub: Arc<Hub>) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
+pub fn router(
+    hub: Arc<Hub>,
+) -> axum::Router<Arc<dyn ohc_builtin_agent::mesh::transport::MeshTransport>> {
     axum::Router::new()
         .route("/my-plan", axum::routing::get(my_plan_handler))
-        .route("/cost-dashboard", axum::routing::get(cost_dashboard_handler))
+        .route(
+            "/cost-dashboard",
+            axum::routing::get(cost_dashboard_handler),
+        )
         .with_state(hub)
 }
 
@@ -36,15 +41,27 @@ pub async fn my_plan_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<MyPlanResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
             } else {
                 auth.org_id.clone()
             }
-        },
-        None => return Json(MyPlanResponse { current_plan: "Free".to_string(), ai_actions_used: 0, ai_actions_limit: None, storage_used_bytes: 0, storage_limit_bytes: None, next_bill_estimated: 0 })
+        }
+        None => {
+            return Json(MyPlanResponse {
+                current_plan: "Free".to_string(),
+                ai_actions_used: 0,
+                ai_actions_limit: None,
+                storage_used_bytes: 0,
+                storage_limit_bytes: None,
+                next_bill_estimated: 0,
+            });
+        }
     };
 
     let tracker = hub.tracker();
@@ -52,7 +69,8 @@ pub async fn my_plan_handler(
     let ai_used_future = tracker.get_tenant_actions_used(&tenant_id);
     let storage_used_bytes_future = tracker.get_tenant_storage_used(&tenant_id);
 
-    let (tier_res, ai_used_res, storage_used_bytes_res) = tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
+    let (tier_res, ai_used_res, storage_used_bytes_res) =
+        tokio::join!(tier_future, ai_used_future, storage_used_bytes_future);
 
     let tier = tier_res.unwrap_or(::server_pricing::rate_limit::PlanTier::Free);
     let ai_used = ai_used_res.unwrap_or(0);
@@ -63,7 +81,8 @@ pub async fn my_plan_handler(
         ::server_pricing::rate_limit::PlanTier::Starter => "Starter",
         ::server_pricing::rate_limit::PlanTier::Pro => "Pro",
         ::server_pricing::rate_limit::PlanTier::Business => "Business",
-    }.to_string();
+    }
+    .to_string();
 
     let ai_limit = tier.monthly_action_limit().map(|v| v as i32);
     let storage_limit = tier.storage_limit_mb().map(|v| (v as i64) * 1024 * 1024);
@@ -84,7 +103,7 @@ pub async fn my_plan_handler(
     let projected_cost = ::server_pricing::calculator::calculate_projected_monthly_cost(
         base_bill,
         days_elapsed,
-        total_days
+        total_days,
     );
 
     let next_bill_estimated = projected_cost as i32;
@@ -104,20 +123,37 @@ pub async fn cost_dashboard_handler(
     State(hub): State<Arc<Hub>>,
     request: axum::extract::Request,
 ) -> Json<CostDashboardResponse> {
-    let tenant_id = match request.extensions().get::<::server_auth::orchestration::AuthInfo>() {
+    let tenant_id = match request
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+    {
         Some(auth) => {
             if auth.org_id.is_empty() {
                 "default".to_string()
             } else {
                 auth.org_id.clone()
             }
-        },
-        None => return Json(CostDashboardResponse { total_revenue: 0, total_costs: 0, llm_cost: 0, storage_cost: 0, payment_fees: 0, period_start: "2024-05-01".to_string(), period_end: "2024-05-31".to_string() })
+        }
+        None => {
+            return Json(CostDashboardResponse {
+                total_revenue: 0,
+                total_costs: 0,
+                llm_cost: 0,
+                storage_cost: 0,
+                payment_fees: 0,
+                period_start: "2024-05-01".to_string(),
+                period_end: "2024-05-31".to_string(),
+            });
+        }
     };
 
     let now = chrono::Utc::now();
     use chrono::Datelike;
-    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_utc();
+    let start_of_month = chrono::NaiveDate::from_ymd_opt(now.year(), now.month(), 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc();
     let period_start = start_of_month.format("%Y-%m-%d").to_string();
     let period_end = now.format("%Y-%m-%d").to_string();
 
@@ -132,7 +168,11 @@ pub async fn cost_dashboard_handler(
     });
 
     let storage_future = tokio::task::spawn(async move {
-        hub_clone.tracker().get_tenant_storage_used(&tenant_id_clone).await.unwrap_or(0)
+        hub_clone
+            .tracker()
+            .get_tenant_storage_used(&tenant_id_clone)
+            .await
+            .unwrap_or(0)
     });
 
     let (storage_res, auditor_res) = tokio::join!(storage_future, auditor_future);

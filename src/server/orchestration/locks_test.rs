@@ -1,4 +1,4 @@
-use super::locks::{StandaloneLock, DistributedLock};
+use super::locks::{DistributedLock, StandaloneLock};
 
 #[tokio::test]
 async fn test_standalone_lock_acquire() {

@@ -1,6 +1,6 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{Mutex, OwnedMutexGuard};
-use std::collections::HashMap;
 
 #[async_trait::async_trait]
 pub trait DistributedLock: Send + Sync {
@@ -39,7 +39,8 @@ impl DistributedLock for StandaloneLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
         let task_mutex = {
             let mut locks = self.locks.lock().await;
-            locks.entry(task_id.to_string())
+            locks
+                .entry(task_id.to_string())
                 .or_insert_with(|| Arc::new(Mutex::new(())))
                 .clone()
         };
@@ -60,16 +61,22 @@ pub struct RedisLock {
 
 impl RedisLock {
     pub fn new(client: redis::Client) -> Self {
-        Self { client, multiplexed_conn: tokio::sync::OnceCell::new() }
+        Self {
+            client,
+            multiplexed_conn: tokio::sync::OnceCell::new(),
+        }
     }
 }
 
 #[async_trait::async_trait]
 impl DistributedLock for RedisLock {
     async fn acquire(&self, task_id: &str) -> Result<LockGuard, String> {
-        let mut conn = self.multiplexed_conn.get_or_try_init(|| async {
-            self.client.get_multiplexed_async_connection().await
-        }).await.map_err(|e| e.to_string())?.clone();
+        let mut conn = self
+            .multiplexed_conn
+            .get_or_try_init(|| async { self.client.get_multiplexed_async_connection().await })
+            .await
+            .map_err(|e| e.to_string())?
+            .clone();
         let key = format!("ohc:lock:task:{}", task_id);
 
         let acquired: bool = redis::cmd("SET")

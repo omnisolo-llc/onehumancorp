@@ -1,6 +1,6 @@
+use super::locks::DistributedLock;
 use std::collections::HashMap;
 use std::sync::Arc;
-use super::locks::DistributedLock;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum State {
@@ -27,7 +27,12 @@ impl State {
 
 pub trait Repository: Send + Sync {
     fn get_task_state(&self, task_id: &str) -> Result<State, String>;
-    fn update_task_state(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String>;
+    fn update_task_state(
+        &self,
+        task_id: &str,
+        new_state: State,
+        agent_id: &str,
+    ) -> Result<(), String>;
 }
 
 pub struct StateMachine {
@@ -41,7 +46,10 @@ impl StateMachine {
         let mut allowed_transitions = HashMap::new();
         allowed_transitions.insert(State::Pending, vec![State::Ready]);
         allowed_transitions.insert(State::Ready, vec![State::InProgress]);
-        allowed_transitions.insert(State::InProgress, vec![State::Completed, State::Blocked, State::Failed]);
+        allowed_transitions.insert(
+            State::InProgress,
+            vec![State::Completed, State::Blocked, State::Failed],
+        );
         allowed_transitions.insert(State::Blocked, vec![State::InProgress, State::Failed]);
 
         Self {
@@ -51,16 +59,26 @@ impl StateMachine {
         }
     }
 
-    pub async fn transition(&self, task_id: &str, new_state: State, agent_id: &str) -> Result<(), String> {
+    pub async fn transition(
+        &self,
+        task_id: &str,
+        new_state: State,
+        agent_id: &str,
+    ) -> Result<(), String> {
         let _guard = self.lock.acquire(task_id).await?;
 
         let current_state = self.repo.get_task_state(task_id)?;
 
-        let valid_transitions = self.allowed_transitions.get(&current_state)
+        let valid_transitions = self
+            .allowed_transitions
+            .get(&current_state)
             .ok_or_else(|| format!("no valid transitions from state {:?}", current_state))?;
 
         if !valid_transitions.contains(&new_state) {
-            return Err(format!("invalid transition from {:?} to {:?}", current_state, new_state));
+            return Err(format!(
+                "invalid transition from {:?} to {:?}",
+                current_state, new_state
+            ));
         }
 
         self.repo.update_task_state(task_id, new_state, agent_id)?;
@@ -74,7 +92,11 @@ impl StateMachine {
         self.transition(task_id, State::Ready, "").await
     }
 
-    pub async fn transition_to_in_progress(&self, task_id: &str, agent_id: &str) -> Result<(), String> {
+    pub async fn transition_to_in_progress(
+        &self,
+        task_id: &str,
+        agent_id: &str,
+    ) -> Result<(), String> {
         self.transition(task_id, State::InProgress, agent_id).await
     }
 

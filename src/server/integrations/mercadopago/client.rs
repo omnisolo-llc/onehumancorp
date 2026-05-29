@@ -20,17 +20,25 @@ impl MercadoPagoClient {
         }
     }
 
-    pub async fn create_checkout_preference(&self, _price_id: &str, tenant_id: &str) -> Result<String, String> {
+    pub async fn create_checkout_preference(
+        &self,
+        _price_id: &str,
+        tenant_id: &str,
+    ) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             tenant_id,
             "mercadopago_checkout_preference",
-            0.15 // mock cost for api orchestration
-        ).await;
+            0.15, // mock cost for api orchestration
+        )
+        .await;
 
         #[cfg(test)]
         if self.access_token == "test_token" {
-            return Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string());
+            return Ok(
+                "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123"
+                    .to_string(),
+            );
         }
 
         let url = "https://api.mercadopago.com/checkout/preferences";
@@ -44,7 +52,9 @@ impl MercadoPagoClient {
             ]
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -53,7 +63,10 @@ impl MercadoPagoClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                    Ok(
+                        "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123"
+                            .to_string(),
+                    )
                 } else {
                     Err(format!("Mercado Pago API error: {}", resp.status()))
                 }
@@ -69,13 +82,19 @@ impl MercadoPagoClient {
 }
 
 impl MercadoPagoClient {
-    pub async fn create_payment(&self, amount: f64, description: &str, payer_email: &str) -> Result<String, String> {
+    pub async fn create_payment(
+        &self,
+        amount: f64,
+        description: &str,
+        payer_email: &str,
+    ) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             payer_email, // using email as a proxy for tenant/identity in this stub
             "mercadopago_create_payment",
-            0.20
-        ).await;
+            0.20,
+        )
+        .await;
 
         #[cfg(test)]
         if self.access_token == "test_token" {
@@ -92,7 +111,9 @@ impl MercadoPagoClient {
             }
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -124,15 +145,22 @@ mod tests {
     #[tokio::test]
     async fn test_mercadopago_client_create_checkout_preference() {
         let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client.create_checkout_preference("price_123", "tenant_123").await;
+        let result = client
+            .create_checkout_preference("price_123", "tenant_123")
+            .await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123");
+        assert_eq!(
+            result.unwrap(),
+            "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123"
+        );
     }
 
     #[tokio::test]
     async fn test_mercadopago_client_create_payment() {
         let client = MercadoPagoClient::new("test_token".to_string());
-        let result = client.create_payment(100.0, "Test payment", "test@example.com").await;
+        let result = client
+            .create_payment(100.0, "Test payment", "test@example.com")
+            .await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "mock_txn_123");
     }

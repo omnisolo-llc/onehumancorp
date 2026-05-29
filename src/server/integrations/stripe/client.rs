@@ -30,46 +30,64 @@ impl StripeClient {
         StripeClient { api_key }
     }
 
-    pub async fn create_checkout_session(&self, _price_id: &str, customer_id: &str, amount_usd: f64) -> Result<String, String> {
+    pub async fn create_checkout_session(
+        &self,
+        _price_id: &str,
+        customer_id: &str,
+        amount_usd: f64,
+    ) -> Result<String, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             customer_id, // assume customer_id is a proxy for organization_id
             "stripe_checkout_session",
-            0.10 // mock cost for api orchestration
-        ).await;
+            0.10, // mock cost for api orchestration
+        )
+        .await;
 
         // Use PaymentRouter to optimize method
-        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(amount_usd);
+        let pm = crate::integrations::stripe::routing::PaymentRouter::optimize_payment_method(
+            amount_usd,
+        );
 
         match pm {
             crate::integrations::stripe::routing::PaymentMethod::Ach => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_ach...".to_string())
-            },
+            }
             crate::integrations::stripe::routing::PaymentMethod::CreditCard => {
                 Ok("https://checkout.stripe.com/c/pay/cs_test_...".to_string())
-            },
+            }
             crate::integrations::stripe::routing::PaymentMethod::Razorpay => {
                 // Return razorpay checkout dummy link here since routing was updated
                 Ok("https://checkout.razorpay.com/pay/cs_test_...".to_string())
-            },
+            }
             crate::integrations::stripe::routing::PaymentMethod::MercadoPago => {
                 if let Ok(token) = std::env::var("MERCADOPAGO_ACCESS_TOKEN") {
-                    let mp_client = crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
-                    mp_client.create_checkout_preference(_price_id, customer_id).await
+                    let mp_client =
+                        crate::integrations::mercadopago::client::MercadoPagoClient::new(token);
+                    mp_client
+                        .create_checkout_preference(_price_id, customer_id)
+                        .await
                 } else {
-                    Ok("https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123".to_string())
+                    Ok(
+                        "https://www.mercadopago.com.br/checkout/v1/redirect?pref_id=mock_pref_123"
+                            .to_string(),
+                    )
                 }
             }
         }
     }
 
-    pub async fn get_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn get_subscription(
+        &self,
+        _subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         let _ = ::server_telemetry::record_api_call_cost(
             &crate::db::get_pool(),
             "unknown",
             "stripe_get_subscription",
-            0.01
-        ).await;
+            0.01,
+        )
+        .await;
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "active".to_string(),
@@ -78,17 +96,18 @@ impl StripeClient {
     }
 
     pub async fn list_invoices(&self, _customer_id: &str) -> Result<Vec<StripeInvoice>, String> {
-        Ok(vec![
-            StripeInvoice {
-                id: "in_test_...".to_string(),
-                amount_due: 2900,
-                status: "paid".to_string(),
-                invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
-            }
-        ])
+        Ok(vec![StripeInvoice {
+            id: "in_test_...".to_string(),
+            amount_due: 2900,
+            status: "paid".to_string(),
+            invoice_pdf: Some("https://pay.stripe.com/invoice/acct_.../pdf".to_string()),
+        }])
     }
 
-    pub async fn cancel_subscription(&self, _subscription_id: &str) -> Result<StripeSubscription, String> {
+    pub async fn cancel_subscription(
+        &self,
+        _subscription_id: &str,
+    ) -> Result<StripeSubscription, String> {
         Ok(StripeSubscription {
             id: "sub_test_...".to_string(),
             status: "canceled".to_string(),
@@ -111,8 +130,9 @@ impl StripeClient {
                 &crate::db::get_pool(),
                 account_id,
                 "stripe_payout",
-                0.25 // Standard Stripe Payout Fee
-            ).await;
+                0.25, // Standard Stripe Payout Fee
+            )
+            .await;
 
             // Execute real payout call here...
             Ok(Some(format!("po_test_{}", total_cents)))

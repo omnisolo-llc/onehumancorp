@@ -1,5 +1,5 @@
-use sqlx::PgPool;
 use chrono::Utc;
+use sqlx::PgPool;
 use std::sync::OnceLock;
 use tokio::sync::Semaphore;
 
@@ -8,8 +8,6 @@ static SQLITE_CONCURRENCY_LIMITER: OnceLock<Semaphore> = OnceLock::new();
 pub fn get_sqlite_limiter() -> &'static Semaphore {
     SQLITE_CONCURRENCY_LIMITER.get_or_init(|| Semaphore::new(1))
 }
-
-
 
 pub struct SipDB {
     pool: PgPool,
@@ -26,7 +24,11 @@ impl SipDB {
         }
     }
 
-    pub async fn handoff_mission(&self, mission_id: &str, blockers: &str) -> Result<(), sqlx::Error> {
+    pub async fn handoff_mission(
+        &self,
+        mission_id: &str,
+        blockers: &str,
+    ) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
         ::server_common::auth_utils::set_org_context(&mut *tx, &self.org_id).await?;
 
@@ -52,10 +54,13 @@ impl SipDB {
         self
     }
 
-    pub async fn prune_stale_missions(&self, age_threshold: chrono::Duration) -> Result<(), sqlx::Error> {
+    pub async fn prune_stale_missions(
+        &self,
+        age_threshold: chrono::Duration,
+    ) -> Result<(), sqlx::Error> {
         let stuck_threshold = Utc::now() - chrono::Duration::hours(1);
         let fail_threshold = Utc::now() - age_threshold;
-        
+
         let mut attempt = 0;
         let max_attempts = 10;
         let mut backoff = std::time::Duration::from_millis(50);
@@ -92,19 +97,27 @@ impl SipDB {
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
             }.await;
-            
+
             match res {
                 Ok(_) => return Ok(()),
                 Err(err) => {
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") {
+                    if err_str.contains("database is locked")
+                        || err_str.contains("sqlite_busy")
+                        || err_str.contains("deadlock")
+                        || err_str.contains("serialization")
+                        || err_str.contains("timeout")
+                        || err_str.contains("closed")
+                    {
                         attempt += 1;
                         if attempt >= max_attempts {
                             return Err(err);
                         }
                         tokio::time::sleep(backoff).await;
                         backoff *= 2;
-                    } else if err_str.contains("connection refused") || err_str.contains("connection reset") {
+                    } else if err_str.contains("connection refused")
+                        || err_str.contains("connection reset")
+                    {
                         return Err(err);
                     } else {
                         return Err(err);
@@ -113,12 +126,6 @@ impl SipDB {
             }
         }
     }
-
-
-
-
-
-
 
     pub async fn load_grounding_content(&self) -> Option<String> {
         if let Some(ref root) = self.context_root {
@@ -143,7 +150,11 @@ impl SipDB {
     /// innovation completely eliminates context latency and grounding drift
     /// that would otherwise occur if the sub-agent had to explicitly fetch
     /// project rules via ad-hoc file reads at spawn time.
-    pub fn enrich_payload_with_grounding_content(&self, payload: &str, grounding_content: &Option<String>) -> String {
+    pub fn enrich_payload_with_grounding_content(
+        &self,
+        payload: &str,
+        grounding_content: &Option<String>,
+    ) -> String {
         let mut final_payload = payload.to_string();
         if let Some(content) = grounding_content {
             final_payload = format!("{}\n\n[SYSTEM GROUNDING]:\n{}", payload, content);
@@ -156,7 +167,15 @@ impl SipDB {
     /// By utilizing the agent_missions table, we natively inject complete project context
     /// into sub-agent payloads at the moment of creation, achieving hermetic,
     /// zero-latency Bazel-native context routing.
-    pub async fn delegate_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool, grounding_content: &Option<String>) -> Result<(), sqlx::Error> {
+    pub async fn delegate_mission_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        mission_id: &str,
+        status: &str,
+        payload: &str,
+        force_local: bool,
+        grounding_content: &Option<String>,
+    ) -> Result<(), sqlx::Error> {
         let final_payload = self.enrich_payload_with_grounding_content(payload, grounding_content);
 
         let is_standalone = std::env::var("OHC_STANDALONE").unwrap_or_default() == "true";
@@ -166,24 +185,44 @@ impl SipDB {
                 match get_sqlite_limiter().try_acquire() {
                     Ok(p) => Some(p),
                     Err(_) => {
-                        let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "delegate_mission_with_tx").await;
-                        Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                        let _ = crate::telemetry::record_sqlite_throttled_request(
+                            &self.pool,
+                            "delegate_mission_with_tx",
+                        )
+                        .await;
+                        Some(get_sqlite_limiter().acquire().await.map_err(|e| {
+                            sqlx::Error::Io(std::io::Error::new(
+                                std::io::ErrorKind::Other,
+                                e.to_string(),
+                            ))
+                        })?)
                     }
                 }
             } else {
                 None
             };
-            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local).await
-        }).await;
+            self.upsert_mission_with_tx(tx, mission_id, status, &final_payload, force_local)
+                .await
+        })
+        .await;
 
         match res {
             Ok(Ok(_)) => Ok(()),
             Ok(Err(err)) => Err(err),
-            Err(timeout_err) => Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err))),
+            Err(timeout_err) => Err(sqlx::Error::Io(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                timeout_err,
+            ))),
         }
     }
 
-    pub async fn upsert_mission(&self, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+    pub async fn upsert_mission(
+        &self,
+        mission_id: &str,
+        status: &str,
+        payload: &str,
+        force_local: bool,
+    ) -> Result<(), sqlx::Error> {
         let mut attempt = 0;
         let max_attempts = 3;
         let mut backoff = std::time::Duration::from_millis(50);
@@ -196,8 +235,17 @@ impl SipDB {
                     match get_sqlite_limiter().try_acquire() {
                         Ok(p) => Some(p),
                         Err(_) => {
-                            let _ = crate::telemetry::record_sqlite_throttled_request(&self.pool, "upsert_mission").await;
-                            Some(get_sqlite_limiter().acquire().await.map_err(|e| sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?)
+                            let _ = crate::telemetry::record_sqlite_throttled_request(
+                                &self.pool,
+                                "upsert_mission",
+                            )
+                            .await;
+                            Some(get_sqlite_limiter().acquire().await.map_err(|e| {
+                                sqlx::Error::Io(std::io::Error::new(
+                                    std::io::ErrorKind::Other,
+                                    e.to_string(),
+                                ))
+                            })?)
                         }
                     }
                 } else {
@@ -205,26 +253,52 @@ impl SipDB {
                 };
                 let mut tx = self.pool.begin().await?;
                 ::server_common::auth_utils::set_system_context(&mut *tx).await?;
-                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local).await?;
+                self.upsert_mission_with_tx(&mut tx, mission_id, status, payload, force_local)
+                    .await?;
                 tx.commit().await?;
                 Ok::<(), sqlx::Error>(())
-            }).await;
+            })
+            .await;
 
             match res {
                 Ok(Ok(_)) => return Ok(()),
                 Ok(Err(err)) => {
                     let err_str = err.to_string().to_lowercase();
-                    if err_str.contains("database is locked") || err_str.contains("sqlite_busy") || err_str.contains("deadlock") || err_str.contains("serialization") || err_str.contains("timeout") || err_str.contains("closed") || err_str.contains("connection refused") || err_str.contains("connection reset") {
+                    if err_str.contains("database is locked")
+                        || err_str.contains("sqlite_busy")
+                        || err_str.contains("deadlock")
+                        || err_str.contains("serialization")
+                        || err_str.contains("timeout")
+                        || err_str.contains("closed")
+                        || err_str.contains("connection refused")
+                        || err_str.contains("connection reset")
+                    {
                         attempt += 1;
                         if attempt >= max_attempts {
-                            if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
-                                let _ = crate::telemetry::record_sqlite_retry_exhausted(&self.pool, "upsert_mission").await;
+                            if err_str.contains("database is locked")
+                                || err_str.contains("sqlite_busy")
+                            {
+                                let _ = crate::telemetry::record_sqlite_retry_exhausted(
+                                    &self.pool,
+                                    "upsert_mission",
+                                )
+                                .await;
                             }
                             return Err(err);
                         }
-                        if err_str.contains("database is locked") || err_str.contains("sqlite_busy") {
-                            let _ = crate::telemetry::record_sqlite_lock_contention(&self.pool, "upsert_mission").await;
-                        } else if !is_standalone && (err_str.contains("deadlock") || err_str.contains("timeout") || err_str.contains("database is locked") || err_str.contains("serialization")) {
+                        if err_str.contains("database is locked") || err_str.contains("sqlite_busy")
+                        {
+                            let _ = crate::telemetry::record_sqlite_lock_contention(
+                                &self.pool,
+                                "upsert_mission",
+                            )
+                            .await;
+                        } else if !is_standalone
+                            && (err_str.contains("deadlock")
+                                || err_str.contains("timeout")
+                                || err_str.contains("database is locked")
+                                || err_str.contains("serialization"))
+                        {
                             crate::telemetry::record_postgres_lock_contention("upsert_mission");
                         }
                         tokio::time::sleep(backoff).await;
@@ -239,7 +313,10 @@ impl SipDB {
                     }
                     attempt += 1;
                     if attempt >= max_attempts {
-                        return Err(sqlx::Error::Io(std::io::Error::new(std::io::ErrorKind::TimedOut, timeout_err)));
+                        return Err(sqlx::Error::Io(std::io::Error::new(
+                            std::io::ErrorKind::TimedOut,
+                            timeout_err,
+                        )));
                     }
                     tokio::time::sleep(backoff).await;
                     backoff *= 2;
@@ -248,7 +325,14 @@ impl SipDB {
         }
     }
 
-    pub async fn upsert_mission_with_tx(&self, tx: &mut sqlx::Transaction<'_, sqlx::Postgres>, mission_id: &str, status: &str, payload: &str, force_local: bool) -> Result<(), sqlx::Error> {
+    pub async fn upsert_mission_with_tx(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        mission_id: &str,
+        status: &str,
+        payload: &str,
+        force_local: bool,
+    ) -> Result<(), sqlx::Error> {
         let mut final_status = status.to_string();
 
         // Implement Elastic Swarm Bursting: Check for queue saturation
@@ -295,15 +379,23 @@ impl SipDB {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Row;
+    use std::env;
     use std::fs::File;
     use std::io::Write;
-    use std::env;
-    use sqlx::Row;
 
     // Helper to get a dummy pgpool for testing
     async fn setup_dummy_pool() -> PgPool {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
-        sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let db_url = std::env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .acquire_timeout(std::time::Duration::from_millis(50))
             .connect_lazy(&db_url)
             .unwrap()
@@ -314,14 +406,25 @@ mod tests {
         let pool = setup_dummy_pool().await;
         let sip_db = SipDB::new(pool, "test_org".to_string());
         let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, payload, "Payload should be unmodified when no context root is set");
+        let enriched = sip_db
+            .enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        assert_eq!(
+            enriched, payload,
+            "Payload should be unmodified when no context root is set"
+        );
     }
 
     // Helper to create a temporary directory without external crate
     fn create_temp_dir(name: &str) -> String {
         let mut path = env::temp_dir();
-        path.push(format!("{}_{}", name, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+        path.push(format!(
+            "{}_{}",
+            name,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
         std::fs::create_dir_all(&path).unwrap();
         path.to_str().unwrap().to_string()
     }
@@ -336,12 +439,15 @@ mod tests {
         let mut file = File::create(&agents_path).unwrap();
         write!(file, "Always write clean code.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+        let sip_db = SipDB::new(pool, "test_org".to_string()).with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAlways write clean code.");
+        let enriched = sip_db
+            .enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        assert_eq!(
+            enriched,
+            "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAlways write clean code."
+        );
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
@@ -358,8 +464,7 @@ mod tests {
         let mut file = File::create(&agents_path).unwrap();
         write!(file, "Resilient Omni-Context instructions: Always apply Glassmorphism and Fail-Closed security.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+        let sip_db = SipDB::new(pool, "test_org".to_string()).with_context_root(dir_str.clone());
 
         let payload = "{\"task\":\"Scale K8s HPA\"}";
         let grounding = sip_db.load_grounding_content().await;
@@ -382,12 +487,15 @@ mod tests {
         let mut file = File::create(&claude_path).unwrap();
         write!(file, "Use specialized tokens.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+        let sip_db = SipDB::new(pool, "test_org".to_string()).with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nUse specialized tokens.");
+        let enriched = sip_db
+            .enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        assert_eq!(
+            enriched,
+            "Original Task Payload\n\n[SYSTEM GROUNDING]:\nUse specialized tokens."
+        );
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
@@ -406,13 +514,16 @@ mod tests {
         let mut file2 = File::create(&claude_path).unwrap();
         write!(file2, "CLAUDE rules.").unwrap();
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+        let sip_db = SipDB::new(pool, "test_org".to_string()).with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        let enriched = sip_db
+            .enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
         // Only AGENTS.md should be injected
-        assert_eq!(enriched, "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules.");
+        assert_eq!(
+            enriched,
+            "Original Task Payload\n\n[SYSTEM GROUNDING]:\nAGENTS rules."
+        );
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
@@ -422,19 +533,29 @@ mod tests {
         let pool = setup_dummy_pool().await;
         let dir_str = create_temp_dir("tc5");
 
-        let sip_db = SipDB::new(pool, "test_org".to_string())
-            .with_context_root(dir_str.clone());
+        let sip_db = SipDB::new(pool, "test_org".to_string()).with_context_root(dir_str.clone());
 
         let payload = "Original Task Payload";
-        let enriched = sip_db.enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
-        assert_eq!(enriched, payload, "Payload should be unmodified when neither file is present");
+        let enriched = sip_db
+            .enrich_payload_with_grounding_content(payload, &sip_db.load_grounding_content().await);
+        assert_eq!(
+            enriched, payload,
+            "Payload should be unmodified when neither file is present"
+        );
 
         std::fs::remove_dir_all(&dir_str).unwrap();
     }
 
     #[tokio::test]
     async fn test_handoff_mission_marks_blocked() {
-        let pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
@@ -442,7 +563,9 @@ mod tests {
 
         let sip_db = SipDB::new(pool, "test_org".to_string());
 
-        let res = sip_db.handoff_mission("dummy_id", "Blocked by prompt instructions").await;
+        let res = sip_db
+            .handoff_mission("dummy_id", "Blocked by prompt instructions")
+            .await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res.is_err());
     }
@@ -455,7 +578,13 @@ mod tests {
         };
 
         let pool = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .max_connections(1)
             .connect(&database_url)
             .await;
@@ -472,7 +601,7 @@ mod tests {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     tenant_id TEXT,
                     mission_log TEXT
-                )"
+                )",
             )
             .execute(&pool)
             .await
@@ -489,14 +618,18 @@ mod tests {
                 .unwrap();
 
             // Call handoff_mission
-            let res = sip_db.handoff_mission("test_mission_id", "Missing dependencies").await;
+            let res = sip_db
+                .handoff_mission("test_mission_id", "Missing dependencies")
+                .await;
             assert!(res.is_ok());
 
             // Verify
-            let row = sqlx::query("SELECT status, mission_log FROM agent_missions WHERE id = 'test_mission_id'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let row = sqlx::query(
+                "SELECT status, mission_log FROM agent_missions WHERE id = 'test_mission_id'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
 
             let status: String = row.get("status");
             let log: String = row.get("mission_log");
@@ -505,26 +638,39 @@ mod tests {
             assert!(log.contains("Missing dependencies"));
 
             // Call again to test append
-            let res2 = sip_db.handoff_mission("test_mission_id", "Another blocker").await;
+            let res2 = sip_db
+                .handoff_mission("test_mission_id", "Another blocker")
+                .await;
             assert!(res2.is_ok());
 
-            let row2 = sqlx::query("SELECT mission_log FROM agent_missions WHERE id = 'test_mission_id'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let row2 =
+                sqlx::query("SELECT mission_log FROM agent_missions WHERE id = 'test_mission_id'")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
 
             let log2: String = row2.get("mission_log");
             assert!(log2.contains("Missing dependencies\nAnother blocker"));
 
             // Clean up
-            sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'").execute(&pool).await.unwrap();
+            sqlx::query("DELETE FROM agent_missions WHERE id = 'test_mission_id'")
+                .execute(&pool)
+                .await
+                .unwrap();
         }
     }
 
     #[tokio::test]
     async fn test_prune_stale_missions_marks_stuck_as_failed() {
         // First verify it doesn't crash on execution with an invalid/dummy pool.
-        let dummy_pool = sqlx::postgres::PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+        let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .max_connections(1)
             .acquire_timeout(std::time::Duration::from_millis(10))
             .connect_lazy("postgres://localhost/dummy")
@@ -532,7 +678,9 @@ mod tests {
 
         let sip_db_dummy = SipDB::new(dummy_pool, "test_org".to_string());
 
-        let res_dummy = sip_db_dummy.prune_stale_missions(chrono::Duration::hours(24)).await;
+        let res_dummy = sip_db_dummy
+            .prune_stale_missions(chrono::Duration::hours(24))
+            .await;
         // Should error out gracefully with our dummy pool timeout instead of panicking
         assert!(res_dummy.is_err());
 
@@ -543,7 +691,13 @@ mod tests {
         };
 
         if let Ok(pool) = sqlx::postgres::PgPoolOptions::new()
-            .after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
             .max_connections(1)
             .connect(&database_url)
             .await
@@ -559,7 +713,7 @@ mod tests {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     tenant_id TEXT,
                     mission_log TEXT
-                )"
+                )",
             )
             .execute(&mut *tx)
             .await
@@ -602,31 +756,38 @@ mod tests {
             tx.commit().await.unwrap();
 
             let sip_db = SipDB::new(pool.clone(), "test_org".to_string());
-            let res = sip_db.prune_stale_missions(chrono::Duration::hours(24)).await;
+            let res = sip_db
+                .prune_stale_missions(chrono::Duration::hours(24))
+                .await;
             assert!(res.is_ok());
 
             // Verify STUCK mission was marked FAILED
-            let row_stuck = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_id'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let row_stuck =
+                sqlx::query("SELECT status FROM agent_missions WHERE id = 'stuck_mission_id'")
+                    .fetch_one(&pool)
+                    .await
+                    .unwrap();
             use sqlx::Row;
             let status_stuck: String = row_stuck.get("status");
             assert_eq!(status_stuck, "FAILED");
 
             // Verify stale PENDING mission was marked FAILED
-            let row_stale = sqlx::query("SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let row_stale = sqlx::query(
+                "SELECT status FROM agent_missions WHERE id = 'stale_pending_mission_id'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
             let status_stale: String = row_stale.get("status");
             assert_eq!(status_stale, "FAILED");
 
             // Verify normal PENDING mission is still PENDING
-            let row_normal = sqlx::query("SELECT status FROM agent_missions WHERE id = 'normal_pending_mission_id'")
-                .fetch_one(&pool)
-                .await
-                .unwrap();
+            let row_normal = sqlx::query(
+                "SELECT status FROM agent_missions WHERE id = 'normal_pending_mission_id'",
+            )
+            .fetch_one(&pool)
+            .await
+            .unwrap();
             let status_normal: String = row_normal.get("status");
             assert_eq!(status_normal, "PENDING");
 

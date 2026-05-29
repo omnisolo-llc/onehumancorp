@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use crate::db::{DB, DbStore};
 use chrono::Utc;
+use std::sync::Arc;
 
 pub struct ThrottlingManager {
     db: Arc<DB>,
@@ -11,7 +11,11 @@ impl ThrottlingManager {
         Self { db }
     }
 
-    pub async fn check_and_consume_budget(&self, tenant_id: &str, points: i32) -> Result<bool, String> {
+    pub async fn check_and_consume_budget(
+        &self,
+        tenant_id: &str,
+        points: i32,
+    ) -> Result<bool, String> {
         let _now = Utc::now();
 
         match &self.db.store {

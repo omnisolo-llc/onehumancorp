@@ -1,14 +1,14 @@
 pub mod cloud;
+#[cfg(test)]
+mod parity_test;
 pub mod standalone;
 #[cfg(test)]
 mod test;
-#[cfg(test)]
-mod parity_test;
 
+use crate::orchestration::mesh::TeammateMesh;
 use crate::tasks::SharedTask;
 use async_trait::async_trait;
 use std::sync::Arc;
-use crate::orchestration::mesh::TeammateMesh;
 
 #[async_trait]
 pub trait StateManager: Send + Sync {
@@ -32,10 +32,19 @@ pub struct MeshLockGuard {
 }
 
 impl MeshLockGuard {
-    pub async fn acquire(mesh: Arc<dyn TeammateMesh>, resource: String, owner: String, ttl_seconds: u64) -> Result<Self, String> {
+    pub async fn acquire(
+        mesh: Arc<dyn TeammateMesh>,
+        resource: String,
+        owner: String,
+        ttl_seconds: u64,
+    ) -> Result<Self, String> {
         let acquired = mesh.acquire_lock(&resource, &owner, ttl_seconds).await?;
         if acquired {
-            Ok(Self { mesh, resource, owner })
+            Ok(Self {
+                mesh,
+                resource,
+                owner,
+            })
         } else {
             Err(format!("Resource {} is currently locked", resource))
         }

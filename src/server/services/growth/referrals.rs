@@ -1,6 +1,6 @@
+use rand::RngCore;
 use std::collections::HashMap;
 use std::sync::RwLock;
-use rand::RngCore;
 
 pub struct ReferralTracker {
     total_referrals: RwLock<i32>,
@@ -148,23 +148,23 @@ mod tests {
     #[test]
     fn test_referral_tracker() {
         let tracker = ReferralTracker::new();
-        
+
         let code = tracker.generate_referral_code("user1");
         assert_eq!(code.len(), 8); // 4 bytes hex encoded!
-        
+
         // Test idempotency
         let code2 = tracker.generate_referral_code("user1");
         assert_eq!(code, code2);
-        
+
         assert!(tracker.record_referral(&code));
         assert_eq!(tracker.get_user_referrals("user1"), 1);
         assert_eq!(tracker.get_total_referrals(), 1);
-        
+
         assert!(!tracker.record_referral("invalid_code"));
-        
+
         assert!(tracker.record_referral_with_channel(&code, "twitter"));
         assert_eq!(tracker.get_user_referrals("user1"), 2);
-        
+
         let stats = tracker.get_channel_stats();
         assert_eq!(*stats.get("twitter").unwrap(), 1);
 

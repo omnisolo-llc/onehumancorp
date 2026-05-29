@@ -1,9 +1,9 @@
-use std::time::Duration;
-use sqlx::{SqlitePool, PgPool, Row};
-use serde_json::{Value, json};
-use tracing::{info, error, warn};
-use uuid::Uuid;
 use chrono::Utc;
+use serde_json::{Value, json};
+use sqlx::{PgPool, Row, SqlitePool};
+use std::time::Duration;
+use tracing::{error, info, warn};
+use uuid::Uuid;
 
 pub struct HybridSyncDaemon {
     sqlite_pool: SqlitePool,
@@ -12,7 +12,10 @@ pub struct HybridSyncDaemon {
 
 impl HybridSyncDaemon {
     pub fn new(sqlite_pool: SqlitePool, pg_pool: PgPool) -> Self {
-        Self { sqlite_pool, pg_pool }
+        Self {
+            sqlite_pool,
+            pg_pool,
+        }
     }
 
     pub async fn run(&self) {
@@ -121,7 +124,10 @@ impl HybridSyncDaemon {
             let mut tx = match self.pg_pool.begin().await {
                 Ok(t) => t,
                 Err(e) => {
-                    warn!("Failed to begin pg transaction: {}, gracefully degrading (cloud unreachable).", e);
+                    warn!(
+                        "Failed to begin pg transaction: {}, gracefully degrading (cloud unreachable).",
+                        e
+                    );
                     let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                         .bind(e.to_string())
                         .bind(&id)
@@ -138,7 +144,10 @@ impl HybridSyncDaemon {
                 .await;
 
             if let Err(e) = mission_res {
-                warn!("Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).", e);
+                warn!(
+                    "Failed to insert pg agent_missions: {}, gracefully degrading (cloud unreachable).",
+                    e
+                );
                 let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                     .bind(e.to_string())
                     .bind(&id)
@@ -159,7 +168,10 @@ impl HybridSyncDaemon {
                 Ok(_) => {
                     let commit_res = tx.commit().await;
                     if let Err(e) = commit_res {
-                        warn!("Failed to commit pg transaction for memory_id: {}, gracefully degrading. Error: {}", id, e);
+                        warn!(
+                            "Failed to commit pg transaction for memory_id: {}, gracefully degrading. Error: {}",
+                            id, e
+                        );
                         let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                             .bind(e.to_string())
                             .bind(&id)
@@ -173,16 +185,24 @@ impl HybridSyncDaemon {
                         .bind(&id)
                         .execute(&self.sqlite_pool)
                         .await?;
-                    info!("Successfully escalated memory_id: {} to cloud queue: {}", id, queue_id);
+                    info!(
+                        "Successfully escalated memory_id: {} to cloud queue: {}",
+                        id, queue_id
+                    );
                     success_count += 1;
 
-                    if let Err(e) = ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await {
+                    if let Err(e) =
+                        ::server_telemetry::record_rag_escalation(&self.pg_pool, "system", "").await
+                    {
                         warn!("Failed to record RAG escalation telemetry: {}", e);
                     }
                 }
                 Err(e) => {
                     let _ = tx.rollback().await;
-                    warn!("Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}", id, e);
+                    warn!(
+                        "Failed to escalate memory_id: {}, gracefully degrading (cloud unreachable). Error: {}",
+                        id, e
+                    );
                     let _ = sqlx::query("UPDATE swarm_truth_embeddings SET sync_error = ?, last_synced_at = CURRENT_TIMESTAMP WHERE memory_id = ?")
                         .bind(e.to_string())
                         .bind(&id)
@@ -193,7 +213,13 @@ impl HybridSyncDaemon {
         }
 
         if success_count > 0 {
-            if let Err(e) = ::server_telemetry::record_sync_escalation(&self.pg_pool, success_count as f32, ::server_telemetry::get_deployment_mode()).await {
+            if let Err(e) = ::server_telemetry::record_sync_escalation(
+                &self.pg_pool,
+                success_count as f32,
+                ::server_telemetry::get_deployment_mode(),
+            )
+            .await
+            {
                 warn!("Failed to record sync escalation telemetry: {}", e);
             }
         }

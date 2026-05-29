@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::sync::RwLock;
-use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
-use flate2::write::GzEncoder;
-use flate2::read::GzDecoder;
-use flate2::Compression;
-use std::io::{Read, Write};
 use base64::{Engine as _, engine::general_purpose};
+use chrono::{DateTime, Utc};
+use flate2::Compression;
+use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::io::{Read, Write};
+use std::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
@@ -33,10 +33,14 @@ impl UltraPlanManager {
         }
     }
 
-    pub fn create_plan(&self, mission_id: String, state_machine: serde_json::Value) -> Result<UltraPlan, String> {
+    pub fn create_plan(
+        &self,
+        mission_id: String,
+        state_machine: serde_json::Value,
+    ) -> Result<UltraPlan, String> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         let plan = UltraPlan {
             id: id.clone(),
             mission_id,
@@ -45,34 +49,44 @@ impl UltraPlanManager {
             created_at: now,
             updated_at: now,
         };
-        
+
         let mut plans = self.plans.write().unwrap();
         plans.insert(id, plan.clone());
-        
+
         Ok(plan)
     }
 
     pub fn get_ultra_plan(&self, plan_id: &str) -> Result<UltraPlan, String> {
         let plans = self.plans.read().unwrap();
-        plans.get(plan_id).cloned().ok_or_else(|| "ultra plan not found".to_string())
+        plans
+            .get(plan_id)
+            .cloned()
+            .ok_or_else(|| "ultra plan not found".to_string())
     }
-
 }
 
 #[allow(dead_code)]
 pub fn compress_ultraplan_data(data: &[u8]) -> Result<String, String> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(data).map_err(|e: std::io::Error| e.to_string())?;
-    let compressed = encoder.finish().map_err(|e: std::io::Error| e.to_string())?;
+    encoder
+        .write_all(data)
+        .map_err(|e: std::io::Error| e.to_string())?;
+    let compressed = encoder
+        .finish()
+        .map_err(|e: std::io::Error| e.to_string())?;
     Ok(general_purpose::STANDARD.encode(compressed))
 }
 
 #[allow(dead_code)]
 pub fn decompress_ultraplan_data(base64_str: &str) -> Result<Vec<u8>, String> {
-    let decoded = general_purpose::STANDARD.decode(base64_str).map_err(|e| e.to_string())?;
+    let decoded = general_purpose::STANDARD
+        .decode(base64_str)
+        .map_err(|e| e.to_string())?;
     let mut decoder = GzDecoder::new(&decoded[..]);
     let mut decompressed = Vec::new();
-    decoder.read_to_end(&mut decompressed).map_err(|e: std::io::Error| e.to_string())?;
+    decoder
+        .read_to_end(&mut decompressed)
+        .map_err(|e: std::io::Error| e.to_string())?;
     Ok(decompressed)
 }
 
@@ -85,7 +99,7 @@ impl Default for UltraPlanManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_compress_decompress() {
         let data = b"hello world hello world hello world";
@@ -98,12 +112,14 @@ mod tests {
     fn test_create_plan() {
         let manager = UltraPlanManager::new();
         let state_machine = serde_json::json!({"phase": "INIT"});
-        let plan = manager.create_plan("mission1".to_string(), state_machine.clone()).unwrap();
-        
+        let plan = manager
+            .create_plan("mission1".to_string(), state_machine.clone())
+            .unwrap();
+
         assert_eq!(plan.mission_id, "mission1");
         assert_eq!(plan.status, "DELIBERATING");
         assert_eq!(plan.state_machine, state_machine);
-        
+
         let fetched = manager.get_ultra_plan(&plan.id).unwrap();
         assert_eq!(fetched.id, plan.id);
     }

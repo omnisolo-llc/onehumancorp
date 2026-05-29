@@ -1,14 +1,10 @@
-use axum::{
-    extract::Json,
-    http::StatusCode,
-    response::IntoResponse,
-};
+use axum::{extract::Json, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
-use std::sync::Arc;
 use serde_json::Value;
+use std::sync::Arc;
 
-use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use crate::db::DbStore;
+use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 
 #[derive(Clone)]
 pub struct WebhookState {
@@ -33,14 +29,14 @@ pub async fn stripe_webhook_handler(
     axum::extract::State(webhook_state): axum::extract::State<WebhookState>,
     Json(payload): Json<StripeEvent>,
 ) -> impl IntoResponse {
-
     match payload.r#type.as_str() {
         "checkout.session.completed" | "customer.subscription.updated" => {
             let obj = &payload.data.object;
 
             // Extract tenant ID. Depending on your Stripe setup, this might be in metadata
             // or client_reference_id. Here we assume it's in metadata.tenant_id.
-            let tenant_id_opt = obj.get("metadata")
+            let tenant_id_opt = obj
+                .get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
@@ -50,7 +46,8 @@ pub async fn stripe_webhook_handler(
                 // For this example, let's assume we pass the target tier in metadata.tier
                 // or we deduce it. For simplicity in this demo, let's read metadata.tier
                 // and fallback to "Starter" if a payment succeeded.
-                let tier_str = obj.get("metadata")
+                let tier_str = obj
+                    .get("metadata")
                     .and_then(|m| m.get("tier"))
                     .and_then(|t| t.as_str())
                     .unwrap_or("Starter");
@@ -62,9 +59,12 @@ pub async fn stripe_webhook_handler(
                     _ => PlanTier::Free,
                 };
 
-
                 // Update Redis Rate Limiter
-                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, tier.clone()).await {
+                if let Err(_e) = webhook_state
+                    .rate_limiter
+                    .set_tenant_tier(tenant_id, tier.clone())
+                    .await
+                {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -103,18 +103,22 @@ pub async fn stripe_webhook_handler(
             } else {
                 StatusCode::BAD_REQUEST.into_response()
             }
-        },
+        }
         "customer.subscription.deleted" => {
             let obj = &payload.data.object;
-            let tenant_id_opt = obj.get("metadata")
+            let tenant_id_opt = obj
+                .get("metadata")
                 .and_then(|m| m.get("tenant_id"))
                 .and_then(|id| id.as_str())
                 .or_else(|| obj.get("client_reference_id").and_then(|id| id.as_str()));
 
             if let Some(tenant_id) = tenant_id_opt {
-
                 // Update Redis
-                if let Err(_e) = webhook_state.rate_limiter.set_tenant_tier(tenant_id, PlanTier::Free).await {
+                if let Err(_e) = webhook_state
+                    .rate_limiter
+                    .set_tenant_tier(tenant_id, PlanTier::Free)
+                    .await
+                {
                     return StatusCode::INTERNAL_SERVER_ERROR.into_response();
                 }
 
@@ -146,20 +150,23 @@ pub async fn stripe_webhook_handler(
             } else {
                 StatusCode::BAD_REQUEST.into_response()
             }
-        },
+        }
         "invoice.payment_failed" => {
             let obj = &payload.data.object;
-            let tenant_id_opt = obj.get("customer")
-                .and_then(|id| id.as_str());
+            let tenant_id_opt = obj.get("customer").and_then(|id| id.as_str());
 
             if let Some(_tenant_id) = tenant_id_opt {
                 // Trigger SMS notification
                 tokio::spawn(async move {
-                    let _ = crate::dispatch_critical_sms("failed_payment", "Payment failed for your business.").await;
+                    let _ = crate::dispatch_critical_sms(
+                        "failed_payment",
+                        "Payment failed for your business.",
+                    )
+                    .await;
                 });
             }
             StatusCode::OK.into_response()
-        },
+        }
         _ => {
             // Unhandled event types are ignored successfully
             StatusCode::OK.into_response()
@@ -197,11 +204,10 @@ pub async fn mercadopago_webhook_handler(
             // For mock purposes, assume we process it similarly to Stripe.
             // We just return OK.
             StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
+        }
+        _ => StatusCode::OK.into_response(),
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct RazorpayEvent {
@@ -226,19 +232,19 @@ pub struct RazorpayEntity {
     pub order_id: String,
 }
 
-
 fn verify_webhook_signature(headers: &axum::http::HeaderMap, _secret: &str) -> bool {
     // In a real implementation this would perform HMAC SHA256 or similar verification
     // based on the specific provider's signature header (e.g., Stripe-Signature, X-Cal-Signature).
     // The requirement states "VERIFY CRYPTOGRAPHIC SIGNATURES ON ALL WEBHOOKS" so we must include this logic structure.
-    let sig_header = headers.get("X-Signature").or_else(|| headers.get("Stripe-Signature"));
+    let sig_header = headers
+        .get("X-Signature")
+        .or_else(|| headers.get("Stripe-Signature"));
     if let Some(_sig) = sig_header {
         // Mock verification - always true if header exists for the sake of the test, but strictly required structurally
         return true;
     }
     false
 }
-
 
 pub async fn razorpay_webhook_handler(
     headers: axum::http::HeaderMap,
@@ -276,11 +282,10 @@ pub async fn razorpay_webhook_handler(
             }
 
             StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
+        }
+        _ => StatusCode::OK.into_response(),
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct CalComEvent {
@@ -315,11 +320,10 @@ pub async fn calcom_webhook_handler(
             // and auto-generate meeting links (e.g., Zoom).
             tracing::info!("Created booking: {}", booking_uid);
             StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
+        }
+        _ => StatusCode::OK.into_response(),
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct ResendEvent {
@@ -343,11 +347,10 @@ pub async fn resend_webhook_handler(
             // Automatically clean the tenant's mailing list
             tracing::info!("Message bounced/complained: [REDACTED]");
             StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
+        }
+        _ => StatusCode::OK.into_response(),
     }
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct AyrshareEvent {
@@ -366,8 +369,8 @@ pub async fn ayrshare_webhook_handler(
             // Ingest inbound messages into a unified OHC inbox table
             tracing::info!("Incoming notification from integration: [REDACTED]");
             StatusCode::OK.into_response()
-        },
-        _ => StatusCode::OK.into_response()
+        }
+        _ => StatusCode::OK.into_response(),
     }
 }
 
@@ -389,7 +392,7 @@ pub async fn manychat_webhook_handler(
 ) -> impl IntoResponse {
     match payload.status.as_str() {
         "ok" => StatusCode::OK.into_response(),
-        _ => StatusCode::OK.into_response()
+        _ => StatusCode::OK.into_response(),
     }
 }
 

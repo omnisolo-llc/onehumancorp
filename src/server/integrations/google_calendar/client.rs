@@ -4,7 +4,12 @@ use reqwest::Client;
 #[async_trait]
 pub trait GoogleCalendarClientWrapper: Send + Sync {
     async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String>;
-    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String>;
+    async fn create_event(
+        &self,
+        summary: &str,
+        start_time: &str,
+        end_time: &str,
+    ) -> Result<String, String>;
 }
 
 pub struct RealGoogleCalendarClient {
@@ -32,7 +37,9 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             "items": [{"id": "primary"}]
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -45,8 +52,9 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         &crate::db::get_pool(),
                         "unknown",
                         "google_calendar_get_free_busy",
-                        0.01
-                    ).await;
+                        0.01,
+                    )
+                    .await;
                     Ok("{}".to_string()) // In a real app we'd return parsed free/busy data
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))
@@ -56,7 +64,12 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
         }
     }
 
-    async fn create_event(&self, summary: &str, start_time: &str, end_time: &str) -> Result<String, String> {
+    async fn create_event(
+        &self,
+        summary: &str,
+        start_time: &str,
+        end_time: &str,
+    ) -> Result<String, String> {
         let url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
         let payload = serde_json::json!({
@@ -65,7 +78,9 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
             "end": { "dateTime": end_time }
         });
 
-        let res = self.http_client.post(url)
+        let res = self
+            .http_client
+            .post(url)
             .bearer_auth(&self.access_token)
             .json(&payload)
             .send()
@@ -78,8 +93,9 @@ impl GoogleCalendarClientWrapper for RealGoogleCalendarClient {
                         &crate::db::get_pool(),
                         "unknown",
                         "google_calendar_create_event",
-                        0.01
-                    ).await;
+                        0.01,
+                    )
+                    .await;
                     Ok("event_id".to_string()) // Returning mock event id
                 } else {
                     Err(format!("Google Calendar API error: {}", resp.status()))

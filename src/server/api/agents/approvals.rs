@@ -1,16 +1,15 @@
-use axum::{
-    extract::{Extension, State, Path, Query},
-    response::IntoResponse,
-    http::StatusCode,
-    routing::{get, post},
-    Router,
-    Json,
-};
-use std::sync::Arc;
-use serde::{Deserialize, Serialize};
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
 use ::server_common::Claims;
+use axum::{
+    Json, Router,
+    extract::{Extension, Path, Query, State},
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub struct ApprovalsResponse {
@@ -52,13 +51,24 @@ async fn list_approvals(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApprovalsResponse {
+                    pending_approvals: vec![],
+                    next_cursor: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
 
     // Fetch from DB using cursor pagination
-    let approvals = orchestrator.get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let approvals = orchestrator
+        .get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64)
+        .await;
 
     let next_cursor = if approvals.len() == limit {
         approvals.last().map(|a| a.id.clone())
@@ -66,12 +76,15 @@ async fn list_approvals(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: approvals,
-        next_cursor,
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(ApprovalsResponse {
+            pending_approvals: approvals,
+            next_cursor,
+        }),
+    )
+        .into_response()
 }
-
 
 async fn list_activity_feed(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
@@ -80,12 +93,23 @@ async fn list_activity_feed(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(ApprovalsResponse { pending_approvals: vec![], next_cursor: None })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(ApprovalsResponse {
+                    pending_approvals: vec![],
+                    next_cursor: None,
+                }),
+            )
+                .into_response();
+        }
     };
 
     let limit = query.limit.unwrap_or(20);
 
-    let activities = orchestrator.get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64).await;
+    let activities = orchestrator
+        .get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64)
+        .await;
 
     let next_cursor = if activities.len() == limit {
         activities.last().map(|a| a.id.clone())
@@ -93,10 +117,14 @@ async fn list_activity_feed(
         None
     };
 
-    (StatusCode::OK, Json(ApprovalsResponse {
-        pending_approvals: activities,
-        next_cursor,
-    })).into_response()
+    (
+        StatusCode::OK,
+        Json(ApprovalsResponse {
+            pending_approvals: activities,
+            next_cursor,
+        }),
+    )
+        .into_response()
 }
 
 async fn decide_approval(
@@ -107,12 +135,25 @@ async fn decide_approval(
 ) -> impl IntoResponse {
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
-        None => return (StatusCode::UNAUTHORIZED, Json(DecisionResponse { success: false })).into_response(),
+        None => {
+            return (
+                StatusCode::UNAUTHORIZED,
+                Json(DecisionResponse { success: false }),
+            )
+                .into_response();
+        }
     };
 
-    match orchestrator.decide_approval(&id, &tenant_id, payload.approved).await {
+    match orchestrator
+        .decide_approval(&id, &tenant_id, payload.approved)
+        .await
+    {
         Ok(_) => (StatusCode::OK, Json(DecisionResponse { success: true })).into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, Json(DecisionResponse { success: false })).into_response(),
+        Err(_) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(DecisionResponse { success: false }),
+        )
+            .into_response(),
     }
 }
 // Support for AI Agent Department Architecture

@@ -3,9 +3,9 @@ use chrono::DateTime;
 use std::fs;
 use std::io;
 
-use std::path::{Path, PathBuf};
-use crate::billing::Tracker;
 use super::provider::{BlobMetadata, Provider};
+use crate::billing::Tracker;
+use std::path::{Path, PathBuf};
 
 pub struct LocalProvider {
     base_path: PathBuf,
@@ -16,17 +16,26 @@ impl LocalProvider {
     pub fn new<P: AsRef<Path>>(base_path: P) -> io::Result<Self> {
         let abs_path = fs::canonicalize(base_path)?;
         fs::create_dir_all(&abs_path)?;
-        Ok(LocalProvider { base_path: abs_path, tracker: Tracker::new() })
+        Ok(LocalProvider {
+            base_path: abs_path,
+            tracker: Tracker::new(),
+        })
     }
 
     fn get_local_path(&self, key: &str) -> io::Result<PathBuf> {
         if key.contains("..") {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected (..)"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Path traversal detected (..)",
+            ));
         }
         let path = self.base_path.join(key);
-        
+
         if !path.starts_with(&self.base_path) {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Path traversal detected"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Path traversal detected",
+            ));
         }
         Ok(path)
     }
@@ -40,8 +49,13 @@ impl Provider for LocalProvider {
 
     async fn list_blobs(&self, prefix: &str) -> io::Result<Vec<BlobMetadata>> {
         let mut blobs = Vec::new();
-        
-        fn walk_dir(dir: &Path, base_path: &Path, prefix: &str, blobs: &mut Vec<BlobMetadata>) -> io::Result<()> {
+
+        fn walk_dir(
+            dir: &Path,
+            base_path: &Path,
+            prefix: &str,
+            blobs: &mut Vec<BlobMetadata>,
+        ) -> io::Result<()> {
             if dir.is_dir() {
                 for entry in fs::read_dir(dir)? {
                     let entry = entry?;
@@ -49,7 +63,9 @@ impl Provider for LocalProvider {
                     if path.is_dir() {
                         walk_dir(&path, base_path, prefix, blobs)?;
                     } else {
-                        let rel_path = path.strip_prefix(base_path).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                        let rel_path = path
+                            .strip_prefix(base_path)
+                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                         let key = rel_path.to_string_lossy().to_string();
                         if key.starts_with(prefix) {
                             let metadata = entry.metadata()?;
@@ -67,7 +83,7 @@ impl Provider for LocalProvider {
         }
 
         walk_dir(&self.base_path, &self.base_path, prefix, &mut blobs)?;
-        
+
         Ok(blobs)
     }
 
@@ -75,7 +91,10 @@ impl Provider for LocalProvider {
         let path = self.get_local_path(key)?;
         let metadata = fs::metadata(&path)?;
         if metadata.is_dir() {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "Key is a directory"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "Key is a directory",
+            ));
         }
         Ok(BlobMetadata {
             key: key.to_string(),
@@ -96,7 +115,10 @@ impl Provider for LocalProvider {
 
         let path = self.get_local_path(key)?;
         if !path.exists() {
-            return Err(io::Error::new(io::ErrorKind::NotFound, "Blob does not exist"));
+            return Err(io::Error::new(
+                io::ErrorKind::NotFound,
+                "Blob does not exist",
+            ));
         }
         Ok(format!("file://{}", path.to_string_lossy()))
     }
@@ -111,31 +133,39 @@ impl Provider for LocalProvider {
         let mut final_data = data.to_vec();
 
         // Auto-optimization for images: Resize and convert to WebP
-        let extension = Path::new(key).extension().and_then(|e| e.to_str()).unwrap_or("");
-        let reported_size = if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
-            let original_size = data.len();
-            match ::server_pricing::compression::optimize_image(data, 1024) {
-                Ok((optimized_data, _)) => {
-                    final_data = optimized_data;
-                    key_str = ::server_pricing::compression::get_optimized_key(key);
-                    let compressed_size = final_data.len();
-                    tracing::info!(
-                        key = %key_str,
-                        original = original_size,
-                        actual_compressed = compressed_size,
-                        saved = original_size - compressed_size,
-                        "Auto-optimized image to WebP via compression utility"
-                    );
-                    compressed_size
+        let extension = Path::new(key)
+            .extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("");
+        let reported_size =
+            if ::server_pricing::compression::is_image_extension(extension) && data.len() > 1024 {
+                let original_size = data.len();
+                match ::server_pricing::compression::optimize_image(data, 1024) {
+                    Ok((optimized_data, _)) => {
+                        final_data = optimized_data;
+                        key_str = ::server_pricing::compression::get_optimized_key(key);
+                        let compressed_size = final_data.len();
+                        tracing::info!(
+                            key = %key_str,
+                            original = original_size,
+                            actual_compressed = compressed_size,
+                            saved = original_size - compressed_size,
+                            "Auto-optimized image to WebP via compression utility"
+                        );
+                        compressed_size
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "Image optimization failed for {}: {}. Saving original.",
+                            key,
+                            e
+                        );
+                        original_size
+                    }
                 }
-                Err(e) => {
-                    tracing::warn!("Image optimization failed for {}: {}. Saving original.", key, e);
-                    original_size
-                }
-            }
-        } else {
-            data.len()
-        };
+            } else {
+                data.len()
+            };
 
         let path = self.get_local_path(&key_str)?;
         if let Some(parent) = path.parent() {
@@ -145,7 +175,11 @@ impl Provider for LocalProvider {
         // Quota Enforcement
         let t_id = key_str.split('/').next().unwrap_or("default");
         let agent_id = key_str.split('/').nth(1);
-        if let Ok(status) = self.tracker.track_storage_usage(t_id, reported_size as i64, agent_id).await {
+        if let Ok(status) = self
+            .tracker
+            .track_storage_usage(t_id, reported_size as i64, agent_id)
+            .await
+        {
             if status.soft_limit_reached {
                 if let Some(msg) = status.user_message {
                     tracing::warn!(tid = %t_id, "Storage quota warning: {}", msg);
@@ -166,7 +200,8 @@ impl Provider for LocalProvider {
             use tokio::io::AsyncWriteExt;
             let mut file = options.open(&path).await?;
             file.write_all(&final_data).await
-        }.await;
+        }
+        .await;
 
         #[cfg(not(unix))]
         let res = tokio::fs::write(&path, final_data).await;
@@ -176,8 +211,9 @@ impl Provider for LocalProvider {
                 &crate::db::get_pool(),
                 t_id,
                 "write",
-                reported_size as i64
-            ).await;
+                reported_size as i64,
+            )
+            .await;
         }
         res
     }
@@ -195,7 +231,10 @@ mod tests {
             .take(10)
             .map(char::from)
             .collect();
-        let dir = std::env::temp_dir().join(format!("test_storage_{}", random_suffix)).to_string_lossy().to_string();
+        let dir = std::env::temp_dir()
+            .join(format!("test_storage_{}", random_suffix))
+            .to_string_lossy()
+            .to_string();
         fs::create_dir_all(&dir).unwrap();
         let abs_dir = fs::canonicalize(&dir).unwrap();
         let p = LocalProvider::new(&abs_dir).unwrap();

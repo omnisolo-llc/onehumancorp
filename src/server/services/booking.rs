@@ -1,8 +1,8 @@
-use uuid::Uuid;
+use crate::db::get_pool;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use crate::db::get_pool;
 use sqlx::Row;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Quote {
@@ -45,11 +45,7 @@ pub struct BookingRecord {
 pub struct BookingService;
 
 impl BookingService {
-    pub fn create_draft_quote(
-        tenant_id: Uuid,
-        customer_id: Uuid,
-        amount: i64,
-    ) -> Quote {
+    pub fn create_draft_quote(tenant_id: Uuid, customer_id: Uuid, amount: i64) -> Quote {
         Quote {
             id: Uuid::new_v4(),
             tenant_id,
@@ -88,7 +84,10 @@ impl BookingService {
         };
 
         // Dummy Stripe Link
-        let stripe_link = format!("https://checkout.stripe.com/pay/cs_test_{}", Uuid::new_v4().to_string().replace("-", ""));
+        let stripe_link = format!(
+            "https://checkout.stripe.com/pay/cs_test_{}",
+            Uuid::new_v4().to_string().replace("-", "")
+        );
 
         Ok((time_slot, stripe_link))
     }
@@ -109,7 +108,9 @@ impl BookingService {
     pub async fn list_services(tenant_id: &str) -> Result<Vec<Service>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, title, description, price_cents FROM products WHERE type = 'booking'")
             .fetch_all(&mut *tx)
@@ -118,13 +119,16 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let services = rows.into_iter().map(|row| Service {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            title: row.get("title"),
-            description: row.get("description"),
-            price_cents: row.get("price_cents"),
-        }).collect();
+        let services = rows
+            .into_iter()
+            .map(|row| Service {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                title: row.get("title"),
+                description: row.get("description"),
+                price_cents: row.get("price_cents"),
+            })
+            .collect();
 
         Ok(services)
     }
@@ -132,7 +136,9 @@ impl BookingService {
     pub async fn upsert_service(service: Service) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &service.tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         sqlx::query(
             "INSERT INTO products (id, tenant_id, title, description, price_cents, type) \
@@ -141,7 +147,7 @@ impl BookingService {
              title = EXCLUDED.title, \
              description = EXCLUDED.description, \
              price_cents = EXCLUDED.price_cents, \
-             updated_at = CURRENT_TIMESTAMP"
+             updated_at = CURRENT_TIMESTAMP",
         )
         .bind(&service.id)
         .bind(&service.tenant_id)
@@ -179,7 +185,9 @@ impl BookingService {
     pub async fn get_bookings(tenant_id: &str) -> Result<Vec<BookingRecord>, String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let rows = sqlx::query("SELECT id, tenant_id, customer_id, product_id, start_time, end_time, status FROM bookings")
             .fetch_all(&mut *tx)
@@ -188,15 +196,18 @@ impl BookingService {
 
         tx.commit().await.map_err(|e| e.to_string())?;
 
-        let bookings = rows.into_iter().map(|row| BookingRecord {
-            id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
-            customer_id: row.get("customer_id"),
-            product_id: row.get("product_id"),
-            start_time: row.get("start_time"),
-            end_time: row.get("end_time"),
-            status: row.get("status"),
-        }).collect();
+        let bookings = rows
+            .into_iter()
+            .map(|row| BookingRecord {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                customer_id: row.get("customer_id"),
+                product_id: row.get("product_id"),
+                start_time: row.get("start_time"),
+                end_time: row.get("end_time"),
+                status: row.get("status"),
+            })
+            .collect();
 
         Ok(bookings)
     }
@@ -204,12 +215,18 @@ impl BookingService {
     pub async fn create_booking(booking: BookingRecord) -> Result<(), String> {
         let pool = get_pool();
         let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id).await.map_err(|e| e.to_string())?;
+        ::server_common::auth_utils::set_org_context(&mut *tx, &booking.tenant_id)
+            .await
+            .map_err(|e| e.to_string())?;
 
         let now = chrono::Utc::now();
         if booking.start_time.signed_duration_since(now).num_hours() < 48 {
             tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("urgent_booking", "You have an urgent booking coming up soon!").await;
+                let _ = crate::dispatch_critical_sms(
+                    "urgent_booking",
+                    "You have an urgent booking coming up soon!",
+                )
+                .await;
             });
         }
 

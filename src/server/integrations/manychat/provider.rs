@@ -1,4 +1,5 @@
-use super::client::ManychatClient;
+use super::client::{ManychatClient, ManychatConversation};
+use super::commerce::CommerceConversationHandoff;
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -29,12 +30,25 @@ impl ManychatProvider {
                 name: self.metadata.name.clone(),
                 category: self.metadata.category.clone(),
                 base_url: self.metadata.base_url.clone(),
-            }
+            },
         }
     }
 
-    pub async fn fetch_conversations(&self) -> Result<Vec<String>, String> {
+    pub async fn fetch_conversations(&self) -> Result<Vec<ManychatConversation>, String> {
         self._client.fetch_conversations().await
+    }
+
+    pub async fn fetch_commerce_handoffs(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Vec<CommerceConversationHandoff>, String> {
+        let conversations = self.fetch_conversations().await?;
+        Ok(conversations
+            .iter()
+            .map(|conversation| {
+                CommerceConversationHandoff::from_manychat(tenant_id.to_string(), conversation)
+            })
+            .collect())
     }
 }
 
@@ -54,5 +68,27 @@ mod tests {
         let provider = ManychatProvider::new("test_token".to_string());
         let integration = provider.to_integration_provider();
         assert_eq!(integration.metadata.id, "manychat");
+    }
+
+    #[tokio::test]
+    async fn test_manychat_provider_fetches_typed_conversation_context() {
+        let provider = ManychatProvider::new("test_token".to_string());
+        let conversations = provider.fetch_conversations().await.unwrap();
+        assert_eq!(conversations[0].channel, "instagram");
+        assert_eq!(conversations[0].messages[0].direction, "inbound");
+    }
+
+    #[tokio::test]
+    async fn test_manychat_provider_builds_commerce_handoff() {
+        let provider = ManychatProvider::new("test_token".to_string());
+        let handoffs = provider
+            .fetch_commerce_handoffs("tenant_123")
+            .await
+            .unwrap();
+
+        assert_eq!(handoffs[0].tenant_id, "tenant_123");
+        assert_eq!(handoffs[0].source_channel, "instagram");
+        assert!(handoffs[0].checkout_seed.quote_required);
+        assert_eq!(handoffs[0].checkout_seed.payment_provider, "stripe");
     }
 }

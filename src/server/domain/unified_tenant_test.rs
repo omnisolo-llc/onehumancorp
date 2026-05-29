@@ -1,12 +1,27 @@
 #[cfg(test)]
 mod tests {
-    use sqlx::{postgres::PgPoolOptions, Row};
+    use crate::domain::repository::models::{AgentMemory, Business, Tenant};
+    use sqlx::{Row, postgres::PgPoolOptions};
     use std::env;
-    use crate::domain::repository::models::{Business, AgentMemory, Tenant};
 
     #[tokio::test]
     async fn test_tenant_isolation_rls() {
-        let pool = PgPoolOptions::new().after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).after_release(|conn, _meta| { Box::pin(async move { use sqlx::Executor; conn.execute("DISCARD ALL").await?; Ok(true) }) }).acquire_timeout(std::time::Duration::from_millis(100))
+        let pool = PgPoolOptions::new()
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .after_release(|conn, _meta| {
+                Box::pin(async move {
+                    use sqlx::Executor;
+                    conn.execute("DISCARD ALL").await?;
+                    Ok(true)
+                })
+            })
+            .acquire_timeout(std::time::Duration::from_millis(100))
             .connect_lazy("postgres://postgres:postgres@localhost/postgres")
             .unwrap();
 
@@ -26,7 +41,9 @@ mod tests {
             Ok(mut tx) => {
                 use sqlx::Executor;
                 // Set the session context inside the transaction block to system to allow inserts
-                tx.execute("SET LOCAL app.current_tenant = 'system'").await.expect("Failed to set system context");
+                tx.execute("SET LOCAL app.current_tenant = 'system'")
+                    .await
+                    .expect("Failed to set system context");
 
                 // Ensure the tenant exists
                 let _ = sqlx::query("INSERT INTO tenants (id, business_name) VALUES ($1, 'Test Business') ON CONFLICT DO NOTHING")
@@ -53,7 +70,7 @@ mod tests {
                     .execute(&mut *tx).await;
 
                 tx.commit().await.expect("Failed to commit test data");
-            },
+            }
             Err(_) => {
                 // Ignore errors if test db is not running
                 return;
@@ -64,17 +81,37 @@ mod tests {
         match pool.begin().await {
             Ok(mut tx) => {
                 // Call the actual vulnerable function to test application logic
-                ::server_common::auth_utils::set_org_context(&mut *tx, "").await.expect("Failed to call set_org_context");
+                ::server_common::auth_utils::set_org_context(&mut *tx, "")
+                    .await
+                    .expect("Failed to call set_org_context");
 
-                let result = sqlx::query("SELECT COUNT(*) FROM customers").fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
+                let result = sqlx::query("SELECT COUNT(*) FROM customers")
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for empty tenant context"
+                );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM products").fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
+                let result = sqlx::query("SELECT COUNT(*) FROM products")
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for empty tenant context"
+                );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM orders").fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for empty tenant context");
-            },
+                let result = sqlx::query("SELECT COUNT(*) FROM orders")
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for empty tenant context"
+                );
+            }
             Err(_) => {}
         }
 
@@ -83,18 +120,41 @@ mod tests {
             Ok(mut tx) => {
                 use sqlx::Executor;
                 // Set the session context inside the transaction block to tenant_1
-                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_1).as_str()).await.expect("Failed to set tenant context");
+                tx.execute(format!("SET LOCAL app.current_tenant = '{}'", tenant_1).as_str())
+                    .await
+                    .expect("Failed to set tenant context");
 
                 // Query with a different tenant_id (tenant_2)
-                let result = sqlx::query("SELECT COUNT(*) FROM customers WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+                let result = sqlx::query("SELECT COUNT(*) FROM customers WHERE tenant_id = $1")
+                    .bind(tenant_2)
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for another tenant despite data existing"
+                );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM products WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
+                let result = sqlx::query("SELECT COUNT(*) FROM products WHERE tenant_id = $1")
+                    .bind(tenant_2)
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for another tenant despite data existing"
+                );
 
-                let result = sqlx::query("SELECT COUNT(*) FROM orders WHERE tenant_id = $1").bind(tenant_2).fetch_one(&mut *tx).await;
-                assert_eq!(result.unwrap().get::<i64, _>(0), 0, "Should return 0 rows for another tenant despite data existing");
-            },
+                let result = sqlx::query("SELECT COUNT(*) FROM orders WHERE tenant_id = $1")
+                    .bind(tenant_2)
+                    .fetch_one(&mut *tx)
+                    .await;
+                assert_eq!(
+                    result.unwrap().get::<i64, _>(0),
+                    0,
+                    "Should return 0 rows for another tenant despite data existing"
+                );
+            }
             Err(_) => {
                 // Ignore errors if test db is not running
             }
@@ -129,10 +189,9 @@ mod tests {
         assert_eq!(am.id, "1");
     }
 
-
     #[test]
     fn test_new_models_struct_compilation() {
-        use crate::domain::repository::models::{Customer, Product, Order, Booking, AIAgent};
+        use crate::domain::repository::models::{AIAgent, Booking, Customer, Order, Product};
 
         let c = Customer {
             id: "c1".to_string(),
