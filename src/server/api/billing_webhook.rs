@@ -81,7 +81,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind(tier_string)
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&*pool)
                             .await
                             .map(|_| ())
                     }
@@ -124,7 +124,7 @@ pub async fn stripe_webhook_handler(
                         sqlx::query("UPDATE tenants SET tier = ? WHERE tenant_id = ?")
                             .bind("Free")
                             .bind(tenant_id)
-                            .execute(pool)
+                            .execute(&*pool)
                             .await
                             .map(|_| ())
                     }
@@ -257,7 +257,7 @@ pub async fn razorpay_webhook_handler(
                 DbStore::Sqlite(pool) => {
                     sqlx::query("UPDATE orders SET status = 'Paid' WHERE order_id = ?")
                         .bind(order_id)
-                        .execute(pool)
+                        .execute(&*pool)
                         .await
                         .map(|_| ())
                 }
