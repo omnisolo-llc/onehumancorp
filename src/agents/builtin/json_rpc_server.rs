@@ -98,7 +98,7 @@ async fn handle_rpc(
 
     let result = match payload.method.as_str() {
         "run_async" => {
-            state.runner.run_async(&params.initial_message).await
+            state.runner.run_async(&cfg, &params.initial_message).await
         }
         "run_sync_blocking" => {
             // Note: in a real async server you wouldn't want to actually block the tokio worker thread,
@@ -107,7 +107,7 @@ async fn handle_rpc(
             let runner_clone = state.runner.clone();
             let initial_message = params.initial_message.clone();
             match tokio::task::spawn_blocking(move || {
-                runner_clone.run_sync_blocking(&initial_message)
+                runner_clone.run_sync_blocking(&cfg, &initial_message)
             }).await {
                 Ok(res) => res,
                 Err(e) => Err(format!("Spawn blocking failed: {}", e).into()),
