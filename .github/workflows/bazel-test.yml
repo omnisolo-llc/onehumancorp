@@ -41,11 +41,14 @@ jobs:
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
 
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
@@ -94,11 +97,14 @@ jobs:
           sudo rm -rf /usr/local/julia
           sudo rm -rf /usr/local/rust
 
+      - name: Set Bazel cache week
+        run: echo "CACHE_WEEK=$(date +%G-W%V)" >> $GITHUB_ENV
+
       - name: Set up Bazel
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
+          disk-cache: ${{ env.CACHE_WEEK }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && format('{0}-{1}-pr{2}', github.workflow, github.job, github.event.pull_request.number) || format('{0}-{1}', github.workflow, github.job) }}
           repository-cache: |
             - MODULE.bazel
             - MODULE.bazel.lock
