@@ -1117,7 +1117,12 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full md:w-1/3 bg-gray-50 rounded-xl p-4 flex flex-col items-center justify-center border border-gray-100 min-h-[160px]">
                     <div className="text-4xl mb-3">💻</div>
-                    <span className="text-sm font-medium text-gray-600 text-center">Preview: Connect your brand everywhere</span>
+                    <a
+                      href="/builder"
+                      className="px-6 py-3 bg-[#0066FF] text-white rounded-[8px] font-semibold hover:bg-[#0052cc] active:scale-[0.98] transition-all shadow-md"
+                    >
+                      Preview Site
+                    </a>
                 </div>
             </div>
          </section>
