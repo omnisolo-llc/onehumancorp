@@ -560,6 +560,7 @@ pub async fn advisory_insights_handler(
     let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
     let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
@@ -640,6 +641,7 @@ async fn draft_reply_handler(
     );
     let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
+    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&optimized_prompt).await {
         Ok(output) => (StatusCode::OK, axum::Json(DraftReplyResponse { output })).into_response(),
@@ -1468,8 +1470,9 @@ impl HubService for MyHubService {
             return Err(Status::failed_precondition("Minimax API key is not configured"));
         }
         
+        let prompt = ::server_pricing::compression::reduce_tokens(&req.prompt);
         let client = minimax::MinimaxClient::new(api_key);
-        match client.reason(&req.prompt).await {
+        match client.reason(&prompt).await {
             Ok(content) => Ok(Response::new(ReasonResponse { content })),
             Err(e) => Err(Status::internal(e)),
         }
