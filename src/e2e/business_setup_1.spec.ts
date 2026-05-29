@@ -7,17 +7,46 @@ test.describe('Business Setup Wizard', () => {
   });
 
   test('shows the current setup welcome step', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Welcome to OHC Smart Builder' })).toBeVisible();
-    await expect(page.getByRole('button', { name: /Build My Storefront/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Your business, live in minutes.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Start My Business Next/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Instant Build/ })).toBeVisible();
   });
 
-  test('builds storefront from bio', async ({ page }) => {
-    // Need to trigger the mock in the route by specific text to avoid network mock
-    await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I run a local bakery named maya');
-    await page.getByRole('button', { name: /Build My Storefront/ }).click();
+  test('moves through business type and name steps', async ({ page }) => {
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'What kind of business are you building?' })).toBeVisible();
 
-    // Wait for blocks to load (preview mode)
-    // Wait for at least generating state to appear
-    await expect(page.getByText('Agents are building your store...')).toBeVisible({ timeout: 15000 });
+    await page.getByRole('button', { name: /Online Store/ }).click();
+    await expect(page.getByRole('heading', { name: 'Give your business a name' })).toBeVisible();
+    await page.getByPlaceholder('What is your business called?').fill('Test Company');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'What do you sell?' })).toBeVisible();
+  });
+
+  test('completes the publish path to the checklist', async ({ page }) => {
+    await page.getByRole('button', { name: /Start My Business Next/ }).click();
+    await page.getByRole('button', { name: /Online Store/ }).click();
+    await page.getByPlaceholder('What is your business called?').fill('Test Company');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByLabel(/Physical Products/).check();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByPlaceholder('What is the name of this product?').fill('Custom Cookies');
+    await page.getByPlaceholder('0.00').fill('24.99');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await expect(page.getByRole('heading', { name: 'How do you want to receive payments?' })).toBeVisible();
+    await page.getByRole('button', { name: 'Online', exact: true }).click();
+    await page.getByPlaceholder('e.g. Maya Smith').fill('Maya Smith');
+    await page.getByPlaceholder('you@email.com').fill('maya@example.com');
+    await page.getByPlaceholder('Password').fill('password123');
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: 'Modern' }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Free OHC Domain/ }).click();
+    await page.getByRole('button', { name: /Next/ }).click();
+    await page.getByRole('button', { name: /Publish my business/ }).click();
+
+    await expect(page.getByRole('heading', { name: 'CONFETTI SUCCESS' })).toBeVisible();
+    await page.getByRole('button', { name: /View Welcome Checklist/ }).click();
+    await expect(page.getByText("You're set up! Here's what to do next:")).toBeVisible();
   });
 });
