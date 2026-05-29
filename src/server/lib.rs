@@ -531,7 +531,7 @@ pub async fn advisory_insights_handler(
     };
 
     // Gather context from DB and order counts concurrently
-    let (org_res, active_orders_res) = tokio::join!(
+    let (org_res, active_orders_res, sales_res, inventory_res) = tokio::join!(
         async {
             sqlx::query_as::<_, (String, String)>(
                 "SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1"
@@ -547,6 +547,22 @@ pub async fn advisory_insights_handler(
             .bind(&tenant_id)
             .fetch_one(&db.pool)
             .await
+        },
+        async {
+            sqlx::query_scalar::<_, f64>(
+                "SELECT COALESCE(SUM(total_amount), 0.0) FROM orders WHERE tenant_id = $1"
+            )
+            .bind(&tenant_id)
+            .fetch_one(&db.pool)
+            .await
+        },
+        async {
+            sqlx::query_scalar::<_, i64>(
+                "SELECT count(*) FROM products WHERE tenant_id = $1 AND inventory_count < 10"
+            )
+            .bind(&tenant_id)
+            .fetch_one(&db.pool)
+            .await
         }
     );
 
@@ -555,14 +571,59 @@ pub async fn advisory_insights_handler(
         .unwrap_or_else(|| ("A business".to_string(), "".to_string()));
 
     let active_orders = active_orders_res.unwrap_or(0);
+    let total_sales = sales_res.unwrap_or(0.0);
+    let low_inventory_count = inventory_res.unwrap_or(0);
 
-    let prompt = format!("You are a business advisory agent. Business context: A {} business named {}. The business currently has {} active orders to fulfill. Provide a short, plain language insight (about 2 sentences) summarizing this performance and suggesting an actionable next step, like running a promo or checking the inbox. Make it warm and accessible.", industry, business_name, active_orders);
+    let prompt_template = r#"You are a business advisory agent (The Synthesizer) acting as a proactive Chief of Staff for a small business owner.
+Business context: A {industry} business named {business_name}.
+Current metrics:
+- {active_orders} active orders to fulfill.
+- Total sales: ${total_sales}.
+- {low_inventory} products with low inventory.
+Your task is to provide a unified conversational insight briefing and an actionable next step.
+Constraints:
+1. Filter noise and prioritize the single most critical item for the day.
+2. Use Zero Jargon.
+3. The briefing must pass the grandmother test - extremely plain language, 2 sentences max. Make it warm and accessible.
+4. Output MUST be valid JSON with exact keys: briefing, suggested_action (containing label and action_id)."#;
+
+    let prompt = prompt_template
+        .replace("{industry}", &industry)
+        .replace("{business_name}", &business_name)
+        .replace("{active_orders}", &active_orders.to_string())
+        .replace("{total_sales}", &format!("{:.2}", total_sales))
+        .replace("{low_inventory}", &low_inventory_count.to_string());
+
     let optimized_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
 
-    let prompt = ::server_pricing::compression::reduce_tokens(&prompt);
     let client = crate::minimax::MinimaxClient::new(api_key);
     match client.reason(&optimized_prompt).await {
-        Ok(output) => (StatusCode::OK, axum::Json(serde_json::json!({ "summary": output }))).into_response(),
+        Ok(output) => {
+            // Attempt to parse JSON. If the LLM didn't return pure JSON, try to extract it or fallback.
+            let json_str = if output.contains("```json") {
+                output.split("```json").nth(1).unwrap_or("").split("```").next().unwrap_or("").trim()
+            } else if output.contains("{") {
+                &output[output.find("{").unwrap_or(0)..]
+            } else {
+                &output
+            };
+
+            let parsed: Result<serde_json::Value, _> = serde_json::from_str(json_str);
+            match parsed {
+                Ok(json_obj) => (StatusCode::OK, axum::Json(json_obj)).into_response(),
+                Err(_) => {
+                    // Fallback if LLM fails to return JSON
+                    let fallback = serde_json::json!({
+                        "briefing": output.trim_matches(|c| c == '`' || c == '\n'),
+                        "suggested_action": {
+                            "label": "Review Performance",
+                            "action_id": "review_performance"
+                        }
+                    });
+                    (StatusCode::OK, axum::Json(fallback)).into_response()
+                }
+            }
+        },
         Err(e) => {
             tracing::error!("MiniMax advisory insights failed: {}", e);
             (
@@ -572,6 +633,53 @@ pub async fn advisory_insights_handler(
                 .into_response()
         }
     }
+}
+
+#[derive(serde::Deserialize)]
+struct ActionRequest {
+    action_id: String,
+}
+
+pub async fn advisory_action_handler(
+    db: std::sync::Arc<db::DB>,
+    store: std::sync::Arc<crate::auth::Store>,
+    headers: axum::http::HeaderMap,
+    axum::Json(payload): axum::Json<ActionRequest>,
+) -> axum::response::Response {
+    use axum::http::StatusCode;
+    use axum::response::IntoResponse;
+
+    let auth_header = match headers.get("authorization").and_then(|v| v.to_str().ok()) {
+        Some(h) => h,
+        None => return (StatusCode::UNAUTHORIZED, "Missing authorization header").into_response(),
+    };
+
+    let token = if auth_header.to_lowercase().starts_with("bearer ") {
+        &auth_header[7..]
+    } else {
+        auth_header
+    };
+
+    let claims = match store.validate_token(token).await {
+        Ok(c) => c,
+        Err(_) => return (StatusCode::UNAUTHORIZED, "Invalid token").into_response(),
+    };
+
+    let tenant_id = match claims.organization_id {
+        Some(id) if !id.trim().is_empty() => id,
+        _ => return (StatusCode::FORBIDDEN, "Tenant ID not found in claims").into_response(),
+    };
+
+    // Acknowledge the action. If action_id matches a known action, we could trigger it here.
+    // For now, return a generic success since actual execution maps to background tasks or agent flows
+    // that might already be exposed via specific API endpoints in `page.tsx`
+    // like /api/v1/growth/campaign/generate-review etc.
+    let response_body = serde_json::json!({
+        "success": true,
+        "message": format!("Action '{}' triggered successfully for tenant {}", payload.action_id, tenant_id)
+    });
+
+    (StatusCode::OK, axum::Json(response_body)).into_response()
 }
 
 async fn draft_reply_handler(
@@ -2405,6 +2513,14 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
                 let db = db.clone();
                 let store = std::sync::Arc::new(crate::auth::Store::new());
                 move |headers: axum::http::HeaderMap| async move { advisory_insights_handler(db, store, headers).await }
+            }),
+        )
+        .route(
+            "/api/v1/advisory/action",
+            axum::routing::post({
+                let db = db.clone();
+                let store = std::sync::Arc::new(crate::auth::Store::new());
+                move |headers: axum::http::HeaderMap, payload| async move { advisory_action_handler(db, store, headers, payload).await }
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))

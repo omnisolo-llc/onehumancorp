@@ -11,6 +11,14 @@ export default function Dashboard() {
   const [isSendingCampaign, setIsSendingCampaign] = useState(false);
   const [campaignSuccess, setCampaignSuccess] = useState(false);
 
+  // Advisory Insights State
+  const [insightBriefing, setInsightBriefing] = useState<string>("Loading your personalized insight...");
+  const [insightActionLabel, setInsightActionLabel] = useState<string>("View Performance");
+  const [insightActionId, setInsightActionId] = useState<string>("view_performance");
+  const [insightDismissed, setInsightDismissed] = useState<boolean>(false);
+  const [insightActionLoading, setInsightActionLoading] = useState<boolean>(false);
+
+
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
         setHasPro(localStorage.getItem('has_pro') === 'true');
@@ -230,6 +238,25 @@ export default function Dashboard() {
         } catch (e) {
             console.error("Failed to fetch dashboard metrics", e);
         }
+
+        try {
+            const token = localStorage.getItem('token') || 'test-token';
+            const insightRes = await fetch('/api/v1/advisory/insights', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (insightRes.ok) {
+                const insightData = await insightRes.json();
+                if (insightData.briefing) {
+                    setInsightBriefing(insightData.briefing);
+                }
+                if (insightData.suggested_action) {
+                    setInsightActionLabel(insightData.suggested_action.label || 'Take Action');
+                    setInsightActionId(insightData.suggested_action.action_id || 'unknown');
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch advisory insights", e);
+        }
     };
 
     fetchMetrics();
@@ -398,71 +425,64 @@ export default function Dashboard() {
 
       <main id="dashboard-screen" className="p-6 md:p-8 flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
 
-         {/* Business Analytics Widget */}
-         <section className="mb-6 animate-fade-in">
-           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-               <div className="flex items-center gap-4">
-                   <h2 className="text-xl font-semibold font-outfit" style={{ color: '#1D1D1F' }}>Business Analytics</h2>
-               </div>
-           </div>
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Sales</h3>
-                   <div className="text-4xl font-bold font-outfit text-gray-900">${todaysSales.toFixed(2)}</div>
-               </div>
-               <div className="p-6 shadow-sm border rounded-2xl bg-white flex flex-col justify-center">
-                   <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Visitors</h3>
-                   <div className="text-4xl font-bold font-outfit text-gray-900">{activeCustomers}</div>
-               </div>
-           </div>
+         {/* Insights Feed (Replacing legacy Business Analytics and Morning Briefing) */}
+         {!insightDismissed && (
+             <section className="mb-6 animate-fade-in">
+                 <div className="p-6 shadow-md rounded-2xl border transition-all relative overflow-hidden" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(0, 102, 255, 0.2)' }}>
+                     {/* Decorative glass background */}
+                     <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100 rounded-bl-full -z-10 opacity-50 blur-2xl"></div>
 
-           {/* Advanced AI Insights Soft Paywall */}
-           <div className="relative p-6 shadow-sm border rounded-2xl bg-white overflow-hidden">
-               <h3 className="text-lg font-bold font-outfit text-gray-900 mb-4">Advanced AI Insights</h3>
-               <div className="filter blur-sm select-none opacity-50">
-                   <div className="h-32 bg-gray-100 rounded-lg w-full mb-4"></div>
-                   <div className="flex gap-4">
-                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
-                       <div className="h-8 bg-gray-100 rounded w-1/3"></div>
-                   </div>
-               </div>
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
-                   <p className="text-lg font-semibold text-gray-900 mb-4 text-center max-w-sm">
-                       Unlock predictive analytics to foresee trends and boost your revenue.
-                   </p>
-                   <button
-                       onClick={() => {
-                           if (confirm('Upgrade to Pro to access Advanced AI Insights?')) {
-                               window.location.href = '/pricing';
-                           }
-                       }}
-                       className="px-6 py-3 font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98]"
-                   >
-                       Upgrade to Pro
-                   </button>
-               </div>
-           </div>
-         </section>
+                     <div className="flex items-center gap-3 mb-3">
+                         <div className="text-2xl">🌅</div>
+                         <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Good morning, {businessName}</h2>
+                     </div>
+                     <p className="text-gray-700 font-inter text-[15px] leading-relaxed mb-6 font-medium">
+                         {insightBriefing}
+                     </p>
+                     <div className="flex gap-4">
+                         <button
+                             disabled={insightActionLoading}
+                             onClick={async () => {
+                                 if (insightActionId === 'send_review_requests' || insightActionId.includes('review')) {
+                                     handleSendCampaign();
+                                     setInsightDismissed(true);
+                                     return;
+                                 }
 
-         {/* Morning Briefing */}
-         {!morningBriefingDismissed && (
-           <section className="mb-6 animate-fade-in">
-             <div className="p-6 shadow-md rounded-2xl border transition-all" style={{ background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(30px) saturate(210%)', borderColor: 'rgba(52, 199, 89, 0.3)' }}>
-               <div className="flex items-center gap-3 mb-2">
-                 <div className="text-2xl">🌅</div>
-                 <h2 className="text-xl font-bold font-outfit" style={{ color: '#1D1D1F' }}>Morning Briefing</h2>
-               </div>
-               <p className="text-gray-600 font-inter text-sm leading-relaxed mb-5">
-                 Good morning {businessName}! Your storefront is live and looking great. Your next step to success is to add your first product or service so customers can start buying.
-               </p>
-               <div className="flex gap-4">
-                 <button onClick={() => setMorningBriefingDismissed(true)} className="px-6 py-3 font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors shadow-sm">Dismiss</button>
-                 <Link href="/builder" className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2" style={{ background: 'linear-gradient(135deg, #34C759 0%, #2eb350 100%)' }}>
-                   Add your first product
-                 </Link>
-               </div>
-             </div>
-           </section>
+                                 setInsightActionLoading(true);
+                                 try {
+                                     const token = localStorage.getItem('token') || 'test-token';
+                                     const res = await fetch('/api/v1/advisory/action', {
+                                         method: 'POST',
+                                         headers: {
+                                             'Content-Type': 'application/json',
+                                             'Authorization': `Bearer ${token}`
+                                         },
+                                         body: JSON.stringify({ action_id: insightActionId })
+                                     });
+                                     if (res.ok) {
+                                         setInsightDismissed(true);
+                                     }
+                                 } catch (e) {
+                                     console.error("Action execution failed", e);
+                                 } finally {
+                                     setInsightActionLoading(false);
+                                 }
+                             }}
+                             className="px-6 py-3 font-bold text-white rounded-xl shadow-md transition-transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                             style={{ background: 'linear-gradient(135deg, #0066ff 0%, #3b82f6 100%)' }}
+                         >
+                             {insightActionLoading ? 'Executing...' : `[ ${insightActionLabel} ]`}
+                         </button>
+                         <button
+                             onClick={() => setInsightDismissed(true)}
+                             className="px-4 py-3 font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                         >
+                             Dismiss
+                         </button>
+                     </div>
+                 </div>
+             </section>
          )}
 
          {/* Growth Loop: Frictionless Soft Paywall Upgrade CTA */}
