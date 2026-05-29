@@ -42,8 +42,10 @@ def define_playwright_tests(specs, ci_specs = [], data = [], server = None):
             },
             size = "large",
             timeout = "eternal",
+            local = True,
             tags = [
                 "e2e",
+                "no-sandbox",
                 "manual",
                 "no-remote-exec",
                 "requires-docker",
@@ -71,8 +73,10 @@ def define_playwright_tests(specs, ci_specs = [], data = [], server = None):
         size = "large",
         timeout = "eternal",
         shard_count = 8,  # Parallelize the run across 8 shards
+        local = True,
         tags = ["manual",
             "e2e",
+            "no-sandbox",
             "no-remote-exec",
             "requires-docker",
             "no-sandbox",

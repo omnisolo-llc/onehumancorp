@@ -26,9 +26,88 @@ export default function OnboardingWizard() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [validationError, setValidationError] = useState('');
 
+
   useEffect(() => {
     setIsLoaded(true);
+
+    const loadState = async () => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const res = await fetch('/api/onboarding/state', {
+          headers: {
+            'x-tenant-id': tenantId,
+            'x-user-id': userId
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) {
+            if (data.step) setStep(data.step);
+            if (data.chatStep) setChatStep(data.chatStep);
+            if (data.businessName) setBusinessName(data.businessName);
+            if (data.whatYouSell) setWhatYouSell(data.whatYouSell);
+            if (data.location) setLocation(data.location);
+            if (data.businessType) setBusinessType(data.businessType);
+            if (data.categories) setCategories(data.categories);
+            if (data.websiteTemplate) setWebsiteTemplate(data.websiteTemplate);
+            if (data.firstProductName) setFirstProductName(data.firstProductName);
+            if (data.firstProductPrice) setFirstProductPrice(data.firstProductPrice);
+            if (data.aiAgents) setAiAgents(data.aiAgents);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load state", e);
+      }
+    };
+
+    loadState();
   }, []);
+
+
+  const saveStateToBackendRef = useRef<any>();
+
+  useEffect(() => {
+    saveStateToBackendRef.current = async (stateUpdates: any) => {
+      try {
+        const tenantId = typeof localStorage !== 'undefined' ? localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'storefront' : 'storefront';
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('user_id') || 'test-user' : 'test-user';
+
+        const currentState = {
+          step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, aiAgents
+        };
+
+        const mergedState = { ...currentState, ...stateUpdates };
+
+        await fetch('/api/onboarding/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-tenant-id': tenantId,
+            'x-user-id': userId
+          },
+          body: JSON.stringify(mergedState)
+        });
+      } catch (e) {
+        console.error("Failed to save state", e);
+      }
+    };
+  }, [step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, aiAgents]);
+
+  // Setup debounce for saving state when values change
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    const timer = setTimeout(() => {
+      if (saveStateToBackendRef.current) saveStateToBackendRef.current({});
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [step, chatStep, businessName, whatYouSell, location, businessType, categories, websiteTemplate, firstProductName, firstProductPrice, aiAgents, isLoaded]);
+
+
 
   const handleIntake = async () => {
     setIsLoading(true);
@@ -126,7 +205,7 @@ export default function OnboardingWizard() {
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#16161a] font-inter flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
-      <div className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
+      <div id="setup-screen" className="w-full max-w-[375px] mx-auto mac-glass-container rounded-[16px] shadow-lg overflow-hidden flex flex-col h-[650px] relative">
         <div className="p-6 flex-1 flex flex-col overflow-y-auto">
           {error && (
             <div className="mb-4 bg-[#FF3B30]/10 border border-[#FF3B30]/30 text-[#FF3B30] p-3 rounded-[8px] text-sm">
