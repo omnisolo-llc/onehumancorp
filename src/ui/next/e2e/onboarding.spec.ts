@@ -2,6 +2,22 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Onboarding Wizard Flow', () => {
   test('completes full onboarding flow', async ({ page }) => {
+    // Mock the backend requests
+    await page.route('**/api/onboarding/intake', async route => {
+      const json = {
+        business_type: 'Bakery',
+        business_name: 'Maya Cakes',
+        categories: ['food'],
+        initial_products: [{ name: 'Cake', price: '20.00' }]
+      };
+      await route.fulfill({ json });
+    });
+
+    await page.route('**/api/onboarding/start', async route => {
+      const json = { message: "Your business has been successfully launched." };
+      await route.fulfill({ json });
+    });
+
     // Navigate to onboarding page
     await page.goto('http://localhost:3000/onboarding');
 

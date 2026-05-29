@@ -317,7 +317,6 @@ export function HelpWidget() {
 // This component aggregates the required documentation infrastructure
 import { TooltipProvider } from './TooltipRegistry';
 import { HelpChat } from './HelpChat';
-import { WalkthroughProvider } from './Walkthrough';
 
 export function ScribeDocumentationSystem({ children }: { children: React.ReactNode }) {
   return (

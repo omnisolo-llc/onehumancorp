@@ -42,10 +42,6 @@ describe('OnboardingWizard', () => {
     // Mock intake success
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
       json: async () => ({
         business_type: 'Bakery',
         business_name: 'Maya Bakery',
@@ -122,10 +118,6 @@ describe('OnboardingWizard', () => {
 
     // Mock intake failure
     (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
-    (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
 
@@ -169,10 +161,6 @@ describe('OnboardingWizard', () => {
     useOnboardingStore.setState({ step: 3 });
 
     // Mock start failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
     (global.fetch as any).mockResolvedValueOnce({
       ok: false
     });
@@ -265,10 +253,6 @@ describe('OnboardingWizard', () => {
     const userEvent = (await import('@testing-library/user-event')).default.setup({ delay: null });
 
     // Mock intake success
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({}) // For the state fetch on mount
-    });
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
       json: async () => ({
