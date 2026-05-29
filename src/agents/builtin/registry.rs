@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-use crate::agentic_seek::AgenticSeekProvider;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -31,7 +30,6 @@ impl Registry {
         r.register(Arc::new(MiniMaxiProvider::new()));
         r.register(Arc::new(BuiltinProvider::new()));
         r.register(Arc::new(ScoutProvider::new()));
-        r.register(Arc::new(AgenticSeekProvider::new("http://localhost:11434", "llama3")));
         r
     }
 
