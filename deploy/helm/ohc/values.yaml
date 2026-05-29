@@ -76,6 +76,9 @@ redis:
   image:
     registry: public.ecr.aws
     repository: bitnami/redis
+global:
+  security:
+    allowInsecureImages: true
 
 # CloudNative PostgreSQL operator cluster
 # Set cnpg.enabled=true when the CNPG operator is installed in the cluster.
