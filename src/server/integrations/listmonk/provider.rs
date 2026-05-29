@@ -22,7 +22,7 @@ impl ListmonkProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -37,5 +37,23 @@ impl ListmonkProvider {
 impl ListmonkProvider {
     pub async fn send_campaign(&self, list_id: &str, template_id: &str, subject: &str, body: &str) -> Result<(), String> {
         self._client.send_campaign(list_id, template_id, subject, body).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_listmonk_provider_new() {
+        let provider = ListmonkProvider::new("test_token".to_string());
+        assert_eq!(provider.metadata.id, "listmonk");
+    }
+
+    #[test]
+    fn test_listmonk_provider_into() {
+        let provider = ListmonkProvider::new("test_token".to_string());
+        let integration = provider.into_integration_provider();
+        assert_eq!(integration.metadata.id, "listmonk");
     }
 }

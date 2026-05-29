@@ -22,7 +22,7 @@ impl AlipayProvider {
         }
     }
 
-    pub fn to_integration_provider(&self) -> IntegrationProvider {
+    pub fn into_integration_provider(self) -> IntegrationProvider {
         IntegrationProvider {
             metadata: ProviderMetadata {
                 id: self.metadata.id.clone(),
@@ -62,7 +62,7 @@ mod tests {
     #[test]
     fn test_alipay_provider_into() {
         let provider = AlipayProvider::new("test_token".to_string());
-        let integration = provider.to_integration_provider();
+        let integration = provider.into_integration_provider();
         assert_eq!(integration.metadata.id, "alipay");
     }
 }
