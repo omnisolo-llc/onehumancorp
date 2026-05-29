@@ -6,6 +6,7 @@ load("@rules_rust//rust:defs.bzl", "rust_binary", "rust_library", "rust_test")
 rust_library(
     name = "core",
     srcs = [
+        "acon_context.rs",
         "auth.rs",
         "budget.rs",
         "caveman.rs",

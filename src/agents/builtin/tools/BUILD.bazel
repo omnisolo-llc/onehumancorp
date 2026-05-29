@@ -27,6 +27,7 @@ rust_library(
         "ollama.rs",
         "read.rs",
         "recall.rs",
+        "restic.rs",
         "runner.rs",
         "screenshot.rs",
         "sendmessage.rs",
