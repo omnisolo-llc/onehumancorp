@@ -80,7 +80,6 @@ mod tests {
     fn test_update_policy() {
         let mut evaluator = PermissionEvaluator::new();
         let policy = SandboxPolicy {
-            allowed_domains: vec![],
             disabled_commands: vec!["curl".to_string()],
             disabled_patterns: vec![r"(?i)\bwget\b".to_string()],
             read_only_paths: vec![],
