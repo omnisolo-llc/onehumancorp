@@ -3,10 +3,10 @@ import { test, expect } from './fixtures';
 test.describe('Audit: Correct glassmorphism implementation and jargon-free requirements', () => {
   test('verify glassmorphism styling on dark and light mode', async ({ page }) => {
     await page.goto('/website-builder');
-    await expect(page.getByRole('button', { name: /Start My Business Next/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Build My Storefront/ })).toBeVisible();
 
     // Verify glassmorphism CSS
-    const glassEl = page.locator('.glass-container').first();
+    const glassEl = page.locator('.mac-glass-container').first();
     const style = await glassEl.evaluate((el) => {
         const computed = window.getComputedStyle(el);
         return {
@@ -51,7 +51,7 @@ test.describe('Audit: Correct glassmorphism implementation and jargon-free requi
   test('verify dashboard advanced settings toggle functionality', async ({ page }) => {
       // 1. Sign in
       await page.goto('/login');
-      await page.getByPlaceholder('Email or Username').filter({ visible: true }).first().fill('test@example.com');
+      await page.getByPlaceholder(/Email|Username/i).filter({ visible: true }).first().fill('test@example.com');
       await page.locator('input[type="password"]').filter({ visible: true }).first().fill('password123');
       await page.getByRole('button', { name: /Login|Sign In/i }).filter({ visible: true }).first().click();
 

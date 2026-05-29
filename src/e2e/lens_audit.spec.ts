@@ -195,13 +195,13 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify CustomerSuccess Department renders properly inside Action Required block', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Action Required' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText("CustomerSuccess Department")).toBeVisible();
   });
 
   test('verify Approve button works and removes item from UI', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Action Required' })).toBeVisible({ timeout: 10000 });
 
     // We expect the seeded 'Draft email for review' to be present initially
     const approvalText = page.getByText("Draft email for review");
@@ -216,7 +216,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify Reject button works and removes item from UI', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Action Required' })).toBeVisible({ timeout: 10000 });
 
     const approvalText = page.getByText("Abandoned cart recovery");
     await expect(approvalText).toBeVisible();
@@ -231,7 +231,7 @@ test.describe('Lens Audit E2E Flow', () => {
   test('verify Business Snapshot remains visible when Action Required is populated', async ({ page }) => {
     await page.goto('/dashboard');
     // We know Action Required is populated from the seed data
-    await expect(page.getByText("Action Required")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Action Required' })).toBeVisible({ timeout: 10000 });
 
     // Verify Business Snapshot is also visible, ensuring it's not hidden
     await expect(page.getByText("Business Snapshot")).toBeVisible();
@@ -239,7 +239,7 @@ test.describe('Lens Audit E2E Flow', () => {
 
   test('verify Team Activity waiting state is rendered', async ({ page }) => {
     await page.goto('/dashboard');
-    await expect(page.getByText("Team Activity")).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('h2', { hasText: 'Team Activity' })).toBeVisible({ timeout: 10000 });
 
     // Verify the "Waiting for team activity..." element is rendered before any websockets messages
     await expect(page.getByText("Waiting for team activity...")).toBeVisible();
