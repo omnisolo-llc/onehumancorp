@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 use ohc_builtin_agent_core::types::{ToolCall, ToolError};
-use ohc_builtin_agent_tools::Tool;
+use crate::tools::Tool;
 use tracing::warn;
 
 pub struct ToolExecutionEngine;
@@ -29,22 +29,27 @@ impl ToolExecutionEngine {
                         continue;
                     } else {
                         // After retries are exhausted, it becomes an Unexpected/Fatal error to the loop
+                        tracing::error!("LangGraph Mechanic Error Type 1 Exhausted (Transient): {}", msg);
                         return Err(ToolError::Transient(msg));
                     }
                 }
                 Err(ToolError::LlmRecoverable(msg)) => {
                     // 2) LLM-recoverable: returned to the model so it can self-correct.
+                    tracing::info!("LangGraph Mechanic Error Type 2 (LLM-recoverable): {}", msg);
                     return Err(ToolError::LlmRecoverable(msg));
                 }
                 Err(ToolError::UserFixable(msg)) => {
                     // 3) User-fixable: interrupt execution and ask user for input.
+                    tracing::info!("LangGraph Mechanic Error Type 3 (User-fixable): {}", msg);
                     return Err(ToolError::UserFixable(msg));
                 }
                 Err(ToolError::Fatal(msg)) => {
                     // 4) Fatal: bubbles up to debug/halt immediately.
+                    tracing::error!("LangGraph Mechanic Error Type 4 (Fatal): {}", msg);
                     return Err(ToolError::Fatal(msg));
                 }
                 Err(ToolError::Unexpected(msg)) => {
+                    tracing::error!("LangGraph Mechanic Error Type 4 (Unexpected): {}", msg);
                     return Err(ToolError::Unexpected(msg));
                 }
                 Err(ToolError::HandoffRequested(msg)) => {

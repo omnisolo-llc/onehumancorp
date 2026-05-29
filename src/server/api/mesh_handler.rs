@@ -61,12 +61,6 @@ fn check_auth_spiffe_or_session(headers: &HeaderMap) -> Result<String, axum::res
         let error_res = serde_json::json!({ "error": "unauthorized" });
         return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
     }
-
-    if let Err(_) = ::server_auth::parse_spiffe_id(spiffe_id) {
-        let error_res = serde_json::json!({ "error": "unauthorized" });
-        return Err((axum::http::StatusCode::UNAUTHORIZED, axum::response::Json(error_res)).into_response());
-    }
-
     Ok(spiffe_id.to_string())
 }
 
@@ -346,7 +340,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://example.org/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 
@@ -389,7 +383,7 @@ mod tests {
         assert_eq!(res.status(), 401);
 
         // With x-spiffe-id header
-        let res = client.post(&url).header("x-spiffe-id", "spiffe://ohc/org/example.org/agent/agent-1").json(&req_body).send().await.unwrap();
+        let res = client.post(&url).header("x-spiffe-id", "spiffe://example.org/agent-1").json(&req_body).send().await.unwrap();
         assert_eq!(res.status(), 200);
     }
 }

@@ -79,6 +79,8 @@ where
         .route("/social/post", post(handle_social_post))
         .route("/campaign/send", post(handle_send_campaign))
         .route("/campaign/generate-review", post(handle_generate_review))
+        .route("/campaign/generate-customer-referral", post(handle_generate_customer_referral))
+        .route("/campaign/generate-cart", post(handle_generate_cart_campaign))
         .route("/storefront/track", post(handle_track_visitor))
         .route("/storefront/embed", get(handle_storefront_embed))
         .route("/storefront/og-card", get(handle_og_card))
@@ -111,6 +113,27 @@ pub struct GenerateReviewRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenerateReviewResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCustomerReferralRequest {
+    pub store_name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCustomerReferralResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartCampaignRequest {
+    pub customer_name: String,
+    pub cart_value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenerateCartCampaignResponse {
     pub message: String,
 }
 
@@ -180,6 +203,34 @@ async fn handle_generate_review(
     );
 
     Json(GenerateReviewResponse {
+        message: generated,
+    })
+}
+
+async fn handle_generate_customer_referral(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCustomerReferralRequest>,
+) -> impl IntoResponse {
+    let generated = format!(
+        "Hi there! We love having you as a top customer of {}. As a special thank you, give your friends 15% off their first order. When they buy, you get $10! Share your link today.",
+        req.store_name
+    );
+
+    Json(GenerateCustomerReferralResponse {
+        message: generated,
+    })
+}
+
+async fn handle_generate_cart_campaign(
+    Extension(_state): Extension<GrowthState>,
+    Json(req): Json<GenerateCartCampaignRequest>,
+) -> impl IntoResponse {
+    let generated = format!(
+        "Hi {},\n\nWe noticed you left some items in your cart totaling {}. Did you have any questions or need help checking out?\n\nAs a special thank you for shopping with us, here is a 10% discount code to complete your purchase: COMEBACK10\n\nClick here to securely finish your checkout: https://ohc.store/checkout/recover\n\nWarmly,\nThe Team\n\n⚡ Powered by OHC",
+        req.customer_name, req.cart_value
+    );
+
+    Json(GenerateCartCampaignResponse {
         message: generated,
     })
 }
@@ -361,6 +412,12 @@ async fn handle_check_milestones(
             title: "🚀 100 Visitors Today!".to_string(),
             description: "Your storefront reached 100 visitors today!".to_string(),
             reached: reached_types.contains(&"100_visitors".to_string()),
+        },
+        Milestone {
+            id: "100th_order".to_string(),
+            title: "🎉 100th Order!".to_string(),
+            description: "You've successfully processed your 100th order on OHC.".to_string(),
+            reached: reached_types.contains(&"100th_order".to_string()),
         },
     ];
     Json(MilestonesResponse { milestones })
