@@ -29,6 +29,21 @@ export default function Dashboard() {
   const [morningBriefingDismissed, setMorningBriefingDismissed] = useState<boolean>(false);
   const businessName = typeof localStorage !== 'undefined' ? localStorage.getItem('business_name') || 'Maya' : 'Maya';
 
+  // Extract automated review request count from approvals
+  let unreviewedCount = 12; // Fallback
+  for (const a of (approvals || [])) {
+    if (a.payload) {
+        try {
+            let p = typeof a.payload === 'string' ? JSON.parse(a.payload) : a.payload;
+            if (p.feature_type === 'automated_review_request' && p.count) {
+                unreviewedCount = p.count;
+            }
+        } catch (e) {
+            // ignore parse error
+        }
+    }
+  }
+
   // Growth Loop: Trial Extension State
   const [trialDaysLeft, setTrialDaysLeft] = useState<number>(14);
   const [twitterConnected, setTwitterConnected] = useState<boolean>(false);
@@ -661,12 +676,12 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <p className="text-gray-600 font-inter text-sm mb-5 leading-relaxed">
-                    You have 12 recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
+                    You have {unreviewedCount} recent orders without reviews. Let AI generate and send personalized follow-up emails to collect more 5-star reviews and increase your conversion rate.
                 </p>
 
                 {campaignSuccess ? (
                     <div className="p-4 rounded-xl mb-4 font-bold text-sm" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                        ✓ Campaign sent to <span id="review-emails-sent">12</span> customers!
+                        ✓ Campaign sent to <span id="review-emails-sent">{unreviewedCount}</span> customers!
                     </div>
                 ) : (
                     <button
