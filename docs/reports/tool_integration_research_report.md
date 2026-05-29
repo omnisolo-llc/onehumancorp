@@ -1,129 +1,83 @@
 # Tool Integration Research Report
 
 ## 1. Social Media Integration
-**Title**: Unified Social Inbox: Instagram, Facebook, WhatsApp, and TikTok
-**Problem Statement**: Small business owners constantly juggle multiple apps on their phone to answer customer DMs and comments across Instagram, Facebook, WhatsApp, and TikTok. It's overwhelming, messages fall through the cracks, and sales are lost because they couldn't reply fast enough while busy running their business. They need one simple inbox that collects all these messages in one place.
-**Research Report**:
-- **Market Solutions Evaluated**: ManyChat, Hootsuite, Sprout Social, Meta Business Suite.
-- **Evaluation**: Meta Business Suite is free but only covers Meta properties (not TikTok) and can be clunky. ManyChat is great for automation but complex for non-technical users. A direct integration into OHC using official APIs would provide a simpler, unified interface.
-- **Advantages**: Huge time saver, never miss a lead, builds customer trust through faster responses.
-- **Risks**: Meta's OAuth process can be intimidating for users; API rate limits; potential for disconnected accounts requiring re-authentication.
-- **Pricing**: Free for the user if we integrate standard APIs, though third-party aggregators might charge $15-$50/month.
-- **Environment**: Works in Cloud mode. Standalone mode might face challenges with webhook delivery to local networks without a tunneling service.
-**Design Doc**:
-- A new "Unified Inbox" screen in OHC.
-- A simple settings page where the user clicks "Connect Instagram", "Connect Facebook", etc., which opens a standard secure login popup.
-- Incoming DMs and comments appear as standard chat threads in OHC.
-- When the owner replies in OHC, the message is sent back to the customer on their original platform.
-**Implementation Prompt**: Build a Unified Social Inbox feature where business owners can authorize their social media accounts via standard OAuth flows. The system should listen for incoming messages/comments and display them in a centralized chat interface. Outgoing replies from this interface should be routed back to the correct social platform. Acceptance criteria: A user can connect Instagram/Facebook, receive a DM in the OHC inbox, and reply successfully.
+
+**Title**: Unified Social Inbox: Instagram, Facebook, TikTok, and WhatsApp
+**Problem Statement**: Small business owners waste hours checking 4-5 different apps to reply to customer inquiries, often missing sales or responding late because messages are scattered across platforms. They need a single place to see and reply to all messages.
+**Research Report**: Unified inbox tools like ManyChat, Sprout Social, and Hootsuite offer social media message aggregation. For our target audience, Meta's official Graph API and WhatsApp Business API provide the most reliable way to pull messages without violating Terms of Service. TikTok also offers an official API for comments and messages. The integration requires handling OAuth flows for different platforms, listening to webhooks for new messages, and parsing text/media. Pricing for APIs is generally volume-based but highly affordable for small businesses. Evaluated tools: Meta Graph API (Free tier available), WhatsApp Cloud API (Pay per conversation), TikTok for Business API.
+**Design Doc**: A "Unified Inbox" screen in the OHC platform. When a user connects their social accounts via OAuth, OHC begins receiving webhooks for new messages. The UI displays conversations in a combined chronological feed. The user can reply directly from OHC, and the platform routes the message back to the correct social channel. Cloud mode uses a centralized webhook receiver. Standalone mode polls or uses a local tunnel for webhooks.
+**Implementation Prompt**: Create a Unified Inbox view that displays messages from multiple social channels. Implement the OAuth connection flows for Meta (Facebook/Instagram/WhatsApp) and TikTok. Develop webhook endpoints to receive incoming messages, save them to the tenant database, and display them in real-time. Ensure users can reply from the OHC interface and the replies are successfully delivered to the native platform.
 **Priority**: P0
 **Estimated Scope**: Large
+
+---
 
 ## 2. Calendar & Scheduling
-**Title**: Frictionless Booking with Google Calendar & Outlook Sync
-**Problem Statement**: Small business owners (like consultants, salons, or tutors) waste hours playing "email ping-pong" trying to find a time to meet with clients. They also risk double-booking themselves if their work appointments aren't synced with their personal Google or Outlook calendars.
-**Research Report**:
-- **Market Solutions Evaluated**: Calendly, Acuity Scheduling, Cal.com.
-- **Evaluation**: Calendly is the market leader but charges per user for advanced features. Cal.com is open-source and developer-friendly. Building a native scheduling flow integrated with Google/Outlook calendars provides the most seamless experience for OHC users without requiring them to pay for another subscription.
-- **Advantages**: Eliminates double bookings, saves time scheduling, looks professional to clients.
-- **Risks**: Handling complex timezone math, recurring events, and token expiration for calendar sync.
-- **Pricing**: Generally $10-$15/mo for external tools; free if built natively into OHC.
-- **Environment**: Works in both Cloud and Standalone (assuming outbound internet access for OAuth and API calls).
-**Design Doc**:
-- A "Booking Page" configuration screen where the owner sets their available hours and connects their Google/Outlook account.
-- OHC automatically generates a public, branded booking link they can share with clients.
-- When a client books, it automatically blocks the time on the owner's calendar and sends confirmation emails to both parties.
-**Implementation Prompt**: Create a native calendar synchronization and scheduling system. Business owners should be able to connect their Google Workspace or Microsoft Outlook accounts. The system must read their busy times to prevent double-booking and allow the owner to publish a customizable booking page. When a client selects a time, it should automatically create the event on the owner's calendar.
+
+**Title**: Seamless Calendar Sync & Booking Pages
+**Problem Statement**: Service-based businesses (salons, consultants, tutors) lose time and risk double-booking due to manual scheduling. They need a simple, automated way for clients to book appointments that instantly syncs with their personal Google or Outlook calendars.
+**Research Report**: Tools like Calendly, Acuity, and Cal.com dominate this space. Integrating directly with Google Calendar API and Microsoft Graph API is the most robust approach for a platform, avoiding third-party subscription fees for the user. These APIs handle timezone translation and conflict resolution out-of-the-box. Free tier API access is generous. The main challenge is managing OAuth refresh tokens and parsing recurring events properly. Both Cloud and Standalone modes are viable, though Standalone requires local OAuth handling.
+**Design Doc**: A "Booking Page" feature that generates a public URL for the business. The business owner authenticates their Google or Outlook calendar in OHC. OHC queries the calendar for free/busy times and displays available slots to clients. When a client books, OHC inserts an event directly into the owner's calendar and sends a confirmation email.
+**Implementation Prompt**: Build a public booking page generator for tenants. Integrate Google Calendar and Outlook OAuth flows to fetch free/busy data. Create the booking logic that checks availability, handles timezone conversions, and creates events on the connected calendar. Include a settings page for the business owner to define working hours and meeting durations.
 **Priority**: P0
 **Estimated Scope**: Medium
+
+---
 
 ## 3. Email Marketing
-**Title**: Simple Customer Newsletter & Broadcasts
-**Problem Statement**: Small businesses often have a list of customer emails but find tools like Mailchimp too complicated or expensive just to send a simple monthly update or a holiday promotion. They need a way to send nice-looking updates to their customer list directly from where that list already lives.
-**Research Report**:
-- **Market Solutions Evaluated**: Mailchimp, ConvertKit, SendGrid, MailerLite.
-- **Evaluation**: Mailchimp is famous but its UI has become bloated and pricing scales aggressively with list size. MailerLite is simpler. However, a lightweight native email broadcast tool leveraging an underlying provider (like SendGrid or AWS SES) abstracts the complexity away from the user.
-- **Advantages**: Drives repeat business, keeps the brand top-of-mind, very high ROI.
-- **Risks**: Spam compliance (CAN-SPAM/GDPR), managing bounce rates, keeping the IP reputation clean.
-- **Pricing**: External tools scale up to $50+/mo quickly; native integration could be much cheaper or bundled.
-- **Environment**: Works in Cloud. Standalone might require the user to input their own SMTP credentials.
-**Design Doc**:
-- A "Marketing" tab where the owner can select segments of their customer list.
-- A simple, block-based email editor with a few beautiful, foolproof templates.
-- A basic dashboard showing open rates and click rates after sending.
-- Automatic insertion of legally required unsubscribe links.
-**Implementation Prompt**: Implement a lightweight email broadcast feature allowing owners to design and send newsletters to their saved customer contacts. Provide a simple WYSIWYG editor and handle the batch sending of emails. The system must automatically manage unsubscribes and provide basic post-send analytics (opens/clicks).
+
+**Title**: Customer List Email Campaigns
+**Problem Statement**: Small business owners collect customer emails but don't know how to engage them effectively. Setting up complex tools like Mailchimp is overwhelming. They need a dead-simple way to send announcements or promotions to their existing customer list directly from OHC.
+**Research Report**: Providers like SendGrid, Resend, and Postmark offer robust APIs for transactional and marketing emails. Resend is particularly developer-friendly with high deliverability rates. For non-technical users, a drag-and-drop template builder is too complex; they prefer simple, text-based or single-image emails (like Substack). Spam compliance (unsubscribe links, physical address) is critical. Integrating an API like Resend costs fractions of a cent per email, easily subsidized or passed on. Works perfectly in Cloud mode; Standalone mode can use the user's own API key.
+**Design Doc**: A "Broadcasts" section in OHC. The owner selects a segment of their customer list, writes a rich-text message with an optional image, and hits send. OHC compiles the list, appends mandatory unsubscribe footers, and dispatches the emails via a transactional email API (e.g., Resend). Analytics (open rates) are fetched via webhooks and displayed in a simple dashboard.
+**Implementation Prompt**: Create an Email Campaigns interface allowing users to compose rich-text emails and send them to their customer segments. Integrate an email API (e.g., Resend) for bulk dispatch. Implement mandatory CAN-SPAM compliance features (unsubscribe links). Set up webhooks to track and display basic metrics like open and bounce rates.
 **Priority**: P1
 **Estimated Scope**: Medium
+
+---
 
 ## 4. Payment Processing
-**Title**: Global & Local Payment Processing Integration
-**Problem Statement**: While Stripe is great, it doesn't support every country, and many customers in regions like LATAM or Asia prefer local payment methods (like Mercado Pago, Alipay, or UPI). Small business owners lose sales when they can't accept the payment methods their local customers actually use.
-**Research Report**:
-- **Market Solutions Evaluated**: Stripe, Square, PayPal, Mercado Pago (LATAM), Razorpay (India).
-- **Evaluation**: Stripe is standard but has geographical gaps. Integrating regional leaders like Mercado Pago and Razorpay allows OHC to serve a truly global audience.
-- **Advantages**: Increases conversion rates at checkout, expands the addressable market for OHC.
-- **Risks**: Managing multiple webhooks, handling different currencies and settlement times, complex refund logic.
-- **Pricing**: Transaction fees typically range from 1.5% to 3.5% + fixed fee.
-- **Environment**: Works in both Cloud and Standalone (requires internet to communicate with payment gateways).
-**Design Doc**:
-- A "Payments" settings page where owners can toggle on the payment providers relevant to their region.
-- A unified checkout experience for the customer that dynamically displays available payment methods based on the owner's configuration and the customer's location.
-- A single "Transactions" dashboard in OHC that normalizes data from all providers into one view.
-**Implementation Prompt**: Expand the checkout and invoicing system to support multiple, pluggable payment gateways, specifically targeting regional providers like Mercado Pago and Razorpay alongside standard options. Business owners should be able to authenticate with their preferred provider. The system must handle the checkout flow, webhook processing for payment confirmation, and unified reporting.
+
+**Title**: Global Payment Links & Alternative Methods
+**Problem Statement**: Stripe is great, but many small businesses operate in regions where Stripe is unavailable or not the preferred method (e.g., Mercado Pago in LATAM, Paytm in India). Businesses need to generate payment links that accept the local payment methods their customers actually use.
+**Research Report**: Aggregators like Rapyd or dLocal offer broad global coverage, but direct integrations with regional leaders (Mercado Pago for LATAM, Razorpay/Paytm for India) often provide lower fees and better merchant experiences. These tools offer API-based "Payment Links" which are incredibly easy for non-technical users to share via WhatsApp. The settlement speed varies by region. The API integration involves creating a payment intent and returning a hosted checkout URL. Works in both Cloud and Standalone modes.
+**Design Doc**: A "Get Paid" feature where the owner enters an amount and description, and OHC generates a shareable payment link. Depending on the tenant's region, OHC routes the request to Stripe, Mercado Pago, or Razorpay to generate the link. When the payment succeeds, the respective provider sends a webhook to OHC, marking the internal invoice/order as paid.
+**Implementation Prompt**: Implement a Payment Link generator that integrates with at least two regional payment providers (e.g., Mercado Pago and Razorpay) in addition to Stripe. Provide a simple UI for the owner to input amount and details to get a link. Implement webhook handlers for each provider to update the payment status securely in the database.
 **Priority**: P1
-**Estimated Scope**: Large
+**Estimated Scope**: Medium
+
+---
 
 ## 5. Shipping & Logistics
-**Title**: Automated Shipping Rates and Label Generation
-**Problem Statement**: For businesses shipping physical goods, calculating the right shipping cost and manually typing out shipping labels is tedious and error-prone. If they guess the shipping cost wrong, they eat the loss. They need exact rates at checkout and one-click label printing.
-**Research Report**:
-- **Market Solutions Evaluated**: Shippo, EasyPost, ShipStation.
-- **Evaluation**: ShipStation is comprehensive but often overkill and expensive for very small businesses. EasyPost and Shippo offer excellent API-first platforms that aggregate dozens of carriers. Shippo has a very friendly pay-as-you-go model.
-- **Advantages**: Eliminates manual data entry, prevents undercharging for shipping, provides professional tracking numbers instantly.
-- **Risks**: Accurate package dimension/weight data is required from the user; carrier API downtimes.
-- **Pricing**: Shippo/EasyPost charge pennies per label (e.g., $0.05) plus actual postage.
-- **Environment**: Cloud and Standalone supported (requires internet for API calls).
-**Design Doc**:
-- An integration where the owner connects their Shippo or EasyPost account (or uses an OHC master account).
-- During checkout, the customer sees live shipping rates based on their address and the cart's weight.
-- On the OHC order dashboard, the owner clicks a single "Purchase & Print Label" button, which generates a PDF and automatically emails the tracking link to the customer.
-**Implementation Prompt**: Integrate a shipping aggregator API to provide live carrier rates during customer checkout and enable one-click shipping label generation from the order management dashboard. The system should allow the owner to define standard box sizes/weights, generate a printable PDF label, and automatically dispatch a tracking notification to the buyer.
-**Priority**: P1
-**Estimated Scope**: Medium
+
+**Title**: Automated Shipping Labels & Tracking
+**Problem Statement**: E-commerce small businesses waste hours manually copying customer addresses into local carrier websites to buy shipping labels. They need a system that calculates rates and prints labels with one click right from the order dashboard.
+**Research Report**: APIs like Shippo, EasyPost, and Sendle aggregate multiple carriers (USPS, UPS, FedEx, local international carriers). Shippo and EasyPost provide excellent REST APIs to fetch real-time rates, generate labels (PDF/ZPL), and track packages. Pricing is typically a few cents per label. The integration requires accurate package weight/dimensions and from/to addresses. Works in both Cloud and Standalone (printing locally).
+**Design Doc**: On the "Order Details" page, add a "Create Label" button. OHC sends the order's shipping address and default box dimensions to the shipping API (e.g., EasyPost) to fetch rates. The user selects a rate, and OHC purchases the label, displaying the PDF for download/printing. The tracking number is automatically saved and emailed to the customer.
+**Implementation Prompt**: Integrate a shipping aggregator API (e.g., EasyPost) into the order fulfillment flow. Build the UI to display live shipping rates, allow the user to purchase a label, and render the resulting PDF. Automate the process of attaching the tracking number to the order and sending a notification to the customer.
+**Priority**: P2
+**Estimated Scope**: Large
+
+---
 
 ## 6. SMS & Notifications
-**Title**: Reliable SMS Customer Alerts
-**Problem Statement**: Many customers, especially in certain demographics or regions, ignore emails but will always read a text message. Business owners need a way to send immediate, reliable updates (like "Your order is ready for pickup" or appointment reminders) via SMS to ensure the message is seen.
-**Research Report**:
-- **Market Solutions Evaluated**: Twilio, MessageBird, Vonage, Plivo.
-- **Evaluation**: Twilio is the industry standard with the best global coverage, though pricing can add up. MessageBird is a strong competitor globally. A direct Twilio integration is robust and well-documented.
-- **Advantages**: Near 100% open rates, reduces no-shows for appointments, fast communication.
-- **Risks**: Strict telecom regulations (A2P 10DLC in the US), high costs per message compared to email, spam filtering.
-- **Pricing**: ~$0.01 to $0.04 per message depending on the country.
-- **Environment**: Cloud and Standalone supported.
-**Design Doc**:
-- A configuration screen where the owner inputs their Twilio credentials (or buys credits through OHC).
-- Automated triggers (e.g., appointment 24 hours away, order shipped) that dispatch customizable SMS templates.
-- A log of sent messages and their delivery status on the customer's profile.
-**Implementation Prompt**: Build an SMS notification system utilizing a provider like Twilio. Allow owners to configure automated SMS reminders and status updates triggered by specific system events (e.g., upcoming appointments, order status changes). Include features for owners to customize the message templates and view delivery logs to confirm receipt.
-**Priority**: P0
-**Estimated Scope**: Medium
 
-## 7. Video Conferencing
-**Title**: Auto-Generated Video Links for Services
-**Problem Statement**: Online tutors, consultants, and coaches currently have to manually create a Zoom or Google Meet link for every new booking and email it to the client. This is tedious, and clients often lose the link right before the meeting.
-**Research Report**:
-- **Market Solutions Evaluated**: Zoom API, Google Meet (via Calendar API), Microsoft Teams.
-- **Evaluation**: Google Meet is essentially free if integrated with the Calendar sync. Zoom is ubiquitous but requires OAuth and a paid Zoom account for longer meetings. Supporting both covers 99% of use cases.
-- **Advantages**: Completely seamless experience for both owner and client; zero manual work.
-- **Risks**: Token expiration, handling meeting passwords/waiting rooms, rate limits on link generation.
-- **Pricing**: Free via Google Meet; Zoom requires the user to have their own plan.
-**Environment**: Cloud and Standalone supported.
-**Design Doc**:
-- When setting up a "Service", the owner can choose the location as "Online Video Call" and select their preferred provider (Zoom or Meet).
-- When a client books, the system automatically calls the provider's API to generate a unique meeting room.
-- The link is automatically embedded in the calendar invite and the reminder emails/SMS.
-**Implementation Prompt**: Integrate video conferencing link generation for online service bookings. Allow business owners to connect their Zoom or Google accounts. When a client books a virtual service, automatically generate a unique meeting URL and inject it into all confirmation communications and calendar events.
+**Title**: Instant SMS Notifications for Customers
+**Problem Statement**: Many customers, especially in certain demographics or regions, ignore emails but read every text message. Businesses need to send appointment reminders, order updates, and simple marketing blasts via SMS to ensure they are seen.
+**Research Report**: Twilio is the industry standard, but alternatives like MessageBird or Plivo often offer better pricing for specific regions. SMS pricing varies wildly by destination country. A critical challenge is 10DLC compliance in the US, which requires business registration to avoid carrier filtering. For non-US regions, alphanumeric sender IDs are common. Cloud mode handles API keys centrally; Standalone could require the user to input their own Twilio credentials (revealed via Advanced Mode).
+**Design Doc**: A "Text Alerts" settings panel where owners can toggle automatic SMS reminders for appointments or order shipments. OHC formats short, concise messages and dispatches them via the SMS API (e.g., Twilio). For campaigns, a simple broadcast tool similar to the email feature, but restricted by character limits and strictly enforcing opt-out tracking.
+**Implementation Prompt**: Integrate an SMS provider (e.g., Twilio) to send automated transactional messages (e.g., appointment reminders). Build a preferences UI for the business owner to toggle these notifications. Ensure the system handles phone number formatting (E.164) and automatically processes "STOP" replies to update opt-out lists in the database.
 **Priority**: P1
 **Estimated Scope**: Medium
+
+---
+
+## 7. Video Conferencing
+
+**Title**: Auto-Generated Meeting Links
+**Problem Statement**: Tutors, consultants, and remote service providers struggle with manually creating Zoom or Google Meet links and sending them to clients for every booking. They need video links to be automatically generated and attached to calendar invites.
+**Research Report**: Google Meet is free and automatically included if we integrate Google Calendar. Zoom requires a separate OAuth integration and API calls to create meetings. Zoom's API is robust but their app approval process is stringent. Microsoft Teams works via Microsoft Graph API. Generating links automatically saves the user ~2 minutes per booking and eliminates "where is the link" emails. Works seamlessly in both Cloud and Standalone modes.
+**Design Doc**: Tied closely to the Calendar Scheduling feature. When an owner sets a service type as "Online Meeting", OHC automatically adds a Google Meet link (via Google Calendar API) or a Zoom link (via Zoom OAuth API) to the created calendar event. The generated link is displayed on the booking confirmation page and in reminder emails.
+**Implementation Prompt**: Extend the calendar booking system to support location types (Physical vs. Online). Integrate the Zoom API via OAuth to create unique meeting URLs on demand. Ensure that if Google Calendar is used, the native Google Meet generation flag is passed. Update confirmation emails and the client-facing UI to prominently display the "Join Meeting" button.
+**Priority**: P2
+**Estimated Scope**: Small
