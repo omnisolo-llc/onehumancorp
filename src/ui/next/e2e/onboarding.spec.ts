@@ -12,17 +12,6 @@ test.describe('Onboarding Wizard Flow', () => {
     const descriptionInput = page.locator('textarea[placeholder="e.g. I bake custom vegan cakes in Portland, OR..."]');
     await descriptionInput.fill('I am a freelance handyman in Miami');
 
-    // Intercept API calls
-    await page.route('**/api/onboarding/intake', route => route.fulfill({
-      status: 200,
-      json: { initial_products: [{ name: 'Custom Cake', price: '25.00' }] }
-    }));
-
-    await page.route('**/api/onboarding/start', route => route.fulfill({
-      status: 200,
-      json: { message: "Your business has been successfully launched." }
-    }));
-
     // Click Generate
     await page.locator('button:has-text("Generate My Business")').click();
 

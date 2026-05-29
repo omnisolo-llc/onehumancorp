@@ -48,13 +48,22 @@ test.describe('Onboarding Wizard', () => {
 
     await startPromise;
 
-    // Step 2 - Review
-    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
+    // Wait for the UI state changes reflecting onboarding step transitions
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Continue/i }).click();
 
     // Step 3 - Style
-    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // Verification 1: Query the database to assert the data was correctly modified/updated.
+    // Assert Maya's agents have been correctly provisioned
+    await expect(async () => {
+      const res = await page.request.get('/api/onboarding/state');
+      expect(res.ok()).toBeTruthy();
+      const state = await res.json();
+      expect(state.company_name).toBe("Maya's Custom Cakes");
+    }).toPass({ timeout: 10000 });
 
     // Simplified Mobile First Onboarding - wait for it to generate
     // Step 2 is automatic, so wait for Step 3 directly
@@ -119,13 +128,21 @@ test.describe('Onboarding Wizard', () => {
 
     await startPromise2;
 
-    // Step 2 - Review
-    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible();
+    // Wait for the UI state changes reflecting onboarding step transitions
+    await expect(page.getByRole('heading', { name: "Review Details" })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Continue/i }).click();
 
     // Step 3 - Style
-    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Style & Team" })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: /Launch Store/i }).click();
+
+    // Verification 1: Query the database to assert the data was correctly modified/updated.
+    await expect(async () => {
+      const res = await page.request.get('/api/onboarding/state');
+      expect(res.ok()).toBeTruthy();
+      const state = await res.json();
+      expect(state.company_name).toBe("Carlos Plumbing");
+    }).toPass({ timeout: 10000 });
 
     // Simplified Mobile First Onboarding - wait for it to generate
     await expect(page.getByRole('heading', { name: "You're Live!" })).toBeVisible({ timeout: 15000 });
