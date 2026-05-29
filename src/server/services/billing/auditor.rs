@@ -230,13 +230,17 @@ impl CostAuditor {
 
         // Also record the payment fee based on routing rules
         let mut total_payment_fees = self.total_payment_fees.lock().unwrap();
-        let optimal_pm = crate::pricing::payment_routing::route_payment((amount * 100.0).round() as i64);
-        let fee = if optimal_pm == "ACH" {
-            (amount * 0.008).min(5.0)
+        let amount_cents = (amount * 100.0).round() as i64;
+        let fee_cents = if crate::pricing::payment_routing::route_payment(amount_cents) == "ACH" {
+            let mut f = (amount_cents as f64 * 0.008).round() as i64;
+            if f > 500 {
+                f = 500;
+            }
+            f
         } else {
-            (amount * 0.029) + 0.30
+            (amount_cents as f64 * 0.029).round() as i64 + 30
         };
-        *total_payment_fees += fee;
+        *total_payment_fees += fee_cents as f64 / 100.0;
     }
 
     pub fn get_total_payment_fees(&self) -> f64 {
