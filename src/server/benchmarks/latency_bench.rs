@@ -46,7 +46,7 @@ pub async fn bench_db_query_time() {
 
     // Standalone Mode (SQLite)
     let sqlite_pool = sqlx::sqlite::SqlitePoolOptions::new().connect("sqlite::memory:").await.unwrap();
-    let mut sqlite_times = Vec::new();
+    let mut sqlite_times: Vec<u128> = Vec::new();
     for _ in 0..iterations {
         let start = std::time::Instant::now();
         let _ = sqlx::query("SELECT 1").execute(&sqlite_pool).await;
