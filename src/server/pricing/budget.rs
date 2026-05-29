@@ -83,7 +83,7 @@ mod tests {
         
         let err = manager.record_spend(60.0).unwrap_err();
         assert!(err.contains("budget exceeded"));
-        
+
         assert_eq!(manager.get_remaining(), 50.0); // Should not change!
         
         let err = manager.record_spend(-10.0).unwrap_err();

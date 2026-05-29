@@ -68,6 +68,7 @@ pub mod benchmarks;
 pub use ::server_config as config;
 pub use ::server_common as common;
 pub use crate::proto as ohc;
+use crate::ohc::orchestration::*;
 pub mod builder;
 pub mod tools;
 pub mod workers;
@@ -1504,7 +1505,7 @@ impl HubService for MyHubService {
         if req.parent_thread_id.contains("SYSTEM:") || req.parent_thread_id.contains("\n\n") {
             return Err(Status::invalid_argument("parent_thread_id contains forbidden prompt injection sequences"));
         }
-        
+
         // Delegate to K8s Operator
         let pod_id = crate::orchestration::hierarchical::K8sOperatorDelegator::spawn_sub_agent_pod(
             &req.target_role,
@@ -1761,7 +1762,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         crate::db::DbStore::Postgres => ohc_builtin_agent::memory_store::VectorRepository::new(db.pool.clone()),
         crate::db::DbStore::Sqlite(sqlite_pool) => ohc_builtin_agent::memory_store::VectorRepository::new_sqlite(sqlite_pool.clone()),
     });
-    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo);
+    let resolver = std::sync::Arc::new(ohc_builtin_agent::memory_store::MockConflictResolver);
+    let consolidation_worker = crate::workers::memory::MemoryConsolidationWorker::new(vector_repo, resolver);
     consolidation_worker.start();
 
     // Start Competitor Audit Worker
@@ -1976,6 +1978,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/webhooks/resend", axum::routing::post(api::billing_webhook::resend_webhook_handler))
         .route("/api/v1/webhooks/ayrshare", axum::routing::post(api::billing_webhook::ayrshare_webhook_handler))
         .route("/api/v1/webhooks/manychat", axum::routing::post(api::billing_webhook::manychat_webhook_handler))
+        .route("/api/v1/webhooks/calendly", axum::routing::post(api::billing_webhook::calendly_webhook_handler))
+        .route("/api/v1/webhooks/mailchimp", axum::routing::post(api::billing_webhook::mailchimp_webhook_handler))
         .with_state(webhook_state);
 
     let health_router = axum::Router::new()
@@ -2038,6 +2042,25 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
 
     let db_for_sales = db.clone();
     let settings_store = std::sync::Arc::new(crate::settings::Store::new());
+    let dynamic_workflow_queue: std::sync::Arc<dyn crate::queue::TaskQueue> = match &db.store {
+        crate::db::DbStore::Postgres => {
+            std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
+        }
+        crate::db::DbStore::Sqlite(sqlite_pool) => {
+            let queue = crate::queue::SqliteTaskQueue::new(sqlite_pool.clone());
+            queue.init().await?;
+            std::sync::Arc::new(queue)
+        }
+    };
+    let dynamic_workflow_state_dir = std::env::var("OHC_DYNAMIC_WORKFLOW_STATE_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(".ohc/dynamic-workflows"));
+    let dynamic_workflow_manager = std::sync::Arc::new(
+        crate::orchestration::dynamic_workflows::DynamicWorkflowManager::with_state_dir(
+            dynamic_workflow_queue,
+            dynamic_workflow_state_dir,
+        ),
+    );
     let app = axum::Router::new()
         .route("/api/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2247,11 +2270,13 @@ async fn get_inbox_messages_handler(axum::extract::Extension(user): axum::extrac
             }),
         )
         .nest("/api/v1/autodream", api::autodream::router(autodream_worker.clone()))
+        .nest("/api/v1/dynamic-workflows", api::dynamic_workflows::router(dynamic_workflow_manager.clone()))
         .nest("/api/billing", api::billing_api::router(hub.clone()))
         .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()))
         .nest("/api/agents", api::agents::hire::router(hub.clone()))
         .nest("/api/onboarding", api::onboarding::router(std::sync::Arc::new(crate::services::onboarding::onboarding_agent::OnboardingAgent::new(db.clone(), hub.clone()))).with_state(mesh_transport.clone()))
         .nest("/api/v1/growth", api::growth::router(db.pool.clone(), hub.clone()))
+
         .nest("/api/agents/approvals", api::agents::approvals::router(dept_orchestrator.clone()))
         .nest("/api/agents/settings", api::agents::settings::router(dept_orchestrator.clone()))
         .nest("/api/agents/chat", api::agents::chat::router(dept_orchestrator.clone()))
@@ -2655,8 +2680,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             box-shadow: 0 0 0 4px rgba(0, 111, 255, 0.13);
                         }
                         button {
-            min-height: 44px;
-            min-width: 44px;
                             min-height: 44px;
                             min-width: 44px;
                             padding: 10px 18px;
@@ -2730,13 +2753,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         #setup-screen {
                             font-family: 'Inter', sans-serif;
                             padding: 40px;
-                            max-width: 600px;
+                            max-width: 375px;
                             margin: 60px auto;
                             color: #1D1D1F;
+                            background: rgba(255, 255, 255, 0.65);
+                            backdrop-filter: blur(30px) saturate(210%);
+                            -webkit-backdrop-filter: blur(30px) saturate(210%);
+                            border: 1px solid rgba(255, 255, 255, 0.4);
+                            border-radius: 16px;
                         }
 
                         body.dark-theme #setup-screen {
                             color: #F5F5F7;
+                            background: rgba(22, 22, 26, 0.7);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
                         }
 
                         #setup-screen h1, #setup-screen h2, #setup-screen h3 {
@@ -2758,21 +2788,21 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         #setup-screen > div.hidden {
                             opacity: 0;
-                            transform: translateY(10px);
                             pointer-events: none;
-                            position: absolute;
+                            transform: translateY(10px);
                             visibility: hidden;
+                            position: absolute;
                         }
 
                         @media (max-width: 375px) {
                             #setup-screen {
                                 padding: 24px;
                                 margin: 20px auto;
-                                border-radius: 12px;
+                                border-radius: 16px;
                             }
                             #setup-screen button {
-            min-height: 44px;
-            min-width: 44px;
+                                min-height: 44px;
+                                min-width: 44px;
                                 width: 100%;
                                 margin-right: 0;
                             }
@@ -2976,6 +3006,12 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
             }
             #setup-screen h1 {
                 font-size: 24px;
+            }
+
+            #setup-screen .step-container {
+                transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+                opacity: 1;
+                visibility: visible;
             }
             #setup-screen button, #setup-screen input {
                 width: 100%;
@@ -3734,7 +3770,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                     <!-- API Screen -->
                     <div id="api-screen" class="screen glass">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                            <h1>Connect Tools</h1>
+                            <h1>Connect Custom Software</h1>
                             <button class="secondary" onclick="showScreen('dashboard-screen')">Back to Dashboard</button>
                         </div>
 
@@ -4119,11 +4155,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                      </div>
 
                     <!-- Setup Wizard -->
-                    <div id="setup-screen" class="screen glass" style="max-width: 375px; width: 100%; overflow-x: hidden; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(30px) saturate(210%); -webkit-backdrop-filter: blur(30px) saturate(210%); border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 16px; margin: 0 auto;">
+                    <div id="setup-screen" class="screen glass" style="width: 100%; overflow-x: hidden; margin: 0 auto;">
                         <h1 style="margin-bottom: 24px;">OneHuman</h1>
                         <div id="step-1" style="border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
                             <h1>10-Minute Setup Wizard</h1>
-                            <p>Your business, live in minutes.</p>
+                            <h2>Your business, live in minutes.</h2>
                             <p>Zero tech skills needed. We do the heavy lifting.</p>
                             <button onclick="nextStep(2)" style="border-radius: 8px;">🚀 Start My Business Next</button>
                             <button class="secondary" onclick="nextStep('ai')" style="border-radius: 8px;">⚡ Instant Build (AI) →</button>
@@ -4285,7 +4321,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             </div>
                             <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
                             <h2 style="margin-bottom: 12px; color: var(--primary);">Unlock AI Power</h2>
-                            <p style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
+                            <p id="soft-paywall-desc" style="margin-bottom: 24px; color: var(--text-secondary); font-size: 15px;">Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.</p>
 
                             <button onclick="showScreen('pricing-screen'); closeSoftPaywall();" style="width: 100%; margin-bottom: 12px; padding: 14px; border-radius: 12px; font-weight: bold; background: linear-gradient(135deg, #0066ff 0%, #3b82f6 100%); border: none; color: white;">Upgrade to Pro</button>
 
@@ -4355,7 +4391,16 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             clearTimeout(saveWizardStateTimeout);
                             saveWizardStateTimeout = setTimeout(async () => {
                                 const inputs = document.querySelectorAll('#setup-screen input');
-                                const state = { step: currentStep };
+                                let state = { step: currentStep };
+
+                                const existingState = localStorage.getItem('ohc_wizard_state');
+                                if (existingState) {
+                                    try {
+                                        const parsed = JSON.parse(existingState);
+                                        state = { ...parsed, ...state };
+                                    } catch(e) {}
+                                }
+
                                 Object.assign(state, onboardingState);
                                 inputs.forEach((input, index) => {
                                     const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
@@ -4411,17 +4456,20 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 console.error('Failed to load state from server', e);
                             }
 
-                            if (!state) {
-                                const saved = localStorage.getItem('ohc_wizard_state');
-                                if (saved) {
-                                    try { state = JSON.parse(saved); } catch (e) { console.error('Failed to parse wizard state', e); }
-                                }
+                            const saved = localStorage.getItem('ohc_wizard_state');
+                            if (saved) {
+                                try {
+                                    const localState = JSON.parse(saved);
+                                    if (localState) {
+                                        state = { ...localState, ...state };
+                                    }
+                                } catch (e) { console.error('Failed to parse wizard state', e); }
                             }
 
                             if (state) {
                                 if (state.step) currentStep = state.step;
                                 inputs.forEach((input, index) => {
-                                    const key = input.placeholder ? input.placeholder : (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
+                                    const key = input.id || input.placeholder || (input.type === 'checkbox' ? 'checkbox_' + index : 'input_' + index);
                                     if (state[key] !== undefined) {
                                         if (input.type === 'checkbox') {
                                             input.checked = state[key];
@@ -4432,10 +4480,14 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                                 });
                                 // Restore screen visually without calling nextStep to avoid validation
                                 if (currentStep && currentStep !== 1) {
-                                    document.getElementById('step-1').style.display = 'none';
+                                    const step1 = document.getElementById('step-1');
+                                    if (step1) {
+                                        step1.classList.add('hidden');
+                                        step1.style.display = 'none';
+                                    }
                                     const currentStepEl = document.getElementById(`step-${currentStep}`);
                                     if (currentStepEl) {
-                                        currentStepEl.style.display = 'block';
+                                        currentStepEl.style.display = '';
                                         currentStepEl.classList.remove('hidden');
                                     }
                                 }
@@ -4618,8 +4670,11 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             localStorage.setItem('has_pro', 'true');
                             closeSoftPaywall();
                             alert('Thank you for sharing! Your 7-day Pro trial has been activated.');
-                            // Re-run the campaign now that they have pro
-                            sendReviewCampaign();
+                            // Re-run the pending action now that they have pro
+                            if (window.pendingProAction) {
+                                window.pendingProAction();
+                                window.pendingProAction = null;
+                            }
                         }
 
                         function closeEmbedSetup() {
@@ -4628,6 +4683,8 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
                         async function sendReviewCampaign() {
                             if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-desc').innerText = 'Automated AI Review Requests are a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.';
+                                window.pendingProAction = sendReviewCampaign;
                                 document.getElementById('soft-paywall-modal').classList.add('open');
                                 return;
                             }
@@ -4828,9 +4885,10 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         function showMilestone(title, body) {
                             document.getElementById('milestone-title').textContent = title;
                             let htmlBody = body;
-                            if (title === '🎉 10th Order!') {
+                            if (title === '🎉 10th Order!' || title === '🎉 100th Order!') {
                                 const tenantId = localStorage.getItem('tenant_id') || 'DEFAULT';
-                                const shareText = encodeURIComponent('I just reached my 10th Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
+                                const mName = title === '🎉 10th Order!' ? '10th' : '100th';
+                                const shareText = encodeURIComponent('I just reached my ' + mName + ' Order on One Human Corp! Join me and start your own business: ohc://join?ref=' + tenantId);
                                 htmlBody += '<div style="margin-top: 15px;">' +
                                     '<p style="font-weight: bold; margin-bottom: 8px;">Share Your Success</p>' +
                                     '<a href="https://wa.me/?text=' + shareText + '" target="_blank" style="display: inline-block; padding: 6px 12px; margin-right: 8px; background: #25D366; color: white; text-decoration: none; border-radius: 4px;">Share to WhatsApp</a>' +
@@ -5113,46 +5171,57 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
 
 
                         function validateInputs(stepId) {
+                            let hasError = false;
+
+                            // Reset previous errors
+                            document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
+                                input.style.border = "";
+                            });
+
                             if (stepId === 3 && currentStep === 2) {
-                                let valid = false;
-                                document.querySelectorAll('#step-2 button.secondary').forEach(b => {
-                                    if (b.classList.contains('selected') || document.activeElement === b) valid = true;
-                                });
+                                let valid = onboardingState.business_type ? true : false;
+                                const input = document.getElementById('step-2-business-type');
+                                if (input && input.value.trim().length >= 3) valid = true;
+
                                 if (!valid) {
-                                    alert('Please select a business type');
-                                    return false;
+                                    if(input) input.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 4 && currentStep === 3) {
-                                const inputs = document.querySelectorAll('#step-3 input[type="text"]');
-                                let valid = false;
-                                inputs.forEach(inp => { if (inp.value.trim().length >= 3) valid = true; });
-                                if (!valid) {
-                                    alert('Please enter a business name (at least 3 characters)');
-                                    return false;
+                                const input1 = document.getElementById('step-3-business-name');
+                                const input2 = document.getElementById('step-3-business-name-2');
+                                if ((!input1 || input1.value.trim().length < 3) && (!input2 || input2.value.trim().length < 3)) {
+                                    if(input1) input1.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 6 && currentStep === 5) {
-                                const nameInput = document.querySelectorAll('#step-5 input[type="text"]')[0];
-                                const priceInput = document.querySelectorAll('#step-5 input[type="text"]')[1];
+                                const nameInput = document.getElementById('step-5-product-name');
+                                const priceInput = document.getElementById('step-5-product-price');
                                 if (!nameInput || nameInput.value.trim().length === 0) {
-                                    alert('Please enter a product or service name');
-                                    return false;
+                                    if(nameInput) nameInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                                 if (!priceInput || priceInput.value.trim().length === 0 || !/^\d+(\.\d{1,2})?$/.test(priceInput.value.trim())) {
-                                    alert('Please enter a valid price (e.g., 10.00)');
-                                    return false;
+                                    if(priceInput) priceInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
                             if (stepId === 8 && currentStep === 7) {
-                                const emailInput = document.querySelector('#step-7 input[type="email"]');
+                                const emailInput = document.getElementById('step-7-user-email');
                                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                                 if (!emailInput || !emailRegex.test(emailInput.value.trim())) {
-                                    alert('Please enter a valid email address');
-                                    return false;
+                                    if(emailInput) emailInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
+                                }
+                                const pwdInput = document.getElementById('step-7-user-password');
+                                if (!pwdInput || pwdInput.value.trim().length < 6) {
+                                    if(pwdInput) pwdInput.style.border = "2px solid #FF3B30";
+                                    hasError = true;
                                 }
                             }
-                            return true;
+                            return !hasError;
                         }
 
 
@@ -5160,20 +5229,9 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             const prevStep = currentStep;
 
                             if (stepId !== "generating" && typeof stepId !== "undefined") {
-                                // Enhanced Input Validation - only validate when moving forward
-                                let hasError = false;
                                 if (typeof stepId === 'number' && stepId > currentStep) {
-                                    document.querySelectorAll(`#step-${currentStep} input`).forEach(input => {
-                                        // Only validate text inputs that are not optional
-                                        if (input.type === 'text' && input.getAttribute('inputmode') !== 'decimal' && input.value.trim().length < 3) {
-                                            input.style.border = "2px solid #FF3B30";
-                                            hasError = true;
-                                        } else {
-                                            input.style.border = "";
-                                        }
-                                    });
+                                    if (!validateInputs(stepId)) return;
                                 }
-                                if (hasError) return;
 
                                 try {
                                     const stateData = { step: stepId };
@@ -5217,7 +5275,6 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             document.querySelectorAll('#setup-screen > div').forEach(d => {
                                 if (d.id.startsWith('step-') || d.id === 'checklist-screen') {
                                     d.classList.add('hidden');
-                                    d.style.display = 'none'; // Fallback for old e2e logic
                                     setTimeout(() => { if (d.classList.contains('hidden')) d.style.display = 'none'; }, 250);
                                     suppressButtonText(d, true);
                                     suppressInputSelectors(d, true);
@@ -5225,13 +5282,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                             });
                             const next = document.getElementById('step-' + stepId);
                             if (next) {
-                                next.style.display = 'block'; // Fallback for old e2e logic
+                                next.style.display = ''; // Fallback for old e2e logic
                                 setTimeout(() => next.classList.remove('hidden'), 10);
                                 suppressButtonText(next, false);
                                 suppressInputSelectors(next, false);
                                 // Ensure nested elements are also visible for Playwright
                                 Array.from(next.children).forEach(child => {
-                                    if (child.style.display === 'none') child.style.display = 'block';
+                                    if (child.style.display === 'none') child.style.display = '';
                                 });
                             }
 
@@ -5354,6 +5411,13 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         }
 
                         function generateSeasonalPromo() {
+                            if (localStorage.getItem('has_pro') !== 'true') {
+                                document.getElementById('soft-paywall-desc').innerText = 'Seasonal Promotion Generator is a Pro feature. Upgrade to our Pro plan to boost your sales on autopilot.';
+                                window.pendingProAction = generateSeasonalPromo;
+                                document.getElementById('soft-paywall-modal').classList.add('open');
+                                return;
+                            }
+
                             const occasionInput = document.getElementById('promo-occasion').value || 'Special Event';
                             const discountInput = document.getElementById('promo-discount').value || '10';
 
@@ -5879,7 +5943,7 @@ async fn ui_handler(req: axum::extract::Request) -> impl axum::response::IntoRes
                         });
                     </script>
                     <!-- Scribe: Documentation HTML Scaffolding -->
-                    <button id="global-help-btn" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
+                    <button id="global-help-btn" aria-label="Help" onclick="showScreen('help-screen')" placeholder="help-btn-tooltip">?</button>
                     <button id="global-chat-btn" onclick="document.getElementById('ai-chat-widget').style.display='flex'">✨ Ask anything</button>
 
                     <div id="ai-chat-widget">

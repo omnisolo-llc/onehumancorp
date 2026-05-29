@@ -40,6 +40,7 @@ pub mod create_skill;
 pub mod pydantic;
 pub mod marketplace;
 pub mod marketplace_tool;
+pub mod claude_code_plugins;
 
 #[async_trait::async_trait]
 impl ToolExecutor for ohc_builtin_agent_core::code_native::CodeNativeAdapter {
@@ -143,6 +144,14 @@ pub fn all_tools(
         mcp_dynamic::mcp_discover_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
         mcp_dynamic::mcp_invoke_tool(std::env::var("MCP_GATEWAY_URL").unwrap_or_else(|_| "http://localhost:8080".to_string())),
     ];
+
+    // Ruflo Unique Harness Innovations: 32+ Claude Code plugins
+    let plugins_dir = std::env::var("CLAUDE_CODE_PLUGINS_DIR").unwrap_or_else(|_| "/etc/claude-code-plugins".to_string());
+    if let Ok(mut plugin_tools) = tokio::runtime::Handle::current().block_on(async {
+        Ok::<_, ()>(claude_code_plugins::load_claude_code_plugins(std::path::Path::new(&plugins_dir), working_dir.clone()).await)
+    }) {
+        tools.append(&mut plugin_tools);
+    }
 
     if let Some(accessor) = memory_accessor {
         tools.push(anthropic_memory::topic_retrieve_tool(accessor.clone()));
