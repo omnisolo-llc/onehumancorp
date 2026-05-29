@@ -17,7 +17,7 @@ impl TaskRepository {
             DbStore::Postgres => {
                 sqlx::query(
                     r#"
-                    INSERT INTO tasks (
+                    INSERT INTO legacy_tasks (
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -39,7 +39,7 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query(
                     r#"
-                    INSERT INTO tasks (
+                    INSERT INTO legacy_tasks (
                         id, organization_id, parent_task_id, title, description,
                         status, assigned_agent_role, created_at, updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -69,7 +69,7 @@ impl TaskRepository {
                     r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
-                    FROM tasks
+                    FROM legacy_tasks
                     WHERE organization_id = $1
                     "#
                 )
@@ -83,7 +83,7 @@ impl TaskRepository {
                     r#"
                     SELECT id, organization_id, parent_task_id, title, description,
                            status, assigned_agent_role, created_at, updated_at
-                    FROM tasks
+                    FROM legacy_tasks
                     WHERE organization_id = ?
                     "#
                 )
@@ -102,7 +102,7 @@ impl TaskRepository {
             DbStore::Postgres => {
                 let result = sqlx::query(
                     r#"
-                    UPDATE tasks
+                    UPDATE legacy_tasks
                     SET status = $1, updated_at = $2
                     WHERE id = $3 AND organization_id = $4
                     RETURNING id
@@ -123,7 +123,7 @@ impl TaskRepository {
             DbStore::Sqlite(sqlite_pool) => {
                 let result = sqlx::query(
                     r#"
-                    UPDATE tasks
+                    UPDATE legacy_tasks
                     SET status = ?, updated_at = ?
                     WHERE id = ? AND organization_id = ?
                     RETURNING id
@@ -159,7 +159,7 @@ mod tests {
 
         sqlx::query(
             r#"
-            CREATE TABLE tasks (
+            CREATE TABLE legacy_tasks (
                 id TEXT PRIMARY KEY,
                 organization_id TEXT NOT NULL,
                 parent_task_id TEXT,
@@ -169,7 +169,7 @@ mod tests {
                 assigned_agent_role VARCHAR(100),
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (parent_task_id) REFERENCES tasks(id)
+                FOREIGN KEY (parent_task_id) REFERENCES legacy_tasks(id)
             );
             "#
         )
