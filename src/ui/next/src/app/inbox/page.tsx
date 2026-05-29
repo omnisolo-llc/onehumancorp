@@ -10,6 +10,7 @@ type Message = {
   content: string;
   date: string;
   draft?: string;
+  isAiReplied?: boolean;
 };
 
 export default function InboxPage() {
@@ -85,6 +86,42 @@ export default function InboxPage() {
     setTwilioChannels(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const simulateIncomingMessage = async () => {
+    const userMsg: Message = {
+      id: Date.now(),
+      sender: 'Instagram User',
+      source: 'Instagram',
+      icon: '📸',
+      content: 'Are you open today?',
+      date: 'Just now'
+    };
+
+    setMessages(prev => [...prev, userMsg]);
+
+    try {
+      const res = await fetch('/api/inbox/webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg.content })
+      });
+      const data = await res.json();
+
+      const aiMsg: Message = {
+        id: Date.now() + 1,
+        sender: 'Auto-Reply Agent',
+        source: 'AI',
+        icon: '✨',
+        content: data.reply,
+        date: 'Just now',
+        isAiReplied: true,
+      };
+
+      setMessages(prev => [...prev, aiMsg]);
+    } catch (error) {
+      console.error('Failed to get AI reply:', error);
+    }
+  };
+
   return (
     <div className="p-4 max-w-[375px] mx-auto bg-white min-h-screen shadow-xl relative overflow-x-hidden flex flex-col font-inter">
       <div className="flex items-center mb-4 border-b pb-2">
@@ -153,8 +190,16 @@ export default function InboxPage() {
               <span className="font-semibold text-sm">{msg.sender}</span>
               <span className="text-xs text-gray-500">{msg.date}</span>
             </div>
-            <div className={`p-3 rounded-xl mt-1 inline-block text-left shadow-sm ${msg.sender === 'Me' ? 'bg-blue-100' : 'bg-gray-50 border border-gray-100'}`}>
-              <p className="text-sm text-gray-800 leading-relaxed">{msg.content}</p>
+            <div
+              className={`p-3 rounded-[16px] mt-1 inline-block text-left shadow-sm relative ${msg.sender === 'Me' ? 'bg-[#0066FF] text-white' : (msg.isAiReplied ? 'border border-white/40' : 'bg-gray-50 border border-gray-100')}`}
+              style={msg.isAiReplied ? { background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)' } : {}}
+            >
+              {msg.isAiReplied && (
+                 <div className="absolute -top-3 right-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 z-10">
+                    <span>✨</span> AI Replied
+                 </div>
+              )}
+              <p className={`text-sm leading-relaxed ${msg.sender === 'Me' ? 'text-white' : 'text-gray-800'}`}>{msg.content}</p>
             </div>
 
             {/* Auto-Drafted AI Reply Component */}
@@ -204,6 +249,14 @@ export default function InboxPage() {
            <button onClick={() => sendReply()}>Send</button>
            <input type="text" id="reply-input" value={replyInput} onChange={e => setReplyInput(e.target.value)} />
         </div>
+      </div>
+      <div className="absolute bottom-4 left-0 right-0 px-4 flex justify-center pb-safe">
+         <button
+           onClick={simulateIncomingMessage}
+           className="w-full max-w-[300px] py-3 bg-[#0066FF] text-white font-bold rounded-[8px] shadow-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 text-sm"
+         >
+           <span>🤖</span> Simulate Incoming Message
+         </button>
       </div>
     </div>
   );
