@@ -992,10 +992,6 @@ pub fn redact_interface_pii(val: Value) -> Value {
         Value::String(s) => {
             if is_email(&s) {
                 Value::String("[EMAIL_REDACTED]".to_string())
-            } else if is_ssn(&s) {
-                Value::String("[SSN_REDACTED]".to_string())
-            } else if is_credit_card(&s) {
-                Value::String("[CC_REDACTED]".to_string())
             } else {
                 Value::String(s)
             }
@@ -1038,24 +1034,8 @@ pub fn is_sensitive_key(key: &str) -> bool {
         || k.contains("geolocation")
 }
 
-use regex::Regex;
-
 pub fn is_email(s: &str) -> bool {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| Regex::new(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$").unwrap());
-    re.is_match(s)
-}
-
-pub fn is_ssn(s: &str) -> bool {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| Regex::new(r"^\d{3}-\d{2}-\d{4}$").unwrap());
-    re.is_match(s)
-}
-
-pub fn is_credit_card(s: &str) -> bool {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{4}$").unwrap());
-    re.is_match(s)
+    s.contains('@') && s.contains('.')
 }
 
 #[cfg(test)]
