@@ -1,4 +1,4 @@
-use ohc_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use ohc_builtin_agent_core::types::{ChatRequest, Message};
 use ohc_builtin_agent_llm::LlmClient;
 use std::sync::Arc;
 use futures::future::join_all;
@@ -108,7 +108,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<Box<dyn std::error::Error + Send + Sync>> {
             let role = req.system;
             let output = if role.contains("Lead") {
                 format!("Lead Agent Output: {}", self.resp)
@@ -159,7 +159,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl LlmClient for AdaptiveMockLlmClient {
-        async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        async fn chat(&self, req: ChatRequest) -> Result<Box<dyn std::error::Error + Send + Sync>> {
             let output = if req.system.contains("COMPLEX") {
                 "COMPLEX".to_string()
             } else {
@@ -215,7 +215,7 @@ mod tests {
         struct HintMockLlmClient;
         #[async_trait::async_trait]
         impl LlmClient for HintMockLlmClient {
-            async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            async fn chat(&self, req: ChatRequest) -> Result<Box<dyn std::error::Error + Send + Sync>> {
                 let msg_content = &req.messages[0].content;
                 let output = if msg_content.contains("SONA Trajectory Hint") {
                     "Hint recognized".to_string()
@@ -300,7 +300,7 @@ impl SwarmCoordinator {
                 // Lead agent delegates to workers (simulated here by simply passing the task to each)
                 let mut futures = Vec::new();
                 for worker in &self.workers {
-                    let task_clone = task.to_string();
+                    let _task_clone = task.to_string();
                     let instruction = "Provide a specialized solution for this task.";
                     futures.push(Box::pin(async move {
                         worker.process_task(&task_clone, instruction).await
@@ -325,7 +325,7 @@ impl SwarmCoordinator {
                 let mut futures = Vec::new();
 
                 // Include lead agent in mesh
-                let task_clone = task.to_string();
+                let _task_clone = task.to_string();
                 let instruction = "Analyze the task and provide your independent solution.";
                 let lead_clone = task.to_string();
 
@@ -334,7 +334,7 @@ impl SwarmCoordinator {
                 }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);
 
                 for worker in &self.workers {
-                    let task_clone = task.to_string();
+                    let _task_clone = task.to_string();
                     futures.push(Box::pin(async move {
                         worker.process_task(&task_clone, "Analyze the task and provide your independent solution.").await
                     }) as std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, String>> + Send>>);

@@ -63,7 +63,7 @@ impl AgentProtocolServer {
         };
 
         let initial_message = req.input.unwrap_or_else(|| "Continue".to_string());
-        let cfg = crate::agent::AgentRunConfig::default();
+        let _cfg = crate::agent::AgentRunConfig::default();
 
         match self.runner.run_async(&initial_message).await {
             Ok(result) => {

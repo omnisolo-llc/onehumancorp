@@ -47,7 +47,7 @@ impl VisualOrchestrator {
     }
 
     /// Evaluates the visual orchestration graph
-    pub async fn execute(&self, mut inputs: HashMap<String, String>) -> Result<String, String> {
+    pub async fn execute(&self, inputs: HashMap<String, String>) -> Result<String, String> {
         let mut state = inputs.clone();
 
         // 1. Find start node (Input)
@@ -72,7 +72,7 @@ impl VisualOrchestrator {
             visited.insert(current_node_id.clone());
 
             match node {
-                OrchestrationNode::Input { name } => {
+                OrchestrationNode::Input { name: _ } => {
                     // Start block; variables should be in state already.
                 }
                 OrchestrationNode::Llm { prompt_template } => {
@@ -199,7 +199,7 @@ mod tests {
         let config = AgentRunConfig::default();
         let orchestrator = VisualOrchestrator::new(graph, agent, config);
 
-        let mut inputs = HashMap::new();
+        let inputs = HashMap::new();
         inputs.insert("n_in".to_string(), "raw text block".to_string());
 
         let result = orchestrator.execute(inputs).await.unwrap();
