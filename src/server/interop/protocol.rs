@@ -1,4 +1,8 @@
 use crate::msgbus::{Bus, DistributedLock, Message};
+#[cfg(test)]
+use crate::msgbus::MemoryBus;
+#[cfg(test)]
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::time::{sleep, timeout, Duration};
 
